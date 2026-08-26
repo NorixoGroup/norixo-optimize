@@ -1,7 +1,7 @@
 export const privacyI18n = {
   en: {
     eyebrow: "Legal",
-    title: "Privacy policy",
+    title: "Privacy Policy",
     paragraphOneBeforeLink:
       "This page describes, for information purposes, Norixo’s general approach to personal data related to the use of its online services. For any specific question, use the",
     contactLink: "Contact",

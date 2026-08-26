@@ -3,11 +3,26 @@ import type { Metadata } from "next";
 import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
 import { LegalContent } from "@/components/marketing/LegalContent";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
+import { buildCanonicalUrl } from "@/lib/seo/seoUrls";
 
 export const metadata: Metadata = {
-  title: "Mentions légales | Norixo",
+  title: "Legal Notice | Norixo",
   description:
-    "Consultez les mentions légales de Norixo : informations sur l’éditeur du service, conditions d’utilisation applicables et obligations légales associées au site.",
+    "Legal notice for Norixo, including publisher, hosting, and site use information.",
+  alternates: buildHreflangAlternates("/legal"),
+  openGraph: {
+    title: "Legal Notice | Norixo",
+    description:
+      "Legal notice for Norixo, including publisher, hosting, and site use information.",
+    url: buildCanonicalUrl("/legal"),
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Legal Notice | Norixo",
+    description:
+      "Legal notice for Norixo, including publisher, hosting, and site use information.",
+  },
 };
 
 export default function LegalPage() {

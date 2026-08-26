@@ -1,18 +1,46 @@
 export const legalI18n = {
   en: {
-    eyebrow: "Legal",
-    title: "Legal notice",
-    publisherLabel: "Website publisher:",
-    publisherText:
-      "Norixo — company or individual entrepreneur responsible for the “Norixo Optimize” service (detailed information to be completed according to your legal status and real registered address).",
-    hostingLabel: "Hosting:",
-    hostingText:
-      "the site is hosted on cloud infrastructure consistent with common web application practices (for example Vercel or equivalent — to be specified internally).",
-    intellectualPropertyLabel: "Intellectual property:",
-    intellectualPropertyText:
-      "the content, trademarks and graphic elements of the site are the property of Norixo or its partners, unless otherwise stated.",
-    claimBeforeLink: "For any complaint or request related to the site, see the",
-    contactLink: "Contact",
+    eyebrow: "Legal Notice",
+    title: "Legal Notice",
+    intro:
+      "This page provides the legal information concerning the publisher and operation of the Norixo website and services.",
+    publisherSectionTitle: "Website publisher",
+    publisherLead: "Norixo is operated and published by:",
+    companyNameLabel: "Company name",
+    companyNameValue: "CONCIERGERIE SHORT RENTAL",
+    legalFormLabel: "Legal form",
+    legalFormValue:
+      "Moroccan single-member limited liability company (SARL à associé unique / SARLAU)",
+    registeredOfficeLabel: "Registered office",
+    registeredOfficeValue:
+      "201 BD MUSTAPHA EL MAANI\n2nd Floor, Apartment 9\nMers Sultan\nCasablanca, Morocco",
+    shareCapitalLabel: "Share capital",
+    shareCapitalValue: "MAD 100,000",
+    commercialRegisterLabel: "Commercial Register",
+    commercialRegisterValue: "Casablanca RC No. 656941",
+    iceLabel: "ICE",
+    iceValue: "003646904000038",
+    taxIdLabel: "Tax Identification Number",
+    taxIdValue: "66189007",
+    professionalTaxLabel: "Professional Tax Number",
+    professionalTaxValue: "34212684",
+    legalRepresentativeLabel: "Legal representative",
+    legalRepresentativeValue: "Mohamed Sobhy, Manager",
+    contactLabel: "Contact",
+    contactValue: "support@norixo.io",
+    websiteLabel: "Website",
+    websiteValue: "norixo.io",
+    serviceSectionTitle: "Norixo service",
+    serviceParagraphOne:
+      "Norixo is a software and service operated under the Norixo brand.",
+    serviceParagraphTwo:
+      "It provides tools related to analysis and optimization of short-term-rental listings and associated market and listing information.",
+    serviceParagraphThree:
+      "Third-party trademarks remain the property of their respective owners. Norixo does not claim official affiliation, endorsement, or partnership with Airbnb, Booking.com, Expedia, or other third-party platforms unless such a relationship is explicitly proven elsewhere.",
+    hostingSectionTitle: "Hosting",
+    hostingParagraphOne: "Hosting provider: Vercel Inc.",
+    hostingParagraphTwo:
+      "The site is deployed on Vercel, as indicated by the repository configuration and deployment setup used for this project.",
     backHome: "← Back to home",
   },
   fr: {
