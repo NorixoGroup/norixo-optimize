@@ -19,7 +19,12 @@ export function ContactContent() {
         <p>
           {copy.paragraphOneBeforeEmail} (
           {copy.paragraphOneAfterEmail}{" "}
-          <span className="text-slate-200">support@votredomaine.com</span>
+          <a
+            className="font-medium text-orange-300 underline-offset-4 hover:underline"
+            href="mailto:support@norixo.io"
+          >
+            support@norixo.io
+          </a>
           ).
         </p>
         <p>{copy.paragraphTwo}</p>
