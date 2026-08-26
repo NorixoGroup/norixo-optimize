@@ -1264,82 +1264,86 @@ export const guides: Guide[] = [
     slug: "airbnb-title-generator",
     title: "Airbnb Title Generator Guide",
     description:
-      "The complete Airbnb title generator guide for writing clearer, more clickable listing titles that highlight location, amenities, guest intent, and booking value.",
-    heroTitle: "Airbnb title generator: write titles guests want to click",
+      "The complete Airbnb title generator guide for writing clear, accurate listing titles with useful location, amenity, and property details.",
+    heroTitle: "Airbnb title generator: write clearer listing titles",
     heroSubtitle:
-      "Learn how to create Airbnb titles that communicate value fast, improve first impressions, and help guests understand why your listing is relevant.",
+      "Learn how to use truthful distinguishing details, useful context, and readable wording in an Airbnb listing title.",
     intro:
-      "An Airbnb title is one of the first signals guests see when comparing listings. A strong title does not simply sound nice. It explains the main reason to click, highlights the listing's strongest advantage, and matches what guests care about in that market.",
+      "An Airbnb title is one of the first details guests see when comparing listings. A useful title does more than sound appealing: it identifies the stay accurately and uses limited space for a truthful detail that helps a guest understand it.",
     sections: [
       {
         title: "What an Airbnb title generator should do",
-        body: "A good Airbnb title generator should create specific, benefit-driven titles based on the property, location, amenities, and guest intent. It should avoid vague phrases and focus on the strongest reason a guest would choose the listing.",
+        body: "A useful title-writing process starts with verified listing facts: property type, layout, setting, access, amenities, and geographic context. It should avoid vague phrases and help a host choose the detail that most clearly distinguishes the stay.",
       },
       {
         title: "The goal of an Airbnb title",
-        body: "The title should help guests quickly understand the listing's value. It can highlight a view, pool, beach access, parking, central location, workspace, family setup, luxury design, terrace, or unique experience.",
+        body: "The title should help guests quickly understand what the stay is. A view, pool, beach access, parking, workspace, family setup, terrace, or other verified feature may be useful when it adds meaningful context.",
       },
       {
-        title: "Lead with the strongest selling point",
-        body: "The best titles usually start with the most important advantage. If the listing has a sea view, pool, private terrace, central location, or rare amenity, that should often appear early.",
+        title: "Start with a useful distinguishing detail",
+        body: "Start with the most useful truthful detail when it clarifies the stay. A sea view, pool, private terrace, access detail, or workspace can be included when it is accurate and genuinely distinguishes the listing.",
       },
       {
         title: "Avoid generic titles",
-        body: "Titles like 'beautiful apartment', 'nice place', or 'cozy home' are weak because they do not explain what makes the listing special. Guests need concrete reasons to click.",
+        body: "Titles like 'beautiful apartment', 'nice place', or 'cozy home' say little about the stay. Replace generic adjectives with a concrete, accurate detail when one is available.",
       },
       {
         title: "Use location carefully",
-        body: "Including the city or neighborhood can help when location is the main value. But if every competing listing mentions the same city, a stronger amenity or experience may be more clickable.",
+        body: "A city or town may be redundant when Airbnb already supplies it in search. A neighborhood, landmark, access advantage, or other geographic context can still deserve title space when it truthfully distinguishes the stay.",
       },
       {
         title: "Match the title to guest intent",
-        body: "A family may care about space, parking, kitchen, and safety. A couple may care about design, view, or romantic setting. A remote worker may care about Wi-Fi and workspace. A strong title speaks to the right guest.",
+        body: "Choose details that describe the property rather than assumptions about a guest. For example, a workspace, parking, kitchen, view, or layout can be mentioned when it is verified and useful for understanding the stay.",
       },
       {
         title: "Do not keyword-stuff Airbnb titles",
-        body: "Airbnb titles should be clear and natural. Keyword stuffing can make the listing feel spammy and less trustworthy. Use keywords only when they make the value clearer.",
+        body: "Use natural descriptive language when it helps guests understand the property or a genuine differentiator. Do not force or repeat phrases merely as keywords: accuracy and readability come first, and this is not a keyword-density or ranking formula.",
       },
       {
-        title: "Use amenities as value signals",
-        body: "Amenities like pool, parking, hot tub, terrace, balcony, workspace, air conditioning, beach access, and self check-in can make titles stronger when they are important in the local market.",
+        title: "Use amenities selectively",
+        body: "An amenity such as a pool, parking, terrace, balcony, workspace, air conditioning, beach access, or self check-in may be mentioned when it is accurate, materially useful, genuinely distinguishing, and worth the limited title space.",
       },
       {
         title: "Keep titles easy to scan",
-        body: "Guests scan quickly on mobile. A title should be readable, specific, and not overloaded. Short, clear value usually beats long generic wording.",
+        body: "Airbnb currently advises hosts to try to use fewer than 50 characters because longer titles may be shortened in search results on smaller screens. Treat that as current Airbnb guidance rather than a permanent rule, and keep the final wording readable and accurate.",
       },
       {
-        title: "Test titles when performance changes",
-        body: "If views, clicks, or bookings drop, the title may need to be refreshed. Seasonality, competitor changes, new amenities, or new photos can all justify a title update.",
+        title: "Remove redundant information",
+        body: "Airbnb says city or town names, total bed count, and new-listing status generally need not be repeated when they are already supplied in search. Removing redundant wording can preserve title space for a useful, truthful distinction.",
+      },
+      {
+        title: "Illustrative title rewrites",
+        body: "Replace generic wording with a truthful detail: 'Beautiful apartment in Florence' can become 'Sunny apartment near the Uffizi.' Replace a redundant label with useful context: 'New 3-bed home in Lisbon' can become 'Garden home near the park.' Replace forced phrasing with readable description: 'Pool apartment Airbnb rental with parking' can become 'Apartment with pool and parking.' Use an example only when the rewritten detail is accurate for the listing.",
       },
       {
         title: "Common Airbnb title mistakes",
-        body: "Common mistakes include vague adjectives, duplicated location words, missing the strongest feature, overusing symbols, keyword stuffing, and writing a title that does not match the photos.",
+        body: "Common mistakes include vague adjectives, repeated location words, unnecessary symbols, forced keyword phrasing, and titles that do not match the property or photos.",
       },
       {
         title: "How Norixo helps improve titles",
-        body: "Norixo reviews title clarity, listing positioning, guest intent, market context, and conversion signals to identify whether the title communicates the right value.",
+        body: "Norixo helps hosts review title clarity, listing facts, useful distinctions, and whether the wording accurately represents the stay.",
       },
     ],
     faq: [
       {
         question: "What makes a good Airbnb title?",
         answer:
-          "A good Airbnb title is clear, specific, benefit-driven, and focused on the strongest reason guests should click the listing.",
+          "A good Airbnb title is short, readable, accurate, and specific enough to communicate a truthful distinguishing detail. It should use limited title space for useful context rather than generic wording or information Airbnb already shows elsewhere.",
       },
       {
         question: "Should I include the city in my Airbnb title?",
         answer:
-          "Sometimes. If location is the strongest selling point, include it. If every competitor uses the same location, a stronger amenity or unique benefit may work better.",
+          "Not by default. Airbnb says city or town information generally need not be repeated when it is already shown in search, but a neighborhood, landmark, access detail, or other geographic context may be useful when it truthfully distinguishes the stay.",
       },
       {
         question: "How long should an Airbnb title be?",
         answer:
-          "It should be short enough to scan quickly but specific enough to communicate value. Clarity matters more than length.",
+          "Airbnb currently advises hosts to try to use fewer than 50 characters because longer titles may be shortened in search results on smaller screens. This is current Airbnb guidance, not a universal title-length formula or lower-bound rule.",
       },
       {
         question: "Should I use keywords in my Airbnb title?",
         answer:
-          "Use natural keywords when they help guests understand the listing. Avoid keyword stuffing or awkward titles.",
+          "Use natural descriptive language when it helps guests understand the property or a genuine differentiator. Do not force or repeat phrases merely as keywords; Airbnb's title guidance does not establish a keyword-density, ranking, or visibility formula.",
       },
       {
         question: "What Airbnb title mistakes should I avoid?",
@@ -1349,7 +1353,7 @@ export const guides: Guide[] = [
       {
         question: "Can a better Airbnb title increase bookings?",
         answer:
-          "A stronger title can improve click-through and help guests understand value faster, which can support booking conversion.",
+          "No title change can guarantee ranking, impressions, visibility, clicks, CTR, conversion, bookings, occupancy, or revenue. Those outcomes depend on multiple listing, guest, market, and platform factors.",
       },
       {
         question: "What are examples of strong Airbnb title signals?",
@@ -1362,6 +1366,61 @@ export const guides: Guide[] = [
           "Yes. Norixo helps identify whether the title is clear, specific, competitive, and aligned with guest intent.",
       },
     ],
+    answerFirst: {
+      title: "What makes a good Airbnb listing title?",
+      body: "A useful Airbnb listing title is short, readable, accurate, and specific enough to communicate a truthful distinguishing detail quickly. It should prioritize information that adds useful context beyond details Airbnb already shows elsewhere.",
+    },
+    auditFramework: {
+      title: "A five-step title-prioritization framework",
+      rows: [
+        {
+          dimension: "1. Identify the property accurately",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Start with verified property facts such as type, layout, setting, or access.",
+          whyItMatters: "The title should accurately identify what a guest can expect.",
+        },
+        {
+          dimension: "2. Choose the strongest truthful differentiator",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Select one verified detail, such as a view, terrace, pool, parking, or workspace, when it genuinely distinguishes the stay.",
+          whyItMatters: "A concrete detail can communicate useful context without relying on generic adjectives.",
+        },
+        {
+          dimension: "3. Add useful specificity",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Add a neighborhood, landmark, access detail, or amenity only when it changes a guest's understanding of the stay.",
+          whyItMatters: "Specificity is useful when it is truthful and materially informative.",
+        },
+        {
+          dimension: "4. Remove redundant information or generic filler",
+          evidenceLabel: "Airbnb first-party guidance",
+          review: "Avoid repeating city or town, total bed count, or new-listing status when Airbnb already supplies it in search; remove vague filler too.",
+          whyItMatters: "This preserves limited title space for a useful distinction.",
+        },
+        {
+          dimension: "5. Check readability, accuracy, and expectation alignment",
+          evidenceLabel: "Airbnb first-party guidance",
+          review: "Keep the title readable and accurate, avoid forced keywords or unnecessary symbols, and check it against the listing details and photos.",
+          whyItMatters: "The title should describe the stay clearly without overpromising.",
+        },
+      ],
+    },
+    evidenceSources: {
+      title: "Official Airbnb title guidance",
+      note: "Airbnb documents its own listing and title guidance. Norixo's five-step framework is a transparent host-side synthesis: Airbnb does not endorse Norixo, and these sources do not prove ranking, clicks, CTR, conversion, bookings, occupancy, or revenue outcomes.",
+      sources: [
+        {
+          title: "Airbnb — Guidelines for writing your listing title",
+          href: "https://www.airbnb.com/resources/hosting-homes/a/guidelines-for-writing-your-listing-title-533",
+          role: "Important information first; fewer than 50 characters; possible truncation; repetition avoidance; and useful distinguishing details.",
+        },
+        {
+          title: "Airbnb — Help your listing stand out",
+          href: "https://www.airbnb.com/resources/hosting-homes/a/help-your-listing-stand-out-658",
+          role: "Concise, conversational titles and truthful special features, including useful location or top-amenity context.",
+        },
+      ],
+    },
   },
   {
     slug: "airbnb-photo-optimization",
