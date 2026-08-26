@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 
+import EEAT from "@/components/seo/EEAT";
 import { defaultLocale } from "@/data/i18n";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 
@@ -9,14 +10,14 @@ const socialImage = "/og/norixo-research-methodology.png";
 export const metadata: Metadata = {
   title: "Public Market Data Methodology | Norixo",
   description:
-    "How to interpret Norixo public market data, including aggregation, percentiles, confidence, freshness, limitations, and publication checks.",
+    "How to interpret Norixo public market data, including sources, aggregation, percentiles, confidence, freshness, limitations, citation guidance, and publication checks.",
   alternates: buildHreflangAlternates("/research/methodology", {
     locales: [defaultLocale],
   }),
   openGraph: {
     title: "Public Market Data Methodology | Norixo",
     description:
-      "How to interpret Norixo public market data, including aggregation, percentiles, confidence, freshness, limitations, and publication checks.",
+      "How to interpret Norixo public market data, including sources, aggregation, percentiles, confidence, freshness, limitations, citation guidance, and publication checks.",
     url: "/research/methodology",
     siteName: "Norixo",
     type: "article",
@@ -34,7 +35,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Public Market Data Methodology | Norixo",
     description:
-      "How to interpret Norixo public market data, including aggregation, percentiles, confidence, freshness, limitations, and publication checks.",
+      "How to interpret Norixo public market data, including sources, aggregation, percentiles, confidence, freshness, limitations, citation guidance, and publication checks.",
     images: [socialImage],
   },
 };
@@ -95,6 +96,42 @@ const terms = [
   },
 ] as const;
 
+const sourceTypes = [
+  "Publicly accessible listing information",
+  "Public marketplace information",
+  "Listing attributes supplied for analysis",
+  "Aggregated market observations",
+  "Norixo-generated analytical outputs",
+  "Derived metrics and statistical summaries",
+] as const;
+
+const methodologyPrinciples = [
+  {
+    title: "Relevance",
+    text: "Signals should relate directly to the question being answered, the market being studied, or the listing being reviewed.",
+  },
+  {
+    title: "Freshness",
+    text: "Market information can change over time, so the age of the evidence matters as much as the evidence itself.",
+  },
+  {
+    title: "Consistency",
+    text: "The same question should be answered using the same definitions, scope, and reading rules wherever possible.",
+  },
+  {
+    title: "Aggregation",
+    text: "Public outputs should describe markets at an aggregated level rather than exposing private or single-listing detail.",
+  },
+  {
+    title: "Outlier awareness",
+    text: "Unusual values should be treated carefully so a single extreme observation does not distort the reading.",
+  },
+  {
+    title: "Confidence and limitations",
+    text: "Every result should make clear what the evidence supports and what it does not support.",
+  },
+] as const;
+
 export default function ResearchMethodologyPage() {
   const jsonLd = [
     {
@@ -102,6 +139,7 @@ export default function ResearchMethodologyPage() {
       "@type": "Article",
       headline: "Public Market Data Methodology",
       description: metadata.description,
+      dateModified: "2026-08-26",
       author: {
         "@type": "Organization",
         name: "Norixo",
@@ -189,6 +227,40 @@ export default function ResearchMethodologyPage() {
       </section>
 
       <section className="mx-auto max-w-6xl px-6 pb-10">
+        <div className="rounded-3xl border border-[#10231F]/10 bg-white p-8 shadow-sm">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#D96C3B]">
+            Sources and evidence
+          </p>
+          <h2 className="mt-3 text-3xl font-semibold">
+            What Norixo may use in a research output
+          </h2>
+          <p className="mt-4 max-w-3xl leading-8 text-[#4C5C55]">
+            Norixo may combine several kinds of evidence depending on the tool,
+            report, or research output. The exact mix can vary, so readers
+            should always review the scope and publication details shown on the
+            page they are citing.
+          </p>
+          <ul className="mt-6 grid gap-3 md:grid-cols-2">
+            {sourceTypes.map((item) => (
+              <li
+                key={item}
+                className="rounded-2xl bg-[#FAF7F2] px-4 py-3 text-sm leading-6 text-[#4C5C55]"
+              >
+                {item}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-6 max-w-3xl leading-8 text-[#4C5C55]">
+            Estimates are not official marketplace statistics unless a page
+            explicitly says so. Marketplace names such as Airbnb, Booking.com,
+            Expedia, Agoda, and Vrbo remain trademarks of their respective
+            owners. Norixo is independent from those marketplaces unless a page
+            explicitly states otherwise.
+          </p>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-6 pb-10">
         <div className="mb-8 max-w-3xl">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#D96C3B]">
             Four reading layers
@@ -234,6 +306,210 @@ export default function ResearchMethodologyPage() {
             ))}
           </div>
         </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-6 pb-10">
+        <div className="rounded-3xl bg-white p-8 shadow-sm">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#D96C3B]">
+            Methodology principles
+          </p>
+          <h2 className="mt-3 text-3xl font-semibold">
+            How Norixo keeps outputs readable and comparable
+          </h2>
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
+            {methodologyPrinciples.map((item) => (
+              <article
+                key={item.title}
+                className="rounded-2xl border border-[#10231F]/10 bg-[#FAF7F2] p-5"
+              >
+                <h3 className="text-xl font-semibold">{item.title}</h3>
+                <p className="mt-3 leading-7 text-[#4C5C55]">{item.text}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-6 pb-10">
+        <div className="rounded-3xl bg-[#10231F] p-8 text-white shadow-sm">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#F5C7AF]">
+            Update and revision policy
+          </p>
+          <h2 className="mt-3 text-3xl font-semibold">
+            How this methodology stays current
+          </h2>
+          <p className="mt-4 max-w-3xl leading-8 text-white/80">
+            Norixo methodology may evolve as the product, market conditions, or
+            publication safeguards change. Material updates can result in page
+            revisions, and each research output should be read with its own
+            publication or update date in mind.
+          </p>
+          <p className="mt-4 text-sm text-white/70">Last reviewed: August 2026</p>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-6 pb-10">
+        <div className="rounded-3xl border border-[#10231F]/10 bg-white p-8 shadow-sm">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#D96C3B]">
+            Limitations
+          </p>
+          <h2 className="mt-3 text-3xl font-semibold">
+            What this page does not promise
+          </h2>
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
+            <article className="rounded-2xl bg-[#FAF7F2] p-5">
+              <h3 className="text-xl font-semibold">Market conditions change</h3>
+              <p className="mt-3 leading-7 text-[#4C5C55]">
+                Availability, pricing, ranking, and listing performance can
+                change after a capture period ends.
+              </p>
+            </article>
+            <article className="rounded-2xl bg-[#FAF7F2] p-5">
+              <h3 className="text-xl font-semibold">Samples are not the whole market</h3>
+              <p className="mt-3 leading-7 text-[#4C5C55]">
+                A limited or shifting sample can be useful, but it does not mean
+                the result represents every property or every segment equally.
+              </p>
+            </article>
+            <article className="rounded-2xl bg-[#FAF7F2] p-5">
+              <h3 className="text-xl font-semibold">Observed listings are not bookings</h3>
+              <p className="mt-3 leading-7 text-[#4C5C55]">
+                A visible listing, a market observation, or a derived metric does
+                not prove a completed booking or a guaranteed future outcome.
+              </p>
+            </article>
+            <article className="rounded-2xl bg-[#FAF7F2] p-5">
+              <h3 className="text-xl font-semibold">Estimates are not guarantees</h3>
+              <p className="mt-3 leading-7 text-[#4C5C55]">
+                Occupancy, revenue, pricing, and other derived indicators are
+                estimates that should not be read as promises of commercial
+                performance.
+              </p>
+            </article>
+            <article className="rounded-2xl bg-[#FAF7F2] p-5">
+              <h3 className="text-xl font-semibold">Context matters</h3>
+              <p className="mt-3 leading-7 text-[#4C5C55]">
+                Geographic differences, property type, seasonality, and listing
+                quality can all influence how a signal should be interpreted.
+              </p>
+            </article>
+            <article className="rounded-2xl bg-[#FAF7F2] p-5">
+              <h3 className="text-xl font-semibold">No contractual SLA</h3>
+              <p className="mt-3 leading-7 text-[#4C5C55]">
+                This page documents a methodology. It does not create a service
+                level promise or a guarantee of a particular business outcome.
+              </p>
+            </article>
+          </div>
+          <p className="mt-6 max-w-3xl leading-8 text-[#4C5C55]">
+            Norixo outputs should be interpreted as decision support. They do
+            not replace independent judgment, and they do not override any
+            mandatory statutory rights a user may have.
+          </p>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-6 pb-10">
+        <div className="rounded-3xl bg-white p-8 shadow-sm">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#D96C3B]">
+            Editorial note
+          </p>
+          <h2 className="mt-3 text-3xl font-semibold">
+            How the public methodology is reviewed
+          </h2>
+          <p className="mt-4 max-w-3xl leading-8 text-[#4C5C55]">
+            Methodology and public research are maintained by Norixo and reviewed
+            for methodological consistency, source clarity, limitations, and the
+            boundary between public and private data.
+          </p>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-6 pb-10">
+        <div className="rounded-3xl border border-[#10231F]/10 bg-[#FFF7ED] p-8 shadow-sm">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#D96C3B]">
+            How to cite Norixo research
+          </p>
+          <h2 className="mt-3 text-3xl font-semibold">
+            Give readers the exact page you used
+          </h2>
+          <p className="mt-4 max-w-3xl leading-8 text-[#4C5C55]">
+            When citing Norixo research, include Norixo, the exact page or
+            report title, the publication or update date when available, and the
+            canonical Norixo URL. Link directly to the specific report, tool, or
+            methodology page instead of only linking to the homepage.
+          </p>
+          <div className="mt-6 rounded-2xl bg-white p-5 text-sm leading-7 text-[#4C5C55]">
+            <p className="font-semibold text-[#10231F]">Format example</p>
+            <p className="mt-2">
+              Norixo, “Page title,” publication/update date, canonical URL.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-6 pb-10">
+        <div className="rounded-3xl bg-white p-8 shadow-sm">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#D96C3B]">
+            Corrections
+          </p>
+          <h2 className="mt-3 text-3xl font-semibold">
+            How to report a factual issue
+          </h2>
+          <p className="mt-4 max-w-3xl leading-8 text-[#4C5C55]">
+            If you spot a factual error, unclear methodology, attribution issue,
+            or materially outdated information, contact{" "}
+            <a
+              href="mailto:support@norixo.io"
+              className="font-semibold text-[#10231F] underline underline-offset-4"
+            >
+              support@norixo.io
+            </a>
+            . We do not promise a fixed response SLA, but we do want readers to
+            have a clear way to raise legitimate concerns.
+          </p>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-6 pb-10">
+        <div className="rounded-3xl bg-white p-8 shadow-sm">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#D96C3B]">
+            Helpful references
+          </p>
+          <h2 className="mt-3 text-3xl font-semibold">
+            Explore related Norixo documentation
+          </h2>
+          <div className="mt-6 grid gap-3 md:grid-cols-2">
+            <Link
+              href="/research"
+              className="rounded-2xl border border-[#10231F]/10 bg-[#FAF7F2] px-4 py-3 text-sm font-semibold text-[#10231F] transition hover:-translate-y-0.5 hover:shadow-sm"
+            >
+              Research hub
+            </Link>
+            <Link
+              href="/reports"
+              className="rounded-2xl border border-[#10231F]/10 bg-[#FAF7F2] px-4 py-3 text-sm font-semibold text-[#10231F] transition hover:-translate-y-0.5 hover:shadow-sm"
+            >
+              Public reports
+            </Link>
+            <Link
+              href="/tools"
+              className="rounded-2xl border border-[#10231F]/10 bg-[#FAF7F2] px-4 py-3 text-sm font-semibold text-[#10231F] transition hover:-translate-y-0.5 hover:shadow-sm"
+            >
+              Public tools
+            </Link>
+            <Link
+              href="/guides"
+              className="rounded-2xl border border-[#10231F]/10 bg-[#FAF7F2] px-4 py-3 text-sm font-semibold text-[#10231F] transition hover:-translate-y-0.5 hover:shadow-sm"
+            >
+              Guides
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-5xl px-6 pb-20">
+        <EEAT updated="August 2026" />
       </section>
 
       <section className="mx-auto max-w-6xl px-6 pb-20">
