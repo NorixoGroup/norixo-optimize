@@ -770,82 +770,129 @@ export const guides: Guide[] = [
     slug: "airbnb-trust-optimization",
     title: "Airbnb Trust Optimization Guide",
     description:
-      "The complete Airbnb trust optimization guide for strengthening reviews, ratings, Superhost credibility, listing accuracy, transparency, and guest confidence before booking.",
-    heroTitle: "Airbnb trust optimization: build confidence before guests book",
+      "A practical Airbnb trust guide for reviewing guest-visible confidence signals, reviews, ratings, Superhost context, and accurate expectation setting.",
+    heroTitle: "Airbnb trust optimization: confidence evidence before conclusions",
     heroSubtitle:
-      "Learn how to make your Airbnb listing feel credible, transparent, and reassuring with stronger reviews, ratings, host signals, and listing accuracy.",
+      "Learn how to interpret trust signals carefully without treating them as proof of quality, cause, or commercial outcomes.",
     intro:
-      "Airbnb trust optimization is the process of reducing perceived risk before a guest books. Guests want to believe the listing is accurate, the host is reliable, the stay will match expectations, and previous guests had a good experience. Strong trust signals do not replace pricing, photos, or conversion work, but they help guests feel safer choosing one listing over another.",
+      "Airbnb trust work starts with guest-visible and host-observable information: listing facts, review patterns, rating context, visible host status, public responses, and expectation setting. Treat these as confidence evidence to review, not as proof of listing quality, a past cause, or a future outcome.",
+    answerFirst: {
+      title: "What are Airbnb trust signals?",
+      body: "Airbnb trust signals are guest-visible or host-observable facts that may help a guest form confidence about a listing or host, such as accurate listing information, review patterns, rating context, visible host status, factual public responses, and clear expectations. Signal does not equal interpretation or outcome: an observable signal may justify further review, but it does not by itself prove listing quality, root cause, future guest satisfaction, ratings, reviews, ranking, bookings, or revenue.",
+    },
+    auditFramework: {
+      title: "A seven-dimension confidence-evidence review",
+      rows: [
+        {
+          dimension: "1. Listing accuracy and expectation setting",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Compare current photos, listing facts, amenities, access information, and material limitations with the stay being represented.",
+          whyItMatters: "Host interpretation: a mismatch or information gap may justify clarification or correction; disclosure does not guarantee reviews or bookings.",
+        },
+        {
+          dimension: "2. Review patterns",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Separate isolated public-review observations from repeated themes, visible strengths, friction points, and expectation gaps.",
+          whyItMatters: "Host interpretation: repeated themes may identify an area worth investigating. One review is not root-cause proof, and no universal complaint threshold proves a cause.",
+        },
+        {
+          dimension: "3. Rating context",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Review overall and category ratings available in Airbnb's review system alongside the relevant written feedback and listing context.",
+          whyItMatters: "Host interpretation: ratings summarize past guest evaluations and require context; they do not prove quality, future satisfaction, ranking, conversion, or booking probability.",
+        },
+        {
+          dimension: "4. Host communication evidence",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Review published host information, factual public responses, and recurring communication themes visible to guests or the host.",
+          whyItMatters: "Host interpretation: unclear information may warrant reviewing communication; it does not automatically establish a guest outcome.",
+        },
+        {
+          dimension: "5. Reliability and consistency signals",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Check consistency among listing facts, access details, amenities, and public responses over time.",
+          whyItMatters: "Host interpretation: inconsistency may justify checking listing accuracy or operating practice, not assuming a trust or booking outcome.",
+        },
+        {
+          dimension: "6. Superhost or visible host-status context",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Check current Airbnb program status and any visible badge in its published host-program context.",
+          whyItMatters: "Host interpretation: Superhost is Airbnb program context, not proof of property quality, Airbnb endorsement, certification, or a guarantee for a specific listing.",
+        },
+        {
+          dimension: "7. Response and issue-resolution evidence",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Review professional, factual public responses and documented corrections where they are applicable and privacy-safe to share.",
+          whyItMatters: "Host interpretation: a response may clarify context but does not erase a guest experience or guarantee future outcomes.",
+        },
+      ],
+    },
     sections: [
       {
-        title: "What Airbnb trust optimization means",
-        body: "Airbnb trust optimization means improving the signals that help guests believe a listing is credible before they commit to a stay. It includes reviews, ratings, host reputation, Superhost status, listing accuracy, transparent rules, realistic photos, and clear expectations. The goal is to reduce doubt, not to manipulate guests or promise more than the stay can deliver.",
+        title: "Signal, interpretation, and outcome are different",
+        body: "A trust signal is an observable fact. An interpretation is a bounded reason to inspect, clarify, or correct something. An outcome is what happens later for a guest, listing, or business. Norixo's host-side review separates these three steps instead of treating confidence evidence as a proprietary Airbnb trust metric or a commercial prediction.",
       },
       {
-        title: "Why guests hesitate before booking",
-        body: "Guests hesitate when they are unsure whether the photos are accurate, the space is clean, the host is responsive, check-in will be simple, the location fits the trip, or the price is justified. Trust optimization starts by identifying the doubts a guest may have while comparing similar listings.",
+        title: "What reviews can tell a host",
+        body: "Reviews can show guest perceptions, recurring themes, visible strengths, friction points, expectation gaps, and areas worth investigating. Use a sequence of single observation, repeated pattern, host interpretation, and verified operational cause: repeated comments can justify investigation, but they do not automatically establish a cause, universal quality, future ratings or reviews, ranking impact, booking impact, or commercial outcome.",
       },
       {
-        title: "Reviews as social proof",
-        body: "Reviews show how previous guests experienced the stay. They can confirm that the listing is accurate, clean, comfortable, well located, and managed by a reliable host. A trust strategy should understand what reviews already prove and which doubts still remain unanswered.",
+        title: "Read ratings as context, not proof",
+        body: "Aggregate and category ratings summarize past guest evaluations in Airbnb's review system. They are useful context alongside written feedback and listing facts, but a rating alone does not prove quality, future satisfaction, ranking, conversion, or bookings, and Norixo does not infer an unpublished Airbnb rating formula.",
       },
       {
-        title: "Ratings and visible reputation",
-        body: "Ratings give guests a quick reputation signal before they read individual reviews. Strong ratings can reinforce confidence, while weak or inconsistent ratings can make guests look for safer alternatives. Hosts should treat ratings as a summary of the promises the listing has kept over time.",
+        title: "Use Superhost status precisely",
+        body: "Superhost is an Airbnb host-program status based on Airbnb's published criteria and evaluation process. It applies to host-program context, not a property certification: it does not mean Airbnb endorses a property, certifies quality, or guarantees ranking, bookings, or revenue for a specific listing.",
       },
       {
-        title: "Superhost and host credibility",
-        body: "Superhost status can reassure guests because it signals consistency, responsiveness, and positive guest outcomes. It should be treated as one trust signal among many, not as a replacement for accurate photos, transparent descriptions, strong reviews, and clear expectations.",
+        title: "Trust, guest experience, reviews, and ratings are not interchangeable",
+        body: "Trust is confidence formed from available signals before and during a stay. Guest experience is the actual delivered guest journey. Reviews are post-stay guest perception and feedback, while ratings are structured guest evaluations in Airbnb's review system. These concepts can interact without making trust a duplicate of guest-experience diagnosis.",
       },
       {
-        title: "Listing accuracy and transparency",
-        body: "A trustworthy listing is clear about what guests will actually get. Photos, descriptions, amenities, house rules, sleeping arrangements, fees, access details, and location context should match reality. Hiding limitations may increase short-term clicks but can damage reviews and future confidence.",
+        title: "Set expectations with accurate facts",
+        body: "Keep listing facts, material limitations, access constraints, amenity availability, and photos realistic and current. Clear disclosure can reduce information gaps; it does not guarantee positive reviews, better ratings, bookings, conversion, or ranking.",
       },
       {
-        title: "Trust signals guests notice first",
-        body: "Guests often notice the rating, review count, recent review quality, host profile, cancellation clarity, photo realism, amenities, and description transparency before they make a decision. These visible signals shape whether the listing feels safe enough to consider seriously.",
+        title: "Respond to reviews with useful public context",
+        body: "When a public response is useful, keep it factual, professional, respectful, non-argumentative, and privacy-safe. Acknowledge actionable feedback where appropriate and avoid revealing private guest information. A response may clarify context for future readers, but it does not guarantee rankings, visibility, conversion, bookings, ratings, or reviews.",
       },
       {
-        title: "How trust supports booking confidence",
-        body: "Trust supports booking confidence by reducing uncertainty. A guest who believes the listing is accurate, the host is reliable, and the stay matches the price is more likely to continue comparing seriously. This supports conversion, but it is not the same as optimizing the full booking funnel.",
+        title: "Use a confidence-evidence method",
+        body: "Norixo's transparent host-side synthesis is: observe, classify, distinguish isolated and repeated signals, assess controllability, form a bounded interpretation, choose a correction or disclosure action, and observe later feedback. It is not Airbnb's framework, a proprietary trust algorithm, a scoring model, causal proof, or legal or evidentiary analysis.",
       },
       {
-        title: "Trust versus guest experience",
-        body: "Trust optimization happens before booking, while guest experience is delivered before, during, and after the stay. Communication, check-in, cleanliness, and satisfaction influence future reviews, but this guide focuses on how those outcomes appear as trust signals to future guests.",
+        title: "What trust signals cannot guarantee",
+        body: "Trust signals can provide context and identify areas worth reviewing, but they cannot guarantee ratings, reviews, Superhost status, future guest satisfaction, ranking, impressions, visibility, clicks, CTR, conversion, bookings, occupancy, ADR, RevPAR, revenue, or profit. Those outcomes depend on multiple listing, guest, market, platform, and operational factors.",
       },
       {
-        title: "Common trust mistakes",
-        body: "Common mistakes include vague descriptions, over-edited photos, missing access details, unclear rules, ignoring review concerns, hiding limitations, weak host profiles, and promising amenities that are not reliable. These issues can make guests feel that booking carries unnecessary risk.",
+        title: "Avoid common trust-evidence mistakes",
+        body: "Avoid treating review count, recency, a single rating, or a status badge as certainty. Do not turn one complaint into a cause, repeated feedback into proof, or a confidence signal into a promise about quality or commercial performance.",
       },
       {
-        title: "How to audit Airbnb trust signals",
-        body: "A trust audit should review the listing from a cautious guest's perspective. Check whether the reviews answer important doubts, whether ratings match the price, whether photos and descriptions are transparent, whether amenities are believable, and whether the host profile feels reliable.",
-      },
-      {
-        title: "Building a stronger trust system over time",
-        body: "Trust improves when the listing consistently sets accurate expectations and the stay delivers on them. Hosts should keep photos current, respond thoughtfully to feedback, clarify recurring questions, monitor review patterns, and update the listing when guest concerns reveal trust gaps.",
+        title: "How Norixo reviews confidence evidence",
+        body: "Norixo can organize observable listing facts, feedback themes, rating context, public responses, and expectation-setting gaps into a bounded review. The result identifies areas worth clarifying or investigating without predicting ratings, reviews, ranking, bookings, conversion, or revenue.",
       },
     ],
     faq: [
       {
         question: "What are Airbnb trust signals?",
         answer:
-          "Airbnb trust signals are the visible cues that help guests feel safer booking, such as reviews, ratings, Superhost status, accurate photos, transparent descriptions, clear rules, and host credibility.",
+          "Airbnb trust signals are guest-visible or host-observable facts that may help a guest form confidence about a listing or host, including accurate listing information, review patterns, rating context, visible host status, factual public responses, and clear expectations. They are evidence inputs, not proof of quality, cause, or future outcomes.",
       },
       {
-        question: "Do Airbnb reviews affect bookings?",
+        question: "What can Airbnb reviews tell a host?",
         answer:
-          "Reviews can affect bookings because they help guests judge accuracy, cleanliness, host reliability, comfort, and whether the listing matches expectations.",
+          "Reviews can show guest perceptions, recurring themes, visible strengths, friction points, and expectation gaps. A repeated theme may justify investigation, but one review or repeated comments do not automatically prove a root cause, future outcome, ranking impact, or booking impact.",
       },
       {
-        question: "How do ratings affect guest confidence?",
+        question: "Do Airbnb ratings prove listing quality?",
         answer:
-          "Ratings give guests a quick summary of past guest satisfaction. Strong ratings can reinforce confidence, while weak or inconsistent ratings can increase perceived risk.",
+          "No. Aggregate and category ratings summarize past guest evaluations and require context alongside written feedback and listing facts. A rating alone does not prove universal quality, future satisfaction, ranking, conversion, or booking probability.",
       },
       {
-        question: "Does Superhost status improve trust?",
+        question: "What does Airbnb Superhost status mean?",
         answer:
-          "Superhost status can improve trust because it signals reliability and positive guest outcomes, but it should be supported by accurate listing information and strong reviews.",
+          "Superhost is an Airbnb host-program status based on Airbnb's published criteria and evaluation process. It is not Airbnb endorsement or certification of a property, and it does not guarantee quality, ranking, bookings, or revenue for a specific listing.",
       },
       {
         question: "How can hosts reduce perceived risk?",
@@ -853,14 +900,14 @@ export const guides: Guide[] = [
           "Hosts can reduce perceived risk with accurate photos, transparent descriptions, clear amenities, realistic rules, strong reviews, responsive communication signals, and honest expectation-setting.",
       },
       {
-        question: "Should hosts respond to reviews?",
+        question: "Should Airbnb hosts respond to reviews?",
         answer:
-          "Thoughtful review responses can show accountability and professionalism, especially when they clarify issues or show that guest feedback is taken seriously.",
+          "Yes, when a response can add useful public context. Keep it factual, professional, respectful, non-argumentative, and privacy-safe; acknowledge actionable feedback where appropriate without revealing private guest information or promising an outcome.",
       },
       {
-        question: "Is trust optimization the same as conversion optimization?",
+        question: "Can stronger trust signals guarantee more bookings?",
         answer:
-          "No. Trust optimization focuses on credibility, proof, reputation, and perceived risk. Conversion optimization covers the broader process of turning listing attention into bookings.",
+          "No. Trust signals can provide context and identify areas worth reviewing, but they cannot guarantee ratings, reviews, Superhost status, future guest satisfaction, ranking, impressions, visibility, clicks, CTR, conversion, bookings, occupancy, ADR, RevPAR, revenue, or profit.",
       },
       {
         question: "How can an Airbnb listing be audited for trust weaknesses?",
@@ -868,6 +915,27 @@ export const guides: Guide[] = [
           "Review the listing like a cautious guest: check reviews, ratings, photos, descriptions, amenities, rules, host credibility, and any unanswered doubts that could make booking feel risky.",
       },
     ],
+    evidenceSources: {
+      title: "Official Airbnb trust and review guidance",
+      note: "Airbnb documents its own review system, rating context, Superhost program, and listing guidance. Norixo's confidence-evidence method is a transparent host-side synthesis: Airbnb does not endorse or validate Norixo, and these sources do not prove ranking, clicks, CTR, conversion, bookings, occupancy, ADR, RevPAR, revenue, profit, rating, or review outcomes.",
+      sources: [
+        {
+          title: "Airbnb — Why reviews matter",
+          href: "https://www.airbnb.com/resources/hosting-homes/a/why-reviews-matter-41",
+          role: "Review-system context, feedback, category-rating context, and constructive public review-response context.",
+        },
+        {
+          title: "Airbnb — What's required to be a Superhost",
+          href: "https://www.airbnb.com/help/article/829",
+          role: "Current Superhost program criteria, evaluation process, and host-status context; not property endorsement or a quality, ranking, booking, or revenue guarantee.",
+        },
+        {
+          title: "Airbnb — Writing an effective listing description",
+          href: "https://www.airbnb.com/resources/hosting-homes/a/writing-an-effective-listing-description-13",
+          role: "Accurate facts, realistic representation, relevant limitations, guest access, and expectation setting; not proof of rating, review, ranking, conversion, or booking outcomes.",
+        },
+      ],
+    },
   },
   {
     slug: "airbnb-guest-experience",
