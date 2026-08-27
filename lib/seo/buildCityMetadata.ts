@@ -33,7 +33,7 @@ export function buildCityMetadata(input: CityMetadataInput) {
     url: canonical,
     type: "website",
     locale: "en_US",
-    siteName: "Listing Conversion Optimizer",
+    siteName: "Norixo",
     images: [
       {
         url: "/og-cover.png",
