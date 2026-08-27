@@ -24,7 +24,7 @@ export function buildGuideMetadata(guide: Guide): Metadata {
       "Airbnb listing audit",
       "Airbnb pricing optimization",
       "Airbnb conversion optimization",
-      "Norixo Optimize",
+      "Norixo",
     ],
     alternates: buildHreflangAlternates(`/guides/${guide.slug}`, {
       locales: [defaultLocale],
