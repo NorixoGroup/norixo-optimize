@@ -85,8 +85,8 @@ const html = `<!DOCTYPE html>
     <img src="data:image/png;base64,${logoB64}" width="380" height="380" alt="" />
   </div>
   <div class="sub">
-    <div class="brand">Norixo Optimizer</div>
-    <div class="tag">Listing Conversion Optimizer</div>
+    <div class="brand">Norixo</div>
+    <div class="tag">Airbnb &amp; Booking Listing Audit</div>
   </div>
 </body>
 </html>`;
