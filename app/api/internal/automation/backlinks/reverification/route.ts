@@ -19,7 +19,10 @@ type ReverificationAutomationBody = {
   workspaceLimit?: number;
   candidateLimitPerWorkspace?: number;
   schedulerMaxIterations?: number;
+  linkId?: string;
 };
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value != null && !Array.isArray(value);
@@ -34,14 +37,14 @@ function parseBody(value: unknown): ReverificationAutomationBody | null {
     return null;
   }
 
-  const expectedKeys = ["workspaceLimit", "candidateLimitPerWorkspace", "schedulerMaxIterations"];
+  const expectedKeys = ["workspaceLimit", "candidateLimitPerWorkspace", "schedulerMaxIterations", "linkId"];
   const keys = Object.keys(value);
   if (!keys.every((key) => expectedKeys.includes(key))) {
     return null;
   }
 
-  const { workspaceLimit, candidateLimitPerWorkspace, schedulerMaxIterations } = value;
-  for (const [fieldName, fieldValue, max] of [
+  const { workspaceLimit, candidateLimitPerWorkspace, schedulerMaxIterations, linkId } = value;
+  for (const [, fieldValue, max] of [
     ["workspaceLimit", workspaceLimit, 100],
     ["candidateLimitPerWorkspace", candidateLimitPerWorkspace, 200],
     ["schedulerMaxIterations", schedulerMaxIterations, 100],
@@ -56,6 +59,9 @@ function parseBody(value: unknown): ReverificationAutomationBody | null {
       return null;
     }
   }
+  if (linkId != null && (typeof linkId !== "string" || !UUID_PATTERN.test(linkId.trim()))) {
+    return null;
+  }
 
   return {
     ...(typeof workspaceLimit === "number" ? { workspaceLimit } : {}),
@@ -63,6 +69,7 @@ function parseBody(value: unknown): ReverificationAutomationBody | null {
       ? { candidateLimitPerWorkspace }
       : {}),
     ...(typeof schedulerMaxIterations === "number" ? { schedulerMaxIterations } : {}),
+    ...(typeof linkId === "string" ? { linkId: linkId.trim() } : {}),
   };
 }
 
@@ -132,16 +139,19 @@ export async function POST(request: NextRequest) {
           listBacklinkReverificationCandidates(adminClient, {
             workspaceId,
             limit,
+            ...(body.linkId == null ? {} : { linkId: body.linkId }),
           }),
         getJobByKey: (workspaceId, jobKey) =>
           getBacklinkVerificationJobByKey(adminClient, workspaceId, jobKey),
         createJob: (input) => createBacklinkVerificationJob(adminClient, input.workspaceId, input),
         runSchedulerTick: (input) => composition.runSchedulerTick(input),
+        runTargetedJob: (input) => composition.runTargetedJob(input),
       },
       {
         workspaceLimit: body.workspaceLimit,
         candidateLimitPerWorkspace: body.candidateLimitPerWorkspace,
         schedulerMaxIterations: body.schedulerMaxIterations,
+        linkId: body.linkId,
         workerId: "norixo-backlink-reverification",
         leaseDurationSeconds: 120,
         now: new Date().toISOString(),

@@ -36,9 +36,12 @@ async function main(): Promise<void> {
     "listBacklinkReverificationCandidates",
     "getBacklinkVerificationJobByKey",
     "createBacklinkVerificationJob",
+    "linkId",
+    "UUID_PATTERN",
     "BACKLINK_REVERIFICATION_ENABLED",
     "BACKLINK_REVERIFICATION_CADENCE_DAYS",
     "runBacklinkReverificationProducer",
+    "runTargetedJob",
     "scheduled:",
     "triggerSource: \"scheduler\"",
   ]) {

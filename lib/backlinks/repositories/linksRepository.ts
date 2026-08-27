@@ -31,6 +31,7 @@ export interface ListBacklinkLinksInput {
 export interface ListBacklinkReverificationCandidatesInput {
   workspaceId: WorkspaceId;
   limit: number;
+  linkId?: string;
 }
 
 function assertNonEmptyUpdate(operation: string, input: UpdateBacklinkLinkInput): void {
@@ -108,7 +109,7 @@ export async function listBacklinkReverificationCandidates(
   input: ListBacklinkReverificationCandidatesInput,
 ): Promise<Array<Pick<BacklinkLinkRow, "id" | "workspace_id" | "status" | "acquired_at" | "last_verified_at">>> {
   const operation = "listBacklinkReverificationCandidates";
-  const { data, error } = await client
+  let query = client
     .from("backlink_links")
     .select("id, workspace_id, status, acquired_at, last_verified_at")
     .eq("workspace_id", input.workspaceId)
@@ -117,6 +118,10 @@ export async function listBacklinkReverificationCandidates(
     .order("acquired_at", { ascending: true })
     .order("id", { ascending: true })
     .limit(input.limit);
+  if (input.linkId != null) {
+    query = query.eq("id", input.linkId);
+  }
+  const { data, error } = await query;
 
   if (error != null) {
     throw normalizeBacklinkRepositoryError(operation, error);

@@ -2,7 +2,6 @@ import { createOrGetBacklinkVerificationJob } from "./job-service";
 import { buildScheduledBacklinkVerificationJobInput } from "./scheduled-job-factory";
 import type {
   BacklinkVerificationJob,
-  CreateBacklinkVerificationJobInput,
   CreateOrGetBacklinkVerificationJobDependencies,
   HttpVerificationOptions,
 } from "./job-types";
@@ -53,6 +52,7 @@ export type BacklinkReverificationProducerSummary = {
     jobsExisting: number;
     jobsSkipped: number;
   }>;
+  scopedJob: BacklinkVerificationJob | null;
   issues: Array<{
     workspaceId: string;
     status: "failed";
@@ -62,7 +62,7 @@ export type BacklinkReverificationProducerSummary = {
 
 export type BacklinkReverificationProducerDependencies = {
   listEligibleWorkspaces: (limit: number) => Promise<BacklinkReverificationWorkspaceControl[]>;
-  listCandidates: (workspaceId: string, limit: number) => Promise<BacklinkReverificationCandidate[]>;
+  listCandidates: (workspaceId: string, limit: number, linkId?: string) => Promise<BacklinkReverificationCandidate[]>;
   getJobByKey: CreateOrGetBacklinkVerificationJobDependencies["getJobByKey"];
   createJob: CreateOrGetBacklinkVerificationJobDependencies["createJob"];
   now?: () => string;
@@ -73,6 +73,7 @@ export type BacklinkReverificationProducerInput = {
   candidateLimitPerWorkspace?: number;
   cadenceDays: number;
   now?: string;
+  linkId?: string;
 };
 
 function assert(condition: boolean, message: string): asserts condition {
@@ -140,8 +141,10 @@ export async function runBacklinkReverificationProducer(
     jobsExisting: 0,
     jobsSkipped: 0,
     workspaces: [],
+    scopedJob: null,
     issues: [],
   };
+  const scopedLinkId = input.linkId?.trim() ?? null;
 
   for (const workspace of eligibleWorkspaces) {
     let workspaceFailed = false;
@@ -151,7 +154,7 @@ export async function runBacklinkReverificationProducer(
     let jobsSkipped = 0;
 
     try {
-      const candidates = (await dependencies.listCandidates(workspace.workspaceId, candidateLimitPerWorkspace)).filter(
+      const candidates = (await dependencies.listCandidates(workspace.workspaceId, candidateLimitPerWorkspace, scopedLinkId ?? undefined)).filter(
         (candidate) => isEligibleStatus(candidate.status),
       );
 
@@ -181,6 +184,10 @@ export async function runBacklinkReverificationProducer(
           getJobByKey: dependencies.getJobByKey,
           createJob: dependencies.createJob,
         });
+
+        if (scopedLinkId != null && summary.scopedJob == null) {
+          summary.scopedJob = result.job;
+        }
 
         if (result.kind === "created") {
           jobsCreated += 1;

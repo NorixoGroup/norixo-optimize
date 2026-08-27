@@ -2,13 +2,20 @@ import type { RunBacklinkVerificationSchedulerTickResult } from "./scheduler-typ
 import {
   runBacklinkReverificationProducer,
   type BacklinkReverificationProducerDependencies,
-  type BacklinkReverificationProducerInput,
   type BacklinkReverificationProducerSummary,
 } from "./reverification-producer";
 import type { BacklinkReverificationRuntimeConfig } from "./reverification-config";
 
 export type BacklinkReverificationAutomationDependencies =
   BacklinkReverificationProducerDependencies & {
+    runTargetedJob: (input: {
+      workspaceId: string;
+      jobId: string;
+      workerId: string;
+      claimedAt: string;
+      attemptedAt: string;
+      leaseDurationSeconds: number;
+    }) => Promise<unknown>;
     runSchedulerTick: (
       input: {
         workspaceId: string;
@@ -24,6 +31,7 @@ export type BacklinkReverificationAutomationInput = {
   workspaceLimit?: number;
   candidateLimitPerWorkspace?: number;
   schedulerMaxIterations?: number;
+  linkId?: string;
   workerId: string;
   leaseDurationSeconds: number;
   now?: string;
@@ -42,6 +50,7 @@ export type BacklinkReverificationAutomationResult =
       reason: "BACKLINK_REVERIFICATION_DISABLED";
       producer: null;
       scheduler: null;
+      scopedExecution: null;
     }
   | {
       disposition: "completed";
@@ -53,7 +62,8 @@ export type BacklinkReverificationAutomationResult =
         empty: number;
         maxIterationsReached: number;
         workspaces: BacklinkReverificationAutomationWorkspaceResult[];
-      };
+      } | null;
+      scopedExecution: unknown | null;
     };
 
 const DEFAULT_SCHEDULER_MAX_ITERATIONS = 10;
@@ -68,6 +78,7 @@ export async function runBacklinkReverificationAutomation(
       reason: "BACKLINK_REVERIFICATION_DISABLED",
       producer: null,
       scheduler: null,
+      scopedExecution: null,
     };
   }
 
@@ -76,7 +87,35 @@ export async function runBacklinkReverificationAutomation(
     candidateLimitPerWorkspace: input.candidateLimitPerWorkspace,
     cadenceDays: input.config.cadenceDays,
     now: input.now,
+    linkId: input.linkId,
   });
+
+  if (input.linkId != null) {
+    if (producer.scopedJob == null) {
+      return {
+        disposition: "completed",
+        producer,
+        scheduler: null,
+        scopedExecution: null,
+      };
+    }
+
+    const scopedExecution = await dependencies.runTargetedJob({
+      workspaceId: producer.scopedJob.workspaceId,
+      jobId: producer.scopedJob.id,
+      workerId: input.workerId,
+      claimedAt: input.now ?? new Date().toISOString(),
+      attemptedAt: input.now ?? new Date().toISOString(),
+      leaseDurationSeconds: input.leaseDurationSeconds,
+    });
+
+    return {
+      disposition: "completed",
+      producer,
+      scheduler: null,
+      scopedExecution,
+    };
+  }
 
   const schedulerMaxIterations = input.schedulerMaxIterations ?? DEFAULT_SCHEDULER_MAX_ITERATIONS;
   const schedulerResults: BacklinkReverificationAutomationWorkspaceResult[] = [];
@@ -123,5 +162,6 @@ export async function runBacklinkReverificationAutomation(
       maxIterationsReached,
       workspaces: schedulerResults,
     },
+    scopedExecution: null,
   };
 }
