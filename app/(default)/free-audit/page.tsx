@@ -1,23 +1,24 @@
 import type { Metadata } from "next";
 
 import { FreeAuditContent } from "@/app/(default)/free-audit/FreeAuditContent";
-import { getFreeAuditSeoCopy } from "@/app/(default)/free-audit/freeAuditTranslations";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 
 const siteUrl = (
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://norixo.io"
 ).replace(/\/$/, "");
-const seoCopy = getFreeAuditSeoCopy("en");
+const pageTitle = "Free Airbnb listing audit preview & market analyzer | Norixo";
+const pageDescription =
+  "Use Norixo's free Airbnb and Booking market analyzer to see price range, median and confidence, then continue to a full listing audit.";
 const alternates = buildHreflangAlternates("/free-audit");
 const socialImage = "/og/free-airbnb-market-snapshot.png";
 
 export const metadata: Metadata = {
-  title: seoCopy.title,
-  description: seoCopy.description,
+  title: pageTitle,
+  description: pageDescription,
   alternates,
   openGraph: {
-    title: seoCopy.title,
-    description: seoCopy.description,
+    title: pageTitle,
+    description: pageDescription,
     url: "/free-audit",
     siteName: "Norixo",
     type: "website",
@@ -27,14 +28,14 @@ export const metadata: Metadata = {
         url: socialImage,
         width: 1200,
         height: 630,
-        alt: seoCopy.title,
+        alt: pageTitle,
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: seoCopy.title,
-    description: seoCopy.description,
+    title: pageTitle,
+    description: pageDescription,
     images: [socialImage],
   },
 };
@@ -45,8 +46,8 @@ const freeAuditJsonLd = [
     "@type": "WebPage",
     "@id": `${siteUrl}/free-audit#webpage`,
     url: `${siteUrl}/free-audit`,
-    name: seoCopy.title,
-    description: seoCopy.description,
+    name: pageTitle,
+    description: pageDescription,
     isPartOf: { "@id": `${siteUrl}/#website` },
     about: { "@id": `${siteUrl}/#software` },
     mainEntity: { "@id": `${siteUrl}/#software` },
