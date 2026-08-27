@@ -12,17 +12,28 @@ export type CitySchemaInput = {
  */
 export function buildCitySchema(input: CitySchemaInput): Record<string, unknown>[] {
   const { city, baseUrl } = input;
-  const canonicalUrl = `${baseUrl.replace(/\/$/, "")}/airbnb-optimizer/${city.slug}`;
+  const normalizedBaseUrl = baseUrl.replace(/\/$/, "");
+  const canonicalUrl = `${normalizedBaseUrl}/airbnb-optimizer/${city.slug}`;
 
   const pageTitle = `Airbnb Listing Optimization Guide for ${city.name}`;
-  const pageDescription = `Learn how to optimize your Airbnb listing in ${city.name}, ${city.country} to improve bookings and overall listing performance.`;
+  const pageDescription = `Learn how to optimize your Airbnb listing in ${city.name}, ${city.country} by reviewing listing quality, market positioning and booking friction.`;
 
   const webPage: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "WebPage",
+    "@id": `${canonicalUrl}#webpage`,
     name: pageTitle,
     description: pageDescription,
     url: canonicalUrl,
+    isPartOf: {
+      "@id": `${normalizedBaseUrl}/#website`,
+    },
+    publisher: {
+      "@id": `${normalizedBaseUrl}/#organization`,
+    },
+    about: {
+      "@id": `${normalizedBaseUrl}/#software`,
+    },
     mainEntity: {
       "@type": "Thing",
       name: `${city.name} Airbnb listing optimization guide`,
@@ -38,15 +49,15 @@ export function buildCitySchema(input: CitySchemaInput): Record<string, unknown>
         name: `How can I improve my Airbnb listing performance in ${city.name}?`,
         acceptedAnswer: {
           "@type": "Answer",
-          text: `Focus on your first photos, opening description and amenity list. Guests comparing places in ${city.name} quickly scan for a strong first image, a clear explanation of who the listing is for, and the essentials they expect for their stay.`,
+          text: `Review the first photos, opening description, amenities, pricing context and trust signals. Guests comparing places in ${city.name} need to understand quickly what the listing offers and how it differs from nearby alternatives.`,
         },
       },
       {
         "@type": "Question",
-        name: `Do better photos really increase bookings in ${city.name}?`,
+        name: `Do better photos help an Airbnb listing in ${city.name}?`,
         acceptedAnswer: {
           "@type": "Answer",
-          text: `Yes. High-quality photos with a strong cover image are one of the main drivers of clicks and bookings in ${city.name}. Reordering your gallery to highlight light, space and unique features can significantly improve listing performance.`,
+          text: `Photos shape the first impression guests get when comparing listings in ${city.name}. A clear cover image and a well-ordered gallery can make the property easier to understand before guests read the full description.`,
         },
       },
       {
@@ -54,15 +65,15 @@ export function buildCitySchema(input: CitySchemaInput): Record<string, unknown>
         name: `How should I price my Airbnb in ${city.name}?`,
         acceptedAnswer: {
           "@type": "Answer",
-          text: `Start by looking at similar listings in ${city.name} with comparable size, location and amenities. Your nightly rate should feel aligned with those options, while your photos and description clearly justify any premium you charge.`,
+          text: `Compare similar listings in ${city.name} with relevant property type, location and amenities, then review whether your presentation and trust signals support the price position you choose.`,
         },
       },
       {
         "@type": "Question",
-        name: `Can a listing optimization tool help increase bookings in ${city.name}?`,
+        name: `Can a listing optimization tool help with an Airbnb in ${city.name}?`,
         acceptedAnswer: {
           "@type": "Answer",
-          text: `A dedicated optimization tool can audit your listing for ${city.name}, benchmark it against similar homes and provide an actionable checklist to improve conversion, photos, copy and pricing.`,
+          text: `A listing optimization tool can help organize listing and market signals, identify potential friction in photos, copy, pricing and positioning, and prioritize what the host should review first.`,
         },
       },
     ],
@@ -71,12 +82,19 @@ export function buildCitySchema(input: CitySchemaInput): Record<string, unknown>
   const softwareApplication: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
+    "@id": `${normalizedBaseUrl}/#software`,
     name: "Norixo",
-    applicationCategory: "MarketingApplication",
+    applicationCategory: "BusinessApplication",
     operatingSystem: "Web",
-    url: `${baseUrl.replace(/\/$/, "")}/analyze`,
+    url: normalizedBaseUrl,
     description:
-      "Norixo is a web-based SaaS tool that audits Airbnb listings, benchmarks them against competitors and recommends changes to improve bookings.",
+      "Norixo is a web-based SaaS tool for auditing short-term-rental listings, reviewing market positioning and prioritizing listing improvements.",
+    provider: {
+      "@id": `${normalizedBaseUrl}/#organization`,
+    },
+    brand: {
+      "@id": `${normalizedBaseUrl}/#organization`,
+    },
   };
 
   const breadcrumbList: Record<string, unknown> = {
@@ -87,13 +105,13 @@ export function buildCitySchema(input: CitySchemaInput): Record<string, unknown>
         "@type": "ListItem",
         position: 1,
         name: "Home",
-        item: baseUrl.replace(/\/$/, ""),
+        item: normalizedBaseUrl,
       },
       {
         "@type": "ListItem",
         position: 2,
         name: "Airbnb Optimizer",
-        item: `${baseUrl.replace(/\/$/, "")}/airbnb-optimizer`,
+        item: `${normalizedBaseUrl}/airbnb-optimizer`,
       },
       {
         "@type": "ListItem",
