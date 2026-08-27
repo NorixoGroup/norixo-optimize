@@ -17,15 +17,14 @@ export function ContactContent() {
       </h1>
       <div className="mt-8 space-y-4 text-sm leading-7 text-slate-300">
         <p>
-          {copy.paragraphOneBeforeEmail} (
-          {copy.paragraphOneAfterEmail}{" "}
+          {copy.paragraphOneBeforeEmail}:{" "}
           <a
             className="font-medium text-orange-300 underline-offset-4 hover:underline"
             href="mailto:support@norixo.io"
           >
             support@norixo.io
           </a>
-          ).
+          .
         </p>
         <p>{copy.paragraphTwo}</p>
       </div>

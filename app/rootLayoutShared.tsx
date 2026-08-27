@@ -25,8 +25,23 @@ const organizationJsonLd = {
   "@type": "Organization",
   "@id": `${siteUrl}/#organization`,
   name: "Norixo",
+  legalName: "CONCIERGERIE SHORT RENTAL",
   url: siteUrl,
   logo: `${siteUrl}/favicon.png`,
+  email: "support@norixo.io",
+  address: {
+    "@type": "PostalAddress",
+    streetAddress: "201 BD MUSTAPHA EL MAANI, 2nd Floor, Apartment 9",
+    addressLocality: "Casablanca",
+    addressRegion: "Casablanca-Settat",
+    addressCountry: "MA",
+  },
+  contactPoint: {
+    "@type": "ContactPoint",
+    contactType: "customer support",
+    email: "support@norixo.io",
+    availableLanguage: ["en", "fr"],
+  },
 };
 const websiteJsonLd = {
   "@context": "https://schema.org",
@@ -35,6 +50,22 @@ const websiteJsonLd = {
   name: "Norixo",
   url: siteUrl,
   publisher: {
+    "@id": `${siteUrl}/#organization`,
+  },
+};
+const softwareJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "@id": `${siteUrl}/#software`,
+  name: "Norixo",
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  url: siteUrl,
+  description: defaultDescription,
+  provider: {
+    "@id": `${siteUrl}/#organization`,
+  },
+  brand: {
     "@id": `${siteUrl}/#organization`,
   },
 };
@@ -92,10 +123,11 @@ export function RootDocumentShell({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify([organizationJsonLd, websiteJsonLd]).replace(
-              /</g,
-              "\\u003c",
-            ),
+            __html: JSON.stringify([
+              organizationJsonLd,
+              websiteJsonLd,
+              softwareJsonLd,
+            ]).replace(/</g, "\\u003c"),
           }}
         />
         <I18nProvider initialLocale={locale}>
