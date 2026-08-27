@@ -25,8 +25,23 @@ const organizationJsonLd = {
   "@type": "Organization",
   "@id": `${siteUrl}/#organization`,
   name: "Norixo",
+  legalName: "CONCIERGERIE SHORT RENTAL",
   url: siteUrl,
   logo: `${siteUrl}/favicon.png`,
+  email: "support@norixo.io",
+  address: {
+    "@type": "PostalAddress",
+    streetAddress: "201 BD MUSTAPHA EL MAANI, 2nd Floor, Apartment 9",
+    addressLocality: "Casablanca",
+    addressRegion: "Casablanca-Settat",
+    addressCountry: "MA",
+  },
+  contactPoint: {
+    "@type": "ContactPoint",
+    contactType: "customer support",
+    email: "support@norixo.io",
+    availableLanguage: ["en", "fr"],
+  },
 };
 const websiteJsonLd = {
   "@context": "https://schema.org",
