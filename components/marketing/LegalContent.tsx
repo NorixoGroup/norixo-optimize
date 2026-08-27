@@ -7,7 +7,10 @@ import { legalI18n } from "@/data/marketing/legalI18n";
 
 export function LegalContent() {
   const { copy } = useTranslation(legalI18n);
-  const legalCopy = copy as (typeof legalI18n)["en"];
+  const legalCopy = {
+    ...legalI18n.en,
+    ...copy,
+  } as (typeof legalI18n)["en"];
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-20">
