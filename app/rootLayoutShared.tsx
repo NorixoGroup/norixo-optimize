@@ -53,6 +53,22 @@ const websiteJsonLd = {
     "@id": `${siteUrl}/#organization`,
   },
 };
+const softwareJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "@id": `${siteUrl}/#software`,
+  name: "Norixo",
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  url: siteUrl,
+  description: defaultDescription,
+  provider: {
+    "@id": `${siteUrl}/#organization`,
+  },
+  brand: {
+    "@id": `${siteUrl}/#organization`,
+  },
+};
 
 export const rootMetadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -107,10 +123,11 @@ export function RootDocumentShell({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify([organizationJsonLd, websiteJsonLd]).replace(
-              /</g,
-              "\\u003c",
-            ),
+            __html: JSON.stringify([
+              organizationJsonLd,
+              websiteJsonLd,
+              softwareJsonLd,
+            ]).replace(/</g, "\\u003c"),
           }}
         />
         <I18nProvider initialLocale={locale}>
