@@ -5,9 +5,9 @@ import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 const siteUrl = (
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://norixo.io"
 ).replace(/\/$/, "");
-const pageTitle = "Norixo Optimize – Airbnb & Booking listing audit to improve conversion";
+const pageTitle = "Norixo – Airbnb & Booking listing audit to improve conversion";
 const pageDescription =
-  "Analyze your Airbnb and Booking listings with Norixo Optimize: conversion audit, optimization priorities, and practical recommendations to increase bookings.";
+  "Analyze your Airbnb and Booking listings with Norixo: conversion audit, optimization priorities, and practical recommendations to increase bookings.";
 const alternates = buildHreflangAlternates("/");
 const socialImage = "/og-cover.png";
 
@@ -43,7 +43,7 @@ const homeJsonLd = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   "@id": `${siteUrl}/#software`,
-  name: "Norixo Optimize",
+  name: "Norixo",
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   url: siteUrl,
