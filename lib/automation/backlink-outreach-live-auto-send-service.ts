@@ -89,6 +89,7 @@ function isSkippableSendError(code: BacklinkOutreachEmailSendError["code"]): boo
     code === "OUTREACH_EMAIL_CONTENT_INCOMPLETE" ||
     code === "OUTREACH_CONTACT_NOT_ELIGIBLE" ||
     code === "OUTREACH_MAX_ATTEMPTS_REACHED" ||
+    code === "OUTREACH_SEND_RATE_LIMIT_EXCEEDED" ||
     code === "OUTREACH_ATTEMPT_IDEMPOTENCY_CONFLICT" ||
     code === "OUTREACH_SEND_ATTEMPT_IN_PROGRESS" ||
     code === "OUTREACH_SEND_ATTEMPT_UNRESOLVED";

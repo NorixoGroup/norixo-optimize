@@ -19,6 +19,7 @@ import {
   getBacklinkOutreachAttemptById,
   getBacklinkOutreachAttemptByIdempotencyKey,
   getOpenBacklinkOutreachAttemptForOutreach,
+  listBacklinkOutreachAttemptSendWindowRows,
   reserveBacklinkOutreachAttempt,
   updateBacklinkOutreachAttemptState,
 } from "@/lib/backlinks/repositories/outreachAttemptsRepository";
@@ -196,6 +197,8 @@ export async function POST(request: NextRequest) {
         getBacklinkOutreachById(adminClient, workspaceId, outreachId),
       getContact: (workspaceId, contactId) =>
         getBacklinkContactById(adminClient, workspaceId, contactId),
+      listAttemptSummariesSince: (workspaceId, since) =>
+        listBacklinkOutreachAttemptSendWindowRows(adminClient, workspaceId, since),
       getAttemptByIdempotencyKey: (workspaceId, idempotencyKey) =>
         getBacklinkOutreachAttemptByIdempotencyKey(adminClient, workspaceId, idempotencyKey),
       getOpenAttemptForOutreach: (workspaceId, outreachId) =>

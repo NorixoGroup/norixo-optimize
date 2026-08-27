@@ -4,13 +4,14 @@ import { getCampaignOpportunity } from "@/lib/backlinks/repositories/campaignOpp
 import { getBacklinkContactById, listBacklinkContactsByDomain } from "@/lib/backlinks/repositories/contactsRepository";
 import { getBacklinkOpportunityById } from "@/lib/backlinks/repositories/opportunitiesRepository";
 import { getBacklinkOutreachById, activateBacklinkOutreachAfterEmailAccepted, listBacklinkOutreachByOpportunity, updateBacklinkOutreach } from "@/lib/backlinks/repositories/outreachRepository";
-import { getBacklinkOutreachAttemptById, getBacklinkOutreachAttemptByIdempotencyKey, getOpenBacklinkOutreachAttemptForOutreach, reserveBacklinkOutreachAttempt, updateBacklinkOutreachAttemptState } from "@/lib/backlinks/repositories/outreachAttemptsRepository";
+import { getBacklinkOutreachAttemptById, getBacklinkOutreachAttemptByIdempotencyKey, getOpenBacklinkOutreachAttemptForOutreach, listBacklinkOutreachAttemptSendWindowRows, reserveBacklinkOutreachAttempt, updateBacklinkOutreachAttemptState } from "@/lib/backlinks/repositories/outreachAttemptsRepository";
 import { getAutomationWorkspaceControl } from "@/lib/automation/repositories/automationWorkspaceControlsRepository";
 import { createEnvironmentOutreachEmailProvider } from "@/lib/backlinks/providers/outreachEmailProvider";
 import { markBacklinkOutreachAttemptAccepted, markBacklinkOutreachAttemptFailed, markBacklinkOutreachAttemptUnknown } from "@/lib/backlinks/services/outreachAttemptService";
 import { BacklinkOutreachEmailSendError, sendBacklinkOutreachEmail } from "@/lib/backlinks/services/outreachEmailSendService";
 import { getBacklinkOutreachReplyTokenKeyring } from "@/lib/backlinks/services/outreachReplyCorrelationIdentity";
 import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 function parse(value: unknown): { idempotencyKey: string } | null {
   if (typeof value !== "object" || value == null || Array.isArray(value)) return null;
@@ -27,6 +28,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   const input = parse(await request.json().catch(() => null));
   if (!input) return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   const { id } = await context.params;
+  const adminClient = createSupabaseAdminClient();
   const transitions = {
     getAttempt: (workspaceId: string, attemptId: string) => getBacklinkOutreachAttemptById(auth.client, workspaceId, attemptId),
     updateAttempt: (workspaceId: string, attemptId: string, patch: Parameters<typeof updateBacklinkOutreachAttemptState>[3]) => updateBacklinkOutreachAttemptState(auth.client, workspaceId, attemptId, patch),
@@ -42,10 +44,11 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       getWorkspaceControl: (workspaceId) => getAutomationWorkspaceControl(auth.client, workspaceId),
       getOutreach: (workspaceId, outreachId) => getBacklinkOutreachById(auth.client, workspaceId, outreachId),
       getContact: (workspaceId, contactId) => getBacklinkContactById(auth.client, workspaceId, contactId),
+      listAttemptSummariesSince: (workspaceId, since) => listBacklinkOutreachAttemptSendWindowRows(auth.client, workspaceId, since),
       getAttemptByIdempotencyKey: (workspaceId, idempotencyKey) => getBacklinkOutreachAttemptByIdempotencyKey(auth.client, workspaceId, idempotencyKey),
       getOpenAttemptForOutreach: (workspaceId, outreachId) => getOpenBacklinkOutreachAttemptForOutreach(auth.client, workspaceId, outreachId),
       updateOutreach: (workspaceId, outreachId, value) => updateBacklinkOutreach(auth.client, workspaceId, outreachId, value),
-      reserveAttempt: (workspaceId, value) => reserveBacklinkOutreachAttempt(auth.client, workspaceId, value),
+      reserveAttempt: (workspaceId, value) => reserveBacklinkOutreachAttempt(adminClient, workspaceId, value),
       markAttemptAccepted: markBacklinkOutreachAttemptAccepted(transitions),
       markAttemptFailed: markBacklinkOutreachAttemptFailed(transitions),
       markAttemptUnknown: markBacklinkOutreachAttemptUnknown(transitions),
