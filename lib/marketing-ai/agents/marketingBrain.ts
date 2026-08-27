@@ -71,7 +71,7 @@ export function buildMarketingBrainBrief(
   const market = input.market?.trim() || "marché SaaS international";
   const context =
     input.context?.trim() ||
-    "Norixo Optimize est un SaaS qui aide à analyser et améliorer les annonces Airbnb, Booking et autres plateformes de location courte durée.";
+    "Norixo est un SaaS qui aide à analyser et améliorer les annonces Airbnb, Booking et autres plateformes de location courte durée.";
 
   return {
     campaignGoal: input.objective,
@@ -86,7 +86,7 @@ export function buildMarketingBrainBrief(
       "Clarifier les priorités d'amélioration.",
       "Préparer des actions marketing actionnables.",
     ],
-    positioning: `Norixo Optimize comme SaaS marketing pour ${market}.`,
+    positioning: `Norixo comme SaaS marketing pour ${market}.`,
     valueProposition: context,
     keyMessages: [
       "Norixo aide à identifier les points de friction.",
@@ -112,7 +112,7 @@ export function buildMarketingBrainBrief(
           "audit annonce location courte durée",
         ]
       : [],
-    ctaStrategy: "Inviter à découvrir Norixo Optimize avant toute validation humaine.",
+    ctaStrategy: "Inviter à découvrir Norixo avant toute validation humaine.",
     successMetrics: [
       `Plan marketing structuré sur ${timeframe}.`,
       "Contenus prêts pour revue humaine.",
