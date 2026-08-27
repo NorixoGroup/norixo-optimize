@@ -71,12 +71,12 @@ export function buildCitySchema(input: CitySchemaInput): Record<string, unknown>
   const softwareApplication: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    name: "Listing Conversion Optimizer",
+    name: "Norixo",
     applicationCategory: "MarketingApplication",
     operatingSystem: "Web",
     url: `${baseUrl.replace(/\/$/, "")}/analyze`,
     description:
-      "Listing Conversion Optimizer is a web-based SaaS tool that audits Airbnb listings, benchmarks them against competitors and recommends changes to improve bookings.",
+      "Norixo is a web-based SaaS tool that audits Airbnb listings, benchmarks them against competitors and recommends changes to improve bookings.",
   };
 
   const breadcrumbList: Record<string, unknown> = {
