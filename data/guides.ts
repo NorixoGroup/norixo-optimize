@@ -265,102 +265,203 @@ export const guides: Guide[] = [
     slug: "airbnb-pricing-optimization",
     title: "Airbnb Pricing Optimization Guide",
     description:
-      "The complete Airbnb pricing optimization guide for hosts who want to improve nightly rates, occupancy, revenue, seasonality strategy, market positioning, and booking conversion.",
+      "A claim-safe Airbnb pricing optimization guide for hosts who want to evaluate nightly rates, competitor context, ADR, seasonality, and pricing hypotheses without treating them as guaranteed outcomes.",
     heroTitle: "Airbnb pricing optimization: price smarter, not just lower",
     heroSubtitle:
-      "Learn how to align your Airbnb price with demand, competition, seasonality, guest expectations, and listing quality.",
+      "Learn how to evaluate date-specific pricing evidence, separate listed prices from realized metrics, and test bounded price hypotheses.",
     intro:
-      "Airbnb pricing optimization is not simply about lowering your nightly rate. It is the process of finding the right price for the right guest, at the right time, in the right market. A strong pricing strategy balances occupancy, revenue, perceived value, seasonality, competition, and conversion.",
+      "Airbnb pricing optimization is not a promise that one method can know the correct price, forecast demand, or guarantee bookings. It is a structured way to review date-specific pricing evidence, interpret it cautiously, choose a bounded pricing action when justified, and observe what happens later.",
+    answerFirst: {
+      title: "What Airbnb pricing optimization means",
+      body:
+        "Airbnb pricing optimization is the process of evaluating date-specific pricing evidence and forming a bounded pricing hypothesis or action while accounting for listing context, market context, time period, availability, and uncertainty. It is decision support, not proof of an objectively correct nightly price, a booking-probability model, a revenue forecast, an Airbnb ranking method, or a guarantee of occupancy, ADR, RevPAR, revenue, profit, or bookings.",
+    },
+    auditFramework: {
+      title: "A claim-safe pricing evidence framework",
+      rows: [
+        {
+          dimension: "Date and stay context",
+          evidenceLabel: "Observable listing input",
+          review:
+            "Observe the specific date, weekday or weekend, length of stay, guest count context, fees or discounts shown, and any stay restrictions that apply to that date.",
+          whyItMatters:
+            "This can explain why one price is being considered for one context, but it does not prove future demand, booking probability, or an optimal price.",
+        },
+        {
+          dimension: "Listing-specific pricing context",
+          evidenceLabel: "Observable listing input",
+          review:
+            "Review the subject listing's configured nightly price together with property type, capacity, amenities, location, reviews, photos, rules, and cancellation context.",
+          whyItMatters:
+            "These differences can support a pricing hypothesis, but they do not prove that guests will book, click, convert, or accept a higher price.",
+        },
+        {
+          dimension: "Comparable price context",
+          evidenceLabel: "Norixo heuristic / comparison",
+          review:
+            "Use relevant competitor listed prices as context, while keeping competitor listed price separate from competitor booked price, competitor ADR, and the chosen price for this listing.",
+          whyItMatters:
+            "A visible competitor price is an asking price for a date. It does not prove a booking, realized revenue, willingness to pay, or the correct price for another listing.",
+        },
+        {
+          dimension: "Availability and booking context",
+          evidenceLabel: "Host-side observable evidence",
+          review:
+            "Check calendar availability, blocked dates, minimum-stay rules, booking window, booking pace, and other restrictions under a consistent method.",
+          whyItMatters:
+            "Unavailable nights and booking pace can support investigation, but an unavailable night is not necessarily a confirmed booking and booking pace does not prove price causality.",
+        },
+        {
+          dimension: "Historical performance context",
+          evidenceLabel: "Host-side observable evidence",
+          review:
+            "Compare historical ADR, occupancy, RevPAR, revenue, and profit only when definitions, periods, fees, blocked nights, and data sources are compatible.",
+          whyItMatters:
+            "Historical metrics describe past performance under a methodology. ADR is not the current nightly price, revenue is not profit, and a higher ADR is not automatically better.",
+        },
+        {
+          dimension: "Demand, seasonality, and events",
+          evidenceLabel: "Norixo heuristic / comparison",
+          review:
+            "Consider seasonality, holidays, local events, lead time, and current market context as inputs to a price hypothesis.",
+          whyItMatters:
+            "Historical or current context may inform a decision, but it does not prove future demand or guarantee that an event will create bookings.",
+        },
+        {
+          dimension: "Pricing hypothesis and uncertainty boundary",
+          evidenceLabel: "Norixo heuristic / comparison",
+          review:
+            "Separate observation, interpretation, pricing hypothesis, action, and outcome before changing a price or pricing rule.",
+          whyItMatters:
+            "A pricing action is a testable decision, not a proven optimum. Later results should be observed before claiming that the action caused bookings, revenue, or profit.",
+        },
+      ],
+    },
     sections: [
       {
         title: "What Airbnb pricing optimization means",
-        body: "Airbnb pricing optimization means adjusting your price based on local demand, competitor listings, seasonality, property quality, guest expectations, and booking behavior. The goal is not always to be the cheapest. The goal is to make the price feel justified compared with nearby alternatives.",
+        body: "Airbnb pricing optimization means reviewing the price shown for a specific date or stay context, comparing it with relevant evidence, and deciding whether a pricing hypothesis is worth testing. Observation, interpretation, pricing hypothesis, action, and outcome are different steps: seeing a price or a calendar pattern does not prove what caused it or what will happen after a change.",
       },
       {
         title: "Price must match perceived value",
-        body: "Guests do not evaluate price alone. They compare price against photos, location, reviews, amenities, design, cleanliness, capacity, and trust. If your listing looks weaker than similar options, even an average price can feel expensive.",
+        body: "Guests do not evaluate price alone. Photos, location, reviews, amenities, design, cleanliness, capacity, rules, and trust can all affect how a price is perceived. Those factors can help explain why one price hypothesis may be more coherent than another, but they do not guarantee clicks, conversion, or bookings.",
       },
       {
         title: "Understand your local market",
-        body: "A good Airbnb price depends on the local market. A beachfront apartment, city-center studio, family villa, riad, ski chalet, or business apartment should not be priced using the same logic. Your market, property type, and guest intent matter.",
+        body: "Market context matters, but P12 pricing work should not turn into a market-intelligence report. A beachfront apartment, city-center studio, family villa, riad, ski chalet, or business apartment may need different pricing evidence. The question here is narrower: given the available evidence for this listing and date, what pricing hypothesis is reasonable to test?",
       },
       {
         title: "Use comparable listings carefully",
-        body: "Competitors should be similar in location, property type, capacity, quality, amenities, and guest experience. Comparing a small apartment with luxury villas or hotels can create misleading pricing decisions.",
+        body: "Competitor prices are contextual observations, not instructions. A competitor listed price is not the same as a competitor booked price, competitor ADR, revenue, profit, or the recommended price for your listing. Comparing a small apartment with a luxury villa, a weak listing with a highly reviewed one, or one date with another period can create misleading pricing decisions.",
       },
       {
         title: "Seasonality changes everything",
-        body: "Airbnb pricing should move with demand. High season, weekends, holidays, school breaks, festivals, conferences, weather, and local events can all change what guests are willing to pay.",
+        body: "Seasonality, weekends, holidays, school breaks, festivals, conferences, weather, and local events can all provide pricing context. They do not prove future demand. Event presence, historical demand, or a seasonal label can support a hypothesis, but the later outcome still depends on search context, competition, availability, restrictions, guest preferences, and timing.",
       },
       {
         title: "Occupancy and nightly rate must work together",
-        body: "A higher nightly rate is not always better if it reduces occupancy too much. A lower rate is not always better if it fills the calendar with low-value bookings. The right strategy balances occupancy, average daily rate, and total revenue.",
+        body: "A listed nightly price is the price offered for a particular date or context. ADR is a retrospective average rate for booked nights under a data source's methodology. Revenue is not the same as ADR, and profit requires costs to be accounted for. A higher ADR is not automatically better if occupancy, costs, restrictions, or guest mix move differently.",
       },
       {
         title: "Pricing affects conversion",
-        body: "When guests compare listings, price is one of the fastest decision signals. If your listing looks overpriced, guests may skip it. If it looks too cheap, guests may question quality. Pricing must support trust and booking confidence.",
+        body: "Price can influence how guests compare listings, but pricing is not a standalone conversion guarantee. A lower price does not guarantee additional bookings, and weak booking pace does not prove that price is the cause. Availability, stay restrictions, search criteria, location, listing presentation, reviews, competition, and demand conditions can all affect results.",
       },
       {
         title: "Do not copy competitor prices blindly",
-        body: "Competitor prices can be useful, but they do not tell the full story. A competitor may have better reviews, better photos, different cancellation rules, stronger amenities, or a better location. Pricing must be interpreted with listing quality.",
+        body: "Hosts should not copy competitor prices blindly. A visible competitor price does not prove that the night booked, what transaction price was paid, what ADR was realized, or what guests were willing to pay. It is one piece of context that should be interpreted alongside listing quality, restrictions, availability, and the date being evaluated.",
       },
       {
         title: "When to increase your Airbnb price",
-        body: "You may be able to increase price when demand is strong, your listing has strong reviews, your photos are excellent, your amenities are competitive, your calendar fills too quickly, or nearby comparable listings are priced higher.",
+        body: "A price increase may be a reasonable hypothesis when evidence suggests the current price is not aligned with the listing's value, date context, booking window, restrictions, or relevant comparison context. That does not mean the increase will maximize revenue or profit. It should be treated as a chosen action whose later results need to be observed.",
       },
       {
         title: "When to lower your Airbnb price",
-        body: "Lowering price may help when views are low, conversion is weak, competitors are better positioned, demand is soft, your listing is new, reviews are limited, or your price is not supported by the current presentation.",
+        body: "A price reduction may be a reasonable hypothesis when the listing appears misaligned with the date context, demand context, presentation, restrictions, or relevant alternatives. It is not a rule that lower price means more bookings. Do not invent elasticity coefficients, booking-probability percentages, or optimal-price functions without a named methodology and suitable data.",
       },
       {
         title: "Common Airbnb pricing mistakes",
-        body: "Common mistakes include using one fixed price all year, ignoring local events, comparing against the wrong competitors, overpricing weak listings, underpricing premium stays, and changing price without improving listing presentation.",
+        body: "Common pricing mistakes include treating one visible competitor price as the correct price, inferring a booking from an unavailable calendar night, confusing listed price with ADR, confusing revenue with profit, assuming historical demand proves future demand, and presenting a pricing change as a guaranteed booking or revenue lever.",
       },
       {
         title: "How Norixo helps with pricing",
-        body: "Norixo analyzes your listing price together with market signals, property quality, competitor positioning, photos, description, and conversion factors. This helps hosts understand whether pricing is aligned with perceived value and local competition.",
+        body: "Norixo frames pricing as evidence review and hypothesis testing. A safe workflow is: identify the target date and stay context, collect observable pricing context, distinguish listed prices from realized metrics, compare only relevant context, identify listing-specific differences, form a bounded pricing hypothesis, choose an action if justified, observe later results, and revise the hypothesis when the evidence changes.",
+      },
+      {
+        title: "What pricing analysis does not guarantee",
+        body: "Pricing analysis, pricing hypotheses, price changes, dynamic pricing, competitor-price comparisons, and Norixo analysis do not guarantee future demand, Airbnb search ranking, impressions, visibility, clicks, CTR, conversion, bookings, occupancy, ADR, RevPAR, revenue, profit, ROI, investment return, or future guest behavior. Norixo does not claim access to Airbnb's private ranking, demand, or booking-probability systems.",
       },
     ],
+    evidenceSources: {
+      title: "Bounded pricing evidence sources",
+      note:
+        "These sources support narrow pricing, calendar, discount, restriction, and metric-context statements. They do not endorse Norixo, validate a Norixo pricing framework, prove an optimal price, or guarantee future bookings, revenue, profit, or ranking outcomes.",
+      sources: [
+        {
+          title: "Airbnb Help — Use Smart Pricing",
+          href: "https://www.airbnb.com/help/article/1168",
+          role:
+            "Airbnb first-party context for Smart Pricing, host-set price ranges, and date-level price overrides; not proof of guaranteed demand, ranking, or revenue.",
+        },
+        {
+          title: "Airbnb Help — How discounts are applied",
+          href: "https://www.airbnb.com/help/article/3421",
+          role:
+            "Airbnb first-party context for discounts and promotions in pricing flows; not a universal discount strategy or booking guarantee.",
+        },
+        {
+          title: "PriceLabs — Understanding the Dynamic Pricing Calendar",
+          href: "https://help.pricelabs.co/portal/en/kb/articles/pricing-calendar",
+          role:
+            "Third-party documentation showing date-level pricing, availability, event, booking, and restriction context; not Airbnb ranking evidence or Norixo validation.",
+        },
+        {
+          title: "AirDNA — How does AirDNA calculate ADR?",
+          href: "https://help.airdna.co/en/articles/8062173-how-does-airdna-calculate-average-daily-rate-adr",
+          role:
+            "Methodology example for ADR as a retrospective booked-night metric with provider-specific inclusions; not a current nightly price or recommended price.",
+        },
+      ],
+    },
     faq: [
       {
         question: "What is Airbnb pricing optimization?",
         answer:
-          "Airbnb pricing optimization is the process of adjusting nightly rates based on demand, competition, seasonality, property quality, guest expectations, and revenue goals.",
+          "Airbnb pricing optimization is the process of reviewing date-specific pricing evidence and forming a bounded pricing hypothesis or action. It is decision support, not proof of a correct price, future demand, booking probability, or guaranteed revenue.",
       },
       {
-        question: "Should I lower my Airbnb price to get more bookings?",
+        question: "How should an Airbnb host set a nightly price?",
         answer:
-          "Not always. If the issue is weak photos, unclear value, poor reviews, or missing amenities, lowering the price may not solve the real problem.",
+          "Start with the target date, stay context, listing quality, availability, restrictions, seasonality, and relevant competitor-price context. Then separate what is observed from what is only a pricing hypothesis before changing the price.",
       },
       {
-        question: "How do I know if my Airbnb is overpriced?",
+        question: "Should Airbnb hosts copy competitor prices?",
         answer:
-          "Your listing may be overpriced if similar nearby listings offer stronger photos, better reviews, more amenities, or better locations at the same or lower price.",
+          "No. Competitor listed prices are contextual observations. They do not prove booked price, ADR, revenue, profit, guest willingness to pay, booking probability, or the recommended price for another listing.",
       },
       {
-        question: "How often should I update Airbnb pricing?",
+        question: "Should Airbnb hosts lower prices to get more bookings?",
         answer:
-          "Pricing should be reviewed regularly, especially before weekends, holidays, high season, local events, and periods of weak demand.",
+          "A lower price may be one hypothesis to test, but it does not guarantee more bookings. Results also depend on demand, availability, stay restrictions, competition, listing presentation, reviews, timing, and guest preferences.",
       },
       {
-        question: "Do Airbnb pricing tools guarantee more revenue?",
+        question: "What is the difference between an Airbnb nightly price and ADR?",
         answer:
-          "No tool can guarantee revenue. Pricing tools can help, but results depend on demand, competition, listing quality, reviews, and conversion.",
+          "A nightly price is the offered or configured price for a specific date. ADR is a retrospective average rate for booked nights under a data source's methodology. ADR is not revenue, profit, or a recommended nightly price.",
       },
       {
-        question: "What is the difference between price and perceived value?",
+        question: "Does an unavailable calendar night prove that a competitor was booked?",
         answer:
-          "Price is the amount charged. Perceived value is how guests judge that price based on photos, location, amenities, reviews, and trust.",
+          "No. An unavailable night may reflect a booking, host block, owner use, maintenance, preparation time, stay restriction, calendar control, or another operational setting. It should not be treated as confirmed booking evidence by itself.",
       },
       {
-        question: "Can better photos justify a higher Airbnb price?",
+        question: "Can pricing optimization predict the optimal price or booking probability?",
         answer:
-          "Better photos can improve perceived value and trust, which may help support a stronger price when the property and market demand justify it.",
+          "Not without a defined model, methodology, and suitable data. Public listed prices and calendars do not reveal Airbnb's private booking probability, demand curve, or an objectively optimal price.",
       },
       {
-        question: "Can Norixo audit Airbnb pricing?",
+        question: "Can Airbnb pricing optimization guarantee more bookings or revenue?",
         answer:
-          "Yes. Norixo reviews pricing signals with listing quality, market context, and competitor positioning to identify possible pricing problems.",
+          "No. Pricing optimization can support better decisions and later observation, but it cannot guarantee ranking, impressions, visibility, clicks, CTR, conversion, bookings, occupancy, ADR, RevPAR, revenue, profit, ROI, or future demand.",
       },
     ],
   },
