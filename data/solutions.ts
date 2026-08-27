@@ -85,61 +85,61 @@ export const solutions: Solution[] = [
     slug: "airbnb-listing-optimization",
     title: "Airbnb Listing Optimization",
     description:
-      "Optimize titles, descriptions, pricing, photos and guest trust signals.",
+      "Analyze and improve Airbnb titles, descriptions, photos, amenities, pricing, trust signals and competitive positioning.",
     heroTitle: "Airbnb Listing Optimization",
     heroSubtitle:
-      "Improve every part of your Airbnb listing with data-driven recommendations.",
+      "See which parts of your listing create friction, how you compare with the market, and what to improve first.",
     intro:
-      "High-performing listings combine strong pricing, compelling visuals and clear communication.",
+      "Norixo turns listing and market signals into a structured optimization review instead of a generic checklist. It examines the elements guests compare before booking and organizes the findings into clear priorities.",
     cta: "Analyze my listing",
 
     sections: [
       {
-        title: "Listing quality",
-        body: "High-performing listings combine strong photos, pricing, titles, descriptions, amenities and guest trust signals."
+        title: "Listing structure",
+        body: "Norixo reviews the listing as a complete booking page: title, description, photos, amenities, pricing context, trust signals and positioning are assessed together rather than in isolation."
       },
       {
-        title: "Photos first",
-        body: "Photos create the first impression and strongly influence click-through rate."
+        title: "Photo presentation",
+        body: "The audit reviews gallery quality and presentation signals, including whether the strongest visual proof appears early enough to support the listing's promise."
       },
       {
-        title: "Title optimization",
-        body: "Titles should clearly communicate the property's strongest selling points."
+        title: "Title and positioning",
+        body: "Titles are reviewed for clarity, relevance and differentiation so the listing's main value proposition is understandable quickly."
       },
       {
-        title: "Descriptions",
-        body: "Descriptions should answer guest questions before they are asked."
+        title: "Description and objections",
+        body: "Descriptions are checked for clarity, missing decision information and avoidable uncertainty that can weaken guest confidence before booking."
       },
       {
-        title: "Amenities",
-        body: "The right amenities improve both search relevance and conversion."
+        title: "Amenities and trust",
+        body: "Norixo looks for missing or weakly presented amenities and trust signals that can make comparable listings easier to choose."
       },
       {
-        title: "Trust",
-        body: "Reviews, cleanliness and communication reduce booking hesitation."
+        title: "Pricing context",
+        body: "Pricing is interpreted together with perceived listing quality and local market context instead of being judged as a standalone number."
       },
       {
-        title: "Competition",
-        body: "Successful hosts monitor nearby listings continuously."
+        title: "Competitive positioning",
+        body: "The audit compares how the listing is positioned against relevant market alternatives so hosts can see where their presentation is stronger, weaker or unclear."
       },
       {
-        title: "Continuous improvement",
-        body: "Optimization is an ongoing process, not a one-time task."
+        title: "Prioritized actions",
+        body: "Norixo returns structured findings and an ordered set of improvement priorities so hosts can focus on the most important issues first."
       }
     ],
 
     faq: [
       {
         question: "What is Airbnb listing optimization?",
-        answer: "It is the process of improving every element of a listing to increase visibility and bookings."
+        answer: "It is the process of improving the listing elements guests compare before booking, including photos, title, description, amenities, pricing context, trust and positioning."
       },
       {
-        question: "Does listing quality affect bookings?",
-        answer: "Yes. Better listings generally create more trust and improve conversion."
+        question: "What does Norixo analyze?",
+        answer: "Norixo reviews listing content, photos, amenities, pricing context, guest trust signals, market positioning and conversion friction, then organizes the findings into priorities."
       },
       {
-        question: "How does Norixo help?",
-        answer: "Norixo identifies opportunities across pricing, photos, descriptions and market positioning."
+        question: "Does Norixo automatically edit my Airbnb listing?",
+        answer: "No. Norixo analyzes the listing and provides recommendations; the host remains in control of any changes."
       }
     ],
   },
@@ -209,61 +209,61 @@ export const solutions: Solution[] = [
     slug: "airbnb-listing-audit",
     title: "Airbnb Listing Audit",
     description:
-      "Identify the issues reducing visibility and bookings.",
+      "Audit Airbnb listing content, photos, amenities, pricing context, trust signals, competition and conversion blockers in one structured review.",
     heroTitle: "Airbnb Listing Audit",
     heroSubtitle:
-      "Find what limits your listing performance.",
+      "Diagnose what is clear, what creates friction, how the listing compares with the market, and what to review first.",
     intro:
-      "Norixo audits pricing, photos, positioning, trust signals and conversion factors.",
+      "Norixo combines listing-level signals with market context to produce a structured audit. The goal is to identify concrete strengths, weaknesses and decision friction without pretending to guarantee ranking or bookings.",
     cta: "Run an audit",
 
     sections: [
       {
-        title: "Audit overview",
-        body: "A complete audit highlights strengths, weaknesses and optimization opportunities."
+        title: "What the audit covers",
+        body: "The audit reviews title, description, photos, amenities, pricing context, trust signals, competitive positioning and conversion friction as connected parts of the same listing."
       },
       {
-        title: "Pricing review",
-        body: "Pricing is evaluated against market context."
+        title: "Pricing and market context",
+        body: "Norixo compares the listing's pricing context with available market evidence and considers whether the presentation supports the position being asked of guests."
       },
       {
-        title: "Photo review",
-        body: "Images are assessed for quality and presentation."
+        title: "Photo analysis",
+        body: "The gallery is reviewed for presentation quality, sequencing and whether the first images provide enough visual proof of the property's main selling points."
       },
       {
-        title: "Content review",
-        body: "Titles and descriptions are reviewed for clarity and persuasion."
+        title: "Title and description review",
+        body: "Norixo checks whether the title and description communicate the property clearly, surface meaningful differentiators and answer important guest questions."
       },
       {
-        title: "Competition",
-        body: "Nearby listings provide important benchmarks."
+        title: "Amenities and guest trust",
+        body: "The audit identifies missing, unclear or weakly presented amenities and trust signals that may create avoidable hesitation."
       },
       {
-        title: "Guest trust",
-        body: "Reviews and trust signals influence booking decisions."
+        title: "Competitive positioning",
+        body: "Relevant alternatives provide context for how the listing is presented, where it appears weaker or stronger, and which differences guests can actually notice."
       },
       {
-        title: "Priorities",
-        body: "Focus first on improvements with the greatest potential impact."
+        title: "Scores and findings",
+        body: "Norixo organizes the analysis into structured findings and category-level signals so the host can understand where attention is needed instead of receiving an unranked list of tips."
       },
       {
-        title: "Continuous monitoring",
-        body: "Regular audits help maintain competitiveness."
+        title: "Prioritized recommendations",
+        body: "The final report orders recommended actions by importance and explains what each recommendation is intended to clarify or improve."
       }
     ],
 
     faq: [
       {
-        question: "Why audit an Airbnb listing?",
-        answer: "Audits identify issues that reduce visibility and conversion."
+        question: "What is an Airbnb listing audit?",
+        answer: "An Airbnb listing audit is a structured review of the listing elements that shape guest understanding and booking confidence, including content, photos, amenities, pricing context, trust and competitive positioning."
       },
       {
-        question: "How often should I audit?",
-        answer: "Reviewing a listing regularly helps adapt to market changes."
+        question: "What does Norixo return after an audit?",
+        answer: "Norixo returns structured findings, category-level signals and prioritized recommendations covering the main listing and market factors reviewed."
       },
       {
-        question: "What does Norixo audit?",
-        answer: "Pricing, photos, positioning, trust, competition and conversion signals."
+        question: "Does a Norixo audit guarantee more bookings or a higher ranking?",
+        answer: "No. The audit identifies evidence-based improvement opportunities and priorities, but it does not guarantee marketplace ranking, bookings or revenue."
       }
     ],
   },
