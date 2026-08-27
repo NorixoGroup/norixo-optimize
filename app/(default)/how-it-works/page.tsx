@@ -7,9 +7,9 @@ const siteUrl = (
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://norixo.io"
 ).replace(/\/$/, "");
 const pageTitle =
-  "How Norixo Optimize works – Airbnb & Booking listing audit";
+  "How Norixo works – Airbnb & Booking listing audit";
 const pageDescription =
-  "Discover how Norixo Optimize analyzes your Airbnb and Booking listings, evaluates your market position and generates practical recommendations to improve conversion.";
+  "Discover how Norixo analyzes your Airbnb and Booking listings, evaluates your market position and generates practical recommendations to improve conversion.";
 const alternates = buildHreflangAlternates("/how-it-works");
 const socialImage = "/og-cover.png";
 
