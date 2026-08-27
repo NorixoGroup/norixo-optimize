@@ -26,6 +26,8 @@ async function main(): Promise<void> {
   assert.match(source, /<select name="opportunity_id" required disabled=\{pages\.opportunities\.items\.length === 0\} value=\{editorFieldValue\(field\.key\)\}/);
   assert.match(source, /<select name="campaign_id" required disabled=\{pages\.campaigns\.items\.length === 0\} value=\{editorFieldValue\(field\.key\)\}/);
   assert.match(source, /<select name="page_type" value=\{editorFieldValue\("page_type"\)\}/);
+  assert.match(source, /OutreachContactRow/);
+  assert.match(source, /const sendAction = activeSection === "outreach" \? outreachSendAction\(row, contact\) : null;/);
   assert.match(source, /method: editor\.row == null \? "POST" : "PATCH"/);
   assert.match(source, /Chargement du cockpit Backlinks/);
   assert.match(source, /backlinks nécessitent votre attention/);
@@ -38,6 +40,7 @@ async function main(): Promise<void> {
     source,
     /repositories\/|\.from\(|createSupabase|SUPABASE_SERVICE_ROLE_KEY|service_role|\/api\/admin\//,
   );
+  assert.doesNotMatch(source, /outreachSendDialog\.channel !== "email"/);
 
   console.info("Backlink dashboard smoke passed.");
 }

@@ -4,6 +4,30 @@ type Contact = { id: string; contact_key: string; full_name: string | null; role
 type Outreach = { id: string; contact_id: string; channel: string; status: string };
 type Opportunity = { id: string; domain_id: string; asset_id: string };
 
+export type BacklinkOutreachChannelEvidence = {
+  contact_status: string;
+  email_normalized: string | null;
+  linkedin_url?: string | null;
+  contact_form_url?: string | null;
+};
+
+export function resolveBacklinkOutreachChannels(
+  contact: BacklinkOutreachChannelEvidence,
+): OutreachDraftChannel[] {
+  const available = contact.contact_status !== "do_not_contact" && contact.contact_status !== "archived";
+  const channels: OutreachDraftChannel[] = [];
+  if (available && contact.email_normalized) channels.push("email");
+  if (available && contact.linkedin_url) channels.push("linkedin");
+  if (available && contact.contact_form_url) channels.push("contact_form");
+  return channels;
+}
+
+export function resolveBacklinkOutreachPreferredChannel(
+  contact: BacklinkOutreachChannelEvidence,
+): OutreachDraftChannel | null {
+  return resolveBacklinkOutreachChannels(contact)[0] ?? null;
+}
+
 export type OutreachDraftEligibilityDependencies = {
   getMembership: (input: { workspaceId: string; campaignId: string; opportunityId: string }) => Promise<{ campaign_id: string; opportunity_id: string }>;
   getOpportunity: (workspaceId: string, opportunityId: string) => Promise<Opportunity>;
@@ -20,11 +44,7 @@ export async function getBacklinkOutreachDraftEligibilityForMembership(deps: Out
     const unavailableReasons: OutreachDraftEligibilityReason[] = [];
     if (contact.contact_status === "do_not_contact") unavailableReasons.push("CONTACT_DO_NOT_CONTACT");
     if (contact.contact_status === "archived") unavailableReasons.push("CONTACT_ARCHIVED");
-    const available = contact.contact_status !== "do_not_contact" && contact.contact_status !== "archived";
-    const channels: OutreachDraftChannel[] = [];
-    if (available && contact.email_normalized) channels.push("email");
-    if (available && contact.linkedin_url) channels.push("linkedin");
-    if (available && contact.contact_form_url) channels.push("contact_form");
+    const channels = resolveBacklinkOutreachChannels(contact);
     const eligibleChannels = channels.filter((channel) => {
       const occupied = outreach.some((item) => item.id !== input.excludeOutreachId && item.contact_id === contact.id && item.channel === channel && activeStatuses.has(item.status));
       if (occupied) unavailableReasons.push("OUTREACH_ALREADY_ACTIVE");

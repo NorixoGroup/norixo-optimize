@@ -1,7 +1,11 @@
 import { randomUUID } from "node:crypto";
 import type { BacklinkOutreachAttemptReservation, BacklinkOutreachAttemptRow } from "../repositories/outreachAttemptsRepository";
 import type { OutreachEmailSendResult } from "../providers/outreachEmailProvider";
-import { getBacklinkOutreachDraftEligibilityForMembership, type OutreachDraftEligibilityDependencies } from "./outreachDraftEligibilityService";
+import {
+  getBacklinkOutreachDraftEligibilityForMembership,
+  resolveBacklinkOutreachPreferredChannel,
+  type OutreachDraftEligibilityDependencies,
+} from "./outreachDraftEligibilityService";
 import { BacklinkOutreachReplyCorrelationIdentityError, deriveBacklinkOutreachReplyCorrelationIdentity, reconstructBacklinkOutreachReplyToForAttempt, type BacklinkOutreachReplyTokenKeyring } from "./outreachReplyCorrelationIdentity";
 import type { AutomationWorkspaceControl } from "@/lib/automation/workspace-control-types";
 
@@ -25,6 +29,8 @@ type Contact = {
   domain_id: string;
   contact_status: string;
   email_normalized: string | null;
+  linkedin_url?: string | null;
+  contact_form_url?: string | null;
 };
 
 export type BacklinkOutreachEmailSendErrorCode =
@@ -53,6 +59,7 @@ export type BacklinkOutreachEmailSendDependencies = {
   getContact: (workspaceId: string, contactId: string) => Promise<Contact>;
   getAttemptByIdempotencyKey: (workspaceId: string, idempotencyKey: string) => Promise<BacklinkOutreachAttemptRow | null>;
   getOpenAttemptForOutreach: (workspaceId: string, outreachId: string) => Promise<BacklinkOutreachAttemptRow | null>;
+  updateOutreach: (workspaceId: string, outreachId: string, input: { channel: "email" }) => Promise<Outreach>;
   reserveAttempt: (workspaceId: string, input: { attemptId: string; outreachId: string; actorUserId: string; channel: "email"; provider: "resend"; recipient: string; idempotencyKey: string; replyTokenHash: string; replyTokenKeyVersion: string; attemptKind: "initial" }) => Promise<BacklinkOutreachAttemptReservation>;
   markAttemptAccepted: (input: { workspaceId: string; attemptId: string; providerMessageId: string | null }) => Promise<unknown>;
   markAttemptFailed: (input: { workspaceId: string; attemptId: string; errorCode: string; errorMessage: string }) => Promise<unknown>;
@@ -167,9 +174,6 @@ export function sendBacklinkOutreachEmail(
     if (outreach.status !== "ready") {
       throw new BacklinkOutreachEmailSendError("OUTREACH_NOT_SENDABLE");
     }
-    if (outreach.channel !== "email") {
-      throw new BacklinkOutreachEmailSendError("OUTREACH_EMAIL_CHANNEL_UNSUPPORTED");
-    }
     if (outreach.current_attempt >= outreach.max_attempts) {
       throw new BacklinkOutreachEmailSendError("OUTREACH_MAX_ATTEMPTS_REACHED");
     }
@@ -181,6 +185,7 @@ export function sendBacklinkOutreachEmail(
     );
     const contact = await dependencies.getContact(input.workspaceId, outreach.contact_id);
     const recipient = contact.email_normalized?.trim();
+    const preferredChannel = resolveBacklinkOutreachPreferredChannel(contact);
     if (
       contact.domain_id !== eligibility.domainId ||
       contact.contact_status === "do_not_contact" ||
@@ -189,6 +194,16 @@ export function sendBacklinkOutreachEmail(
       !eligibility.contacts.some((item) => item.contactId === contact.id)
     ) {
       throw new BacklinkOutreachEmailSendError("OUTREACH_CONTACT_NOT_ELIGIBLE");
+    }
+    if (outreach.status === "ready" && outreach.current_attempt === 0 && outreach.channel !== "email") {
+      if (preferredChannel !== "email") {
+        throw new BacklinkOutreachEmailSendError("OUTREACH_EMAIL_CHANNEL_UNSUPPORTED");
+      }
+      const reconciled = await dependencies.updateOutreach(input.workspaceId, outreach.id, { channel: "email" });
+      outreach.channel = reconciled.channel;
+    }
+    if (outreach.channel !== "email") {
+      throw new BacklinkOutreachEmailSendError("OUTREACH_EMAIL_CHANNEL_UNSUPPORTED");
     }
 
     const openAttempt = await dependencies.getOpenAttemptForOutreach(input.workspaceId, outreach.id);

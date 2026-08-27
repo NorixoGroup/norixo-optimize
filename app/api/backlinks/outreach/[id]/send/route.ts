@@ -3,7 +3,7 @@ import { isAdminPrivateEmail } from "@/lib/auth/isAdminEmail";
 import { getCampaignOpportunity } from "@/lib/backlinks/repositories/campaignOpportunitiesRepository";
 import { getBacklinkContactById, listBacklinkContactsByDomain } from "@/lib/backlinks/repositories/contactsRepository";
 import { getBacklinkOpportunityById } from "@/lib/backlinks/repositories/opportunitiesRepository";
-import { getBacklinkOutreachById, activateBacklinkOutreachAfterEmailAccepted, listBacklinkOutreachByOpportunity } from "@/lib/backlinks/repositories/outreachRepository";
+import { getBacklinkOutreachById, activateBacklinkOutreachAfterEmailAccepted, listBacklinkOutreachByOpportunity, updateBacklinkOutreach } from "@/lib/backlinks/repositories/outreachRepository";
 import { getBacklinkOutreachAttemptById, getBacklinkOutreachAttemptByIdempotencyKey, getOpenBacklinkOutreachAttemptForOutreach, reserveBacklinkOutreachAttempt, updateBacklinkOutreachAttemptState } from "@/lib/backlinks/repositories/outreachAttemptsRepository";
 import { getAutomationWorkspaceControl } from "@/lib/automation/repositories/automationWorkspaceControlsRepository";
 import { createEnvironmentOutreachEmailProvider } from "@/lib/backlinks/providers/outreachEmailProvider";
@@ -44,6 +44,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       getContact: (workspaceId, contactId) => getBacklinkContactById(auth.client, workspaceId, contactId),
       getAttemptByIdempotencyKey: (workspaceId, idempotencyKey) => getBacklinkOutreachAttemptByIdempotencyKey(auth.client, workspaceId, idempotencyKey),
       getOpenAttemptForOutreach: (workspaceId, outreachId) => getOpenBacklinkOutreachAttemptForOutreach(auth.client, workspaceId, outreachId),
+      updateOutreach: (workspaceId, outreachId, value) => updateBacklinkOutreach(auth.client, workspaceId, outreachId, value),
       reserveAttempt: (workspaceId, value) => reserveBacklinkOutreachAttempt(auth.client, workspaceId, value),
       markAttemptAccepted: markBacklinkOutreachAttemptAccepted(transitions),
       markAttemptFailed: markBacklinkOutreachAttemptFailed(transitions),

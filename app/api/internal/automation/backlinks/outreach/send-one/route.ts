@@ -13,6 +13,7 @@ import {
   listBacklinkOutreachLiveAutoSendCandidates,
   listBacklinkOutreachByOpportunity,
   activateBacklinkOutreachAfterEmailAccepted,
+  updateBacklinkOutreach,
 } from "@/lib/backlinks/repositories/outreachRepository";
 import {
   getBacklinkOutreachAttemptById,
@@ -199,6 +200,8 @@ export async function POST(request: NextRequest) {
         getBacklinkOutreachAttemptByIdempotencyKey(adminClient, workspaceId, idempotencyKey),
       getOpenAttemptForOutreach: (workspaceId, outreachId) =>
         getOpenBacklinkOutreachAttemptForOutreach(adminClient, workspaceId, outreachId),
+      updateOutreach: (workspaceId, outreachId, input) =>
+        updateBacklinkOutreach(adminClient, workspaceId, outreachId, input),
       reserveAttempt: (workspaceId, input) =>
         reserveBacklinkOutreachAttempt(adminClient, workspaceId, input),
       markAttemptAccepted: markBacklinkOutreachAttemptAccepted(transitions),
