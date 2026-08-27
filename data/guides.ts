@@ -1229,102 +1229,174 @@ export const guides: Guide[] = [
     slug: "airbnb-description-generator",
     title: "Airbnb Description Generator Guide",
     description:
-      "The complete Airbnb description generator guide for writing clearer, more persuasive listing descriptions that improve trust, answer guest questions, and support bookings.",
-    heroTitle: "Airbnb description generator: write descriptions that convert",
+      "A practical Airbnb description generator guide for writing accurate, specific listing copy that explains the stay, guest-use context, amenities, access, and material limitations.",
+    heroTitle: "Airbnb description generator: write clearer listing copy",
     heroSubtitle:
-      "Learn how to write Airbnb descriptions that explain the stay clearly, reduce guest hesitation, and make your listing easier to book.",
+      "Learn how to write Airbnb descriptions that explain the stay clearly, avoid unsupported claims, and set realistic guest expectations.",
     intro:
-      "An Airbnb description should do more than describe a property. It should help guests understand the stay, trust the listing, compare it with alternatives, and feel confident enough to book. A strong description answers questions before they become objections.",
+      "An Airbnb description should give guests accurate context about the stay that is not already obvious from the title, photos, amenity fields, or basic listing facts. A useful description explains the space, access, sleeping setup, relevant amenities, and material limitations without turning those details into ranking, conversion, or booking promises.",
+    answerFirst: {
+      title: "What makes a good Airbnb description?",
+      body: "A good Airbnb description gives guests accurate, useful context about the stay that is not already clear from the title, photos, amenity fields, or basic listing facts. It should explain the space, guest-use areas, sleeping and layout context, notable verified features, practical access details, material limitations, and realistic expectations in concise, factual, specific, readable language.",
+    },
+    auditFramework: {
+      title: "Description evidence: a seven-dimension listing-copy review",
+      rows: [
+        {
+          dimension: "1. Property identity",
+          evidenceLabel: "Observable listing input",
+          review: "Check the property type, room configuration, sleeping setup, and verified listing facts.",
+          whyItMatters: "Host-side interpretation: the description should make the accommodation easy to understand without restating every basic field.",
+        },
+        {
+          dimension: "2. Guest-use context",
+          evidenceLabel: "Observable listing input",
+          review: "Check private and shared spaces, workspace, outdoor areas, sleeping use, and relevant access configuration.",
+          whyItMatters: "Host-side interpretation: include context when it changes how a guest understands use of the stay.",
+        },
+        {
+          dimension: "3. Distinguishing facts",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Identify truthful features that materially differentiate the stay and can be verified from the listing.",
+          whyItMatters: "Host-side interpretation: specific verified details may deserve description space when they add useful information.",
+        },
+        {
+          dimension: "4. Field overlap and redundancy",
+          evidenceLabel: "Observable listing input",
+          review: "Compare the description with the title, photos, amenity fields, capacity, bed count, and other structured listing data.",
+          whyItMatters: "Host-side interpretation: avoid duplicating information unless prose adds necessary context.",
+        },
+        {
+          dimension: "5. Access and practical details",
+          evidenceLabel: "Observable listing input",
+          review: "Check stairs, lift or elevator, parking, shared entrance, access method, restricted spaces, and material timing or usage constraints.",
+          whyItMatters: "Host-side interpretation: include these details when they affect reasonable expectations about the stay.",
+        },
+        {
+          dimension: "6. Material limitations",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Check noise, current construction, stairs, no elevator, shared spaces, limited parking, small rooms, low ceilings, unusual layouts, or restricted amenity access.",
+          whyItMatters: "Host-side interpretation: disclose a limitation when it materially changes what a reasonable guest might expect.",
+        },
+        {
+          dimension: "7. Accuracy and expectation alignment",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Check consistency among the description, photos, amenities, access details, and actual stay.",
+          whyItMatters: "Host-side interpretation: inconsistencies may justify factual correction or clarification, not outcome claims.",
+        },
+      ],
+    },
     sections: [
       {
         title: "What an Airbnb description generator should do",
-        body: "A good Airbnb description generator should not create generic text. It should structure the listing around guest intent, property strengths, sleeping setup, amenities, location, access, rules, and the main reasons someone should book.",
+        body: "A good Airbnb description generator should not create generic or exaggerated text. It should organize verified listing facts around property identity, guest-use context, sleeping setup, amenities, location, access, rules, and material details that help guests understand the stay.",
       },
       {
-        title: "The goal of an Airbnb description",
-        body: "The goal is to reduce uncertainty. Guests want to know what the space is like, who it fits, what is included, where it is located, how check-in works, and whether the stay matches their trip.",
+        title: "Separate fact, interpretation, and outcome",
+        body: "Fact is what the listing can verify, such as an apartment being on the third floor without an elevator. Editorial interpretation is deciding that this access context is materially relevant and should be disclosed clearly. The description should not claim that mentioning the fact improves conversion, prevents bad reviews, or produces bookings.",
       },
       {
-        title: "Start with the strongest reason to book",
-        body: "The opening lines should immediately communicate the listing's main value: sea view, central location, pool, family setup, workspace, private terrace, design, parking, beach access, or proximity to major attractions.",
+        title: "Description versus title",
+        body: "The title is a short identifying or differentiating summary. The description has more room for factual context about the stay, so it should not simply repeat the title or make title-ranking or click claims.",
       },
       {
-        title: "Explain the space clearly",
-        body: "Guests need to understand the layout. Describe bedrooms, beds, bathrooms, living areas, kitchen, outdoor spaces, workspaces, and any shared or private areas. Avoid vague wording that forces guests to guess.",
+        title: "Use structured amenities and prose differently",
+        body: "Use Airbnb's structured amenity fields to represent amenity availability. Mention an amenity in prose only when its configuration, access, practical context, or effect on how the space is used prevents ambiguity; do not duplicate long amenity lists or claim repetition improves ranking, visibility, conversion, or bookings.",
       },
       {
-        title: "Describe who the listing is best for",
-        body: "A strong description helps the right guests recognize themselves. Mention whether the stay fits couples, families, remote workers, business travelers, groups of friends, beach stays, city breaks, or long stays.",
+        title: "Write a bounded opening paragraph",
+        body: "The opening can name the property identity, one or two verified distinguishing facts, and useful stay context. Avoid exaggerated superlatives, unsupported best-in-market language, generic luxury claims, long feature lists, and any formula presented as Airbnb's own method.",
       },
       {
-        title: "Highlight amenities with context",
-        body: "Do not only list amenities. Explain why they matter. Fast Wi-Fi supports remote work, air conditioning improves summer comfort, parking reduces stress, and a washing machine helps longer stays.",
+        title: "Treat length as a clarity issue, not a benchmark",
+        body: "There is no universal ideal word count for an Airbnb description unless Airbnb publishes one for the relevant field. Keep the copy concise enough to scan and detailed enough to explain material guest-use information, then remove duplication and filler.",
       },
       {
-        title: "Clarify the location",
-        body: "Location information should help guests imagine the trip. Explain nearby landmarks, beaches, transport, restaurants, business districts, attractions, and what the neighborhood feels like. Be honest about distances and access.",
+        title: "Clarify guest access and practical context",
+        body: "Describe private or shared areas, restricted spaces, relevant entry or access context, stairs, lift or elevator availability, parking, and material timing or usage constraints when they affect listing understanding. Keep this about what the stay includes rather than a full operational check-in guide.",
       },
       {
-        title: "Answer common guest objections",
-        body: "Descriptions should answer questions about noise, stairs, parking, check-in, building access, sleeping setup, rules, safety, Wi-Fi, air conditioning, heating, and anything that may affect expectations.",
+        title: "Disclose material limitations",
+        body: "Disclose limitations that affect what a reasonable guest might expect from the stay, such as street noise, current nearby construction, stairs, no elevator, shared spaces, limited parking, small rooms, low ceilings, unusual layouts, or restricted amenity access. Do not turn disclosure into a guarantee of ratings, reviews, conversion, bookings, or ranking.",
       },
       {
-        title: "Use structure, not long paragraphs",
-        body: "Guests scan quickly. Use clear sections such as The space, What guests love, Sleeping setup, Amenities, Location, Guest access, and Things to know. Structure makes the listing easier to trust.",
+        title: "Frame target-guest relevance safely",
+        body: "A description may emphasize facts relevant to families, remote work, long stays, couples, or business travel when those details are accurate and non-discriminatory. Treat this as informational relevance, not a universal ideal-guest claim or a promise of better commercial performance.",
       },
       {
-        title: "Avoid generic copy",
-        body: "Generic phrases like 'beautiful apartment' or 'perfect location' are weak unless supported by specifics. Strong descriptions use concrete details that help guests understand why the stay is valuable.",
+        title: "Use Norixo's description audit sequence",
+        body: "Identify the verified fact, classify where it belongs, check coverage, check specificity, check field overlap, add guest-use context, disclose material limitations, remove duplication or unsupported claims, and then check expectation alignment. This is Norixo's host-side synthesis, not Airbnb's framework, a proprietary copy score, a ranking formula, or a conversion model.",
       },
       {
-        title: "Keep the tone honest and persuasive",
-        body: "Good Airbnb copy should be warm and confident, but not exaggerated. Overpromising creates disappointment and bad reviews. Honest descriptions attract better-fit guests and reduce complaints.",
+        title: "Do not promise commercial outcomes",
+        body: "A clearer and more accurate description can improve information quality and expectation clarity, but it cannot guarantee ranking, impressions, visibility, clicks, CTR, conversion, bookings, occupancy, ADR, RevPAR, revenue, profit, ratings, reviews, or future guest satisfaction.",
       },
       {
-        title: "How Norixo helps improve descriptions",
-        body: "Norixo identifies vague copy, missing information, weak positioning, unclear guest fit, and description gaps that may reduce trust or booking conversion.",
+        title: "How Norixo helps review descriptions",
+        body: "Norixo identifies vague wording, missing factual context, field overlap, unclear guest-use information, and description gaps that may need clearer copy. The review stays focused on observable listing information and bounded editorial interpretation.",
       },
     ],
+    evidenceSources: {
+      title: "Official Airbnb description sources and boundaries",
+      note: "Airbnb documents its own listing-description guidance. Norixo's seven-dimension description-evidence framework is a transparent host-side synthesis: Airbnb does not endorse Norixo, and these sources do not prove ranking, clicks, CTR, conversion, bookings, occupancy, revenue, or profit outcomes.",
+      sources: [
+        {
+          title: "Airbnb — Writing an effective listing description",
+          href: "https://www.airbnb.com/resources/hosting-homes/a/writing-an-effective-listing-description-13",
+          role: "Accurate listing copy, factual context, realistic representation, and relevant limitations or access context where supported.",
+        },
+        {
+          title: "Airbnb — How to write a great description",
+          href: "https://www.airbnb.com/resources/hosting-homes/a/how-to-write-a-great-description-369",
+          role: "Clear structure, useful specifics, concise guest-facing copy, and special features where supported.",
+        },
+        {
+          title: "Airbnb — Help your listing stand out",
+          href: "https://www.airbnb.com/resources/hosting-homes/a/help-your-listing-stand-out-658",
+          role: "Truthful special features, concise relevant context, and avoiding unnecessary duplication where supported.",
+        },
+      ],
+    },
     faq: [
+      {
+        question: "What makes a good Airbnb description?",
+        answer:
+          "A good Airbnb description gives accurate, specific context about the stay that is not already obvious from the title, photos, amenities, or basic listing facts. It should help guests understand the space, access, sleeping setup, relevant features, and material limitations.",
+      },
       {
         question: "What should an Airbnb description include?",
         answer:
-          "It should include the space, sleeping setup, amenities, location, guest access, house rules, check-in context, and the main reasons guests should book.",
+          "It should include verified facts about the space, sleeping setup, guest-use areas, location context, relevant amenities, access details, rules or constraints, and material information that shapes realistic expectations.",
       },
       {
         question: "How long should an Airbnb description be?",
         answer:
-          "It should be long enough to answer important guest questions, but structured so it is easy to scan. Clarity matters more than length.",
+          "Use enough words to explain material guest-use information clearly, but remove filler and duplication. Do not treat a universal word count as an SEO, ranking, conversion, or booking optimum unless Airbnb publishes that exact benchmark for the field.",
       },
       {
-        question: "Can a better Airbnb description increase bookings?",
+        question: "Should amenities be repeated in an Airbnb description?",
         answer:
-          "Yes. A clearer description can reduce hesitation, answer objections, improve trust, and support booking conversion.",
+          "Not as a full duplicate list. Use Airbnb's structured amenity fields for availability, and mention an amenity in prose only when configuration, access, practical context, or guest-use meaning would otherwise be unclear.",
       },
       {
-        question: "What is the best structure for an Airbnb description?",
+        question: "Should hosts disclose limitations in an Airbnb description?",
         answer:
-          "A strong structure includes an opening value statement, space overview, sleeping setup, amenities, location, guest access, rules, and things to know.",
+          "Yes, when a limitation materially affects what a reasonable guest might expect from the stay. Disclose details such as stairs, no elevator, shared spaces, restricted amenities, noise, or access constraints factually, without promising review or booking outcomes.",
       },
       {
-        question: "Should I use keywords in my Airbnb description?",
+        question: "Can rewriting an Airbnb description guarantee more bookings?",
         answer:
-          "Use natural keywords only when they help clarity. Do not stuff keywords. Airbnb descriptions should primarily help guests understand and trust the stay.",
+          "No. Clearer description copy can improve information quality and expectation clarity, but it cannot guarantee ranking, impressions, visibility, clicks, CTR, conversion, bookings, occupancy, ADR, RevPAR, revenue, profit, ratings, reviews, or future guest satisfaction.",
       },
       {
-        question: "What Airbnb description mistakes should I avoid?",
+        question: "How should Airbnb descriptions differ from listing titles?",
         answer:
-          "Avoid vague copy, exaggerated promises, missing amenities, unclear sleeping setup, poor location context, and long unstructured paragraphs.",
+          "The title is a short identifying or differentiating summary. The description should provide broader factual context about the stay, guest-use areas, access, layout, amenities, and limitations instead of simply repeating the title.",
       },
       {
-        question: "Can Norixo help rewrite Airbnb descriptions?",
+        question: "How can hosts audit an Airbnb description?",
         answer:
-          "Norixo can identify description weaknesses and show where the listing copy may be unclear, generic, or missing key guest information.",
-      },
-      {
-        question: "Should Airbnb descriptions mention house rules?",
-        answer:
-          "Yes, important rules should be clear so guests understand expectations before booking and there are fewer surprises later.",
+          "Start with verified listing facts, classify whether each fact belongs in the title, photos, amenity fields, or prose, then check coverage, specificity, field overlap, guest-use context, material limitations, and expectation alignment.",
       },
     ],
   },
