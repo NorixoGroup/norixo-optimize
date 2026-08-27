@@ -30,7 +30,7 @@ export default function RankingsHubPage() {
 
         <div className="mt-8 flex flex-wrap gap-3">
           <Link
-            href="/analyze"
+            href="/free-audit"
             className="rounded-full bg-[#10231F] px-6 py-3 text-sm font-semibold text-white"
           >
             Audit my Airbnb listing
