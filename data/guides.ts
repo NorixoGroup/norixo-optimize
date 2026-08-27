@@ -1750,72 +1750,149 @@ export const guides: Guide[] = [
     slug: "airbnb-market-intelligence",
     title: "Airbnb Market Intelligence Guide",
     description:
-      "A practical Airbnb market intelligence guide for hosts who want to compare markets, understand local context, read rankings and reports, and decide what to optimize next.",
+      "A practical Airbnb market intelligence guide for hosts who want to compare observable market context, reports, rankings, and listing evidence without treating them as forecasts or guarantees.",
     heroTitle: "Airbnb Market Intelligence: How to Compare Markets Before Optimizing Your Listing",
     heroSubtitle:
-      "Learn how to read Airbnb market context before making pricing, revenue, SEO, photo, trust, or conversion decisions for a listing.",
+      "Learn how to separate market observations, public benchmarks, host interpretation, and outcomes before making listing decisions.",
     intro:
-      "Airbnb market intelligence is the practice of understanding the market around a listing before deciding what to improve. It helps hosts compare cities, countries, destinations, guest expectations, pricing context, competition, photo depth, trust signals, and local positioning. The goal is not to predict demand or guarantee returns. The goal is to make better listing decisions with clearer market context.",
+      "Airbnb market intelligence is the practice of reading observable market and listing context before deciding what to investigate or change. It helps hosts compare destination type, guest-use context, comparable listings, public benchmark context, visible listing differences, and time period without treating those signals as private Airbnb data, forecasts, or guaranteed outcomes.",
+    answerFirst: {
+      title: "What Airbnb market intelligence means",
+      body: "Airbnb market intelligence uses observable market and listing context to understand how a property sits relative to alternatives. It may include destination type, guest-use context, comparable listings, visible pricing context, occupancy, ADR, or RevPAR benchmarks when scope and methodology are known, supply and availability context, listing differences, public reports, and Norixo market rankings. It is decision context, not a forecast, guarantee, private Airbnb ranking feed, future-demand proof, individualized pricing advice, or investment advice.",
+    },
+    auditFramework: {
+      title: "A bounded Airbnb market-intelligence framework",
+      rows: [
+        {
+          dimension: "Destination / market type",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Identify whether the destination is urban, leisure, event-driven, seasonal, business-oriented, family-oriented, remote-work friendly, or mixed based on observable public context.",
+          whyItMatters: "This frames the comparison set, but it is not an Airbnb taxonomy, attractiveness score, demand forecast, or investment signal.",
+        },
+        {
+          dimension: "Guest intent and use case",
+          evidenceLabel: "Observable listing input",
+          review: "Describe likely stay-use contexts such as short city breaks, family stays, work trips, extended stays, beach travel, or event visits when supported by listing and location evidence.",
+          whyItMatters: "Guest-use context helps interpret what information may matter; it does not prove exact demand distribution or booking probability.",
+        },
+        {
+          dimension: "Comparable-set selection",
+          evidenceLabel: "Norixo heuristic / comparison",
+          review: "Select alternatives by relevance and substitutability across micro-location, property type, capacity, bedrooms, bathrooms, amenity profile, condition, stay-use context, time period, and availability context.",
+          whyItMatters: "Comparable quality matters more than distance alone; Norixo does not require or imply a universal comp count or proprietary similarity score.",
+        },
+        {
+          dimension: "Public benchmark context",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Read occupancy, ADR, RevPAR, revenue, listing count, and availability benchmarks only when their source, period, and calculation method are clear enough to interpret.",
+          whyItMatters: "A benchmark provides context for investigation, not a target, forecast, recommended rate, or guaranteed outcome.",
+        },
+        {
+          dimension: "Listing-level differences",
+          evidenceLabel: "Observable listing input",
+          review: "Compare visible differences such as photos, description clarity, amenities, reviews, rating context, rules, access details, fees, and location explanation.",
+          whyItMatters: "Differences can form bounded hypotheses about presentation or expectation gaps; they do not establish Airbnb ranking causes.",
+        },
+        {
+          dimension: "Time period / seasonality context",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Normalize comparisons by date range, season, weekday/weekend mix, events, booking window, and availability constraints when that context is visible or documented.",
+          whyItMatters: "A market signal from one period should not be generalized into future demand, future occupancy, or future revenue.",
+        },
+        {
+          dimension: "Decision boundary / non-forecast interpretation",
+          evidenceLabel: "Norixo heuristic / comparison",
+          review: "Use market context to decide what to inspect next, then separate the host action from any later performance result.",
+          whyItMatters: "Market intelligence supports judgment; it is not a ranking formula, pricing engine, forecast model, ROI guarantee, or Airbnb endorsement.",
+        },
+      ],
+    },
     sections: [
       {
-        title: "What Airbnb market intelligence means",
-        body: "Airbnb market intelligence means looking beyond one listing and understanding the environment in which it competes. A host should know whether the market is price-sensitive, visually competitive, trust-driven, family-oriented, city-break focused, premium, seasonal, or crowded with similar properties. This context helps explain why the same listing quality can perform differently in two destinations.",
+        title: "Observation is not the same as benchmark, interpretation, or outcome",
+        body: "Keep the evidence chain explicit: observation is what can be seen or documented, benchmark is a scoped comparison, interpretation is a bounded host-side hypothesis, and outcome is what actually happens later. OBSERVATION != BENCHMARK != INTERPRETATION != OUTCOME. A visible price gap, availability pattern, or report metric can justify investigation, but it does not by itself prove clicks, CTR, conversion, bookings, occupancy, ADR, RevPAR, revenue, profit, ranking, or future demand.",
       },
       {
-        title: "Why market context matters before optimization",
-        body: "Optimization without market context can lead to the wrong priorities. A listing in a premium city may need stronger trust and presentation before price changes make sense. A listing in a highly visual leisure market may need better photos before copy changes matter. A listing in a dense urban market may need clearer location and value positioning. Market intelligence helps hosts decide what to fix first.",
+        title: "Build comparable sets by relevance, not distance alone",
+        body: "A good Airbnb comparable should be substitutable for the same guest need. Review micro-location, property type, capacity, bedrooms, bathrooms, amenity profile, quality or condition, stay-use context, time period, and availability context. There is no universal rule that a host must use five, ten, fifteen, or any fixed number of comps; the core principle is relevance and substitutability.",
       },
       {
-        title: "How to compare Airbnb markets",
-        body: "A useful market comparison looks at the type of destination, guest intent, local competition, price expectations, visual standards, review quality, and the kind of listings guests are likely to compare. Comparing Paris with Marrakech, Dubai, Tokyo, Barcelona, or New York is not only about price. Each market has different guest expectations, property types, trust signals, and decision patterns.",
+        title: "Unavailable nights do not automatically prove bookings",
+        body: "Calendar availability needs careful handling. An unavailable night may be booked, host-blocked, reserved for maintenance, used by the owner, constrained by minimum-stay rules, affected by preparation time, or controlled by another setting. UNAVAILABLE NIGHT != CONFIRMED BOOKING. Do not infer occupancy, demand, or booking pace from unavailable nights unless the data source explains the method and scope.",
       },
       {
-        title: "Market demand and guest intent",
-        body: "Market demand should be understood carefully. Norixo should not be treated as a live demand prediction engine or investment forecasting tool. But hosts can still think about guest intent: business travel, city breaks, family stays, cultural trips, beach holidays, long stays, events, or premium leisure. These patterns influence how guests search, what they notice first, and what information they need before booking.",
+        title: "Interpret benchmarks without turning them into targets",
+        body: "Occupancy, ADR, and RevPAR benchmarks are contextual signals when the source methodology and period are known. A gap can justify questions, but it should not be turned into a cause or prescription. Possible explanations can include comparable mismatch, availability restrictions, listing differences, stay rules, seasonality, event context, quality, price, demand context, or other factors outside the metric.",
       },
       {
-        title: "Competition and local positioning",
-        body: "Competition is not just the number of listings in a place. It is the set of alternatives a guest sees and compares. Local positioning depends on property type, neighborhood, price band, visual quality, amenities, review strength, and clarity of the listing. A market can be attractive and still difficult if many nearby listings communicate value more clearly.",
+        title: "Market reports are not forecasts unless they say so",
+        body: "A market report usually describes observed, collected, modeled, or aggregated information for a stated period and methodology. Treat that as context, not as a prediction of future demand, future occupancy, future ADR, future RevPAR, future bookings, revenue, or profit. A report becomes a forecast only when it provides an explicit forecast method and scope.",
       },
       {
-        title: "Pricing context versus pricing strategy",
-        body: "Market intelligence can explain price context: whether a market tends to look premium, accessible, competitive, or highly variable. That is different from a full pricing strategy. Pricing optimization decides how to set and adjust a specific listing's rate. Market intelligence helps a host understand whether the listing's price feels supported by photos, amenities, trust, location, and nearby alternatives.",
+        title: "Booking pace is time-relative, not proof of future demand",
+        body: "Booking pace can be useful only when the underlying method is known and the signal is tied to a specific time window. A phrase like 70% unavailable should not be rewritten as 70% booked unless the source proves that interpretation. Booking pace should not be used as a future-demand guarantee, optimal-price proof, or standalone performance prediction.",
       },
       {
-        title: "Revenue context versus revenue optimization",
-        body: "Market intelligence also supports revenue thinking, but it does not replace revenue optimization. Revenue work focuses on how an individual listing or portfolio improves bookings, occupancy, ADR, RevPAR, and total performance. Market intelligence describes the external context that can shape those decisions: local demand patterns, guest expectations, competition, and the level of presentation needed to compete.",
+        title: "Competitor prices are context, not recommended prices",
+        body: "Competitor nightly rates can help a host understand the visible price environment only when comparable listings, dates, fees, stay rules, and scope are similar enough to interpret. A competitor price is not a recommended price, pricing strategy, revenue forecast, ADR target, or booking-maximization formula for another listing.",
       },
       {
-        title: "Photo depth, trust and listing quality benchmarks",
-        body: "Some market reports can expose practical benchmarks such as average price, average rating, and average photo count. These signals help hosts ask better questions. Is the listing's gallery deep enough for the market? Does the rating context make trust more important? Does the price require stronger visual proof? Benchmarks should guide investigation, not be treated as automatic rules.",
+        title: "Market context versus listing action",
+        body: "Separate market context, listing evidence, host action, and outcome. Market context is external observable context; listing evidence is property-specific fact; host action is a judgment-based decision; outcome remains unknown until later observation. A safe sequence is: observe market, select comps, normalize period and scope, identify differences, form a bounded hypothesis, choose an action, and observe later result.",
       },
       {
-        title: "How to use Airbnb market rankings",
-        body: "Airbnb market rankings are discovery and comparison pages. They help hosts explore cities, markets, countries, regions, or audience-specific destinations. A ranking page is not the same thing as Airbnb search ranking for a listing. Market rankings compare places. Airbnb SEO and ranking optimization focus on making one listing more visible and attractive inside Airbnb's search and comparison flow.",
+        title: "Norixo market rankings are not Airbnb search rankings",
+        body: "Norixo market rankings are comparison and discovery pages for destinations, countries, regions, or market themes. They do not describe Airbnb's private search ranking system, ranking weights, recommendation logic, visibility signals, or the search position of one listing. Market rankings compare places; Airbnb search ranking concerns how individual listings appear in Airbnb search results.",
       },
       {
-        title: "How to use Airbnb market reports",
-        body: "A market report is a local benchmark or evidence page. It can help a host understand price context, competition signals, photo depth, trust expectations, and local listing quality. A report should not be read as a promise of future demand or return on investment. It is a structured way to understand what a market appears to require from a competitive listing.",
+        title: "Pricing and investment boundaries",
+        body: "Market intelligence can support pricing context, but Norixo market intelligence is not a nightly-rate recommendation engine, dynamic-pricing strategy, guaranteed ADR target, booking-maximization formula, or revenue forecast. It is also not investment, tax, or financial advice, and it should not imply that a destination or metric pattern proves ROI, investment return, or that a property should be bought.",
       },
       {
-        title: "From market insight to listing action",
-        body: "The best use of market intelligence is to turn context into the next useful action. If the market is visually competitive, review photos. If price appears high for the perceived value, review pricing and presentation together. If guests need reassurance, improve trust signals, rules, communication, and description clarity. If the market is crowded, sharpen the listing's reason to choose it.",
+        title: "What market intelligence cannot guarantee",
+        body: "Market intelligence cannot guarantee future demand, Airbnb search ranking, market-ranking implications, impressions, visibility, clicks, CTR, conversion, bookings, occupancy, ADR, RevPAR, revenue, profit, ROI, or investment return. Those outcomes depend on platform behavior, guest demand, competition, pricing, availability, regulations, property quality, operations, and other factors beyond a guide or audit.",
       },
       {
         title: "How Norixo helps hosts interpret market signals",
-        body: "Norixo can help hosts analyze a listing, compare practical market signals, review photos, pricing context, trust, competition, and listing quality, and turn those observations into optimization recommendations. Norixo should not be described as guaranteeing market performance, predicting regulation, forecasting live demand, or providing investment advice. Its role is to make listing decisions clearer and more evidence-informed.",
+        body: "Norixo can organize observable market context, comparable listings, public benchmark methods, listing evidence, and bounded interpretation into a clearer host-side review. That synthesis can help decide what to investigate next, but it is not Airbnb endorsement, private Airbnb data access, proprietary Airbnb ranking knowledge, market forecast, price prescription, or performance guarantee.",
       },
     ],
+    evidenceSources: {
+      title: "Market intelligence evidence boundaries",
+      note: "Airbnb provides public listing guidance, AirDNA publishes public metric methodology, and PriceLabs documents market-dashboard terminology and methodology. Norixo's market-context framework is a transparent host-side synthesis only: these sources do not endorse Norixo, provide private Airbnb ranking data, prove universal market truth, or guarantee ranking, pricing, revenue, ROI, or performance outcomes.",
+      sources: [
+        {
+          title: "Airbnb — Help your listing stand out",
+          href: "https://www.airbnb.com/resources/hosting-homes/a/help-your-listing-stand-out-658",
+          role: "Public listing context for features and listing completeness; not market forecast, Airbnb ranking proof, revenue proof, or Norixo endorsement.",
+        },
+        {
+          title: "AirDNA — How does AirDNA calculate occupancy rate?",
+          href: "https://help.airdna.co/en/articles/8062178-how-does-airdna-calculate-occupancy-rate",
+          role: "Public occupancy methodology and availability or blocked-night context; not universal occupancy methodology, future-demand proof, performance guarantee, or Norixo validation.",
+        },
+        {
+          title: "AirDNA — How does AirDNA calculate average daily rate (ADR)?",
+          href: "https://help.airdna.co/en/articles/8062173-how-does-airdna-calculate-average-daily-rate-adr",
+          role: "ADR methodology, period, and metric context; not a recommended nightly rate, revenue guarantee, or performance forecast.",
+        },
+        {
+          title: "PriceLabs — Market Dashboards: Methodology & Terminology",
+          href: "https://help.pricelabs.co/portal/en/kb/articles/market-dashboard-methodology-terminology",
+          role: "Public market-dashboard terminology for listings, dates, ADR, occupancy, revenue, RevPAR, and observed or scraped market context where supported; not Airbnb ranking proof, universal market truth, Norixo validation, or price recommendation proof.",
+        },
+      ],
+    },
     faq: [
       {
         question: "What is Airbnb market intelligence?",
         answer:
-          "Airbnb market intelligence is the process of understanding the market context around a listing, including price expectations, competition, guest intent, trust signals, photo standards, and local positioning.",
+          "Airbnb market intelligence is the use of observable market and listing context to understand how a property sits relative to alternatives. It can include destination type, guest-use context, comparable listings, public benchmark context, visible listing differences, reports, and rankings, but it is not a forecast, private Airbnb ranking feed, pricing engine, or guarantee.",
       },
       {
-        question: "How do I compare Airbnb markets?",
+        question: "How do hosts compare Airbnb markets?",
         answer:
-          "Compare markets by looking at destination type, guest expectations, pricing context, competition, listing quality standards, trust signals, and the kind of properties guests are likely to compare.",
+          "Hosts compare Airbnb markets by looking at destination type, guest expectations, pricing context, competition, listing quality standards, trust signals, and the kind of properties guests are likely to compare.",
       },
       {
         question: "What data should hosts check before optimizing a listing?",
@@ -1823,29 +1900,29 @@ export const guides: Guide[] = [
           "Hosts should review practical signals such as price context, average rating, photo depth, competition, guest expectations, property positioning, amenities, and trust signals before deciding what to optimize.",
       },
       {
-        question: "Is market intelligence the same as pricing optimization?",
+        question: "What makes a good Airbnb comparable?",
         answer:
-          "No. Market intelligence explains the context around a market. Pricing optimization decides how to set and adjust the price of a specific listing.",
+          "A good comparable is relevant and substitutable for the same guest need. Review micro-location, property type, capacity, bedrooms, bathrooms, amenity profile, quality or condition, stay-use context, time period, and availability context rather than relying on distance alone or a universal number of comps.",
       },
       {
-        question: "Is market intelligence the same as revenue optimization?",
+        question: "How should hosts use market benchmarks?",
         answer:
-          "No. Revenue optimization focuses on improving the economic performance of a listing or portfolio. Market intelligence provides external context that can inform those decisions.",
+          "Use occupancy, ADR, RevPAR, revenue, listing-count, or availability benchmarks as scoped context for investigation when the source period and method are clear. A benchmark is not a cause, forecast, recommended price, ADR target, RevPAR target, or proof that a listing will receive more bookings or revenue.",
       },
       {
         question: "Are Airbnb market reports forecasts?",
         answer:
-          "No. Market reports should be treated as contextual benchmarks and evidence pages, not as live demand predictions, regulation forecasts, or investment return guarantees.",
+          "No. Airbnb market reports should be treated as contextual benchmark or evidence pages for a stated period and methodology unless they explicitly provide a forecast method. They are not live demand predictions, future occupancy estimates, revenue forecasts, or investment-return guarantees.",
       },
       {
-        question: "How should hosts use Airbnb market rankings?",
+        question: "Do Norixo market rankings mean Airbnb search rankings?",
         answer:
-          "Hosts can use rankings to discover and compare cities, countries, regions, markets, or audience-specific destinations. These rankings compare places, not the search position of one listing.",
+          "No. Norixo market rankings compare destinations, countries, regions, or market themes. They do not describe Airbnb's private search ranking system, recommendation logic, ranking weights, visibility signals, or the search position of one listing.",
       },
       {
-        question: "Can Norixo guarantee market performance?",
+        question: "Can market intelligence guarantee revenue or ROI?",
         answer:
-          "No. Norixo can help interpret listing and market signals, but actual performance depends on demand, competition, property quality, pricing, operations, guest experience, and many factors outside any audit.",
+          "No. Market intelligence cannot guarantee future demand, Airbnb ranking, impressions, visibility, clicks, CTR, conversion, bookings, occupancy, ADR, RevPAR, revenue, profit, ROI, or investment return. It is decision context, not financial, tax, investment, or pricing advice.",
       },
     ],
   },
