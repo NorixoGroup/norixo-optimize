@@ -117,7 +117,7 @@ function resolveVideoPromptInput(input: VideoScriptRunInput): VideoScriptInput {
       social?.videoPrompt ??
       plannerItem?.angle ??
       brief?.keyMessages[0] ??
-      "Présenter Norixo Optimize comme outil pour identifier les points de friction et clarifier les priorités",
+      "Présenter Norixo comme outil pour identifier les points de friction et clarifier les priorités",
     audience:
       legacyAudience ??
       brief?.targetAudience ??
