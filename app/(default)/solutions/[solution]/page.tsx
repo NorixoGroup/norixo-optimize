@@ -42,33 +42,37 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function SolutionPage({ params }: Props) {
   const { solution: slug } = await params;
   const solution = getSolutionBySlug(slug);
+  const siteUrl = "https://norixo.io";
 
   if (!solution) {
     notFound();
   }
 
+  const pageUrl = `${siteUrl}/solutions/${solution.slug}`;
   const jsonLd = [
     {
       "@context": "https://schema.org",
       "@type": "WebPage",
+      "@id": `${pageUrl}#webpage`,
       name: solution.title,
       description: solution.description,
-      url: `https://norixo.io/solutions/${solution.slug}`,
+      url: pageUrl,
+      isPartOf: { "@id": `${siteUrl}/#website` },
+      about: { "@id": `${siteUrl}/#software` },
+      mainEntity: { "@id": `${siteUrl}/#software` },
     },
     {
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
+      "@id": `${siteUrl}/#software`,
       name: "Norixo",
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web",
+      url: siteUrl,
       description:
         "Norixo helps Airbnb hosts audit listings, improve pricing, strengthen SEO, and identify conversion blockers.",
-    },
-    {
-      "@context": "https://schema.org",
-      "@type": "Organization",
-      name: "Norixo",
-      url: "https://norixo.io",
+      provider: { "@id": `${siteUrl}/#organization` },
+      brand: { "@id": `${siteUrl}/#organization` },
     },
     ...(solution.faq
       ? [
@@ -110,7 +114,7 @@ export default async function SolutionPage({ params }: Props) {
 
         <div className="mt-8 flex flex-wrap gap-3">
           <Link
-            href="/analyze"
+            href="/free-audit"
             className="rounded-full bg-[#10231F] px-6 py-3 text-sm font-semibold text-white"
           >
             {solution.cta}
@@ -328,7 +332,7 @@ export default async function SolutionPage({ params }: Props) {
             trust, and conversion issues that may be blocking bookings.
           </p>
           <Link
-            href="/analyze"
+            href="/free-audit"
             className="mt-6 inline-flex rounded-full bg-white px-6 py-3 text-sm font-semibold text-[#10231F]"
           >
             Start an Airbnb audit

@@ -9,6 +9,7 @@ import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 const pageTitle = "Airbnb Optimizer | Norixo";
 const pageDescription =
   "Audit and improve Airbnb listings by market, city, pricing, content, photos, and conversion signals.";
+const siteUrl = "https://norixo.io";
 
 export const metadata: Metadata = {
   title: pageTitle,
@@ -20,6 +21,7 @@ export const metadata: Metadata = {
     title: pageTitle,
     description: pageDescription,
     url: "/airbnb-optimizer",
+    siteName: "Norixo",
     type: "website",
     locale: "en_US",
   },
@@ -37,18 +39,24 @@ export default function AirbnbOptimizerHubPage() {
     topic: localSeoTopics[index],
   }));
 
+  const pageUrl = `${siteUrl}/airbnb-optimizer`;
   const jsonLd = [
     {
       "@context": "https://schema.org",
       "@type": "CollectionPage",
+      "@id": `${pageUrl}#webpage`,
       name: pageTitle,
       description: pageDescription,
-      url: "https://norixo.io/airbnb-optimizer",
+      url: pageUrl,
       inLanguage: "en",
       isPartOf: {
-        "@type": "WebSite",
-        name: "Norixo",
-        url: "https://norixo.io",
+        "@id": `${siteUrl}/#website`,
+      },
+      publisher: {
+        "@id": `${siteUrl}/#organization`,
+      },
+      about: {
+        "@id": `${siteUrl}/#software`,
       },
     },
     {
@@ -59,13 +67,13 @@ export default function AirbnbOptimizerHubPage() {
           "@type": "ListItem",
           position: 1,
           name: "Home",
-          item: "https://norixo.io",
+          item: siteUrl,
         },
         {
           "@type": "ListItem",
           position: 2,
           name: "Airbnb Optimizer",
-          item: "https://norixo.io/airbnb-optimizer",
+          item: pageUrl,
         },
       ],
     },
@@ -102,7 +110,7 @@ export default function AirbnbOptimizerHubPage() {
             Explore Paris optimizer
           </Link>
           <Link
-            href="/analyze"
+            href="/free-audit"
             className="rounded-full border border-[#10231F]/20 px-6 py-3 text-sm font-semibold"
           >
             Audit my Airbnb listing
