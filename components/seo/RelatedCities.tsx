@@ -31,7 +31,7 @@ export function RelatedCities({
           >
             <p className="font-semibold">{city.name}</p>
             <p className="mt-2 text-sm text-[#5F6F68]">
-              {city.country} · €{city.avgPrice}/night
+              {city.country} · qualitative market guide
             </p>
           </Link>
         ))}

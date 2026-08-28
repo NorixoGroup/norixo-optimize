@@ -38,7 +38,7 @@ export default async function CountryPage({ params }: Props) {
   }
 
   const countryCities = cities.filter((city) =>
-    country.featuredCities.includes(city.slug)
+    country.featuredCities.includes(city.slug),
   );
 
   const faq = [
@@ -64,13 +64,18 @@ export default async function CountryPage({ params }: Props) {
     },
   ];
 
+  const pageUrl = `https://norixo.io/countries/${country.slug}`;
   const jsonLd = [
     {
       "@context": "https://schema.org",
       "@type": "WebPage",
+      "@id": `${pageUrl}#webpage`,
       name: `Airbnb Optimizer ${country.name}`,
       description: country.marketSummary,
-      url: `https://norixo.io/countries/${country.slug}`,
+      url: pageUrl,
+      isPartOf: { "@id": "https://norixo.io/#website" },
+      publisher: { "@id": "https://norixo.io/#organization" },
+      about: { "@id": "https://norixo.io/#software" },
     },
     {
       "@context": "https://schema.org",
@@ -92,7 +97,7 @@ export default async function CountryPage({ params }: Props) {
           "@type": "ListItem",
           position: 3,
           name: country.name,
-          item: `https://norixo.io/countries/${country.slug}`,
+          item: pageUrl,
         },
       ],
     },
@@ -111,17 +116,14 @@ export default async function CountryPage({ params }: Props) {
     {
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
-      name: "Norixo Optimize",
+      "@id": "https://norixo.io/#software",
+      name: "Norixo",
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web",
+      url: "https://norixo.io/free-audit",
+      provider: { "@id": "https://norixo.io/#organization" },
       description:
-        "Norixo Optimize helps Airbnb hosts audit listings, improve pricing, strengthen SEO, and identify conversion blockers.",
-    },
-    {
-      "@context": "https://schema.org",
-      "@type": "Organization",
-      name: "Norixo",
-      url: "https://norixo.io",
+        "Norixo helps short-term rental hosts audit listings, review pricing context, and identify listing optimization opportunities.",
     },
   ];
 
@@ -162,7 +164,7 @@ export default async function CountryPage({ params }: Props) {
 
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
-              href="/analyze"
+              href="/free-audit"
               className="rounded-full bg-[#10231F] px-6 py-3 text-sm font-semibold text-white"
             >
               Audit my Airbnb listing
@@ -203,8 +205,8 @@ export default async function CountryPage({ params }: Props) {
           </h2>
           <p className="mt-4 leading-7 text-[#4C5C55]">
             Explore local Airbnb optimizer pages for major short-term rental
-            markets in {country.name}. Each page focuses on pricing, guest
-            expectations, competition, and listing conversion signals.
+            markets in {country.name}. Public city cards remain qualitative unless
+            the source, sample, observation period and freshness are published with a metric.
           </p>
         </div>
 
@@ -217,7 +219,7 @@ export default async function CountryPage({ params }: Props) {
             >
               <p className="font-semibold">{city.name}</p>
               <p className="mt-2 text-sm text-[#5F6F68]">
-                Average reference price: €{city.avgPrice}/night
+                {city.country} · qualitative city optimization guide
               </p>
             </Link>
           ))}
@@ -245,7 +247,7 @@ export default async function CountryPage({ params }: Props) {
               Explore Airbnb guides
             </Link>
             <Link
-              href="/analyze"
+              href="/free-audit"
               className="rounded-full border border-white/30 px-6 py-3 text-sm font-semibold text-white"
             >
               Audit my Airbnb listing
@@ -275,7 +277,7 @@ export default async function CountryPage({ params }: Props) {
                 "airbnb-listing-audit",
                 "airbnb-photo-optimization",
                 "airbnb-conversion-optimization",
-              ].includes(guide.slug)
+              ].includes(guide.slug),
             )
             .map((guide) => (
               <Link

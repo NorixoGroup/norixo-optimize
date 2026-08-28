@@ -43,8 +43,8 @@ function buildTopicSpecificAnalysis(city: City, topic: LocalSeoTopic) {
     return {
       heading: `Pricing and revenue strategy in ${city.name}`,
       paragraphs: [
-        `${city.pricingAngle} With an average reference price around €${city.avgPrice} per night, ${city.name} rewards listings that make their value obvious before guests even open the calendar.`,
-        `${city.competitionAngle} For ${topic.label.toLowerCase()}, the real goal is to match rate, perceived quality, and demand so that pricing supports both occupancy and revenue instead of weakening both.`,
+        `${city.pricingAngle} In ${city.name}, pricing should be compared against genuinely similar alternatives rather than a single unsupported city-wide average.`,
+        `${city.competitionAngle} For ${topic.label.toLowerCase()}, compare rate, perceived quality, demand context and listing presentation together so the recommendation remains specific to the property and market segment.`,
       ],
     };
   }
@@ -53,8 +53,8 @@ function buildTopicSpecificAnalysis(city: City, topic: LocalSeoTopic) {
     return {
       heading: `Photo strategy for ${city.name} listings`,
       paragraphs: [
-        `Listings in ${city.name} average about ${city.avgPhotos} photos, which means guests expect a complete visual story before they trust the stay. ${city.guestExpectationAngle}`,
-        `${city.competitionAngle} For ${topic.label.toLowerCase()}, the cover image, the order of the first rooms, and the clarity of what guests will experience matter more than simply uploading more photos.`,
+        `Guests need a complete visual story before they can evaluate the stay. ${city.guestExpectationAngle}`,
+        `${city.competitionAngle} For ${topic.label.toLowerCase()}, the cover image, gallery order and clarity of what guests will experience matter more than publishing an unsupported average photo-count benchmark.`,
       ],
     };
   }
@@ -72,7 +72,7 @@ function buildTopicSpecificAnalysis(city: City, topic: LocalSeoTopic) {
       heading: `Visibility and listing clarity in ${city.name}`,
       paragraphs: [
         `${city.marketAngle} In practice, ${topic.label.toLowerCase()} in ${city.name} is about making the listing easier to understand, easier to trust, and easier to compare in a crowded search result.`,
-        `${city.guestExpectationAngle} Clearer titles, sharper positioning, and stronger copy work best when they reflect the local market instead of repeating generic Airbnb language.`,
+        `${city.guestExpectationAngle} Clearer titles, sharper positioning and stronger copy work best when they reflect the local market instead of repeating generic Airbnb language.`,
       ],
     };
   }
@@ -88,8 +88,8 @@ function buildTopicSpecificAnalysis(city: City, topic: LocalSeoTopic) {
     return {
       heading: `Trust and conversion signals in ${city.name}`,
       paragraphs: [
-        `The average rating bar in ${city.name} sits near ${city.avgRating.toFixed(1)}/5, so guests compare not only price but also reassurance, consistency, and detail before they book.`,
-        `${city.guestExpectationAngle} For ${topic.label.toLowerCase()}, the strongest gains usually come from removing uncertainty, showing the stay clearly, and reinforcing why this listing feels safer or easier to choose than nearby alternatives.`,
+        `Guests compare reassurance, consistency, detail and perceived value before they book. This public page does not publish a city-wide rating average without visible claim-level evidence.`,
+        `${city.guestExpectationAngle} For ${topic.label.toLowerCase()}, focus on removing uncertainty, showing the stay clearly and explaining why the listing fits the intended guest.`,
       ],
     };
   }
@@ -105,8 +105,8 @@ function buildTopicSpecificAnalysis(city: City, topic: LocalSeoTopic) {
     return {
       heading: `Guest-fit strategy in ${city.name}`,
       paragraphs: [
-        `${city.marketAngle} In ${city.name}, different guest types compare stays through very practical signals: layout, comfort, clarity, and how well the listing matches the trip they are actually planning.`,
-        `${city.guestExpectationAngle} For ${topic.label.toLowerCase()}, the page should help hosts align pricing, amenities, and listing framing with the needs of the guest profile most likely to convert.`,
+        `${city.marketAngle} In ${city.name}, different guest types compare stays through practical signals such as layout, comfort, clarity and how well the listing matches the trip they are planning.`,
+        `${city.guestExpectationAngle} For ${topic.label.toLowerCase()}, align pricing, amenities and listing framing with the needs of the intended guest profile.`,
       ],
     };
   }
@@ -114,8 +114,8 @@ function buildTopicSpecificAnalysis(city: City, topic: LocalSeoTopic) {
   return {
     heading: `How ${topic.label.toLowerCase()} applies in ${city.name}`,
     paragraphs: [
-      `${city.competitionAngle} In ${city.name}, strong Airbnb performance depends on how clearly the listing communicates value, quality, and fit for the trip.`,
-      `${topic.description} ${city.guestExpectationAngle} The strongest pages for this market connect local demand, competitive positioning, and booking confidence instead of relying on generic listing advice.`,
+      `${city.competitionAngle} In ${city.name}, listing performance depends on how clearly the page communicates value, quality and fit for the trip.`,
+      `${topic.description} ${city.guestExpectationAngle} The strongest analysis connects local demand, competitive positioning and booking confidence instead of relying on unsupported city-wide averages.`,
     ],
   };
 }
@@ -372,7 +372,7 @@ export function generateStaticParams() {
     localSeoTopics.map((topic) => ({
       city: city.slug,
       topic: topic.slug,
-    }))
+    })),
   );
 }
 
@@ -415,9 +415,10 @@ export default async function LocalSeoPage({ params }: Props) {
       description: topic.description,
       inLanguage: "en",
       isPartOf: {
-        "@type": "WebSite",
-        name: "Norixo",
-        url: "https://norixo.io",
+        "@id": "https://norixo.io/#website",
+      },
+      publisher: {
+        "@id": "https://norixo.io/#organization",
       },
       about: [
         "Airbnb optimization",
@@ -436,16 +437,13 @@ export default async function LocalSeoPage({ params }: Props) {
       headline: `${city.name} ${topic.titleSuffix}`,
       description: topic.description,
       author: {
-        "@type": "Organization",
-        name: "Norixo",
+        "@id": "https://norixo.io/#organization",
       },
       publisher: {
-        "@type": "Organization",
-        name: "Norixo",
+        "@id": "https://norixo.io/#organization",
       },
       mainEntityOfPage: {
-        "@type": "WebPage",
-        "@id": `https://norixo.io/airbnb-optimizer/${city.slug}/${topic.slug}`,
+        "@id": pageUrl,
       },
     },
     {
@@ -519,7 +517,7 @@ export default async function LocalSeoPage({ params }: Props) {
 
         <div className="mt-8 flex flex-wrap gap-3">
           <Link
-            href="/analyze"
+            href="/free-audit"
             className="rounded-full bg-[#10231F] px-6 py-3 text-sm font-semibold text-white"
           >
             Audit my Airbnb listing
@@ -565,37 +563,25 @@ export default async function LocalSeoPage({ params }: Props) {
       </section>
 
       <section className="mx-auto max-w-5xl px-6 pb-12">
-        <h2 className="text-2xl font-semibold">Local KPI snapshot</h2>
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
-          <article className="rounded-3xl bg-white p-6 shadow-sm">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#5F6F68]">
-              Avg. nightly price
-            </p>
-            <p className="mt-3 text-3xl font-semibold text-[#10231F]">€{city.avgPrice}</p>
-            <p className="mt-3 text-sm leading-6 text-[#5F6F68]">
-              Reference pricing signal for stronger listings in {city.name}.
-            </p>
-          </article>
-          <article className="rounded-3xl bg-white p-6 shadow-sm">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#5F6F68]">
-              Avg. guest rating
-            </p>
-            <p className="mt-3 text-3xl font-semibold text-[#10231F]">
-              {city.avgRating.toFixed(1)} / 5
-            </p>
-            <p className="mt-3 text-sm leading-6 text-[#5F6F68]">
-              Trust and quality pressure guests bring into this market.
-            </p>
-          </article>
-          <article className="rounded-3xl bg-white p-6 shadow-sm">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#5F6F68]">
-              Avg. photos
-            </p>
-            <p className="mt-3 text-3xl font-semibold text-[#10231F]">{city.avgPhotos}</p>
-            <p className="mt-3 text-sm leading-6 text-[#5F6F68]">
-              Visual completeness benchmark for listings in {city.name}.
-            </p>
-          </article>
+        <div className="rounded-3xl border border-[#10231F]/10 bg-white p-8 shadow-sm">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#D96C3B]">
+            Evidence policy
+          </p>
+          <h2 className="mt-3 text-2xl font-semibold">Why this page does not publish city-wide averages</h2>
+          <p className="mt-4 leading-8 text-[#4C5C55]">
+            A city-wide average price, rating or photo count is only useful when its source, sample,
+            observation period, freshness and limitations are visible. Those claim-level provenance
+            fields are not attached to the legacy city averages used by this template, so Norixo does
+            not present them here as public market facts.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-4 text-sm font-semibold">
+            <Link href="/research/methodology" className="underline-offset-4 hover:underline">
+              Public data methodology
+            </Link>
+            <Link href="/reports" className="underline-offset-4 hover:underline">
+              Evidence-aware reports
+            </Link>
+          </div>
         </div>
       </section>
 

@@ -124,9 +124,9 @@ export default function AirbnbOptimizerHubPage() {
             Explore Airbnb optimization by city
           </h2>
           <p className="mt-4 leading-7 text-[#4C5C55]">
-            Browse city pages built around local pricing pressure, competition,
-            guest expectations, and listing quality signals. Each city hub
-            points to more detailed optimization topics for that market.
+            Browse city pages built around local competition, guest expectations,
+            pricing context, and listing quality. Public city cards remain qualitative
+            unless the supporting source, sample, period and freshness are published with a metric.
           </p>
         </div>
 
@@ -142,11 +142,9 @@ export default function AirbnbOptimizerHubPage() {
               </p>
               <h2 className="mt-3 text-2xl font-semibold">{city.name}</h2>
               <p className="mt-3 leading-7 text-[#4C5C55]">{city.marketAngle}</p>
-              <div className="mt-4 flex flex-wrap gap-3 text-sm text-[#5F6F68]">
-                <span>EUR {city.avgPrice}/night</span>
-                <span>{city.avgRating.toFixed(1)}/5</span>
-                <span>{city.avgPhotos} photos</span>
-              </div>
+              <p className="mt-4 text-sm font-semibold text-[#5F6F68]">
+                Qualitative city optimization guide →
+              </p>
             </Link>
           ))}
         </div>

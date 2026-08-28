@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { countries } from "@/data/countries";
-import { cities, getCityBySlug, type City } from "@/data/cities";
+import { cities, getCityBySlug } from "@/data/cities";
 import { getCityHubContentOverride } from "@/data/cityHubContentOverrides";
 import { localSeoTopics } from "@/data/localSeo";
 import { buildCitySchema } from "@/lib/seo/buildCitySchema";
@@ -48,52 +48,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }) as Metadata;
 }
 
-/** Copy helpers — only use fields present on `City` (no invented stats). */
-function pricingContextLine(c: City): string {
-  if (c.avgPrice >= 175) {
-    return `Typical well-positioned listings in ${c.name} cluster around €${c.avgPrice.toFixed(0)} per night—guests compare value carefully at this level.`;
-  }
-  if (c.avgPrice <= 140) {
-    return `With typical nightly prices near €${c.avgPrice.toFixed(0)} in ${c.name}, small upgrades in presentation can still shift which listing wins the booking.`;
-  }
-  return `At roughly €${c.avgPrice.toFixed(0)} per night on average for strong listings in ${c.name}, clarity on value and positioning matters as much as the rate itself.`;
-}
-
-function photoMarketLine(c: City): string {
-  if (c.avgPhotos >= 24) {
-    return `Strong listings in ${c.name} average about ${c.avgPhotos} photos—guests are used to scrolling a full gallery before they shortlist.`;
-  }
-  if (c.avgPhotos <= 21) {
-    return `With around ${c.avgPhotos} photos typical for competitive listings in ${c.name}, each image must work harder to build trust and context.`;
-  }
-  return `Listings near ${c.avgPhotos} photos on average in ${c.name} still need a deliberate order: lead with proof of space, light, and location.`;
-}
-
-function ratingPressureLine(c: City): string {
-  if (c.avgRating >= 4.75) {
-    return `Guest ratings in ${c.name} often sit around ${c.avgRating.toFixed(1)}/5 for top performers—new reviews and visible quality signals weigh heavily.`;
-  }
-  return `With many stays clustering near ${c.avgRating.toFixed(1)}/5 in ${c.name}, ${c.country}, hosts benefit from listings that read as polished and complete before the first message.`;
-}
-
-/** Rotating, deterministic picks so related hubs vary by city as the roster grows (max 4). */
-function relatedHubCitiesFor(currentSlug: string, limit = 4): City[] {
-  const others = cities.filter((c) => c.slug !== currentSlug);
-  if (others.length <= limit) {
-    return others;
-  }
-  let h = 0;
-  for (let i = 0; i < currentSlug.length; i++) {
-    h = (h * 31 + currentSlug.charCodeAt(i)) >>> 0;
-  }
-  const start = h % others.length;
-  const out: City[] = [];
-  for (let i = 0; i < limit; i++) {
-    out.push(others[(start + i) % others.length]);
-  }
-  return out;
-}
-
 function countryToSlug(country: string) {
   const map: Record<string, string> = {
     France: "france",
@@ -122,9 +76,6 @@ export default async function CityOptimizerPage({ params }: PageProps) {
   const {
     name,
     country,
-    avgPrice,
-    avgRating,
-    avgPhotos,
     marketAngle,
     competitionAngle,
     pricingAngle,
@@ -137,7 +88,6 @@ export default async function CityOptimizerPage({ params }: PageProps) {
   );
 
   const baseUrl = publicSiteUrl;
-  const relatedHubCities = relatedHubCitiesFor(city.slug, 4);
   const contentOverride = getCityHubContentOverride(city.slug);
   const schema = buildCitySchema({
     city: {
@@ -155,6 +105,7 @@ export default async function CityOptimizerPage({ params }: PageProps) {
         suppressHydrationWarning
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
       />
+
       {/* Hero */}
       <section className="nk-card nk-card-hover p-6 md:p-8">
         <p className="nk-kicker-muted">Airbnb optimization guide · {country}</p>
@@ -180,74 +131,69 @@ export default async function CityOptimizerPage({ params }: PageProps) {
         </div>
       </section>
 
-      {/* Market snapshot */}
-      <section className="grid gap-6 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]" aria-labelledby="market-snapshot-heading">
+      {/* Market context — qualitative until claim-level evidence is available */}
+      <section
+        className="grid gap-6 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]"
+        aria-labelledby="market-snapshot-heading"
+      >
         <div className="nk-card nk-card-hover p-6">
           <h2 id="market-snapshot-heading" className="nk-section-title">
-            {name} market snapshot
+            {name} market context
           </h2>
           <p className="mt-2 text-[15px] leading-7 text-slate-700">
             {name} is a competitive short-term rental market in {country}. {competitionAngle}{" "}
-            Your photos, description, and amenities still need to justify your nightly rate against
-            what guests see in search.
+            Your photos, description, amenities, pricing and trust signals need to make sense
+            together when guests compare nearby alternatives.
           </p>
-          <ul className="mt-4 space-y-1.5 text-[13px] leading-6 text-slate-700">
-            <li>
-              • Competitive stays in {name} often sit near {avgRating.toFixed(1)}/5—gaps in
-              polish or clarity are easy for guests to spot when they scroll.
-            </li>
-            <li>
-              • Listings with roughly {avgPhotos} photos set the visual bar; a thin gallery
-              makes even fair pricing feel risky.
-            </li>
-            <li>
-              • At about €{avgPrice.toFixed(0)} per night on average for strong listings, guests
-              weigh every detail before they commit.
-            </li>
-          </ul>
+          <p className="mt-4 text-[13px] leading-6 text-slate-600">
+            This city guide intentionally avoids publishing city-level average price, rating or
+            photo-count figures without claim-level evidence showing the source, sample, period and
+            freshness. When Norixo publishes numeric market evidence, the supporting methodology and
+            limitations should be visible with that evidence.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-4 text-[13px] font-semibold text-slate-800">
+            <Link href="/research/methodology" className="underline-offset-4 hover:underline">
+              Read the public data methodology
+            </Link>
+            <Link href="/reports" className="underline-offset-4 hover:underline">
+              View evidence-aware market reports
+            </Link>
+          </div>
         </div>
 
         <div className="nk-card nk-card-hover grid gap-3 p-5 text-sm text-slate-800 sm:grid-cols-2">
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Avg. nightly price
+              Pricing context
             </p>
-            <p className="mt-2 text-2xl font-semibold text-slate-900">
-              €{avgPrice.toFixed(0)}
-            </p>
-            <p className="mt-1 text-[11px] text-slate-500">
-              Typical pricing for well-positioned listings in {name}.
+            <p className="mt-2 text-[13px] leading-6 text-slate-700">
+              {pricingAngle}
             </p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Avg. guest rating
+              Guest expectations
             </p>
-            <p className="mt-2 text-2xl font-semibold text-emerald-600">
-              {avgRating.toFixed(1)}<span className="text-sm text-emerald-500"> / 5</span>
-            </p>
-            <p className="mt-1 text-[11px] text-slate-500">
-              Highly rated stays are now the norm – not the exception.
+            <p className="mt-2 text-[13px] leading-6 text-slate-700">
+              {guestExpectationAngle}
             </p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Avg. photos per listing
+              Listing presentation
             </p>
-            <p className="mt-2 text-2xl font-semibold text-slate-900">
-              {avgPhotos}
-            </p>
-            <p className="mt-1 text-[11px] text-slate-500">
-              You need a strong first 5 photos to win the click.
+            <p className="mt-2 text-[13px] leading-6 text-slate-700">
+              Review the cover image, gallery order, title, description and amenity completeness
+              together rather than treating any one element as a standalone ranking lever.
             </p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Key takeaway
+              Competition
             </p>
             <p className="mt-2 text-[13px] leading-6 text-slate-700">
-              Small improvements in photos, copy and amenities can move you above the
-              average listing in {name} and unlock more bookings.
+              Compare like-for-like alternatives in {name} before deciding whether the main issue
+              is price, presentation, positioning or guest reassurance.
             </p>
           </div>
         </div>
@@ -260,8 +206,7 @@ export default async function CityOptimizerPage({ params }: PageProps) {
         </h2>
         <p className="mt-2 max-w-3xl text-[15px] leading-7 text-slate-700">
           Optimization is not generic advice. {competitionAngle} In {name}, it means aligning how
-          you present your home with how guests already shop—using the same signals they see beside
-          your listing in search.
+          you present your home with how guests compare alternatives in search.
         </p>
         <div className="mt-6 grid gap-6 text-sm text-slate-800 md:grid-cols-2">
           <div>
@@ -269,9 +214,8 @@ export default async function CityOptimizerPage({ params }: PageProps) {
               Why Airbnb optimization matters in {name}
             </h3>
             <p className="mt-2 text-[13px] leading-6 text-slate-700">
-              {guestExpectationAngle} Travelers choosing {name} skim dozens of listings; the winner
-              is rarely the cheapest alone—it is the one that looks trustworthy, complete, and easy
-              to understand in seconds.
+              {guestExpectationAngle} Make the listing easy to understand quickly: what the property
+              offers, who it suits, where it is, and why the price is coherent with the experience.
             </p>
           </div>
           <div>
@@ -279,9 +223,8 @@ export default async function CityOptimizerPage({ params }: PageProps) {
               Pricing strategy in {name}
             </h3>
             <p className="mt-2 text-[13px] leading-6 text-slate-700">
-              {pricingAngle} {pricingContextLine(city)} Use your calendar and comps to stay
-              coherent: if your presentation lags peers near €{avgPrice.toFixed(0)}, guests assume
-              the gap is justified—or they book elsewhere.
+              {pricingAngle} Compare your rate with genuinely similar alternatives and evaluate
+              whether your presentation supports the position you are asking guests to accept.
             </p>
           </div>
           <div>
@@ -289,18 +232,17 @@ export default async function CityOptimizerPage({ params }: PageProps) {
               Photos and listing quality in {name}
             </h3>
             <p className="mt-2 text-[13px] leading-6 text-slate-700">
-              {photoMarketLine(city)} Re-order for clarity, add captions where they remove
-              doubt, and make sure your cover image matches what {name} guests filter for.
+              Build a deliberate gallery order: start with the clearest proof of the space, then
+              remove uncertainty about rooms, amenities, access and surroundings.
             </p>
           </div>
           <div>
             <h3 className="text-sm font-semibold text-slate-900">
-              How to increase bookings in {name}
+              How to improve booking readiness in {name}
             </h3>
             <p className="mt-2 text-[13px] leading-6 text-slate-700">
-              {ratingPressureLine(city)} Pair visible polish with a description that answers
-              “who this is for” in {name}—families, remote workers, weekend explorers—so the
-              right guests stop comparing and start booking.
+              Pair visible polish with a description that explains who the listing is for and what
+              guests should expect, then validate the result against comparable alternatives.
             </p>
           </div>
         </div>
@@ -347,95 +289,76 @@ export default async function CityOptimizerPage({ params }: PageProps) {
         </h2>
         <div className="mt-3 grid gap-4 text-sm text-slate-800 md:grid-cols-3">
           <div>
-            <h3 className="text-sm font-semibold text-slate-900">Lead with your strongest view</h3>
+            <h3 className="text-sm font-semibold text-slate-900">Lead with your strongest proof</h3>
             <p className="mt-2 text-[13px] leading-6 text-slate-700">
-              In {name}, guests care a lot about light, outdoor space and neighborhood
-              atmosphere. Make sure your first photo showcases the best angle or view of
-              your place.
+              Choose a first image that makes the space and its strongest differentiator immediately
+              understandable, then make the rest of the gallery support that promise.
             </p>
           </div>
           <div>
             <h3 className="text-sm font-semibold text-slate-900">Write a city-aware opening</h3>
             <p className="mt-2 text-[13px] leading-6 text-slate-700">
-              Your first 2–3 lines should clearly state who the listing is for and why it is
-              ideal for visiting {name} (weekend break, work trip, family stay, etc.).
+              Your first lines should clearly state who the listing is for and why its location and
+              setup make sense for a stay in {name}.
             </p>
           </div>
           <div>
             <h3 className="text-sm font-semibold text-slate-900">Match amenities to expectations</h3>
             <p className="mt-2 text-[13px] leading-6 text-slate-700">
-              Look at top-performing listings in {name} and make sure your amenity list
-              covers the essentials guests expect at your price point.
+              Compare relevant nearby alternatives and verify that your amenity list accurately
+              covers the essentials guests expect for your property type and positioning.
             </p>
           </div>
         </div>
       </section>
 
-      {/* Example audit */}
-      <section className="grid gap-6 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]" aria-labelledby="example-audit-heading">
+      {/* Audit workflow — deliberately non-numeric */}
+      <section
+        className="grid gap-6 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]"
+        aria-labelledby="example-audit-heading"
+      >
         <div className="nk-card nk-card-hover p-6">
           <h2 id="example-audit-heading" className="nk-section-title">
-            Example audit for a {name} listing
+            What a Norixo audit reviews for a {name} listing
           </h2>
           <p className="mt-3 text-[15px] leading-7 text-slate-700">
-            When you run an audit for a listing in {name}, you&apos;ll get a structured report
-            that scores your listing, highlights weaknesses and shows how much improvement is
-            possible.
+            A full audit reviews the listing itself and organizes findings by category. This public
+            city page does not publish a fabricated city-specific score or pretend that an audit has
+            been run when no listing has been supplied.
           </p>
           <ul className="mt-4 space-y-1.5 text-[13px] leading-6 text-slate-700">
-            <li>• Overall conversion score out of 10 with category breakdowns.</li>
-            <li>• Listing Quality Index (0–100) that captures quality and competitiveness.</li>
-            <li>• Recommended photo order tailored to {name}-style browsing behavior.</li>
-            <li>• Copy tweaks that reinforce trust and clarity for international guests.</li>
+            <li>• Listing structure, title and description clarity.</li>
+            <li>• Photo presentation and gallery sequencing.</li>
+            <li>• Amenities, reassurance and trust signals.</li>
+            <li>• Pricing context and competitive positioning.</li>
+            <li>• Prioritized findings and recommended next actions.</li>
           </ul>
         </div>
 
         <div className="nk-card nk-card-hover space-y-3 bg-slate-50 p-5">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Sample results
-              </p>
-              <p className="mt-1 text-sm font-semibold text-slate-900">
-                {name} · 1BR apartment
-              </p>
-            </div>
-            <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
-              Mock audit
-            </span>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Illustrative workflow
+            </p>
+            <p className="mt-2 text-sm font-semibold text-slate-900">
+              Listing → evidence → findings → priorities
+            </p>
           </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Conversion score
-              </p>
-              <p className="mt-2 text-2xl font-semibold text-emerald-600">
-                6.3<span className="text-sm text-emerald-500"> / 10</span>
-              </p>
-              <p className="mt-1 text-[11px] text-slate-500">Below top {name} competitors.</p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Listing Quality Index
-              </p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900">
-                74<span className="text-sm text-slate-500"> / 100</span>
-              </p>
-              <p className="mt-1 text-[11px] text-emerald-700">Competitive, with clear upside.</p>
-            </div>
-          </div>
-
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Top recommendations
+              Evidence first
             </p>
-            <ul className="mt-3 space-y-1.5 text-[12px] leading-5 text-slate-800">
-              <li>• Highlight proximity to key {name} landmarks in first paragraph.</li>
-              <li>• Swap in brighter living-room photo as the cover image.</li>
-              <li>• Add missing amenities that guests filter for in this area.</li>
-            </ul>
+            <p className="mt-2 text-[12px] leading-5 text-slate-700">
+              Scores and recommendations belong to an actual listing audit. They are not reused as
+              fixed city evidence on public market pages.
+            </p>
           </div>
+          <Link
+            href="/free-audit"
+            className="inline-flex text-[13px] font-semibold text-slate-900 underline-offset-4 hover:underline"
+          >
+            Start with the free audit preview
+          </Link>
         </div>
       </section>
 
@@ -465,50 +388,49 @@ export default async function CityOptimizerPage({ params }: PageProps) {
 
       {/* Internal links — discrete crawl paths */}
       <section className="nk-section-card">
-          <h2 className="text-xl font-semibold tracking-[-0.01em] text-slate-950">
-            Related Airbnb optimization resources
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            Build a stronger Airbnb strategy for {name} by combining local
-            market insights with country-level guidance and practical listing
-            optimization guides.
-          </p>
+        <h2 className="text-xl font-semibold tracking-[-0.01em] text-slate-950">
+          Related Airbnb optimization resources
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          Build a stronger Airbnb strategy for {name} by combining local market insights with
+          country-level guidance and practical listing optimization guides.
+        </p>
 
-          <nav
-            className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-[13px] text-slate-800"
-            aria-label="Related optimization resources"
-          >
-            {hasPublishedCountryPage ? (
-              <Link
-                href={`/countries/${countrySlug}`}
-                className="underline-offset-4 hover:underline"
-              >
-                Airbnb optimizer {country}
-              </Link>
-            ) : null}
-            <Link href="/countries" className="underline-offset-4 hover:underline">
-              Airbnb markets by country
+        <nav
+          className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-[13px] text-slate-800"
+          aria-label="Related optimization resources"
+        >
+          {hasPublishedCountryPage ? (
+            <Link
+              href={`/countries/${countrySlug}`}
+              className="underline-offset-4 hover:underline"
+            >
+              Airbnb optimizer {country}
             </Link>
-            <Link href="/guides" className="underline-offset-4 hover:underline">
-              Airbnb optimization guides
-            </Link>
-            <Link href="/guides/airbnb-seo" className="underline-offset-4 hover:underline">
-              Airbnb SEO
-            </Link>
-            <Link href="/guides/airbnb-listing-optimization" className="underline-offset-4 hover:underline">
-              Listing optimization
-            </Link>
-            <Link href="/guides/airbnb-pricing-optimization" className="underline-offset-4 hover:underline">
-              Pricing optimization
-            </Link>
-            <Link href="/guides/airbnb-listing-audit" className="underline-offset-4 hover:underline">
-              Listing audit
-            </Link>
-            <Link href="/analyze" className="underline-offset-4 hover:underline">
-              Run an Airbnb audit
-            </Link>
-          </nav>
-        </section>
+          ) : null}
+          <Link href="/countries" className="underline-offset-4 hover:underline">
+            Airbnb markets by country
+          </Link>
+          <Link href="/guides" className="underline-offset-4 hover:underline">
+            Airbnb optimization guides
+          </Link>
+          <Link href="/guides/airbnb-seo" className="underline-offset-4 hover:underline">
+            Airbnb SEO
+          </Link>
+          <Link href="/guides/airbnb-listing-optimization" className="underline-offset-4 hover:underline">
+            Listing optimization
+          </Link>
+          <Link href="/guides/airbnb-pricing-optimization" className="underline-offset-4 hover:underline">
+            Pricing optimization
+          </Link>
+          <Link href="/guides/airbnb-listing-audit" className="underline-offset-4 hover:underline">
+            Listing audit
+          </Link>
+          <Link href="/free-audit" className="underline-offset-4 hover:underline">
+            Run an Airbnb audit preview
+          </Link>
+        </nav>
+      </section>
 
       {/* CTA */}
       <section
@@ -517,11 +439,11 @@ export default async function CityOptimizerPage({ params }: PageProps) {
       >
         <div className="max-w-xl">
           <h2 id="cta-heading" className="text-base font-semibold text-slate-900 md:text-lg">
-            Ready to see how your {name} listing scores?
+            Ready to review your {name} listing?
           </h2>
           <p className="mt-2 text-[13px] leading-6 text-slate-700">
-            Open a structured audit in Norixo: conversion score, Listing Quality Index,
-            and a clear order of fixes for your {name} listing.
+            Use Norixo to move from general market context to listing-specific findings and a clear
+            order of fixes for your property.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 md:justify-end">
