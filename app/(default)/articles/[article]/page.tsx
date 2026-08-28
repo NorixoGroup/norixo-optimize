@@ -6,6 +6,7 @@ import { guides } from "@/data/guides";
 import { rankings } from "@/data/rankings";
 import { tools } from "@/data/tools";
 import { buildArticleMetadata } from "@/lib/seo/buildArticleMetadata";
+import { normalizeArticleClaimText } from "@/lib/seo/articleClaimSafety";
 import { getKnowledgeObject } from "@/lib/knowledge";
 import { resolveEditorialLinks } from "@/lib/knowledge/editorial";
 import EEAT from "@/components/seo/EEAT";
@@ -257,7 +258,7 @@ export default async function ArticlePage({ params }: Props) {
       "@context": "https://schema.org",
       "@type": "Article",
       headline: article.title,
-      description: article.description,
+      description: normalizeArticleClaimText(article.description),
       author: {
         "@type": "Organization",
         name: "Norixo",
@@ -276,10 +277,10 @@ export default async function ArticlePage({ params }: Props) {
       "@type": "FAQPage",
       mainEntity: article.faq.map((item) => ({
         "@type": "Question",
-        name: item.question,
+        name: normalizeArticleClaimText(item.question),
         acceptedAnswer: {
           "@type": "Answer",
-          text: item.answer,
+          text: normalizeArticleClaimText(item.answer),
         },
       })),
     },
@@ -310,17 +311,17 @@ export default async function ArticlePage({ params }: Props) {
         </p>
 
         <h1 className="text-4xl font-semibold tracking-tight md:text-6xl">
-          {article.heroTitle}
+          {normalizeArticleClaimText(article.heroTitle)}
         </h1>
 
         <p className="mt-6 max-w-3xl text-lg leading-8 text-[#4C5C55]">
-          {article.heroSubtitle}
+          {normalizeArticleClaimText(article.heroSubtitle)}
         </p>
       </section>
 
       <section className="mx-auto max-w-4xl px-6 pb-10">
         <div className="rounded-3xl bg-white p-8 shadow-sm">
-          <p className="text-lg leading-8 text-[#4C5C55]">{article.intro}</p>
+          <p className="text-lg leading-8 text-[#4C5C55]">{normalizeArticleClaimText(article.intro)}</p>
         </div>
       </section>
 
@@ -328,8 +329,8 @@ export default async function ArticlePage({ params }: Props) {
         <div className="space-y-6">
           {article.sections.map((section) => (
             <article key={section.title} className="rounded-3xl bg-white p-8 shadow-sm">
-              <h2 className="text-2xl font-semibold">{section.title}</h2>
-              <p className="mt-4 leading-8 text-[#4C5C55]">{section.body}</p>
+              <h2 className="text-2xl font-semibold">{normalizeArticleClaimText(section.title)}</h2>
+              <p className="mt-4 leading-8 text-[#4C5C55]">{normalizeArticleClaimText(section.body)}</p>
             </article>
           ))}
         </div>
@@ -341,9 +342,9 @@ export default async function ArticlePage({ params }: Props) {
           {article.faq.map((item) => (
             <details key={item.question} className="rounded-2xl bg-white p-5">
               <summary className="cursor-pointer font-semibold">
-                {item.question}
+                {normalizeArticleClaimText(item.question)}
               </summary>
-              <p className="mt-3 leading-7 text-[#4C5C55]">{item.answer}</p>
+              <p className="mt-3 leading-7 text-[#4C5C55]">{normalizeArticleClaimText(item.answer)}</p>
             </details>
           ))}
         </div>
