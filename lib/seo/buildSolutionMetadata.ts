@@ -3,17 +3,17 @@ import type { Solution } from "@/data/solutions";
 
 const solutionMetaDescriptions: Record<string, string> = {
   "airbnb-seo":
-    "Airbnb SEO software for hosts who want stronger visibility, clearer ranking signals, and more bookings through listing, pricing, and content improvements.",
+    "Airbnb SEO software for hosts who want clearer visibility signals and structured listing, pricing, and content recommendations.",
   "airbnb-listing-optimization":
-    "Optimize Airbnb titles, photos, descriptions, amenities, pricing, and trust signals with Norixo's listing optimization software for higher conversion.",
+    "Optimize Airbnb titles, photos, descriptions, amenities, pricing, and trust signals with Norixo's listing optimization software.",
   "airbnb-pricing-optimization":
     "Airbnb pricing optimization software that helps hosts benchmark local competition, improve positioning, and make smarter nightly rate decisions.",
   "airbnb-listing-audit":
-    "Airbnb listing audit software that reveals pricing gaps, weak photos, unclear copy, and conversion blockers so hosts know what to improve first.",
+    "Airbnb listing audit software that highlights pricing gaps, weak photos, unclear copy, and conversion risks so hosts know what to review first.",
   "airbnb-revenue-optimization":
-    "Airbnb revenue optimization software that connects pricing, positioning, occupancy, and conversion signals to help grow booking revenue more confidently.",
+    "Airbnb revenue optimization software that connects pricing, positioning, occupancy, and conversion signals to help hosts assess revenue opportunities.",
   "airbnb-conversion-optimization":
-    "Airbnb conversion optimization software for turning more listing views into bookings by improving photos, trust signals, positioning, and content clarity.",
+    "Airbnb conversion optimization software for identifying listing factors that can affect booking decisions, including photos, trust signals, positioning, and content clarity.",
 };
 
 export function buildSolutionMetadata(solution: Solution): Metadata {
