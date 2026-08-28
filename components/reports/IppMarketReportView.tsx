@@ -44,6 +44,10 @@ function getCopy(locale: string) {
       available: "Disponible",
       methodologyAndLimits: "Méthodologie et limites",
       sources: "Sources",
+      citationTitle: "Citer ce rapport",
+      citationIntro:
+        "Citez la page canonique de ce rapport. Conservez également toute date de publication ou de mise à jour affichée par le rapport.",
+      methodologyLink: "Méthodologie de recherche Norixo",
       moreMarketReports: "Autres rapports de marché",
     } as const;
   }
@@ -58,6 +62,10 @@ function getCopy(locale: string) {
     available: "Available",
     methodologyAndLimits: "Methodology and limits",
     sources: "Sources",
+    citationTitle: "Cite this report",
+    citationIntro:
+      "Cite this report's canonical page. Preserve any publication or update date displayed by the report when one is available.",
+    methodologyLink: "Norixo research methodology",
     moreMarketReports: "More market reports",
   } as const;
 }
@@ -75,6 +83,7 @@ export default function IppMarketReportView({
   const page = manifest.page;
   const structuredData = manifest.seo.structuredData;
   const copy = getCopy(locale);
+  const canonicalUrl = `https://norixo.io${manifest.route.canonical.pathname}`;
 
   return (
     <main className="min-h-screen bg-[#FAF7F2] text-[#10231F]">
@@ -216,9 +225,33 @@ export default function IppMarketReportView({
                 </ul>
               </div>
             ) : null}
+            <p className="mt-6">
+              <Link
+                href="/research/methodology"
+                className="text-sm font-semibold text-[#10231F] underline underline-offset-4"
+              >
+                {copy.methodologyLink}
+              </Link>
+            </p>
           </div>
         </section>
       ) : null}
+
+      <section className="mx-auto max-w-6xl px-6 pb-12">
+        <div className="rounded-3xl border border-[#10231F]/10 bg-white p-8 shadow-sm">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#D96C3B]">
+            Norixo Research
+          </p>
+          <h2 className="mt-3 text-3xl font-semibold">{copy.citationTitle}</h2>
+          <p className="mt-4 max-w-3xl leading-8 text-[#4C5C55]">
+            {copy.citationIntro}
+          </p>
+          <div className="mt-6 rounded-2xl bg-[#FAF7F2] p-5 text-sm leading-7 text-[#4C5C55]">
+            <p className="font-semibold text-[#10231F]">Norixo, “{page.heading}”</p>
+            <p className="mt-2 break-all">{canonicalUrl}</p>
+          </div>
+        </div>
+      </section>
 
       {relatedCards.length > 0 ? (
         <section className="mx-auto max-w-6xl px-6 pb-20">
