@@ -3,9 +3,16 @@ import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 import { defaultLocale } from "@/data/i18n";
 import type { Guide } from "@/data/guides";
 
+const legacyGuideDescriptions: Record<string, string> = {
+  "airbnb-seo":
+    "Airbnb SEO guide for reviewing listing relevance, search-facing signals, photos, pricing context, trust, and guest decision friction without promising ranking, clicks, or bookings.",
+  "airbnb-listing-optimization":
+    "Airbnb listing optimization guide for reviewing photos, titles, descriptions, pricing, amenities, trust signals, and competitive positioning without guaranteeing conversion or bookings.",
+};
+
 export function buildGuideMetadata(guide: Guide): Metadata {
   const title = `${guide.title} | Norixo`;
-  const description = guide.description;
+  const description = legacyGuideDescriptions[guide.slug] ?? guide.description;
   const url = `https://norixo.io/guides/${guide.slug}`;
   const socialImage = {
     url: "/og-cover.png",
