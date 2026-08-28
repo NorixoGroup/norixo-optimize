@@ -1151,7 +1151,7 @@ function getLocalizationBundle(locale: string): LocalizationBundle {
             : ` (${localizePropertyType("fr", propertyType)})`
         }`,
       descriptionBuilder: ({ platform, city, propertyType, periodLabel, hasOccupancy }) =>
-        `Rapport ${hasOccupancy ? "" : "partiel "}de marché ${capitalize(platform)} pour ${city}${
+        `Rapport de marché ${capitalize(platform)} pour ${city}${
           localizePropertyType("fr", propertyType) == null
             ? ""
             : ` (${localizePropertyType("fr", propertyType)})`
@@ -1276,7 +1276,7 @@ function getLocalizationBundle(locale: string): LocalizationBundle {
           : ` (${localizePropertyType("en", propertyType)})`
       }`,
     descriptionBuilder: ({ platform, city, propertyType, periodLabel, hasOccupancy }) =>
-      `${capitalize(platform)} ${hasOccupancy ? "" : "partial "}market report for ${city}${
+      `${capitalize(platform)} market report for ${city}${
         localizePropertyType("en", propertyType) == null
           ? ""
           : ` (${localizePropertyType("en", propertyType)})`
