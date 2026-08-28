@@ -172,14 +172,13 @@ export default async function RankingPage({ params }: Props) {
       <section className="mx-auto max-w-5xl px-6 py-12">
         <div className="rounded-3xl bg-[#10231F] p-8 text-white md:p-10">
           <h2 className="text-3xl font-semibold">
-            Improve your Airbnb listing before competitors do
+            Review your Airbnb listing against market context
           </h2>
           <p className="mt-4 max-w-2xl leading-7 text-white/80">
-            Use Norixo to audit your listing, pricing, photos, description, and
-            market positioning.
+            Use Norixo to review pricing, photos, description, and market positioning before deciding what to change.
           </p>
           <Link
-            href="/analyze"
+            href="/free-audit"
             className="mt-6 inline-flex rounded-full bg-white px-6 py-3 text-sm font-semibold text-[#10231F]"
           >
             Start an Airbnb listing audit

@@ -235,8 +235,8 @@ export default async function MarketReportPage({ params }: Props) {
             experience it presents.
           </p>
           <p className="mt-5 leading-8 text-[#4C5C55]">
-            A Norixo audit helps identify whether performance is limited by
-            pricing, presentation, trust signals or guest information.
+            A Norixo audit helps identify which areas may deserve review across
+            pricing, presentation, trust signals, and guest information.
           </p>
         </div>
       </section>
@@ -359,11 +359,10 @@ export default async function MarketReportPage({ params }: Props) {
             Audit your Airbnb listing in {city.name}
           </h2>
           <p className="mt-4 max-w-2xl leading-7 text-white/80">
-            Use Norixo to review your listing’s pricing, photos, description
-            quality and conversion blockers.
+            Use Norixo to review pricing, photos, description quality, and market positioning before deciding what to change.
           </p>
           <Link
-            href="/analyze"
+            href="/free-audit"
             className="mt-6 inline-flex rounded-full bg-white px-6 py-3 text-sm font-semibold text-[#10231F]"
           >
             Start an Airbnb audit
