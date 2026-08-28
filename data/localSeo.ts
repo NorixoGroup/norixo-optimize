@@ -20,7 +20,7 @@ export const localSeoTopics: LocalSeoTopic[] = [
     label: "SEO guide",
     titleSuffix: "Airbnb SEO Guide",
     description:
-      "Improve local Airbnb visibility, ranking signals, title clarity, and guest trust.",
+      "Review Airbnb relevance, listing clarity, trust signals, and factors connected to search visibility.",
     guideSlug: "airbnb-seo",
   },
   {
@@ -28,7 +28,7 @@ export const localSeoTopics: LocalSeoTopic[] = [
     label: "Photo tips",
     titleSuffix: "Airbnb Photo Tips",
     description:
-      "Improve Airbnb photos to increase clicks, perceived value, and booking confidence.",
+      "Improve Airbnb photo clarity, perceived value, and the information guests see before booking.",
     guideSlug: "airbnb-photo-optimization",
   },
   {
@@ -44,7 +44,7 @@ export const localSeoTopics: LocalSeoTopic[] = [
     label: "Description optimization",
     titleSuffix: "Airbnb Description Optimization Guide",
     description:
-      "Write clearer Airbnb descriptions that improve trust, reduce uncertainty, and support bookings.",
+      "Write clearer Airbnb descriptions that strengthen trust, reduce uncertainty, and support guest decision-making.",
     guideSlug: "airbnb-listing-optimization",
   },
   {
@@ -52,7 +52,7 @@ export const localSeoTopics: LocalSeoTopic[] = [
     label: "Amenities guide",
     titleSuffix: "Airbnb Amenities Guide",
     description:
-      "Understand which amenities matter most locally and how to present them clearly to guests.",
+      "Understand which amenities matter locally and how to present them clearly to guests.",
     guideSlug: "airbnb-listing-optimization",
   },
   {
@@ -68,7 +68,7 @@ export const localSeoTopics: LocalSeoTopic[] = [
     label: "Booking conversion",
     titleSuffix: "Airbnb Booking Conversion Guide",
     description:
-      "Improve the path from listing view to booking with stronger clarity, pricing, photos, and trust.",
+      "Review listing friction between a guest viewing a property and deciding whether to book.",
     guideSlug: "airbnb-conversion-optimization",
   },
   {
@@ -76,7 +76,7 @@ export const localSeoTopics: LocalSeoTopic[] = [
     label: "Ranking factors",
     titleSuffix: "Airbnb Ranking Factors Guide",
     description:
-      "Understand local ranking signals that influence Airbnb visibility, clicks, and booking decisions.",
+      "Understand listing and marketplace signals commonly associated with Airbnb visibility without assuming control over ranking outcomes.",
     guideSlug: "airbnb-seo",
   },
   {
@@ -84,7 +84,7 @@ export const localSeoTopics: LocalSeoTopic[] = [
     label: "Search visibility",
     titleSuffix: "Airbnb Search Visibility Guide",
     description:
-      "Improve Airbnb search visibility with clearer relevance, stronger listing signals, and better performance.",
+      "Review relevance, listing clarity, trust signals, and other factors that can be connected to Airbnb search visibility.",
     guideSlug: "airbnb-seo",
   },
   {
@@ -92,7 +92,7 @@ export const localSeoTopics: LocalSeoTopic[] = [
     label: "Occupancy guide",
     titleSuffix: "Airbnb Occupancy Guide",
     description:
-      "Understand how local demand, pricing, presentation, and competition influence occupancy.",
+      "Understand how local demand, pricing, presentation, and competition can relate to occupancy.",
     guideSlug: "airbnb-pricing-optimization",
   },
   {
@@ -100,7 +100,7 @@ export const localSeoTopics: LocalSeoTopic[] = [
     label: "Revenue optimization",
     titleSuffix: "Airbnb Revenue Optimization Guide",
     description:
-      "Improve Airbnb revenue by aligning pricing, conversion quality, guest trust, and market positioning.",
+      "Review revenue opportunities through pricing, occupancy, listing quality, guest trust, and market positioning.",
     guideSlug: "airbnb-pricing-optimization",
   },
   {
@@ -116,7 +116,7 @@ export const localSeoTopics: LocalSeoTopic[] = [
     label: "Listing audit",
     titleSuffix: "Airbnb Listing Audit Guide",
     description:
-      "Audit an Airbnb listing locally to identify the most important blockers and optimization priorities.",
+      "Audit an Airbnb listing locally to identify important friction points and optimization priorities.",
     guideSlug: "airbnb-listing-audit",
   },
   {
@@ -124,7 +124,7 @@ export const localSeoTopics: LocalSeoTopic[] = [
     label: "Photo order",
     titleSuffix: "Airbnb Photo Order Guide",
     description:
-      "Improve Airbnb photo order to show the strongest value first and increase guest confidence.",
+      "Improve Airbnb photo order so guests see the strongest and most relevant visual information first.",
     guideSlug: "airbnb-photo-optimization",
   },
   {
@@ -132,7 +132,7 @@ export const localSeoTopics: LocalSeoTopic[] = [
     label: "First photo",
     titleSuffix: "Airbnb First Photo Guide",
     description:
-      "Choose a stronger first photo to improve clicks, perceived value, and listing performance.",
+      "Choose a clearer first photo that communicates the listing's value and context quickly.",
     guideSlug: "airbnb-photo-optimization",
   },
   {
@@ -140,7 +140,7 @@ export const localSeoTopics: LocalSeoTopic[] = [
     label: "Review strategy",
     titleSuffix: "Airbnb Review Strategy Guide",
     description:
-      "Use reviews and guest feedback to improve trust, clarity, and booking confidence.",
+      "Use reviews and guest feedback to strengthen trust, clarity, and booking confidence.",
     guideSlug: "airbnb-conversion-optimization",
   },
   {
@@ -156,7 +156,7 @@ export const localSeoTopics: LocalSeoTopic[] = [
     label: "Seasonality guide",
     titleSuffix: "Airbnb Seasonality Guide",
     description:
-      "Adapt Airbnb pricing, presentation, and positioning to local seasonal demand patterns.",
+      "Review Airbnb pricing, presentation, and positioning against local seasonal demand patterns.",
     guideSlug: "airbnb-pricing-optimization",
   },
   {
@@ -164,7 +164,7 @@ export const localSeoTopics: LocalSeoTopic[] = [
     label: "Family travel guide",
     titleSuffix: "Airbnb Family Travel Guide",
     description:
-      "Optimize listings for families with clearer layouts, practical amenities, reassurance, and photos.",
+      "Adapt listings for families with clearer layouts, practical amenities, reassurance, and photos.",
     guideSlug: "airbnb-listing-optimization",
   },
   {
@@ -172,7 +172,7 @@ export const localSeoTopics: LocalSeoTopic[] = [
     label: "Business travel guide",
     titleSuffix: "Airbnb Business Travel Guide",
     description:
-      "Improve listings for business travelers with clearer work-friendly amenities, access details, and trust signals.",
+      "Improve listing clarity for business travelers with work-friendly amenities, access details, and trust signals.",
     guideSlug: "airbnb-listing-optimization",
   },
   {
@@ -180,7 +180,7 @@ export const localSeoTopics: LocalSeoTopic[] = [
     label: "Long stay guide",
     titleSuffix: "Airbnb Long Stay Guide",
     description:
-      "Optimize Airbnb listings for longer stays with better amenities, pricing, workspace, and practical details.",
+      "Adapt Airbnb listings for longer stays with clearer amenities, pricing, workspace, and practical details.",
     guideSlug: "airbnb-listing-optimization",
   },
   {
@@ -188,7 +188,7 @@ export const localSeoTopics: LocalSeoTopic[] = [
     label: "Local demand guide",
     titleSuffix: "Airbnb Local Demand Guide",
     description:
-      "Understand local guest demand and align your Airbnb listing with the trips guests are actually planning.",
+      "Understand local guest demand and align your Airbnb listing with the trips guests are planning.",
     guideSlug: "airbnb-listing-audit",
   },
   {
@@ -204,7 +204,7 @@ export const localSeoTopics: LocalSeoTopic[] = [
     label: "Conversion guide",
     titleSuffix: "Airbnb Conversion Guide",
     description:
-      "Turn more listing views into bookings with stronger trust, pricing, photos, and copy.",
+      "Review trust, pricing, photos, copy, and other listing factors that may create booking friction.",
     guideSlug: "airbnb-conversion-optimization",
   },
 ];
