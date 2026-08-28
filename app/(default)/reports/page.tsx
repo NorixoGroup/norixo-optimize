@@ -12,7 +12,7 @@ const reportCards = getNextPublicationCards(reportsCatalog);
 export const metadata = {
   title: "Airbnb Market Reports | Norixo",
   description:
-    "Explore Airbnb market reports with city-level pricing context, competition signals, guest expectations, and listing optimization insights.",
+    "Explore Airbnb market reports with publication-specific scope, pricing context where available, periods, confidence, freshness, and limitations.",
   alternates: buildHreflangAlternates("/reports", { locales: [defaultLocale] }),
 };
 
@@ -27,14 +27,14 @@ export default function ReportsPage() {
           Airbnb Market Reports
         </h1>
         <p className="mt-6 max-w-3xl text-lg leading-8 text-[#4C5C55]">
-          Explore market-level Airbnb insights for pricing, competition,
-          listing quality and guest expectations.
+          Explore market-level Airbnb reports with their own scope, periods,
+          confidence, freshness, evidence, and limitations.
         </p>
 
         <p className="mt-4 max-w-3xl leading-8 text-[#4C5C55]">
           This hub is for geographic context. Use it when you want to compare
-          markets, understand city-level positioning signals, and frame a
-          listing decision against published market information.
+          markets, understand published city-level signals, and frame a
+          listing decision against market information that states its limits.
         </p>
 
         <div className="mt-8 flex flex-wrap gap-3 text-sm text-[#10231F]">
@@ -61,8 +61,8 @@ export default function ReportsPage() {
               <h3 className="mt-3 text-xl font-semibold">Choose the market</h3>
               <p className="mt-3 leading-7 text-[#4C5C55]">
                 Start with the city you want to understand better before you
-                compare its pricing context, competition, and guest
-                expectations.
+                compare the published pricing context, scope, period, and
+                limitations available for that report.
               </p>
             </article>
             <article className="rounded-2xl border border-[#10231F]/10 bg-[#FAF7F2] p-5">
@@ -99,8 +99,8 @@ export default function ReportsPage() {
           <p className="mt-4 max-w-3xl leading-8 text-[#4C5C55]">
             The reports hub summarizes city-level market context from the
             published datasets used across Norixo market pages. Report detail
-            pages expose the reference values and narrative context shown for
-            each market.
+            pages expose the reference values, publication scope, confidence,
+            freshness, and provenance available for each market.
           </p>
           <p className="mt-4 max-w-3xl leading-8 text-[#4C5C55]">
             These reports are designed to help frame a market. They are not
@@ -116,7 +116,8 @@ export default function ReportsPage() {
           <p className="mt-4 leading-7 text-[#4C5C55]">
             Start with the city that matters to you most, then use related
             guides, tools, and optimizer pages to turn high-level market
-            context into clearer decisions.
+            context into clearer decisions without treating every report as
+            exhaustive or real-time.
           </p>
         </div>
 

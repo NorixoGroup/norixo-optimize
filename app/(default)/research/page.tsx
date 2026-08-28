@@ -2,10 +2,18 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 import { defaultLocale } from "@/data/i18n";
+import {
+  buildDefaultNextPublicationCatalog,
+  getNextPublicationCards,
+} from "@/lib/intelligencePublishing/nextWebPublicationAdapter";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 
 const siteUrl = "https://norixo.io";
 const socialImage = "/og/norixo-research.png";
+const reportsCatalog = buildDefaultNextPublicationCatalog();
+const publicReportCards = getNextPublicationCards(reportsCatalog)
+  .filter((card) => card.source === "ipp_canonical")
+  .slice(0, 6);
 
 export const metadata: Metadata = {
   title: "Research & Methodology | Norixo",
@@ -70,7 +78,28 @@ export default function ResearchHubPage() {
       about: { "@id": `${siteUrl}/#organization` },
       publisher: { "@id": `${siteUrl}/#organization` },
       mainEntity: { "@id": `${siteUrl}/research/methodology#article` },
+      hasPart: publicReportCards.map((report) => ({
+        "@type": "Report",
+        name: report.title,
+        url: `${siteUrl}${report.href}`,
+      })),
     },
+    ...(publicReportCards.length > 0
+      ? [
+          {
+            "@context": "https://schema.org",
+            "@type": "ItemList",
+            "@id": `${siteUrl}/research#published-reports`,
+            name: "Published Norixo research reports",
+            itemListElement: publicReportCards.map((report, index) => ({
+              "@type": "ListItem",
+              position: index + 1,
+              name: report.title,
+              url: `${siteUrl}${report.href}`,
+            })),
+          },
+        ]
+      : []),
     {
       "@context": "https://schema.org",
       "@type": "BreadcrumbList",
@@ -179,6 +208,48 @@ export default function ResearchHubPage() {
           </p>
         </div>
       </section>
+
+      {publicReportCards.length > 0 ? (
+        <section className="mx-auto max-w-6xl px-6 pb-10">
+          <div className="rounded-3xl border border-[#10231F]/10 bg-white p-8 shadow-sm">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#D96C3B]">
+              Published research reports
+            </p>
+            <h2 className="mt-3 text-3xl font-semibold">
+              Cite the report that contains the market evidence
+            </h2>
+            <p className="mt-4 max-w-3xl leading-8 text-[#4C5C55]">
+              These public reports are generated from the publication catalog
+              and link to their canonical report routes. Use the specific
+              report page when citing a market claim, then check its period,
+              confidence, freshness, scope, and limitations before reusing the
+              evidence.
+            </p>
+            <div className="mt-6 grid gap-5 md:grid-cols-2">
+              {publicReportCards.map((report) => (
+                <Link
+                  key={report.key}
+                  href={report.href}
+                  className="rounded-2xl border border-[#10231F]/10 bg-[#FAF7F2] p-5 transition hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <h3 className="text-xl font-semibold">{report.title}</h3>
+                  <p className="mt-3 leading-7 text-[#4C5C55]">
+                    {report.description}
+                  </p>
+                </Link>
+              ))}
+            </div>
+            <p className="mt-6">
+              <Link
+                href="/reports"
+                className="text-sm font-semibold text-[#10231F] underline underline-offset-4"
+              >
+                Browse the full reports catalog
+              </Link>
+            </p>
+          </div>
+        </section>
+      ) : null}
 
       <section className="mx-auto max-w-6xl px-6 pb-10">
         <div className="rounded-3xl border border-[#10231F]/10 bg-white p-8 shadow-sm">
