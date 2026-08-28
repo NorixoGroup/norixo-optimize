@@ -359,11 +359,11 @@ export default async function ArticlePage({ params }: Props) {
             Audit your Airbnb listing with Norixo
           </h2>
           <p className="mt-4 max-w-2xl leading-7 text-white/80">
-            Find the pricing, photo, description, trust, and ranking signals
-            that may be blocking your bookings.
+            Review pricing, photos, description, trust, and market-positioning signals
+            to identify what deserves attention first.
           </p>
           <Link
-            href="/analyze"
+            href="/free-audit"
             className="mt-6 inline-flex rounded-full bg-white px-6 py-3 text-sm font-semibold text-[#10231F]"
           >
             Start an Airbnb audit
