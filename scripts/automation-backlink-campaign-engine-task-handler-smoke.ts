@@ -39,6 +39,7 @@ const campaignFixture: BacklinkCampaignRow = {
   created_by: ACTOR_ID,
   end_at: null,
   id: CAMPAIGN_ID,
+  live_initial_send_enabled: false,
   name: "Campaign",
   objective: "Build links",
   owner_id: ACTOR_ID,

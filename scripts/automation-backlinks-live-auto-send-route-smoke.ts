@@ -15,6 +15,10 @@ async function main(): Promise<void> {
     "lib/automation/backlink-outreach-live-auto-send-service.ts",
     "utf8",
   );
+  const repo = await readFile(
+    "lib/backlinks/repositories/outreachAttemptsRepository.ts",
+    "utf8",
+  );
 
   for (const required of [
     "export async function POST(request: NextRequest)",
@@ -32,7 +36,7 @@ async function main(): Promise<void> {
     "outreachId",
     "createEnvironmentOutreachEmailProvider()",
     "getBacklinkOutreachReplyTokenKeyring()",
-    "sendBacklinkOutreachEmail(",
+    "sendApprovedBacklinkOutreachEmail(",
     "getCandidateById:",
     "listBacklinkOutreachLiveAutoSendCandidates(",
     "runBacklinkOutreachLiveAutoSend(",
@@ -40,6 +44,11 @@ async function main(): Promise<void> {
   ]) {
     assert(route.includes(required) || service.includes(required), `Missing ${required}`);
   }
+
+  assert(
+    repo.includes("reserve_backlink_outreach_initial_attempt_for_approved_auto_send"),
+    "Missing reserve_backlink_outreach_initial_attempt_for_approved_auto_send",
+  );
 
   for (const forbidden of [
     "vercel.json",

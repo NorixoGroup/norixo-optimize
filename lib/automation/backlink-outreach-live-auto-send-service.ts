@@ -92,7 +92,14 @@ function isSkippableSendError(code: BacklinkOutreachEmailSendError["code"]): boo
     code === "OUTREACH_SEND_RATE_LIMIT_EXCEEDED" ||
     code === "OUTREACH_ATTEMPT_IDEMPOTENCY_CONFLICT" ||
     code === "OUTREACH_SEND_ATTEMPT_IN_PROGRESS" ||
-    code === "OUTREACH_SEND_ATTEMPT_UNRESOLVED";
+    code === "OUTREACH_SEND_ATTEMPT_UNRESOLVED" ||
+    code === "OUTREACH_NOT_APPROVED" ||
+    code === "OUTREACH_APPROVAL_STALE" ||
+    code === "OUTREACH_CAMPAIGN_DISABLED" ||
+    code === "OUTREACH_NOT_READY" ||
+    code === "OUTREACH_INVALID_RECIPIENT" ||
+    code === "OUTREACH_MISSING_APPROVED_CONTENT" ||
+    code === "OUTREACH_INELIGIBLE";
 }
 
 function createDefaultIdempotencyKey(input: {

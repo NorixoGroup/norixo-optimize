@@ -4,24 +4,16 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { isAdminPrivateEmail } from "@/lib/auth/isAdminEmail";
 import { createEnvironmentOutreachEmailProvider } from "@/lib/backlinks/providers/outreachEmailProvider";
-import { getCampaignOpportunity } from "@/lib/backlinks/repositories/campaignOpportunitiesRepository";
-import { getBacklinkContactById, listBacklinkContactsByDomain } from "@/lib/backlinks/repositories/contactsRepository";
-import { getBacklinkOpportunityById } from "@/lib/backlinks/repositories/opportunitiesRepository";
 import {
   getBacklinkOutreachById,
   getBacklinkOutreachLiveAutoSendCandidateById,
   listBacklinkOutreachLiveAutoSendCandidates,
-  listBacklinkOutreachByOpportunity,
   activateBacklinkOutreachAfterEmailAccepted,
-  updateBacklinkOutreach,
 } from "@/lib/backlinks/repositories/outreachRepository";
 import {
   getBacklinkOutreachAttemptById,
-  getBacklinkOutreachAttemptByIdempotencyKey,
-  getOpenBacklinkOutreachAttemptForOutreach,
-  listBacklinkOutreachAttemptSendWindowRows,
-  reserveBacklinkOutreachAttempt,
   updateBacklinkOutreachAttemptState,
+  reserveBacklinkOutreachApprovedInitialAttempt,
 } from "@/lib/backlinks/repositories/outreachAttemptsRepository";
 import {
   markBacklinkOutreachAttemptAccepted,
@@ -29,8 +21,8 @@ import {
   markBacklinkOutreachAttemptUnknown,
 } from "@/lib/backlinks/services/outreachAttemptService";
 import { getBacklinkOutreachReplyTokenKeyring } from "@/lib/backlinks/services/outreachReplyCorrelationIdentity";
-import { getBacklinkOutreachDraftEligibilityForMembership } from "@/lib/backlinks/services/outreachDraftEligibilityService";
-import { sendBacklinkOutreachEmail, BacklinkOutreachEmailSendError } from "@/lib/backlinks/services/outreachEmailSendService";
+import { sendApprovedBacklinkOutreachEmail } from "@/lib/backlinks/services/outreachApprovedAutoSendService";
+import { BacklinkOutreachEmailSendError } from "@/lib/backlinks/services/outreachEmailSendService";
 import {
   BacklinkOutreachLiveAutoSendError,
   runBacklinkOutreachLiveAutoSend,
@@ -156,15 +148,6 @@ export async function POST(request: NextRequest) {
 
   try {
     const adminClient = createSupabaseAdminClient();
-    const transitions = {
-      getAttempt: (workspaceId: string, attemptId: string) =>
-        getBacklinkOutreachAttemptById(adminClient, workspaceId, attemptId),
-      updateAttempt: (
-        workspaceId: string,
-        attemptId: string,
-        patch: Parameters<typeof updateBacklinkOutreachAttemptState>[3],
-      ) => updateBacklinkOutreachAttemptState(adminClient, workspaceId, attemptId, patch),
-    };
     const { data: control, error: controlError } = await adminClient
       .from("automation_workspace_controls")
       .select(
@@ -181,35 +164,39 @@ export async function POST(request: NextRequest) {
       return notEnabledResponse();
     }
 
-    const sendBacklinkOutreach = sendBacklinkOutreachEmail({
-      eligibility: {
-        getMembership: (input) =>
-          getCampaignOpportunity(adminClient, input.workspaceId, input.campaignId, input.opportunityId),
-        getOpportunity: (workspaceId, opportunityId) =>
-          getBacklinkOpportunityById(adminClient, workspaceId, opportunityId),
-        listContactsByDomain: (workspaceId, domainId) =>
-          listBacklinkContactsByDomain(adminClient, workspaceId, domainId),
-        listOutreachByOpportunity: (workspaceId, opportunityId) =>
-          listBacklinkOutreachByOpportunity(adminClient, workspaceId, opportunityId),
-      },
+    const sendBacklinkOutreach = sendApprovedBacklinkOutreachEmail({
       getWorkspaceControl: async () => ({ dryRunOnly: control.dry_run_only }),
       getOutreach: (workspaceId, outreachId) =>
         getBacklinkOutreachById(adminClient, workspaceId, outreachId),
-      getContact: (workspaceId, contactId) =>
-        getBacklinkContactById(adminClient, workspaceId, contactId),
-      listAttemptSummariesSince: (workspaceId, since) =>
-        listBacklinkOutreachAttemptSendWindowRows(adminClient, workspaceId, since),
-      getAttemptByIdempotencyKey: (workspaceId, idempotencyKey) =>
-        getBacklinkOutreachAttemptByIdempotencyKey(adminClient, workspaceId, idempotencyKey),
-      getOpenAttemptForOutreach: (workspaceId, outreachId) =>
-        getOpenBacklinkOutreachAttemptForOutreach(adminClient, workspaceId, outreachId),
-      updateOutreach: (workspaceId, outreachId, input) =>
-        updateBacklinkOutreach(adminClient, workspaceId, outreachId, input),
-      reserveAttempt: (workspaceId, input) =>
-        reserveBacklinkOutreachAttempt(adminClient, workspaceId, input),
-      markAttemptAccepted: markBacklinkOutreachAttemptAccepted(transitions),
-      markAttemptFailed: markBacklinkOutreachAttemptFailed(transitions),
-      markAttemptUnknown: markBacklinkOutreachAttemptUnknown(transitions),
+      reserveApprovedInitialAttempt: (input) =>
+        reserveBacklinkOutreachApprovedInitialAttempt(adminClient, input),
+      markAttemptAccepted: markBacklinkOutreachAttemptAccepted({
+        getAttempt: (workspaceId: string, attemptId: string) =>
+          getBacklinkOutreachAttemptById(adminClient, workspaceId, attemptId),
+        updateAttempt: (
+          workspaceId: string,
+          attemptId: string,
+          patch: Parameters<typeof updateBacklinkOutreachAttemptState>[3],
+        ) => updateBacklinkOutreachAttemptState(adminClient, workspaceId, attemptId, patch),
+      }),
+      markAttemptFailed: markBacklinkOutreachAttemptFailed({
+        getAttempt: (workspaceId: string, attemptId: string) =>
+          getBacklinkOutreachAttemptById(adminClient, workspaceId, attemptId),
+        updateAttempt: (
+          workspaceId: string,
+          attemptId: string,
+          patch: Parameters<typeof updateBacklinkOutreachAttemptState>[3],
+        ) => updateBacklinkOutreachAttemptState(adminClient, workspaceId, attemptId, patch),
+      }),
+      markAttemptUnknown: markBacklinkOutreachAttemptUnknown({
+        getAttempt: (workspaceId: string, attemptId: string) =>
+          getBacklinkOutreachAttemptById(adminClient, workspaceId, attemptId),
+        updateAttempt: (
+          workspaceId: string,
+          attemptId: string,
+          patch: Parameters<typeof updateBacklinkOutreachAttemptState>[3],
+        ) => updateBacklinkOutreachAttemptState(adminClient, workspaceId, attemptId, patch),
+      }),
       sendEmail: createEnvironmentOutreachEmailProvider(),
       activateOutreach: (workspaceId, outreachId, input) =>
         activateBacklinkOutreachAfterEmailAccepted(adminClient, workspaceId, outreachId, input),

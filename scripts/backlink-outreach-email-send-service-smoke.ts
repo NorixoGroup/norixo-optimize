@@ -44,7 +44,7 @@ function attempt(status: BacklinkOutreachAttemptRow["status"] = "requested"): Ba
   };
 }
 
-type OpportunityFixture = { id: string; domain_id: string; asset_id: string };
+type OpportunityFixture = { id: string; domain_id: string; asset_id: string; target_page_url: string };
 type ContactFixture = { id: string; domain_id: string; contact_status: string; email_normalized: string | null; linkedin_url: string | null; contact_form_url: string | null };
 type OutreachFixture = {
   id: string;
@@ -78,7 +78,7 @@ async function main() {
     last_attempt_at: null,
     next_follow_up_at: "unchanged",
   };
-  const currentOpportunity: OpportunityFixture = { id: "opportunity", domain_id: "domain", asset_id: "asset" };
+  const currentOpportunity: OpportunityFixture = { id: "opportunity", domain_id: "domain", asset_id: "asset", target_page_url: "https://example.com/page" };
   let contact: ContactFixture = {
     id: "contact",
     domain_id: "domain",
@@ -359,8 +359,8 @@ async function main() {
     last_attempt_at: "2026-08-10T11:30:00.000Z",
     next_follow_up_at: null,
   });
-  opportunityFixtures.set("recent-hour-opportunity-1", { id: "recent-hour-opportunity-1", domain_id: "other-domain-1", asset_id: "asset-x" });
-  opportunityFixtures.set("recent-hour-opportunity-2", { id: "recent-hour-opportunity-2", domain_id: "other-domain-2", asset_id: "asset-y" });
+  opportunityFixtures.set("recent-hour-opportunity-1", { id: "recent-hour-opportunity-1", domain_id: "other-domain-1", asset_id: "asset-x", target_page_url: "https://example.com/recent-hour-1" });
+  opportunityFixtures.set("recent-hour-opportunity-2", { id: "recent-hour-opportunity-2", domain_id: "other-domain-2", asset_id: "asset-y", target_page_url: "https://example.com/recent-hour-2" });
   contactFixtures.set("recent-hour-contact-1", { id: "recent-hour-contact-1", domain_id: "other-domain-1", contact_status: "verified", email_normalized: "hour1@example.com", linkedin_url: null, contact_form_url: null });
   contactFixtures.set("recent-hour-contact-2", { id: "recent-hour-contact-2", domain_id: "other-domain-2", contact_status: "verified", email_normalized: "hour2@example.com", linkedin_url: null, contact_form_url: null });
   await expects(() => service({ ...input, idempotencyKey: "key-hour" }), "OUTREACH_SEND_RATE_LIMIT_EXCEEDED");
@@ -388,7 +388,7 @@ async function main() {
       last_attempt_at: "2026-08-09T11:00:00.000Z",
       next_follow_up_at: null,
     });
-    opportunityFixtures.set(`${id}-opportunity`, { id: `${id}-opportunity`, domain_id: `${id}-domain`, asset_id: `${id}-asset` });
+    opportunityFixtures.set(`${id}-opportunity`, { id: `${id}-opportunity`, domain_id: `${id}-domain`, asset_id: `${id}-asset`, target_page_url: `https://example.com/${id}` });
     contactFixtures.set(`${id}-contact`, { id: `${id}-contact`, domain_id: `${id}-domain`, contact_status: "verified", email_normalized: `${id}@example.com`, linkedin_url: null, contact_form_url: null });
   }
   await expects(() => service({ ...input, idempotencyKey: "key-daily" }), "OUTREACH_SEND_RATE_LIMIT_EXCEEDED");
@@ -411,7 +411,7 @@ async function main() {
     last_attempt_at: "2026-08-10T10:15:00.000Z",
     next_follow_up_at: null,
   });
-  opportunityFixtures.set("same-domain-opportunity", { id: "same-domain-opportunity", domain_id: "domain", asset_id: "same-domain-asset" });
+  opportunityFixtures.set("same-domain-opportunity", { id: "same-domain-opportunity", domain_id: "domain", asset_id: "same-domain-asset", target_page_url: "https://example.com/same-domain" });
   contactFixtures.set("other-contact", { id: "other-contact", domain_id: "domain", contact_status: "verified", email_normalized: "other@example.com", linkedin_url: null, contact_form_url: null });
   await expects(() => service({ ...input, idempotencyKey: "key-domain" }), "OUTREACH_SEND_RATE_LIMIT_EXCEEDED");
 
@@ -443,7 +443,7 @@ async function main() {
     last_attempt_at: "2026-08-10T10:15:00.000Z",
     next_follow_up_at: null,
   });
-  opportunityFixtures.set("other-domain-opportunity", { id: "other-domain-opportunity", domain_id: "other-domain", asset_id: "other-domain-asset" });
+  opportunityFixtures.set("other-domain-opportunity", { id: "other-domain-opportunity", domain_id: "other-domain", asset_id: "other-domain-asset", target_page_url: "https://example.com/other-domain" });
   contactFixtures.set("other-contact", { id: "other-contact", domain_id: "other-domain", contact_status: "verified", email_normalized: "other-contact@example.com", linkedin_url: null, contact_form_url: null });
   contactFixtures.set("contact", { ...contact, contact_status: "verified", email_normalized: "contact@example.com" });
   const eligibleRateResult = await service({ ...input, idempotencyKey: "key-eligible" });

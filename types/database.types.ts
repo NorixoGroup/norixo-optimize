@@ -690,6 +690,7 @@ export type Database = {
           created_by: string | null
           end_at: string | null
           id: string
+          live_initial_send_enabled: boolean
           name: string
           objective: string
           owner_id: string
@@ -705,6 +706,7 @@ export type Database = {
           created_by?: string | null
           end_at?: string | null
           id?: string
+          live_initial_send_enabled?: boolean
           name: string
           objective: string
           owner_id: string
@@ -720,6 +722,7 @@ export type Database = {
           created_by?: string | null
           end_at?: string | null
           id?: string
+          live_initial_send_enabled?: boolean
           name?: string
           objective?: string
           owner_id?: string
@@ -759,6 +762,134 @@ export type Database = {
           },
           {
             foreignKeyName: "backlink_campaigns_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      backlink_outreach_initial_attempt_snapshots: {
+        Row: {
+          approval_fingerprint: string
+          approved_at: string
+          approved_by: string | null
+          attempt_id: string
+          body: string
+          campaign_id: string
+          channel: string
+          contact_id: string
+          created_at: string
+          idempotency_key: string
+          opportunity_id: string
+          outreach_id: string
+          recipient_email: string
+          subject: string
+          target_url: string
+          workspace_id: string
+        }
+        Insert: {
+          approval_fingerprint: string
+          approved_at: string
+          approved_by?: string | null
+          attempt_id: string
+          body: string
+          campaign_id: string
+          channel: string
+          contact_id: string
+          created_at?: string
+          idempotency_key: string
+          opportunity_id: string
+          outreach_id: string
+          recipient_email: string
+          subject: string
+          target_url: string
+          workspace_id: string
+        }
+        Update: {
+          approval_fingerprint?: string
+          approved_at?: string
+          approved_by?: string | null
+          attempt_id?: string
+          body?: string
+          campaign_id?: string
+          channel?: string
+          contact_id?: string
+          created_at?: string
+          idempotency_key?: string
+          opportunity_id?: string
+          outreach_id?: string
+          recipient_email?: string
+          subject?: string
+          target_url?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backlink_outreach_initial_attempt_snapshots_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: true
+            referencedRelation: "backlink_outreach_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlink_outreach_initial_attempt_snapshots_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "backlink_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlink_outreach_initial_attempt_snapshots_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "backlink_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlink_outreach_initial_attempt_snapshots_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "backlink_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlink_outreach_initial_attempt_snapshots_outreach_id_fkey"
+            columns: ["outreach_id"]
+            isOneToOne: false
+            referencedRelation: "backlink_outreach"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlink_outreach_initial_attempt_snapshots_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_plan_summary"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "backlink_outreach_initial_attempt_snapshots_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_product_activity_summary"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "backlink_outreach_initial_attempt_snapshots_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_revenue_summary"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "backlink_outreach_initial_attempt_snapshots_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_revenue_with_status"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "backlink_outreach_initial_attempt_snapshots_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -1947,6 +2078,17 @@ export type Database = {
           success_verified_at: string | null
           opportunity_id: string
           outreach_key: string
+          auto_send_approved_at: string | null
+          auto_send_approved_by: string | null
+          auto_send_approval_fingerprint: string | null
+          auto_send_approved_recipient: string | null
+          auto_send_approved_subject: string | null
+          auto_send_approved_body: string | null
+          auto_send_approved_channel: string | null
+          auto_send_approved_target_url: string | null
+          auto_send_approved_contact_id: string | null
+          auto_send_approved_opportunity_id: string | null
+          auto_send_approved_campaign_id: string | null
           status: string
           subject: string | null
           stop_reason: string | null
@@ -1976,6 +2118,17 @@ export type Database = {
           success_verified_at?: string | null
           opportunity_id: string
           outreach_key: string
+          auto_send_approved_at?: string | null
+          auto_send_approved_by?: string | null
+          auto_send_approval_fingerprint?: string | null
+          auto_send_approved_recipient?: string | null
+          auto_send_approved_subject?: string | null
+          auto_send_approved_body?: string | null
+          auto_send_approved_channel?: string | null
+          auto_send_approved_target_url?: string | null
+          auto_send_approved_contact_id?: string | null
+          auto_send_approved_opportunity_id?: string | null
+          auto_send_approved_campaign_id?: string | null
           status?: string
           subject?: string | null
           stop_reason?: string | null
@@ -2005,6 +2158,17 @@ export type Database = {
           success_verified_at?: string | null
           opportunity_id?: string
           outreach_key?: string
+          auto_send_approved_at?: string | null
+          auto_send_approved_by?: string | null
+          auto_send_approval_fingerprint?: string | null
+          auto_send_approved_recipient?: string | null
+          auto_send_approved_subject?: string | null
+          auto_send_approved_body?: string | null
+          auto_send_approved_channel?: string | null
+          auto_send_approved_target_url?: string | null
+          auto_send_approved_contact_id?: string | null
+          auto_send_approved_opportunity_id?: string | null
+          auto_send_approved_campaign_id?: string | null
           status?: string
           subject?: string | null
           stop_reason?: string | null
@@ -4669,6 +4833,24 @@ export type Database = {
         Args: {
           p_actor_user_id: string
           p_attempt_id: string
+          p_idempotency_key: string
+          p_outreach_id: string
+          p_requested_at: string
+          p_reply_token_hash: string
+          p_reply_token_key_version: string
+          p_workspace_id: string
+        }
+        Returns: {
+          attempt_id: string | null
+          disposition: string
+          rate_limit_reason: string | null
+        }[]
+      }
+      reserve_backlink_outreach_initial_attempt_for_approved_auto_send: {
+        Args: {
+          p_actor_user_id: string
+          p_attempt_id: string
+          p_campaign_id: string
           p_idempotency_key: string
           p_outreach_id: string
           p_requested_at: string

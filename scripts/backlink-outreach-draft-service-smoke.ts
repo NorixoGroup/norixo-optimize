@@ -34,7 +34,7 @@ function createFixture() {
   const service = createBacklinkOutreachDraftService({
     eligibility: {
       getMembership: async () => ({ campaign_id: "campaign", opportunity_id: "opportunity" }),
-      getOpportunity: async () => ({ id: "opportunity", domain_id: "domain", asset_id: "asset" }),
+      getOpportunity: async () => ({ id: "opportunity", domain_id: "domain", asset_id: "asset", target_page_url: "https://example.com/resources" }),
       listContactsByDomain: async () => [...contacts.values()].filter((contact) => contact.domain_id === "domain"),
       listOutreachByOpportunity: async () => outreach,
     },

@@ -245,6 +245,7 @@ function campaign(): Campaign {
     name: "Campaign",
     objective: "Preview",
     status: "draft",
+    live_initial_send_enabled: false,
     owner_id: id(6),
     archived_at: null,
     created_at: "2026-08-04T00:00:00.000Z",

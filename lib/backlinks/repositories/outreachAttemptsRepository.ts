@@ -11,6 +11,12 @@ type ReserveBacklinkOutreachFollowUpAttemptRpcRow = Database["public"]["Function
 type ReserveBacklinkOutreachInitialAttemptRpcName = "reserve_backlink_outreach_initial_attempt";
 type ReserveBacklinkOutreachInitialAttemptRpcArgs = Database["public"]["Functions"][ReserveBacklinkOutreachInitialAttemptRpcName]["Args"];
 type ReserveBacklinkOutreachInitialAttemptRpcRow = Database["public"]["Functions"][ReserveBacklinkOutreachInitialAttemptRpcName]["Returns"][number];
+type ReserveBacklinkOutreachApprovedInitialAttemptRpcName =
+  "reserve_backlink_outreach_initial_attempt_for_approved_auto_send";
+type ReserveBacklinkOutreachApprovedInitialAttemptRpcArgs =
+  Database["public"]["Functions"][ReserveBacklinkOutreachApprovedInitialAttemptRpcName]["Args"];
+type ReserveBacklinkOutreachApprovedInitialAttemptRpcRow =
+  Database["public"]["Functions"][ReserveBacklinkOutreachApprovedInitialAttemptRpcName]["Returns"][number];
 type CancelBacklinkOutreachPreparedFollowUpAttemptRpcName = "cancel_backlink_outreach_prepared_follow_up_attempt";
 type CancelBacklinkOutreachPreparedFollowUpAttemptRpcArgs = Database["public"]["Functions"][CancelBacklinkOutreachPreparedFollowUpAttemptRpcName]["Args"];
 type CancelBacklinkOutreachPreparedFollowUpAttemptRpcRow = Database["public"]["Functions"][CancelBacklinkOutreachPreparedFollowUpAttemptRpcName]["Returns"][number];
@@ -31,6 +37,34 @@ export type BacklinkOutreachAttemptRateLimitReason =
 export type BacklinkOutreachAttemptReservation =
   | { attempt: BacklinkOutreachAttemptRow; disposition: "created" | "existing"; rateLimitReason: null }
   | { attempt: null; disposition: "rate_limited"; rateLimitReason: BacklinkOutreachAttemptRateLimitReason };
+export type BacklinkOutreachApprovedInitialAttemptSnapshotRow =
+  Database["public"]["Tables"]["backlink_outreach_initial_attempt_snapshots"]["Row"];
+export type BacklinkOutreachApprovedInitialAttemptResult =
+  | {
+      attempt: BacklinkOutreachAttemptRow;
+      snapshot: BacklinkOutreachApprovedInitialAttemptSnapshotRow;
+      disposition: "created" | "existing";
+      rateLimitReason: null;
+    }
+  | {
+      attempt: null;
+      snapshot: null;
+      disposition:
+        | "not_approved"
+        | "approval_stale"
+        | "campaign_disabled"
+        | "not_ready"
+        | "invalid_recipient"
+        | "missing_approved_content"
+        | "ineligible";
+      rateLimitReason: null;
+    }
+  | {
+      attempt: null;
+      snapshot: null;
+      disposition: "rate_limited";
+      rateLimitReason: BacklinkOutreachAttemptRateLimitReason;
+    };
 export type BacklinkOutreachAttemptSummary = {
   latestStatus: BacklinkOutreachAttemptRow["status"] | null;
   latestOpenAttemptId: string | null;
@@ -52,7 +86,7 @@ export type CancelBacklinkOutreachPreparedFollowUpAttemptRpcClient = { rpc(funct
 export type ApplyBacklinkOutreachFollowUpAcceptedRpcClient = { rpc(functionName: ApplyBacklinkOutreachFollowUpAcceptedRpcName, args: ApplyBacklinkOutreachFollowUpAcceptedRpcArgs): PromiseLike<{ data: ApplyBacklinkOutreachFollowUpAcceptedRpcRow[] | null; error: unknown }> };
 export type MarkBacklinkOutreachFollowUpAttemptRequestedRpcClient = { rpc(functionName: MarkBacklinkOutreachFollowUpAttemptRequestedRpcName, args: MarkBacklinkOutreachFollowUpAttemptRequestedRpcArgs): PromiseLike<{ data: MarkBacklinkOutreachFollowUpAttemptRequestedRpcRow[] | null; error: unknown }> };
 
-function required(value: string, field: string): string { const normalized = value.trim(); if (!normalized) throw new BacklinkRepositoryError({ code: "VALIDATION", operation: "createBacklinkOutreachAttempt", message: `${field} is required.` }); return normalized; }
+function required(value: string | null | undefined, field: string): string { const normalized = value?.trim(); if (!normalized) throw new BacklinkRepositoryError({ code: "VALIDATION", operation: "createBacklinkOutreachAttempt", message: `${field} is required.` }); return normalized; }
 function mapInitialAttemptReservation(value: unknown): {
   disposition: "created" | "existing" | "rate_limited";
   attemptId: string | null;
@@ -126,6 +160,188 @@ export async function reserveBacklinkOutreachAttempt(client: ReserveBacklinkOutr
     return { attempt: existing, disposition: mapped.disposition, rateLimitReason: null };
   }
   throw new BacklinkRepositoryError({ code: "DATABASE", operation: "reserveBacklinkOutreachAttempt", message: "The database returned an invalid initial attempt reservation." });
+}
+function mapApprovedInitialAttemptReservation(value: unknown): {
+  disposition:
+    | "created"
+    | "existing"
+    | "rate_limited"
+    | "not_approved"
+    | "approval_stale"
+    | "campaign_disabled"
+    | "not_ready"
+    | "invalid_recipient"
+    | "missing_approved_content"
+    | "ineligible";
+  attemptId: string | null;
+  rateLimitReason: BacklinkOutreachAttemptRateLimitReason | null;
+} {
+  if (!isRecord(value)) {
+    throw new BacklinkRepositoryError({
+      code: "DATABASE",
+      operation: "reserveBacklinkOutreachAttemptForApprovedAutoSend",
+      message: "The database returned an invalid approved initial attempt reservation.",
+    });
+  }
+
+  const { disposition, attempt_id: attemptId, rate_limit_reason: rateLimitReason } = value;
+  if (disposition === "rate_limited") {
+    if (
+      typeof rateLimitReason !== "string" ||
+      (rateLimitReason !== "WORKSPACE_DAILY_LIMIT_REACHED" &&
+        rateLimitReason !== "WORKSPACE_HOURLY_LIMIT_REACHED" &&
+        rateLimitReason !== "DOMAIN_DAILY_LIMIT_REACHED" &&
+        rateLimitReason !== "CONTACT_DAILY_LIMIT_REACHED")
+    ) {
+      throw new BacklinkRepositoryError({
+        code: "DATABASE",
+        operation: "reserveBacklinkOutreachAttemptForApprovedAutoSend",
+        message: "The database returned an invalid approved initial attempt reservation.",
+      });
+    }
+    return { disposition, attemptId: null, rateLimitReason };
+  }
+
+  if (
+    disposition !== "created" &&
+    disposition !== "existing" &&
+    disposition !== "not_approved" &&
+    disposition !== "approval_stale" &&
+    disposition !== "campaign_disabled" &&
+    disposition !== "not_ready" &&
+    disposition !== "invalid_recipient" &&
+    disposition !== "missing_approved_content" &&
+    disposition !== "ineligible"
+  ) {
+    throw new BacklinkRepositoryError({
+      code: "DATABASE",
+      operation: "reserveBacklinkOutreachAttemptForApprovedAutoSend",
+      message: "The database returned an invalid approved initial attempt reservation.",
+    });
+  }
+
+  if ((disposition === "created" || disposition === "existing") && typeof attemptId !== "string") {
+    throw new BacklinkRepositoryError({
+      code: "DATABASE",
+      operation: "reserveBacklinkOutreachAttemptForApprovedAutoSend",
+      message: "The database returned an invalid approved initial attempt reservation.",
+    });
+  }
+
+  if (disposition !== "created" && disposition !== "existing") {
+    return { disposition, attemptId: null, rateLimitReason: null };
+  }
+
+  return { disposition, attemptId: attemptId as string, rateLimitReason: null };
+}
+
+export async function getBacklinkOutreachInitialAttemptSnapshotByAttemptId(
+  client: BacklinkRepositoryClient,
+  workspaceId: WorkspaceId,
+  attemptId: string,
+): Promise<BacklinkOutreachApprovedInitialAttemptSnapshotRow | null> {
+  const operation = "getBacklinkOutreachInitialAttemptSnapshotByAttemptId";
+  const { data, error } = await client
+    .from("backlink_outreach_initial_attempt_snapshots")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .eq("attempt_id", attemptId)
+    .maybeSingle();
+
+  if (error != null) {
+    throw normalizeBacklinkRepositoryError(operation, error);
+  }
+
+  return data;
+}
+
+export async function reserveBacklinkOutreachApprovedInitialAttempt(
+  client: ReserveBacklinkOutreachInitialAttemptRpcClient,
+  input: {
+    workspaceId: WorkspaceId;
+    campaignId: string;
+    outreachId: string;
+    attemptId: string;
+    actorUserId: string;
+    idempotencyKey: string;
+    replyTokenHash: string;
+    replyTokenKeyVersion: string;
+    requestedAt: string;
+  },
+): Promise<BacklinkOutreachApprovedInitialAttemptResult> {
+  const { data, error } = await client.rpc(
+    "reserve_backlink_outreach_initial_attempt_for_approved_auto_send",
+    {
+      p_workspace_id: required(input.workspaceId, "workspaceId"),
+      p_campaign_id: required(input.campaignId, "campaignId"),
+      p_outreach_id: required(input.outreachId, "outreachId"),
+      p_attempt_id: required(input.attemptId, "attemptId"),
+      p_actor_user_id: required(input.actorUserId, "actorUserId"),
+      p_idempotency_key: required(input.idempotencyKey, "idempotencyKey"),
+      p_reply_token_hash: required(input.replyTokenHash, "replyTokenHash"),
+      p_reply_token_key_version: required(input.replyTokenKeyVersion, "replyTokenKeyVersion"),
+      p_requested_at: required(input.requestedAt, "requestedAt"),
+    },
+  );
+
+  if (error != null) {
+    throw normalizeBacklinkRepositoryError(
+      "reserveBacklinkOutreachAttemptForApprovedAutoSend",
+      error,
+    );
+  }
+
+  if (!Array.isArray(data) || data.length !== 1) {
+    throw new BacklinkRepositoryError({
+      code: "DATABASE",
+      operation: "reserveBacklinkOutreachAttemptForApprovedAutoSend",
+      message: "The database returned an invalid approved initial attempt reservation.",
+    });
+  }
+
+  const mapped = mapApprovedInitialAttemptReservation(data[0]);
+  if (mapped.disposition === "rate_limited") {
+    return { attempt: null, snapshot: null, disposition: "rate_limited", rateLimitReason: mapped.rateLimitReason! };
+  }
+
+  if (
+    mapped.disposition === "not_approved" ||
+    mapped.disposition === "approval_stale" ||
+    mapped.disposition === "campaign_disabled" ||
+    mapped.disposition === "not_ready" ||
+    mapped.disposition === "invalid_recipient" ||
+    mapped.disposition === "missing_approved_content" ||
+    mapped.disposition === "ineligible"
+  ) {
+    return { attempt: null, snapshot: null, disposition: mapped.disposition, rateLimitReason: null };
+  }
+
+  const attempt = await getBacklinkOutreachAttemptById(
+    client,
+    input.workspaceId,
+    required(mapped.attemptId, "attemptId"),
+  );
+  if (attempt == null) {
+    throw new BacklinkRepositoryError({
+      code: "NOT_FOUND",
+      operation: "reserveBacklinkOutreachAttemptForApprovedAutoSend",
+      message: "The requested record was not found.",
+    });
+  }
+  const snapshot = await getBacklinkOutreachInitialAttemptSnapshotByAttemptId(
+    client,
+    input.workspaceId,
+    attempt.id,
+  );
+  if (snapshot == null) {
+    throw new BacklinkRepositoryError({
+      code: "DATABASE",
+      operation: "reserveBacklinkOutreachAttemptForApprovedAutoSend",
+      message: "The database returned an invalid approved initial attempt snapshot.",
+    });
+  }
+
+  return { attempt, snapshot, disposition: mapped.disposition, rateLimitReason: null };
 }
 export async function updateBacklinkOutreachAttemptState(client: BacklinkRepositoryClient, workspaceId: WorkspaceId, attemptId: string, patch: BacklinkOutreachAttemptStatePatch): Promise<BacklinkOutreachAttemptRow> { const { data, error } = await client.from("backlink_outreach_attempts").update(patch).eq("workspace_id", workspaceId).eq("id", attemptId).select("*").maybeSingle(); if (error != null) throw normalizeBacklinkRepositoryError("updateBacklinkOutreachAttemptState", error); if (data == null) throw new BacklinkRepositoryError({ code: "NOT_FOUND", operation: "updateBacklinkOutreachAttemptState", message: "The requested record was not found." }); return data; }
 export async function resolveUnknownBacklinkOutreachAttemptState(client: BacklinkRepositoryClient, workspaceId: WorkspaceId, attemptId: string, patch: BacklinkOutreachAttemptStatePatch): Promise<BacklinkOutreachAttemptRow | null> { const { data, error } = await client.from("backlink_outreach_attempts").update(patch).eq("workspace_id", workspaceId).eq("id", attemptId).eq("status", "unknown").select("*").maybeSingle(); if (error != null) throw normalizeBacklinkRepositoryError("resolveUnknownBacklinkOutreachAttemptState", error); return data; }
