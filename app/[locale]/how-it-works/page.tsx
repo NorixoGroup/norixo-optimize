@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
-import { HowItWorksSections } from "@/components/marketing/HowItWorksSections";
+import { HowItWorksSectionsClaimSafe } from "@/components/marketing/HowItWorksSectionsClaimSafe";
 import { isLocale, type Locale } from "@/data/i18n";
 import { howItWorksI18n } from "@/data/marketing/howItWorksI18n";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
@@ -142,7 +142,7 @@ export default async function HowItWorksPage({ params }: Props) {
     <MarketingPageShell>
       <main className="nk-section space-y-10 md:space-y-12">
         <div>
-          <HowItWorksSections
+          <HowItWorksSectionsClaimSafe
             includeAnchorId
             showHeroPersuasionNote
             primaryActionLabel={localizedPrimaryActionLabel}
