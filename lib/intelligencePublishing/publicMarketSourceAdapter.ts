@@ -19,6 +19,7 @@ import {
   type RegistrySnapshot,
 } from "./registryAdapter";
 import type { CoordinationJsonObject, CoordinationJsonValue } from "./distributedCoordination";
+import { buildPublicMarketCompletenessPolicy } from "./publicMarketSourcePolicy";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -909,21 +910,7 @@ export function buildMarketReportBundleFromPublicMarketSource(
     options: {
       strictCompleteness: false,
       supportedLocales: [base.source.publication.primaryLocale],
-      completenessPolicy: {
-        requireOverview: base.source.publication.requiredMetrics.includes(
-          "market_overview",
-        ),
-        requirePricing: base.source.publication.requiredMetrics.includes(
-          "pricing_benchmark",
-        ),
-        requireOccupancy:
-          base.source.publication.indexOnlyWhenComplete ||
-          base.source.publication.requiredMetrics.includes(
-            "occupancy_benchmark",
-          ),
-        allowPartialReport: true,
-        minimumSectionCount: 5,
-      },
+      completenessPolicy: buildPublicMarketCompletenessPolicy(base.source),
       metadata: freezeMetadata({
         sourceKind: base.source.sourceKind,
         sourceFingerprint: base.sourceFingerprint,
