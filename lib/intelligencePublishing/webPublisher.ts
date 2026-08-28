@@ -4000,17 +4000,39 @@ export function buildWebSeoModel(input: Readonly<{
     !Array.isArray(bundle.structuredData.mainEntity)
       ? deepFreeze({
           ...(bundle.structuredData.mainEntity as CoordinationJsonObject),
+          ...(input.route.canonical.canonicalUrl == null
+            ? {}
+            : { "@id": `${input.route.canonical.canonicalUrl}#dataset` }),
           canonicalUrl: input.route.canonical.canonicalUrl,
         })
       : bundle.structuredData.mainEntity;
+  const structuredDataDataset =
+    typeof bundle.structuredData.dataset === "object" &&
+    bundle.structuredData.dataset != null &&
+    !Array.isArray(bundle.structuredData.dataset)
+      ? deepFreeze({
+          ...(bundle.structuredData.dataset as CoordinationJsonObject),
+          ...(input.route.canonical.canonicalUrl == null
+            ? {}
+            : {
+                "@id": `${input.route.canonical.canonicalUrl}#dataset`,
+                isPartOf: { "@id": `${input.route.canonical.canonicalUrl}#webpage` },
+              }),
+        })
+      : bundle.structuredData.dataset;
   const structuredData: CoordinationJsonObject = deepFreeze({
     ...(bundle.structuredData as CoordinationJsonObject),
+    ...(input.route.canonical.canonicalUrl == null
+      ? {}
+      : {
+          "@id": `${input.route.canonical.canonicalUrl}#webpage`,
+          url: input.route.canonical.canonicalUrl,
+        }),
     canonicalUrl: input.route.canonical.canonicalUrl,
     ...(structuredDataMainEntity == null
       ? {}
       : { mainEntity: structuredDataMainEntity }),
-    datePublished: bundle.metadataArtifact.publishedAt,
-    dateModified: bundle.metadataArtifact.modifiedAt,
+    ...(structuredDataDataset == null ? {} : { dataset: structuredDataDataset }),
   });
   const seo = deepFreeze({
     title: bundle.metadataArtifact.title,

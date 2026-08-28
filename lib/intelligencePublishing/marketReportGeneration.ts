@@ -306,11 +306,18 @@ export type MarketReportLineageArtifact = Readonly<{
 }>;
 
 export type MarketReportStructuredData = Readonly<{
+  "@context": string;
+  "@type": readonly string[];
+  "@id": string | null;
   schemaType: string;
+  url: string | null;
+  name: string;
   headline: string;
   description: string;
-  datePublished: string;
-  dateModified: string;
+  datePublished?: string;
+  dateModified?: string;
+  inLanguage: string;
+  isPartOf: CoordinationJsonObject;
   about: CoordinationJsonObject;
   spatialCoverage: CoordinationJsonObject;
   temporalCoverage: CoordinationJsonObject;
@@ -2936,42 +2943,102 @@ function buildStructuredData(
     methodology: MarketReportMethodology | null;
   }>,
 ): MarketReportStructuredData {
+  const canonicalUrl = input.document.identity.canonicalUrl;
+  const reportId = canonicalUrl == null ? null : `${canonicalUrl}#webpage`;
+  const datasetId = canonicalUrl == null ? null : `${canonicalUrl}#dataset`;
+  const methodologyUrl = "https://norixo.io/research/methodology";
+  const buildOrganization = () => freezeMetadata({
+    "@id": "https://norixo.io/#organization",
+    "@type": "Organization",
+    name: "Norixo",
+    url: "https://norixo.io",
+  });
+  const buildTemporalCoverage = () => freezeMetadata({
+    capturePeriodBucket: input.document.period.capturePeriodBucket,
+    sourcePeriodStart: input.document.period.sourcePeriodStart,
+    sourcePeriodEnd: input.document.period.sourcePeriodEnd,
+    windowStartedAt: input.document.period.windowStartedAt,
+    windowEndedAt: input.document.period.windowEndedAt,
+  });
+  const buildSpatialCoverage = () => freezeMetadata({
+    "@type": "Place",
+    address: freezeMetadata({
+      "@type": "PostalAddress",
+      addressLocality: input.document.identity.city,
+      addressCountry: input.document.identity.country,
+    }),
+    city: input.document.identity.city,
+    country: input.document.identity.country,
+  });
+  const variableMeasured = input.document.facts
+    .filter((fact) =>
+      [
+        "pricing_sample",
+        "pricing_p25",
+        "pricing_median",
+        "pricing_p75",
+        "capture_period",
+      ].includes(fact.key),
+    )
+    .map((fact) =>
+      freezeMetadata({
+        "@type": "PropertyValue",
+        name: fact.label,
+        propertyID: fact.key,
+        value: fact.value,
+        ...(fact.unit == null ? {} : { unitText: fact.unit }),
+      }),
+    );
   return deepFreeze({
+    "@context": "https://schema.org",
+    "@type": Object.freeze(["Report", "WebPage"]),
+    "@id": reportId,
     schemaType: "Report",
+    url: canonicalUrl,
+    name: input.document.title,
     headline: input.document.title,
     description: input.document.description,
-    datePublished: input.document.generatedAt,
-    dateModified: input.document.generatedAt,
+    inLanguage: input.document.identity.locale,
+    isPartOf: freezeMetadata({
+      "@id": "https://norixo.io/#website",
+      "@type": "WebSite",
+      name: "Norixo",
+      url: "https://norixo.io",
+    }),
     about: freezeMetadata({
       platform: input.document.identity.platform,
       propertyType: input.document.identity.propertyType,
     }),
-    spatialCoverage: freezeMetadata({
-      country: input.document.identity.country,
-      city: input.document.identity.city,
-    }),
-    temporalCoverage: freezeMetadata({
-      capturePeriodBucket: input.document.period.capturePeriodBucket,
-      sourcePeriodStart: input.document.period.sourcePeriodStart,
-      sourcePeriodEnd: input.document.period.sourcePeriodEnd,
-      windowStartedAt: input.document.period.windowStartedAt,
-      windowEndedAt: input.document.period.windowEndedAt,
-    }),
-    publisher: freezeMetadata({
-      name: "Norixo",
-    }),
+    spatialCoverage: buildSpatialCoverage(),
+    temporalCoverage: buildTemporalCoverage(),
+    publisher: buildOrganization(),
     mainEntity: freezeMetadata({
-      title: input.document.title,
+      "@id": datasetId,
+      "@type": "Dataset",
+      name: `${input.document.title} aggregated evidence`,
       canonicalUrl: input.document.identity.canonicalUrl,
     }),
     dataset: freezeMetadata({
+      "@id": datasetId,
+      "@type": "Dataset",
+      name: `${input.document.title} aggregated evidence`,
+      description: input.document.description,
+      isPartOf: reportId == null ? null : freezeMetadata({ "@id": reportId }),
+      creator: buildOrganization(),
+      publisher: buildOrganization(),
+      spatialCoverage: buildSpatialCoverage(),
+      temporalCoverage: buildTemporalCoverage(),
+      variableMeasured,
+      measurementTechnique: methodologyUrl,
       sourceFamilyCount: input.lineage?.sourceLabels.length ?? 0,
     }),
     methodology: freezeMetadata({
+      "@id": `${methodologyUrl}#article`,
+      url: methodologyUrl,
       bullets: input.methodology?.bullets ?? [],
       disclaimer: input.methodology?.disclaimer ?? null,
     }),
-    canonicalUrl: input.document.identity.canonicalUrl,
+    canonicalUrl,
   });
 }
 
