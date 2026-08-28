@@ -32,6 +32,17 @@ function formatValue(
   return value;
 }
 
+function formatFactValue(value: unknown, locale: string): string {
+  return formatValue(
+    typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean"
+      ? value
+      : null,
+    locale,
+  );
+}
+
 function getCopy(locale: string) {
   if (locale === "fr") {
     return {
@@ -47,6 +58,12 @@ function getCopy(locale: string) {
       citationTitle: "Citer ce rapport",
       citationIntro:
         "Citez la page canonique de ce rapport. Conservez également toute date de publication ou de mise à jour affichée par le rapport.",
+      citationScope: "Périmètre",
+      citationPeriod: "Période",
+      citationSample: "Échantillon",
+      citationQuestions:
+        "Pour une question de méthodologie, de correction ou de réutilisation, contactez Norixo.",
+      contactLink: "Contacter Norixo",
       methodologyLink: "Méthodologie de recherche Norixo",
       moreMarketReports: "Autres rapports de marché",
     } as const;
@@ -65,6 +82,12 @@ function getCopy(locale: string) {
     citationTitle: "Cite this report",
     citationIntro:
       "Cite this report's canonical page. Preserve any publication or update date displayed by the report when one is available.",
+    citationScope: "Scope",
+    citationPeriod: "Period",
+    citationSample: "Sample",
+    citationQuestions:
+      "For methodology, correction, or reuse questions, contact Norixo.",
+    contactLink: "Contact Norixo",
     methodologyLink: "Norixo research methodology",
     moreMarketReports: "More market reports",
   } as const;
@@ -84,6 +107,8 @@ export default function IppMarketReportView({
   const structuredData = manifest.seo.structuredData;
   const copy = getCopy(locale);
   const canonicalUrl = `https://norixo.io${manifest.route.canonical.pathname}`;
+  const citationPeriod = page.facts.find((fact) => fact.key === "capture_period");
+  const citationSample = page.facts.find((fact) => fact.key === "pricing_sample");
 
   return (
     <main className="min-h-screen bg-[#FAF7F2] text-[#10231F]">
@@ -249,7 +274,38 @@ export default function IppMarketReportView({
           <div className="mt-6 rounded-2xl bg-[#FAF7F2] p-5 text-sm leading-7 text-[#4C5C55]">
             <p className="font-semibold text-[#10231F]">Norixo, “{page.heading}”</p>
             <p className="mt-2 break-all">{canonicalUrl}</p>
+            <dl className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div>
+                <dt className="font-semibold text-[#10231F]">{copy.citationScope}</dt>
+                <dd>
+                  {manifest.route.canonical.city} · {manifest.route.canonical.platform} ·{" "}
+                  {manifest.route.canonical.propertyType}
+                </dd>
+              </div>
+              {citationPeriod != null ? (
+                <div>
+                  <dt className="font-semibold text-[#10231F]">{copy.citationPeriod}</dt>
+                  <dd>{formatFactValue(citationPeriod.value, locale)}</dd>
+                </div>
+              ) : null}
+              {citationSample != null ? (
+                <div>
+                  <dt className="font-semibold text-[#10231F]">{copy.citationSample}</dt>
+                  <dd>{formatFactValue(citationSample.value, locale)}</dd>
+                </div>
+              ) : null}
+            </dl>
           </div>
+          <p className="mt-5 max-w-3xl text-sm leading-7 text-[#4C5C55]">
+            {copy.citationQuestions}{" "}
+            <Link
+              href="/contact"
+              className="font-semibold text-[#10231F] underline underline-offset-4"
+            >
+              {copy.contactLink}
+            </Link>
+            .
+          </p>
         </div>
       </section>
 
