@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { MarketingPageShell } from "@/components/marketing/MarketingPageShell";
-import { HowItWorksSections } from "@/components/marketing/HowItWorksSections";
+import { HowItWorksSectionsClaimSafe } from "@/components/marketing/HowItWorksSectionsClaimSafe";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 
 const siteUrl = (
@@ -71,7 +71,7 @@ export default function HowItWorksPage() {
       />
       <main className="nk-section space-y-10 md:space-y-12">
         <div>
-          <HowItWorksSections
+          <HowItWorksSectionsClaimSafe
             includeAnchorId
             showHeroPersuasionNote
             primaryActionLabel="Start my free audit"
