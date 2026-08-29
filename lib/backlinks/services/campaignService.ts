@@ -84,6 +84,15 @@ export async function updateCampaign(
   return updateBacklinkCampaign(client, workspaceId, campaignId, input);
 }
 
+export async function setCampaignLiveInitialSendEnabled(
+  client: BacklinkRepositoryClient,
+  workspaceId: WorkspaceId,
+  campaignId: string,
+  enabled: boolean,
+): Promise<BacklinkCampaignRow> {
+  return updateBacklinkCampaign(client, workspaceId, campaignId, { live_initial_send_enabled: enabled });
+}
+
 export async function addOpportunityToCampaign(
   client: BacklinkRepositoryClient,
   workspaceId: WorkspaceId,
