@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
 import { executeBacklinkVerification } from "../lib/backlinks/verification";
+import { UnsafeHttpTargetError } from "../lib/backlinks/http";
 import type { HttpFetchRequest, HttpFetchResponse } from "../lib/backlinks/http";
 
 const input = {
@@ -71,6 +72,16 @@ async function main(): Promise<void> {
   assert.deepEqual(fetchError, {
     kind: "fetch_error",
     error: { code: "FETCH_ERROR", message: "HTTP fetch timed out after 5000ms." },
+  });
+
+  const unsafeTarget = await executeBacklinkVerification(input, {
+    fetcher: async () => {
+      throw new UnsafeHttpTargetError();
+    },
+  });
+  assert.deepEqual(unsafeTarget, {
+    kind: "fetch_error",
+    error: { code: "unsafe_target", message: "HTTP target is not allowed." },
   });
 
   const nonHtml = await executeBacklinkVerification(

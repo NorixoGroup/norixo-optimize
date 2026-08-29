@@ -1,5 +1,6 @@
 import { extractHtmlAnchors, buildHtmlLinkObservations, parseHtmlDocument } from "../html";
 import { fetchHttp } from "../http";
+import { UnsafeHttpTargetError } from "../http";
 
 import { buildVerificationEvidence } from "./evidence-builder";
 import { runVerification } from "./engine";
@@ -31,6 +32,16 @@ function summarizeResponse(
 }
 
 function toFetchError(error: unknown): BacklinkVerificationRuntimeResult {
+  if (error instanceof UnsafeHttpTargetError) {
+    return {
+      kind: "fetch_error",
+      error: {
+        code: "unsafe_target",
+        message: "HTTP target is not allowed.",
+      },
+    };
+  }
+
   return {
     kind: "fetch_error",
     error: {

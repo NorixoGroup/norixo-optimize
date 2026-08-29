@@ -1,4 +1,10 @@
+import http from "node:http";
+import https from "node:https";
+
 import type { HttpFetchRequest, HttpFetchResponse } from "./types";
+import type { HttpFetchTransportInput, HttpFetchTransportResponse } from "./types";
+import type { DnsLookup } from "./url-safety";
+import { resolveSafeHttpTarget } from "./url-safety";
 
 const redirectStatuses = new Set([301, 302, 303, 307, 308]);
 
@@ -25,77 +31,131 @@ function validateRequest(request: HttpFetchRequest): void {
   }
 }
 
-async function readResponseBody(response: Response, maxResponseBytes: number): Promise<string> {
-  const contentLength = parseContentLength(response.headers.get("content-length"));
-
-  if (contentLength != null && contentLength > maxResponseBytes) {
-    throw new Error("HTTP response exceeds the configured size limit.");
-  }
-
-  if (response.body == null) {
-    return "";
-  }
-
-  const reader = response.body.getReader();
-  const chunks: Uint8Array[] = [];
+async function readStreamBody(
+  stream: NodeJS.ReadableStream,
+  maxResponseBytes: number,
+): Promise<string> {
+  const chunks: Buffer[] = [];
   let downloadedBytes = 0;
 
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
+  for await (const chunk of stream) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    downloadedBytes += buffer.byteLength;
 
-      if (done) {
-        break;
-      }
-
-      downloadedBytes += value.byteLength;
-
-      if (downloadedBytes > maxResponseBytes) {
-        await reader.cancel();
-        throw new Error("HTTP response exceeds the configured size limit.");
-      }
-
-      chunks.push(value);
+    if (downloadedBytes > maxResponseBytes) {
+      throw new Error("HTTP response exceeds the configured size limit.");
     }
-  } finally {
-    reader.releaseLock();
+
+    chunks.push(buffer);
   }
 
-  const body = new Uint8Array(downloadedBytes);
-  let offset = 0;
-
-  for (const chunk of chunks) {
-    body.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-
-  return new TextDecoder().decode(body);
+  return Buffer.concat(chunks, downloadedBytes).toString("utf8");
 }
 
-export async function fetchHttp(request: HttpFetchRequest): Promise<HttpFetchResponse> {
+function headerRecord(headers: http.IncomingHttpHeaders): Record<string, string> {
+  const entries: Array<[string, string]> = [];
+  for (const [key, value] of Object.entries(headers)) {
+    if (Array.isArray(value)) {
+      entries.push([key, value.join(", ")]);
+    } else if (value != null) {
+      entries.push([key, String(value)]);
+    }
+  }
+  return Object.fromEntries(entries);
+}
+
+async function requestBoundTarget(input: HttpFetchTransportInput): Promise<HttpFetchTransportResponse> {
+  const client = input.url.protocol === "https:" ? https : http;
+  const port = input.url.port === "" ? (input.url.protocol === "https:" ? 443 : 80) : Number(input.url.port);
+  const path = `${input.url.pathname}${input.url.search}`;
+
+  return new Promise((resolve, reject) => {
+    const request = client.request(
+      {
+        protocol: input.url.protocol,
+        hostname: input.address,
+        family: input.family,
+        port,
+        path,
+        method: "GET",
+        headers: {
+          ...input.headers,
+          Host: input.url.host,
+        },
+        ...(input.url.protocol === "https:" ? { servername: input.hostname } : {}),
+      },
+      async (response) => {
+        try {
+          const contentLength = parseContentLength(response.headers["content-length"]?.toString() ?? null);
+          if (contentLength != null && contentLength > input.maxResponseBytes) {
+            response.destroy();
+            reject(new Error("HTTP response exceeds the configured size limit."));
+            return;
+          }
+
+          const body = await readStreamBody(response, input.maxResponseBytes);
+          resolve({
+            status: response.statusCode ?? 0,
+            headers: headerRecord(response.headers),
+            body,
+          });
+        } catch (error) {
+          reject(error);
+        }
+      },
+    );
+
+    const abort = () => request.destroy(new Error("HTTP fetch aborted."));
+    input.signal.addEventListener("abort", abort, { once: true });
+    request.on("error", reject);
+    request.on("close", () => input.signal.removeEventListener("abort", abort));
+    request.end();
+  });
+}
+
+function getHeader(headers: Record<string, string>, name: string): string | null {
+  const found = Object.entries(headers).find(([key]) => key.toLowerCase() === name.toLowerCase());
+  return found?.[1] ?? null;
+}
+
+export type HttpFetchDependencies = {
+  dnsLookup?: DnsLookup;
+  transport?: (input: HttpFetchTransportInput) => Promise<HttpFetchTransportResponse>;
+};
+
+export async function fetchHttp(
+  request: HttpFetchRequest,
+  dependencies: HttpFetchDependencies = {},
+): Promise<HttpFetchResponse> {
   validateRequest(request);
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), request.timeoutMs);
   let currentUrl = request.url;
   let redirectCount = 0;
+  const transport = dependencies.transport ?? requestBoundTarget;
 
   try {
     while (true) {
-      const headers = new Headers();
+      const target = await resolveSafeHttpTarget(currentUrl, dependencies.dnsLookup);
+      const headers: Record<string, string> = {};
 
       if (request.userAgent != null) {
-        headers.set("user-agent", request.userAgent);
+        headers["user-agent"] = request.userAgent;
       }
 
-      const response = await fetch(currentUrl, {
+      const response = await transport({
+        url: target.url,
+        address: target.address,
+        family: target.family,
+        hostname: target.hostname,
         headers,
-        redirect: "manual",
         signal: controller.signal,
+        maxResponseBytes: request.maxResponseBytes,
       });
 
       if (redirectStatuses.has(response.status)) {
-        const location = response.headers.get("location");
+        const location = getHeader(response.headers, "location");
 
         if (location == null) {
           throw new Error("HTTP redirect response is missing a Location header.");
@@ -110,18 +170,20 @@ export async function fetchHttp(request: HttpFetchRequest): Promise<HttpFetchRes
         continue;
       }
 
-      const contentLength = parseContentLength(response.headers.get("content-length"));
-      const body = await readResponseBody(response, request.maxResponseBytes);
+      const contentLength = parseContentLength(getHeader(response.headers, "content-length"));
+      if (contentLength != null && contentLength > request.maxResponseBytes) {
+        throw new Error("HTTP response exceeds the configured size limit.");
+      }
 
       return {
         finalUrl: currentUrl,
         status: response.status,
-        headers: Object.fromEntries(response.headers.entries()),
-        body,
+        headers: response.headers,
+        body: response.body,
         redirected: redirectCount > 0,
         redirectCount,
         fetchedAt: new Date().toISOString(),
-        contentType: response.headers.get("content-type"),
+        contentType: getHeader(response.headers, "content-type"),
         contentLength,
       };
     }
