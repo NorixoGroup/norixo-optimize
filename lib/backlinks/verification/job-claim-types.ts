@@ -24,6 +24,18 @@ export type HeartbeatBacklinkVerificationJobResult =
   | { kind: "extended"; job: BacklinkVerificationJob }
   | { kind: "rejected"; reason: "not_updated" };
 
+export interface ReclaimExpiredBacklinkVerificationJobsInput {
+  workspaceId: string;
+  reclaimedAt: string;
+  limit: number;
+  jobId?: string;
+}
+
+export type ReclaimExpiredBacklinkVerificationJobsResult = {
+  kind: "reclaimed";
+  jobs: BacklinkVerificationJob[];
+};
+
 export interface CompleteBacklinkVerificationJobInput {
   jobId: string;
   workerId: string;

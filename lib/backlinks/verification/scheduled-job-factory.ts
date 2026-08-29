@@ -59,6 +59,7 @@ export function buildScheduledBacklinkVerificationJobInput(input: {
     triggerSource: "scheduler",
     policy: input.policy,
     http: input.http,
+    maxAttempts: 2,
     queuedAt: input.queuedAt,
   };
 }

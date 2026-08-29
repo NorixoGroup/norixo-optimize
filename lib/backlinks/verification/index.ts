@@ -40,6 +40,7 @@ export {
   completeVerificationJob,
   extendVerificationJobLease,
   failVerificationJob,
+  reclaimExpiredBacklinkVerificationJobs,
 } from "./job-claim-service";
 export { runVerification } from "./engine";
 export { executeBacklinkVerification } from "./runtime";
@@ -86,12 +87,15 @@ export type {
   FailBacklinkVerificationJobResult,
   HeartbeatBacklinkVerificationJobInput,
   HeartbeatBacklinkVerificationJobResult,
+  ReclaimExpiredBacklinkVerificationJobsInput,
+  ReclaimExpiredBacklinkVerificationJobsResult,
 } from "./job-claim-types";
 export type {
   ClaimNextVerificationJobDependencies,
   CompleteVerificationJobDependencies,
   ExtendVerificationJobLeaseDependencies,
   FailVerificationJobDependencies,
+  ReclaimExpiredBacklinkVerificationJobsDependencies,
 } from "./job-claim-service";
 export type {
   ExecuteClaimedBacklinkVerificationJobDependencies,

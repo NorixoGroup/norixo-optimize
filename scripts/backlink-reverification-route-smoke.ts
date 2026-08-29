@@ -44,6 +44,7 @@ async function main(): Promise<void> {
     "runTargetedJob",
     "scheduled:",
     "triggerSource: \"scheduler\"",
+    "maxAttempts: 2",
   ]) {
     assert(
       route.includes(required) ||

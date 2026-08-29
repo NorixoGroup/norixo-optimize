@@ -148,6 +148,57 @@ async function main(): Promise<void> {
   assert.deepEqual(schedulerBlocked, { kind: "skipped", reason: "fetch_error" });
   assert.equal(schedulerBlockedSetup.updates.length, 0);
 
+  const firstScheduledNotFoundSetup = createDependencies(linkFixture({ status: "active", lost_at: null, lost_reason: null }));
+  await persistBacklinkVerificationResult(
+    { workspaceId, linkId, triggerSource: "scheduler", runtimeResult: runtimeResult("NOT_FOUND") },
+    {
+      ...firstScheduledNotFoundSetup.dependencies,
+      listVerificationJobHistoryForLink: async () => [],
+    },
+  );
+  assert.equal(firstScheduledNotFoundSetup.updates[0]?.status, "active");
+  assert.equal(firstScheduledNotFoundSetup.updates[0]?.lost_at, undefined);
+  assert.equal(firstScheduledNotFoundSetup.updates[0]?.lost_reason, undefined);
+
+  const secondDistinctScheduledNotFoundSetup = createDependencies(linkFixture({ status: "active", lost_at: null, lost_reason: null }));
+  await persistBacklinkVerificationResult(
+    { workspaceId, linkId, triggerSource: "scheduler", runtimeResult: runtimeResult("NOT_FOUND") },
+    {
+      ...secondDistinctScheduledNotFoundSetup.dependencies,
+      listVerificationJobHistoryForLink: async () => [
+        {
+          trigger_source: "scheduler",
+          status: "completed",
+          completed_at: checkedAt,
+          created_at: checkedAt,
+          result_summary: { verificationStatus: "NOT_FOUND" },
+        },
+      ],
+    },
+  );
+  assert.equal(secondDistinctScheduledNotFoundSetup.updates[0]?.status, "lost");
+  assert.equal(secondDistinctScheduledNotFoundSetup.updates[0]?.lost_at, checkedAt);
+  assert.equal(secondDistinctScheduledNotFoundSetup.updates[0]?.lost_reason, "link_not_found");
+
+  const sameJobReplaySetup = createDependencies(linkFixture({ status: "active", last_verified_at: checkedAt, lost_at: null, lost_reason: null }));
+  const sameJobReplay = await persistBacklinkVerificationResult(
+    { workspaceId, linkId, triggerSource: "scheduler", runtimeResult: runtimeResult("NOT_FOUND") },
+    {
+      ...sameJobReplaySetup.dependencies,
+      listVerificationJobHistoryForLink: async () => [
+        {
+          trigger_source: "scheduler",
+          status: "completed",
+          completed_at: checkedAt,
+          created_at: checkedAt,
+          result_summary: { verificationStatus: "NOT_FOUND" },
+        },
+      ],
+    },
+  );
+  assert.deepEqual(sameJobReplay, { kind: "skipped", reason: "stale_result" });
+  assert.equal(sameJobReplaySetup.updates.length, 0);
+
   const staleSetup = createDependencies(linkFixture({ last_verified_at: checkedAt }));
   const stale = await persistBacklinkVerificationResult(
     { workspaceId, linkId, triggerSource: "manual", runtimeResult: runtimeResult("FOUND") },

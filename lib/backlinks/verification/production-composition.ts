@@ -3,9 +3,11 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import {
   claimBacklinkVerificationJobById as claimBacklinkVerificationJobByIdRepository,
   claimNextBacklinkVerificationJob,
+  heartbeatBacklinkVerificationJob,
   markBacklinkVerificationJobCompleted,
   markBacklinkVerificationJobFailed,
   listBacklinkVerificationJobsForLink,
+  reclaimExpiredBacklinkVerificationJobs as reclaimExpiredBacklinkVerificationJobsRepository,
 } from "../repositories/verificationJobsRepository";
 import { createBacklinkVerificationAttempt } from "../repositories/verificationAttemptsRepository";
 import type { BacklinkRepositoryClient } from "../repositories/repositoryClient";
@@ -19,7 +21,9 @@ import type {
 import {
   claimNextVerificationJob,
   completeVerificationJob,
+  extendVerificationJobLease,
   failVerificationJob,
+  reclaimExpiredBacklinkVerificationJobs,
 } from "./job-claim-service";
 import { claimBacklinkVerificationJobById as claimBacklinkVerificationJobByIdService } from "./targeted-job-claim-service";
 import type {
@@ -29,6 +33,9 @@ import type {
   CompleteBacklinkVerificationJobResult,
   FailBacklinkVerificationJobInput,
   FailBacklinkVerificationJobResult,
+  HeartbeatBacklinkVerificationJobInput,
+  HeartbeatBacklinkVerificationJobResult,
+  ReclaimExpiredBacklinkVerificationJobsInput,
 } from "./job-claim-types";
 import type { BacklinkVerificationJob } from "./job-types";
 import { persistBacklinkVerificationResult } from "./persistence";
@@ -112,8 +119,17 @@ export function createBacklinkVerificationProductionComposition(): {
 
   const claimNextJob = (
     input: ClaimNextBacklinkVerificationJobInput,
-  ): Promise<ClaimNextBacklinkVerificationJobResult> =>
-    claimNextVerificationJob(
+  ): Promise<ClaimNextBacklinkVerificationJobResult> => reclaimExpiredBacklinkVerificationJobs(
+      {
+        reclaimExpiredBacklinkVerificationJobs: (reclaimInput) =>
+          reclaimExpiredBacklinkVerificationJobsRepository(client, reclaimInput),
+      },
+      {
+        workspaceId: input.workspaceId,
+        reclaimedAt: input.claimedAt,
+        limit: 100,
+      },
+    ).then(() => claimNextVerificationJob(
       {
         claimNextJob: (claimInput) =>
           claimNextBacklinkVerificationJob(
@@ -125,7 +141,7 @@ export function createBacklinkVerificationProductionComposition(): {
           ),
       },
       input,
-    );
+    ));
 
   const claimTargetedJob = (
     input: ClaimBacklinkVerificationJobByIdInput,
@@ -140,6 +156,33 @@ export function createBacklinkVerificationProductionComposition(): {
             claimInput.workerId,
             claimInput.claimedAt,
             claimInput.leaseDurationSeconds,
+          ),
+      },
+      input,
+    );
+
+  const reclaimExpiredJob = (
+    input: ReclaimExpiredBacklinkVerificationJobsInput,
+  ) => reclaimExpiredBacklinkVerificationJobs(
+    {
+      reclaimExpiredBacklinkVerificationJobs: (reclaimInput) =>
+        reclaimExpiredBacklinkVerificationJobsRepository(client, reclaimInput),
+    },
+    input,
+  );
+
+  const extendLease = (
+    input: HeartbeatBacklinkVerificationJobInput,
+  ): Promise<HeartbeatBacklinkVerificationJobResult> =>
+    extendVerificationJobLease(
+      {
+        heartbeatBacklinkVerificationJob: (heartbeatInput) =>
+          heartbeatBacklinkVerificationJob(
+            client,
+            heartbeatInput.jobId,
+            heartbeatInput.workerId,
+            heartbeatInput.heartbeatAt,
+            heartbeatInput.leaseDurationSeconds,
           ),
       },
       input,
@@ -212,6 +255,7 @@ export function createBacklinkVerificationProductionComposition(): {
         runDependencies,
         completeJob,
         failJob,
+        extendLease,
       },
       input,
     );
@@ -232,6 +276,13 @@ export function createBacklinkVerificationProductionComposition(): {
   const runTargetedJob = async (
     input: RunTargetedBacklinkVerificationJobInput,
   ): Promise<RunTargetedBacklinkVerificationJobResult> => {
+    await reclaimExpiredJob({
+      workspaceId: input.workspaceId,
+      jobId: input.jobId,
+      reclaimedAt: input.claimedAt,
+      limit: 1,
+    });
+
     const claim = await claimTargetedJob({
       workspaceId: input.workspaceId,
       jobId: input.jobId,
@@ -246,6 +297,14 @@ export function createBacklinkVerificationProductionComposition(): {
 
     const job = claim.job;
     let run: BacklinkVerificationRunResult;
+    const heartbeatTimer = setInterval(() => {
+      void extendLease({
+        jobId: job.id,
+        workerId: input.workerId,
+        heartbeatAt: new Date().toISOString(),
+        leaseDurationSeconds: input.leaseDurationSeconds,
+      }).catch(() => undefined);
+    }, 30_000);
 
     try {
       run = await executeBacklinkVerificationRun(
@@ -260,6 +319,7 @@ export function createBacklinkVerificationProductionComposition(): {
         runDependencies,
       );
     } catch (error) {
+      clearInterval(heartbeatTimer);
       const serialized = serializeTargetedRunError(error);
       const failure = await failJob({
         jobId: job.id,
@@ -271,6 +331,7 @@ export function createBacklinkVerificationProductionComposition(): {
 
       return { kind: "failed", job, error: serialized, failure };
     }
+    clearInterval(heartbeatTimer);
 
     const completion = await completeJob({
       jobId: job.id,

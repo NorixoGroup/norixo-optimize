@@ -5121,6 +5121,10 @@ export type Database = {
         Args: { p_heartbeat_at: string; p_job_id: string; p_lease_duration_seconds: number; p_worker_id: string }
         Returns: Database["public"]["Tables"]["backlink_verification_jobs"]["Row"][]
       }
+      reclaim_expired_backlink_verification_jobs: {
+        Args: { p_workspace_id: string; p_reclaimed_at: string; p_limit: number; p_job_id?: string | null }
+        Returns: Database["public"]["Tables"]["backlink_verification_jobs"]["Row"][]
+      }
       complete_backlink_verification_job: {
         Args: { p_completed_at: string; p_job_id: string; p_result_summary: Json; p_worker_id: string }
         Returns: Database["public"]["Tables"]["backlink_verification_jobs"]["Row"][]

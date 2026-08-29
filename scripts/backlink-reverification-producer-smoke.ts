@@ -19,7 +19,7 @@ function job(input: CreateBacklinkVerificationJobInput): BacklinkVerificationJob
     policy: input.policy,
     http: input.http,
     attemptCount: 0,
-    maxAttempts: 1,
+    maxAttempts: input.maxAttempts ?? 1,
     queuedAt: input.queuedAt,
     startedAt: null,
     completedAt: null,
@@ -57,6 +57,7 @@ async function main(): Promise<void> {
       return null;
     },
     createJob: async (input) => {
+      assert.equal(input.maxAttempts, 2);
       created.push(input.jobKey);
       return job(input);
     },
@@ -94,6 +95,7 @@ async function main(): Promise<void> {
     http: { timeoutMs: 10000, maxRedirects: 3, maxResponseBytes: 1048576, userAgent: "Norixo-Backlink-Reverification/1.0" },
   });
   assert.equal(scheduledInput.triggerSource, "scheduler");
+  assert.equal(scheduledInput.maxAttempts, 2);
   assert.match(scheduledInput.jobKey, /^scheduled:[0-9a-f-]{36}:[0-9a-z]+$/);
 
   console.log("PASS — Backlink reverification producer smoke");

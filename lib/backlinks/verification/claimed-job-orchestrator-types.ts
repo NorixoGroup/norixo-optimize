@@ -5,6 +5,8 @@ import type {
   CompleteBacklinkVerificationJobResult,
   FailBacklinkVerificationJobInput,
   FailBacklinkVerificationJobResult,
+  HeartbeatBacklinkVerificationJobInput,
+  HeartbeatBacklinkVerificationJobResult,
 } from "./job-claim-types";
 import type { BacklinkVerificationJob } from "./job-types";
 import type {
@@ -36,6 +38,10 @@ export type ExecuteClaimedBacklinkVerificationJobDependencies = {
   failJob: (
     input: FailBacklinkVerificationJobInput,
   ) => Promise<FailBacklinkVerificationJobResult>;
+  extendLease?: (
+    input: HeartbeatBacklinkVerificationJobInput,
+  ) => Promise<HeartbeatBacklinkVerificationJobResult>;
+  heartbeatIntervalMs?: number;
 };
 
 export type ExecuteClaimedBacklinkVerificationJobResult =
