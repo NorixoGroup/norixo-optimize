@@ -117,11 +117,36 @@ async function main(): Promise<void> {
     { kind: "http_unusable", reason: "http_client_error" as const, response: verifiedResponse },
     { kind: "http_unusable", reason: "http_server_error" as const, response: verifiedResponse },
     { kind: "fetch_error", error: { code: "FETCH_ERROR", message: "Timed out" } },
+    { kind: "fetch_error", error: { code: "unsafe_target", message: "HTTP target is not allowed." } },
   ] as BacklinkVerificationRuntimeResult[]) {
     const skipped = await persistBacklinkVerificationResult({ workspaceId, linkId, triggerSource: "manual", runtimeResult: result }, skippedSetup.dependencies);
     assert.equal(skipped.kind, "skipped");
   }
   assert.equal(skippedSetup.updates.length, 0);
+
+  const schedulerBlockedSetup = createDependencies(linkFixture({ status: "active", lost_at: null, lost_reason: null }));
+  const schedulerBlocked = await persistBacklinkVerificationResult(
+    {
+      workspaceId,
+      linkId,
+      triggerSource: "scheduler",
+      runtimeResult: { kind: "fetch_error", error: { code: "unsafe_target", message: "HTTP target is not allowed." } },
+    },
+    {
+      ...schedulerBlockedSetup.dependencies,
+      listVerificationJobHistoryForLink: async () => [
+        {
+          trigger_source: "scheduler",
+          status: "completed",
+          completed_at: checkedAt,
+          created_at: checkedAt,
+          result_summary: { verificationStatus: "NOT_FOUND" },
+        },
+      ],
+    },
+  );
+  assert.deepEqual(schedulerBlocked, { kind: "skipped", reason: "fetch_error" });
+  assert.equal(schedulerBlockedSetup.updates.length, 0);
 
   const staleSetup = createDependencies(linkFixture({ last_verified_at: checkedAt }));
   const stale = await persistBacklinkVerificationResult(
