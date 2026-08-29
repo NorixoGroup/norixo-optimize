@@ -9,6 +9,9 @@ function validateInput(input: CreateBacklinkVerificationJobInput): void {
   if (!input.workspaceId.trim() || !input.linkId.trim() || !input.jobKey.trim() || input.jobKey.length > 255 || !Number.isFinite(Date.parse(input.queuedAt))) {
     throw new BacklinkRepositoryError({ code: "VALIDATION", operation: "createOrGetBacklinkVerificationJob", message: "The provided data is invalid." });
   }
+  if (input.maxAttempts != null && (!Number.isInteger(input.maxAttempts) || input.maxAttempts < 1 || input.maxAttempts > 10)) {
+    throw new BacklinkRepositoryError({ code: "VALIDATION", operation: "createOrGetBacklinkVerificationJob", message: "The provided data is invalid." });
+  }
 }
 
 export async function createOrGetBacklinkVerificationJob(

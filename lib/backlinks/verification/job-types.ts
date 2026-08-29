@@ -41,6 +41,7 @@ export interface CreateBacklinkVerificationJobInput {
   triggerSource: BacklinkVerificationJobTriggerSource;
   policy: VerificationPolicy;
   http: HttpVerificationOptions;
+  maxAttempts?: number;
   queuedAt: string;
 }
 

@@ -10,6 +10,11 @@ async function main(): Promise<void> {
     "persistBacklinkVerificationResult",
     "triggerSource: job.triggerSource",
     "executeBacklinkVerificationRun",
+    "reclaimExpiredBacklinkVerificationJobs",
+    "reclaimExpiredBacklinkVerificationJobsRepository",
+    "heartbeatBacklinkVerificationJob",
+    "extendLease",
+    "jobId: input.jobId",
   ]) {
     assert(source.includes(fragment), `Missing ${fragment}`);
   }

@@ -5,10 +5,40 @@ import type {
 } from "./claimed-job-orchestrator-types";
 import type { BacklinkVerificationRunResult } from "./run-types";
 
+const DEFAULT_HEARTBEAT_INTERVAL_MS = 30_000;
+
 function assertNonEmptyString(value: string, fieldName: string): void {
   if (value.trim().length === 0) {
     throw new Error(`${fieldName} must not be empty`);
   }
+}
+
+function startHeartbeat(input: {
+  dependencies: ExecuteClaimedBacklinkVerificationJobDependencies;
+  jobId: string;
+  workerId: string;
+  leaseDurationSeconds: number;
+}): () => void {
+  if (input.dependencies.extendLease == null) {
+    return () => undefined;
+  }
+  const extendLease = input.dependencies.extendLease;
+
+  const intervalMs = input.dependencies.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS;
+  if (!Number.isInteger(intervalMs) || intervalMs < 1) {
+    throw new Error("heartbeatIntervalMs must be an integer greater than or equal to 1");
+  }
+
+  const timer = setInterval(() => {
+    void extendLease({
+      jobId: input.jobId,
+      workerId: input.workerId,
+      heartbeatAt: new Date().toISOString(),
+      leaseDurationSeconds: input.leaseDurationSeconds,
+    }).catch(() => undefined);
+  }, intervalMs);
+
+  return () => clearInterval(timer);
 }
 
 function assertValidDateString(value: string, fieldName: string): void {
@@ -68,6 +98,12 @@ export async function executeClaimedBacklinkVerificationJob(
 
   const job = claim.job;
   let run: BacklinkVerificationRunResult;
+  const stopHeartbeat = startHeartbeat({
+    dependencies,
+    jobId: job.id,
+    workerId: input.workerId,
+    leaseDurationSeconds: input.leaseDurationSeconds,
+  });
 
   try {
     run = await dependencies.executeRun(
@@ -82,6 +118,7 @@ export async function executeClaimedBacklinkVerificationJob(
       dependencies.runDependencies,
     );
   } catch (error) {
+    stopHeartbeat();
     const serialized = serializeExecutionError(error);
     const failure = await dependencies.failJob({
       jobId: job.id,
@@ -98,6 +135,7 @@ export async function executeClaimedBacklinkVerificationJob(
       failure,
     };
   }
+  stopHeartbeat();
 
   const resultSummary = {
     runtimeKind: run.runtimeResult.kind,

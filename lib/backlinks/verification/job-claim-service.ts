@@ -7,12 +7,15 @@ import type {
   CompleteBacklinkVerificationJobResult,
   FailBacklinkVerificationJobInput,
   FailBacklinkVerificationJobResult,
+  ReclaimExpiredBacklinkVerificationJobsInput,
+  ReclaimExpiredBacklinkVerificationJobsResult,
 } from "./job-claim-types";
 import type { BacklinkVerificationJob } from "./job-types";
 
 const MIN_LEASE_DURATION_SECONDS = 30;
 const MAX_LEASE_DURATION_SECONDS = 3600;
 const MAX_WORKER_ID_LENGTH = 255;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function assertNonEmptyString(value: string, fieldName: string): void {
   if (value.trim().length === 0) {
@@ -36,6 +39,14 @@ function assertValidDateString(value: string, fieldName: string): void {
   }
 }
 
+function assertValidUuid(value: string, fieldName: string): void {
+  assertNonEmptyString(value, fieldName);
+
+  if (!UUID_PATTERN.test(value.trim())) {
+    throw new Error(`${fieldName} must be a valid UUID`);
+  }
+}
+
 function assertValidLeaseDuration(leaseDurationSeconds: number): void {
   if (
     !Number.isFinite(leaseDurationSeconds) ||
@@ -46,6 +57,12 @@ function assertValidLeaseDuration(leaseDurationSeconds: number): void {
     throw new Error(
       `leaseDurationSeconds must be an integer between ${MIN_LEASE_DURATION_SECONDS} and ${MAX_LEASE_DURATION_SECONDS}`,
     );
+  }
+}
+
+function assertValidLimit(limit: number): void {
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+    throw new Error("limit must be an integer between 1 and 100");
   }
 }
 
@@ -84,6 +101,29 @@ export async function extendVerificationJobLease(
 
   const job = await dependencies.heartbeatBacklinkVerificationJob(input);
   return job == null ? { kind: "rejected", reason: "not_updated" } : { kind: "extended", job };
+}
+
+export type ReclaimExpiredBacklinkVerificationJobsDependencies = {
+  reclaimExpiredBacklinkVerificationJobs: (
+    input: ReclaimExpiredBacklinkVerificationJobsInput,
+  ) => Promise<BacklinkVerificationJob[]>;
+};
+
+export async function reclaimExpiredBacklinkVerificationJobs(
+  dependencies: ReclaimExpiredBacklinkVerificationJobsDependencies,
+  input: ReclaimExpiredBacklinkVerificationJobsInput,
+): Promise<ReclaimExpiredBacklinkVerificationJobsResult> {
+  assertValidUuid(input.workspaceId, "workspaceId");
+  assertValidDateString(input.reclaimedAt, "reclaimedAt");
+  assertValidLimit(input.limit);
+  if (input.jobId != null) {
+    assertValidUuid(input.jobId, "jobId");
+  }
+
+  return {
+    kind: "reclaimed",
+    jobs: await dependencies.reclaimExpiredBacklinkVerificationJobs(input),
+  };
 }
 
 export type CompleteVerificationJobDependencies = {

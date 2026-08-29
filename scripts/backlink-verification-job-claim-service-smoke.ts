@@ -3,6 +3,7 @@ import {
   completeVerificationJob,
   extendVerificationJobLease,
   failVerificationJob,
+  reclaimExpiredBacklinkVerificationJobs,
 } from "../lib/backlinks/verification";
 import type {
   BacklinkVerificationJob,
@@ -11,6 +12,7 @@ import type {
   CompleteVerificationJobDependencies,
   ExtendVerificationJobLeaseDependencies,
   FailVerificationJobDependencies,
+  ReclaimExpiredBacklinkVerificationJobsDependencies,
 } from "../lib/backlinks/verification";
 
 function assert(condition: boolean, message: string): asserts condition {
@@ -46,6 +48,8 @@ const workspaceId = "00000000-0000-4000-8000-000000000099";
 const claimInputs: ClaimNextBacklinkVerificationJobInput[] = [];
 const claimDependencies: ClaimNextVerificationJobDependencies = { claimNextJob: async (input) => { claimInputs.push(input); return jobFixture; } };
 const heartbeatDependencies: ExtendVerificationJobLeaseDependencies = { heartbeatBacklinkVerificationJob: async () => jobFixture };
+const reclaimDependencies: ReclaimExpiredBacklinkVerificationJobsDependencies = { reclaimExpiredBacklinkVerificationJobs: async () => [{ ...jobFixture, status: "queued", maxAttempts: 2, workerId: null, claimedAt: null, heartbeatAt: null, leaseExpiresAt: null, attemptCount: 1 }] };
+const exhaustedReclaimDependencies: ReclaimExpiredBacklinkVerificationJobsDependencies = { reclaimExpiredBacklinkVerificationJobs: async () => [{ ...jobFixture, status: "failed", failedAt: "2026-07-31T12:02:00.000Z", lastErrorCode: "verification_job_lease_expired", lastErrorMessage: "Backlink verification job lease expired before completion.", attemptCount: 1, maxAttempts: 1 }] };
 const completeDependencies: CompleteVerificationJobDependencies = { completeBacklinkVerificationJob: async () => jobFixture };
 const failDependencies: FailVerificationJobDependencies = { failBacklinkVerificationJob: async () => jobFixture };
 const emptyClaimDependencies: ClaimNextVerificationJobDependencies = { claimNextJob: async () => null };
@@ -60,6 +64,17 @@ async function main(): Promise<void> {
   assert(JSON.stringify(Object.keys(receivedClaimInput).sort()) === JSON.stringify(["claimedAt", "leaseDurationSeconds", "workerId", "workspaceId"]), "Claim dependency input must contain exactly the expected keys.");
   assert(receivedClaimInput.workspaceId === workspaceId && receivedClaimInput.workerId === "worker-smoke-1" && receivedClaimInput.claimedAt === "2026-07-31T12:00:00.000Z" && receivedClaimInput.leaseDurationSeconds === 60, "Claim dependency input must preserve workspace and claim values.");
   assert((await extendVerificationJobLease(heartbeatDependencies, { jobId: jobFixture.id, workerId: "worker-smoke-1", heartbeatAt: "2026-07-31T12:00:30.000Z", leaseDurationSeconds: 60 })).kind === "extended", "Expected extended.");
+  const reclaimed = await reclaimExpiredBacklinkVerificationJobs(reclaimDependencies, { workspaceId: jobFixture.workspaceId, reclaimedAt: "2026-07-31T12:02:00.000Z", limit: 1 });
+  assert(reclaimed.kind === "reclaimed", "Expected reclaimed.");
+  assert(reclaimed.jobs.length === 1, "Expected one reclaimed job.");
+  assert(reclaimed.jobs[0]?.status === "queued", "Reclaimed job must be queued.");
+  assert(reclaimed.jobs[0]?.attemptCount === 1, "Reclaimed job must preserve the consumed claim count.");
+  assert(reclaimed.jobs[0]?.workerId === null && reclaimed.jobs[0]?.leaseExpiresAt === null, "Reclaimed job must clear lease ownership fields.");
+  const exhausted = await reclaimExpiredBacklinkVerificationJobs(exhaustedReclaimDependencies, { workspaceId: jobFixture.workspaceId, reclaimedAt: "2026-07-31T12:02:00.000Z", limit: 1 });
+  assert(exhausted.kind === "reclaimed", "Expected exhausted reclaim result.");
+  assert(exhausted.jobs[0]?.status === "failed", "Exhausted reclaimed job must be failed.");
+  assert(exhausted.jobs[0]?.attemptCount === 1, "Exhausted reclaimed job must preserve attempt count.");
+  assert(exhausted.jobs[0]?.lastErrorCode === "verification_job_lease_expired", "Exhausted reclaimed job must expose stable lease-expired error code.");
   assert((await completeVerificationJob(completeDependencies, { jobId: jobFixture.id, workerId: "worker-smoke-1", completedAt: "2026-07-31T12:00:30.000Z", resultSummary: null })).kind === "completed", "Expected completed.");
   assert((await failVerificationJob(failDependencies, { jobId: jobFixture.id, workerId: "worker-smoke-1", failedAt: "2026-07-31T12:00:30.000Z", errorCode: "SMOKE", errorMessage: "Smoke failure" })).kind === "failed", "Expected failed.");
   assert((await claimNextVerificationJob(emptyClaimDependencies, { workspaceId, workerId: "worker-smoke-1", claimedAt: "2026-07-31T12:00:00.000Z", leaseDurationSeconds: 60 })).kind === "empty", "Expected empty.");
@@ -89,6 +104,16 @@ async function main(): Promise<void> {
   await assertRejects(() => extendVerificationJobLease(invalidHeartbeatDependencies, { ...validHeartbeatInput, jobId: "" }), "jobId must not be empty");
   await assertRejects(() => extendVerificationJobLease(invalidHeartbeatDependencies, { ...validHeartbeatInput, heartbeatAt: "not-a-date" }), "heartbeatAt must be a valid date");
   assert(invalidHeartbeatCalls === 0, "Invalid heartbeat inputs must not call dependencies.");
+
+  let invalidReclaimCalls = 0;
+  const invalidReclaimDependencies: ReclaimExpiredBacklinkVerificationJobsDependencies = { reclaimExpiredBacklinkVerificationJobs: async () => { invalidReclaimCalls += 1; return []; } };
+  const validReclaimInput = { workspaceId: jobFixture.workspaceId, reclaimedAt: "2026-07-31T12:02:00.000Z", limit: 1, jobId: jobFixture.id };
+  await assertRejects(() => reclaimExpiredBacklinkVerificationJobs(invalidReclaimDependencies, { ...validReclaimInput, workspaceId: "bad" }), "workspaceId must be a valid UUID");
+  await assertRejects(() => reclaimExpiredBacklinkVerificationJobs(invalidReclaimDependencies, { ...validReclaimInput, reclaimedAt: "not-a-date" }), "reclaimedAt must be a valid date");
+  await assertRejects(() => reclaimExpiredBacklinkVerificationJobs(invalidReclaimDependencies, { ...validReclaimInput, limit: 0 }), "limit must be an integer between 1 and 100");
+  await assertRejects(() => reclaimExpiredBacklinkVerificationJobs(invalidReclaimDependencies, { ...validReclaimInput, limit: 101 }), "limit must be an integer between 1 and 100");
+  await assertRejects(() => reclaimExpiredBacklinkVerificationJobs(invalidReclaimDependencies, { ...validReclaimInput, jobId: "bad" }), "jobId must be a valid UUID");
+  assert(invalidReclaimCalls === 0, "Invalid reclaim inputs must not call dependencies.");
 
   let invalidCompletionCalls = 0;
   const invalidCompletionDependencies: CompleteVerificationJobDependencies = { completeBacklinkVerificationJob: async () => { invalidCompletionCalls += 1; return jobFixture; } };

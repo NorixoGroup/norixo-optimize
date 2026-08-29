@@ -4,6 +4,7 @@ import type { BacklinkInsert, BacklinkRow, WorkspaceId } from "./types";
 import type { Json } from "@/types/database.types";
 import type { Database } from "@/types/database.types";
 import type { BacklinkVerificationJob, CreateBacklinkVerificationJobInput } from "../verification/job-types";
+import type { ReclaimExpiredBacklinkVerificationJobsInput } from "../verification/job-claim-types";
 
 export type BacklinkVerificationJobRow = BacklinkRow<"backlink_verification_jobs">;
 export type BacklinkVerificationJobHistoryRow = Pick<
@@ -92,7 +93,7 @@ export async function createBacklinkVerificationJob(client: BacklinkRepositoryCl
   const operation = "createBacklinkVerificationJob";
   const payload: BacklinkVerificationJobInsert = {
     workspace_id: workspaceId, link_id: input.linkId, job_key: input.jobKey, trigger_source: input.triggerSource,
-    verification_policy: toPolicyJson(input.policy), http_options: toHttpJson(input.http), queued_at: input.queuedAt,
+    verification_policy: toPolicyJson(input.policy), http_options: toHttpJson(input.http), max_attempts: input.maxAttempts ?? 1, queued_at: input.queuedAt,
   };
   const { data, error } = await client.from("backlink_verification_jobs").insert(payload).select("*").single();
   if (error != null) throw normalizeBacklinkRepositoryError(operation, error);
@@ -113,3 +114,19 @@ export const claimBacklinkVerificationJobById = (client: BacklinkRepositoryClien
 export const heartbeatBacklinkVerificationJob = (client: BacklinkRepositoryClient, jobId: string, workerId: string, heartbeatAt: string, leaseDurationSeconds: number) => callJobRpc(client, "heartbeatBacklinkVerificationJob", "heartbeat_backlink_verification_job", { p_job_id: jobId, p_worker_id: workerId, p_heartbeat_at: heartbeatAt, p_lease_duration_seconds: leaseDurationSeconds });
 export const markBacklinkVerificationJobCompleted = (client: BacklinkRepositoryClient, jobId: string, workerId: string, completedAt: string, resultSummary: Json | null) => callJobRpc(client, "markBacklinkVerificationJobCompleted", "complete_backlink_verification_job", { p_job_id: jobId, p_worker_id: workerId, p_completed_at: completedAt, p_result_summary: resultSummary });
 export const markBacklinkVerificationJobFailed = (client: BacklinkRepositoryClient, jobId: string, workerId: string, failedAt: string, errorCode: string, errorMessage: string) => callJobRpc(client, "markBacklinkVerificationJobFailed", "fail_backlink_verification_job", { p_job_id: jobId, p_worker_id: workerId, p_failed_at: failedAt, p_error_code: errorCode, p_error_message: errorMessage });
+
+export async function reclaimExpiredBacklinkVerificationJobs(
+  client: BacklinkRepositoryClient,
+  input: ReclaimExpiredBacklinkVerificationJobsInput,
+): Promise<BacklinkVerificationJob[]> {
+  const operation = "reclaimExpiredBacklinkVerificationJobs";
+  const { data, error } = await client.rpc("reclaim_expired_backlink_verification_jobs", {
+    p_workspace_id: input.workspaceId,
+    p_reclaimed_at: input.reclaimedAt,
+    p_limit: input.limit,
+    p_job_id: input.jobId ?? null,
+  });
+  if (error != null) throw normalizeBacklinkRepositoryError(operation, error);
+  if (!Array.isArray(data)) throw new BacklinkRepositoryError({ code: "DATABASE", operation, message: "The database returned an invalid verification job result." });
+  return data.map(mapJob);
+}
