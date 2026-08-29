@@ -23,7 +23,7 @@ export default function AnalyzeListingPageClient() {
   return (
     <main className="nk-section mx-auto max-w-3xl space-y-12 md:space-y-16">
       <section className="text-center">
-        <p className="nk-kicker-muted">Listing Conversion Optimizer</p>
+        <p className="nk-kicker-muted">Norixo</p>
         <h1 className="mt-3 text-balance text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl md:text-5xl">
           Analyze your Airbnb listing
         </h1>

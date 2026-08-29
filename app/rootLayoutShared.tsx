@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 const siteUrl = (
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://norixo.io"
 ).replace(/\/$/, "");
-const defaultTitle = "Listing Conversion Optimizer";
+const defaultTitle = "Norixo";
 const defaultDescription =
   "Audit and optimize your short-term rental listings for higher conversion.";
 const organizationJsonLd = {
@@ -52,7 +52,7 @@ export const rootMetadata: Metadata = {
     title: defaultTitle,
     description: defaultDescription,
     url: `${siteUrl}/`,
-    siteName: defaultTitle,
+    siteName: "Norixo",
     type: "website",
     locale: "en_US",
     images: [

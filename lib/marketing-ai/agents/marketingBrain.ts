@@ -13,6 +13,12 @@ export type MarketingBrainInput = {
   context?: string;
 };
 
+function normalizeNorixoBrand(value: string) {
+  return value
+    .replace(/Norixo Optimize/g, "Norixo")
+    .replace(/Listing Conversion Optimizer/g, "Norixo");
+}
+
 function getDefaultMarketingChannels() {
   return ["Instagram", "Facebook", "LinkedIn", "SEO", "email", "vidéo"];
 }
@@ -69,9 +75,10 @@ export function buildMarketingBrainBrief(
     "hôtes, conciergeries et gestionnaires de locations courte durée";
   const timeframe = input.timeframe?.trim() || "7 jours";
   const market = input.market?.trim() || "marché SaaS international";
-  const context =
+  const context = normalizeNorixoBrand(
     input.context?.trim() ||
-    "Norixo Optimize est un SaaS qui aide à analyser et améliorer les annonces Airbnb, Booking et autres plateformes de location courte durée.";
+      "Norixo est un SaaS qui aide à analyser et améliorer les annonces Airbnb, Booking et autres plateformes de location courte durée.",
+  );
 
   return {
     campaignGoal: input.objective,
@@ -86,7 +93,7 @@ export function buildMarketingBrainBrief(
       "Clarifier les priorités d'amélioration.",
       "Préparer des actions marketing actionnables.",
     ],
-    positioning: `Norixo Optimize comme SaaS marketing pour ${market}.`,
+    positioning: `Norixo comme SaaS marketing pour ${market}.`,
     valueProposition: context,
     keyMessages: [
       "Norixo aide à identifier les points de friction.",
@@ -112,7 +119,7 @@ export function buildMarketingBrainBrief(
           "audit annonce location courte durée",
         ]
       : [],
-    ctaStrategy: "Inviter à découvrir Norixo Optimize avant toute validation humaine.",
+    ctaStrategy: "Inviter à découvrir Norixo avant toute validation humaine.",
     successMetrics: [
       `Plan marketing structuré sur ${timeframe}.`,
       "Contenus prêts pour revue humaine.",
@@ -123,11 +130,16 @@ export function buildMarketingBrainBrief(
 export async function runMarketingBrain(
   input: MarketingBrainInput,
 ): Promise<MarketingAiExecutionResult> {
+  const normalizedInput = {
+    ...input,
+    context: input.context ? normalizeNorixoBrand(input.context) : input.context,
+  };
+
   return executeMarketingAiRequest({
     agentId: "marketing-manager",
     providerId: "openai",
     model: null,
-    input: buildMarketingBrainPrompt(input),
+    input: buildMarketingBrainPrompt(normalizedInput),
     capabilities: ["chat", "analytics"],
     metadata: {
       objective: input.objective,

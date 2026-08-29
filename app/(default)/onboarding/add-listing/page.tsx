@@ -69,7 +69,7 @@ export default function OnboardingAddListingPage() {
           <div className="space-y-4 text-sm text-slate-200">
             <p className="nk-section-title">Supported platforms</p>
             <p className="text-[13px] leading-6 text-slate-300">
-              Listing Conversion Optimizer is designed around major short‑term rental platforms. The onboarding flow starts with three of them:
+              Norixo is designed around major short‑term rental platforms. The onboarding flow starts with three of them:
             </p>
             <ul className="space-y-2 text-[13px] leading-6 text-slate-200">
               <li>

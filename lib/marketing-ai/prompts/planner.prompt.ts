@@ -33,7 +33,7 @@ export function buildContentPlannerPrompt(
     "développer la visibilité et les conversions de Norixo.io";
   const context =
     input.context?.trim() ||
-    "Norixo Optimize est un SaaS pour hôtes, conciergeries et gestionnaires de locations courte durée.";
+    "Norixo est un SaaS pour hôtes, conciergeries et gestionnaires de locations courte durée.";
 
   return `You are the Content Planner of Norixo Marketing Studio.
 
@@ -87,7 +87,6 @@ Common Norixo rules:
 - Prefer careful wording: "identifier", "prioriser", "mieux comprendre", "points de friction", "pistes d'amélioration".
 - Keep all output useful for a human review before publication.
 
-
 Strict content guardrails:
 - Do not mention free guides, webinars, testimonials, case studies, customer stories, statistics, graphs, surveys or downloadable resources unless explicitly provided in the input.
 - Avoid words like "boost", "transform", "maximize", "guarantee", "more bookings", "increase revenue", "improve ranking", "performance".
@@ -113,7 +112,7 @@ Rules:
 - Keep the plan practical and ready to execute.
 - Never create items about testimonials, fictitious testimonials, webinars, Facebook Live, free guides, ebooks, white papers, downloads, lead magnets, case studies, success stories or customer stories.
 - Never use topics like "témoignage", "témoignage fictif", "témoignages utilisateurs", "webinaire", "Facebook Live", "guide gratuit", "ebook", "livre blanc", "téléchargement", "étude de cas", "success story" or "histoire client".
-- If the marketing brief mentions one of these forbidden assets, ignore it and replace it with a safe product-focused content idea about Norixo Optimize.
+- If the marketing brief mentions one of these forbidden assets, ignore it and replace it with a safe product-focused content idea about Norixo.
 - Safe alternatives: product discovery post, friction analysis carousel, Listing Quality Index explanation, AI audit walkthrough, prioritization checklist, feature education, cautious short-term rental best practices.
 - Do not use "conversion" as a goal unless the topic is strictly product discovery. Prefer awareness, education, trust or traffic.
 - Avoid telling users how to correct listings step by step. Focus on explaining how Norixo helps identify and prioritize friction points.`;

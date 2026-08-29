@@ -7,18 +7,18 @@ import { buildCanonicalUrl } from "@/lib/seo/seoUrls";
 
 export const metadata: Metadata = {
   title: "Contact Norixo | Norixo",
-  description: "Contact Norixo for questions about Norixo Optimize.",
+  description: "Contact Norixo for questions about the product and services.",
   alternates: buildHreflangAlternates("/contact"),
   openGraph: {
     title: "Contact Norixo | Norixo",
-    description: "Contact Norixo for questions about Norixo Optimize.",
+    description: "Contact Norixo for questions about the product and services.",
     url: buildCanonicalUrl("/contact"),
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
     title: "Contact Norixo | Norixo",
-    description: "Contact Norixo for questions about Norixo Optimize.",
+    description: "Contact Norixo for questions about the product and services.",
   },
 };
 

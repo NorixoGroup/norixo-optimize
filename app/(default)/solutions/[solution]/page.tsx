@@ -58,11 +58,11 @@ export default async function SolutionPage({ params }: Props) {
     {
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
-      name: "Norixo Optimize",
+      name: "Norixo",
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web",
       description:
-        "Norixo Optimize helps Airbnb hosts audit listings, improve pricing, strengthen SEO, and identify conversion blockers.",
+        "Norixo helps Airbnb hosts audit listings, improve pricing, strengthen SEO, and identify conversion blockers.",
     },
     {
       "@context": "https://schema.org",

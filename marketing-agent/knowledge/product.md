@@ -2,7 +2,7 @@
 
 ## Produit
 
-Norixo Optimize aide les hotes et gestionnaires de locations courte duree a
+Norixo aide les hotes et gestionnaires de locations courte duree a
 mieux comprendre pourquoi une annonce convertit ou sous-performe.
 
 ## Valeur centrale

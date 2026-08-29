@@ -13,61 +13,61 @@ type Props = {
   }>;
 };
 
-const pageTitle = "Norixo Optimize – Airbnb & Booking listing audit to improve conversion";
+const pageTitle = "Norixo – Airbnb & Booking listing audit to improve conversion";
 const pageDescription =
-  "Analyze your Airbnb and Booking listings with Norixo Optimize: conversion audit, optimization priorities and practical recommendations to increase bookings.";
+  "Analyze your Airbnb and Booking listings with Norixo: conversion audit, optimization priorities and practical recommendations to increase bookings.";
 const socialImage = "/og-cover.png";
 
 const localizedMetadata: Partial<Record<Locale, { title: string; description: string }>> = {
   fr: {
-    title: "Norixo Optimize – Audit d'annonce Airbnb & Booking pour améliorer la conversion",
+    title: "Norixo – Audit d'annonce Airbnb & Booking pour améliorer la conversion",
     description:
-      "Analysez vos annonces Airbnb et Booking avec Norixo Optimize : audit de conversion, priorités d'optimisation et recommandations concrètes pour augmenter les réservations.",
+      "Analysez vos annonces Airbnb et Booking avec Norixo : audit de conversion, priorités d'optimisation et recommandations concrètes pour augmenter les réservations.",
   },
   es: {
-    title: "Norixo Optimize – Auditoría de anuncios Airbnb y Booking para mejorar la conversión",
+    title: "Norixo – Auditoría de anuncios Airbnb y Booking para mejorar la conversión",
     description:
-      "Analiza tus anuncios de Airbnb y Booking con Norixo Optimize: auditoría de conversión, prioridades de optimización y recomendaciones prácticas para aumentar las reservas.",
+      "Analiza tus anuncios de Airbnb y Booking con Norixo: auditoría de conversión, prioridades de optimización y recomendaciones prácticas para aumentar las reservas.",
   },
   de: {
-    title: "Norixo Optimize – Airbnb- und Booking-Anzeigenanalyse zur Verbesserung der Conversion",
+    title: "Norixo – Airbnb- und Booking-Anzeigenanalyse zur Verbesserung der Conversion",
     description:
-      "Analysieren Sie Ihre Airbnb- und Booking-Anzeigen mit Norixo Optimize: Conversion-Audit, Optimierungsprioritäten und konkrete Empfehlungen zur Steigerung der Buchungen.",
+      "Analysieren Sie Ihre Airbnb- und Booking-Anzeigen mit Norixo: Conversion-Audit, Optimierungsprioritäten und konkrete Empfehlungen zur Steigerung der Buchungen.",
   },
   it: {
-    title: "Norixo Optimize – Audit degli annunci Airbnb e Booking per migliorare la conversione",
+    title: "Norixo – Audit degli annunci Airbnb e Booking per migliorare la conversione",
     description:
-      "Analizza i tuoi annunci Airbnb e Booking con Norixo Optimize: audit della conversione, priorità di ottimizzazione e raccomandazioni pratiche per aumentare le prenotazioni.",
+      "Analizza i tuoi annunci Airbnb e Booking con Norixo: audit della conversione, priorità di ottimizzazione e raccomandazioni pratiche per aumentare le prenotazioni.",
   },
   pt: {
-    title: "Norixo Optimize – Auditoria de anúncios Airbnb e Booking para melhorar a conversão",
+    title: "Norixo – Auditoria de anúncios Airbnb e Booking para melhorar a conversão",
     description:
-      "Analise os seus anúncios Airbnb e Booking com Norixo Optimize: auditoria de conversão, prioridades de otimização e recomendações práticas para aumentar as reservas.",
+      "Analise os seus anúncios Airbnb e Booking com Norixo: auditoria de conversão, prioridades de otimização e recomendações práticas para aumentar as reservas.",
   },
   nl: {
-    title: "Norixo Optimize – Audit van Airbnb- en Booking-vermeldingen om conversie te verbeteren",
+    title: "Norixo – Audit van Airbnb- en Booking-vermeldingen om conversie te verbeteren",
     description:
-      "Analyseer je Airbnb- en Booking-vermeldingen met Norixo Optimize: conversie-audit, optimalisatieprioriteiten en praktische aanbevelingen om meer boekingen te genereren.",
+      "Analyseer je Airbnb- en Booking-vermeldingen met Norixo: conversie-audit, optimalisatieprioriteiten en praktische aanbevelingen om meer boekingen te genereren.",
   },
   ja: {
-    title: "Norixo Optimize – Airbnb・Booking掲載の監査でコンバージョンを改善",
+    title: "Norixo – Airbnb・Booking掲載の監査でコンバージョンを改善",
     description:
-      "Norixo Optimize で Airbnb と Booking の掲載を分析し、コンバージョン改善の機会を確認できます。市場での位置と最適化の優先順位を把握し、次の改善施策を整理しましょう。",
+      "Norixo で Airbnb と Booking の掲載を分析し、コンバージョン改善の機会を確認できます。市場での位置と最適化の優先順位を把握し、次の改善施策を整理しましょう。",
   },
   zh: {
-    title: "Norixo Optimize – 审计 Airbnb 和 Booking 房源以提升转化",
+    title: "Norixo – 审计 Airbnb 和 Booking 房源以提升转化",
     description:
-      "使用 Norixo Optimize 分析你的 Airbnb 和 Booking 房源，发现提升转化的机会。了解房源的市场定位和优化优先级，并明确下一步可执行的改进方向。",
+      "使用 Norixo 分析你的 Airbnb 和 Booking 房源，发现提升转化的机会。了解房源的市场定位和优化优先级，并明确下一步可执行的改进方向。",
   },
   ko: {
-    title: "Norixo Optimize – Airbnb·Booking 숙소 감사로 전환율 개선",
+    title: "Norixo – Airbnb·Booking 숙소 감사로 전환율 개선",
     description:
-      "Norixo Optimize로 Airbnb 및 Booking 숙소를 분석하고 전환 개선 기회를 확인하세요. 숙소의 시장 포지션과 최적화 우선순위를 살펴본 뒤 실행 가능한 개선 작업을 정리할 수 있습니다.",
+      "Norixo로 Airbnb 및 Booking 숙소를 분석하고 전환 개선 기회를 확인하세요. 숙소의 시장 포지션과 최적화 우선순위를 살펴본 뒤 실행 가능한 개선 작업을 정리할 수 있습니다.",
   },
   ar: {
-    title: "Norixo Optimize – تدقيق إعلانات Airbnb وBooking لتحسين التحويل",
+    title: "Norixo – تدقيق إعلانات Airbnb وBooking لتحسين التحويل",
     description:
-      "حلّل إعلانات Airbnb وBooking باستخدام Norixo Optimize: تدقيق التحويل، أولويات التحسين، وتوصيات عملية تساعدك على زيادة الحجوزات.",
+      "حلّل إعلانات Airbnb وBooking باستخدام Norixo: تدقيق التحويل، أولويات التحسين، وتوصيات عملية تساعدك على زيادة الحجوزات.",
   },
 };
 

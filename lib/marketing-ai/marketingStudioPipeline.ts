@@ -65,7 +65,7 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
   const timeframe = input.timeframe ?? "7 jours";
   const channels = input.channels ?? ["Instagram", "Facebook", "LinkedIn", "SEO"];
   const context =
-    "Norixo Optimize aide les hôtes et conciergeries à identifier les points de friction d'une annonce et à clarifier les priorités d'amélioration.";
+    "Norixo aide les hôtes et conciergeries à identifier les points de friction d'une annonce et à clarifier les priorités d'amélioration.";
   const brief: MarketingBrainBrief = buildMarketingBrainBrief({
     objective: input.objective,
     audience,
@@ -231,7 +231,7 @@ export async function runMarketingStudioPipeline(input: MarketingStudioPipelineI
     title: resolvedVideoTitle,
     hook: resolvedVideoHook,
     topic:
-      "Présenter Norixo Optimize comme outil pour identifier les points de friction et clarifier les priorités",
+      "Présenter Norixo comme outil pour identifier les points de friction et clarifier les priorités",
     audience,
     cta: resolvedVideoCta,
     language: input.language,

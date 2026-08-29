@@ -7,7 +7,7 @@ const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://norixo.io").replac
   ""
 );
 
-const pageTitle = "Booking.com listing optimization | Listing Conversion Optimizer";
+const pageTitle = "Booking.com listing optimization | Norixo";
 const pageDescription =
   "Improve your Booking.com property listing for higher conversion: clearer positioning, stronger photos, and fixes guests notice before they book.";
 
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     url: `${siteUrl}/booking-optimization`,
     type: "website",
     locale: "en_US",
-    siteName: "Listing Conversion Optimizer",
+    siteName: "Norixo",
     images: [
       {
         url: "/og-cover.png",
@@ -54,7 +54,7 @@ export default function BookingOptimizationPage() {
             Optimize your Booking.com listing for more qualified bookings
           </h1>
           <p className="mt-4 max-w-2xl text-[15px] leading-7 text-slate-600">
-            Guests decide in seconds. Norixo Optimize audits how your property reads on Booking.com—photos,
+            Guests decide in seconds. Norixo audits how your property reads on Booking.com—photos,
             copy, amenities, and trust—and ranks what to fix first.
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -96,7 +96,7 @@ export default function BookingOptimizationPage() {
             </ul>
           </div>
           <div className="nk-card nk-card-hover p-6">
-            <h2 className="nk-section-title">What you get with Norixo Optimize</h2>
+            <h2 className="nk-section-title">What you get with Norixo</h2>
             <ul className="mt-4 space-y-3 text-[13px] leading-6 text-slate-700">
               <li>• A structured audit: scores, gaps, and prioritized actions—not a vague checklist.</li>
               <li>• Clear language on what to change first so your listing earns the next click.</li>
@@ -129,7 +129,7 @@ export default function BookingOptimizationPage() {
             <div>
               <dt className="font-semibold text-slate-900">Do I need an Airbnb URL?</dt>
               <dd className="mt-2 text-[13px] leading-6 text-slate-700">
-                Norixo Optimize works from your listing URL. Use your Booking.com property link when you run the
+                Norixo works from your listing URL. Use your Booking.com property link when you run the
                 audit.
               </dd>
             </div>
