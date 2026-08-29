@@ -3,6 +3,10 @@
     {
       "path": "/api/internal/cron/backlinks/outreach/schedule",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/internal/cron/backlinks/reverification",
+      "schedule": "0 5 * * *"
     }
   ]
 }
