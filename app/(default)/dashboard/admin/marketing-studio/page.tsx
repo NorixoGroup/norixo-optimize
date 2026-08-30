@@ -295,7 +295,7 @@ const MONTH_SLOTS = [
 const DEFAULT_FORM: CampaignFormState = {
   name: "Campagne marketing mensuelle Norixo",
   objective:
-    "Faire decouvrir Norixo Optimize aux conciergeries et aux hotes professionnels.",
+    "Faire decouvrir Norixo aux conciergeries et aux hotes professionnels.",
   audience: "Hotes et conciergeries",
   language: "fr",
   channels: ["facebook", "instagram", "linkedin", "tiktok"],

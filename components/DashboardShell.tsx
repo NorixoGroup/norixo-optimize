@@ -198,7 +198,7 @@ function TopNavbar({
             <div className="nk-dashboard-topbar-logo flex h-10 w-10 items-center justify-center rounded-2xl p-1">
               <Image
                 src="/brand/norixo-logo-mark.png"
-                alt="Norixo Optimize logo"
+                alt="Norixo logo"
                 width={32}
                 height={32}
                 className="h-8 w-8 rounded-xl object-contain"

@@ -174,7 +174,7 @@ export default async function CityOptimizerPage({ params }: PageProps) {
             Run your listing audit
           </Link>
           <p className="text-xs leading-5 text-slate-500">
-            Norixo Optimize scores your listing and surfaces prioritized actions—paste your URL
+            Norixo scores your listing and surfaces prioritized actions—paste your URL
             to start.
           </p>
         </div>
@@ -520,7 +520,7 @@ export default async function CityOptimizerPage({ params }: PageProps) {
             Ready to see how your {name} listing scores?
           </h2>
           <p className="mt-2 text-[13px] leading-6 text-slate-700">
-            Open a structured audit in Norixo Optimize: conversion score, Listing Quality Index,
+            Open a structured audit in Norixo: conversion score, Listing Quality Index,
             and a clear order of fixes for your {name} listing.
           </p>
         </div>

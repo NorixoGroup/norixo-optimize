@@ -14,6 +14,22 @@ export const metadata = {
   description:
     "Explore Airbnb market reports with city-level pricing context, competition signals, guest expectations, and listing optimization insights.",
   alternates: buildHreflangAlternates("/reports", { locales: [defaultLocale] }),
+  openGraph: {
+    title: "Airbnb Market Reports | Norixo",
+    description:
+      "Explore Airbnb market reports with city-level pricing context, competition signals, guest expectations, and listing optimization insights.",
+    url: "/reports",
+    siteName: "Norixo",
+    type: "website",
+    images: ["/og-cover.png"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Airbnb Market Reports | Norixo",
+    description:
+      "Explore Airbnb market reports with city-level pricing context, competition signals, guest expectations, and listing optimization insights.",
+    images: ["/og-cover.png"],
+  },
 };
 
 export default function ReportsPage() {

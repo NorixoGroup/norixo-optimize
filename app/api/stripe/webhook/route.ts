@@ -728,7 +728,7 @@ function getPaymentConfirmationCopy(planCode: string, amount: number, auditQuant
         ? "Pack 5 audits"
         : planCode === "scale"
           ? "Pack 15 audits"
-          : "Norixo Optimize";
+          : "Norixo";
 
   const creditsLabel =
     typeof auditQuantity === "number" && auditQuantity > 0
@@ -745,7 +745,7 @@ function getPaymentConfirmationCopy(planCode: string, amount: number, auditQuant
 
 Merci pour votre confiance.
 
-Votre paiement Norixo Optimize a bien été confirmé et vos crédits sont maintenant disponibles.
+Votre paiement Norixo a bien été confirmé et vos crédits sont maintenant disponibles.
 
 Commande confirmée
 Offre : ${planLabel}
@@ -762,7 +762,7 @@ ${appUrl}/audit/new
 Merci pour votre confiance,
 L'équipe Norixo
 
-Norixo Optimize
+Norixo
 Analyse concurrentielle Airbnb & Booking
 ${appUrl}`;
 
@@ -772,7 +772,7 @@ ${appUrl}`;
         <div style="overflow:hidden;border-radius:22px;background:#ffffff;box-shadow:0 18px 45px rgba(15,23,42,0.10);border:1px solid #e2e8f0">
           <div style="background:#0B1020;padding:30px 28px;text-align:center;color:#ffffff">
             <div style="font-size:13px;letter-spacing:4px;text-transform:uppercase;font-weight:800;color:#93c5fd">
-              NORIXO OPTIMIZE
+              NORIXO
             </div>
             <h1 style="margin:16px 0 0;font-size:28px;line-height:1.2;color:#ffffff">
               Paiement confirmé ✅
@@ -785,7 +785,7 @@ ${appUrl}`;
           <div style="padding:30px 28px">
             <p style="margin:0 0 12px;font-size:16px">Bonjour,</p>
             <p style="margin:0 0 22px;font-size:16px;line-height:1.7;color:#334155">
-              Merci pour votre confiance. Votre paiement <strong>Norixo Optimize</strong> a bien été confirmé.
+              Merci pour votre confiance. Votre paiement <strong>Norixo</strong> a bien été confirmé.
             </p>
 
             <div style="margin:24px 0;padding:22px;border:1px solid #dbeafe;border-radius:18px;background:#F8FAFC">
@@ -840,7 +840,7 @@ ${appUrl}`;
           </div>
 
           <div style="padding:20px 28px;background:#F8FAFC;border-top:1px solid #e2e8f0;color:#64748b;font-size:13px;line-height:1.6;text-align:center">
-            <strong style="color:#0f172a">Norixo Optimize</strong><br/>
+            <strong style="color:#0f172a">Norixo</strong><br/>
             Analyse concurrentielle Airbnb & Booking<br/>
             <a href="${appUrl}" style="color:#2563eb;text-decoration:none">${appUrl}</a>
           </div>

@@ -28,7 +28,7 @@ function isNonEmptyString(value: unknown): value is string {
 }
 
 const NORIXO_PRODUCT_CAPABILITIES_CONTEXT = [
-  "Norixo Optimize helps short-term rental hosts and professionals analyze and improve their listings.",
+  "Norixo helps short-term rental hosts and professionals analyze and improve their listings.",
   "Real product capabilities that can inform the creative direction include: AI listing audit, Listing Quality Index / quality score, title optimization, description optimization, photo analysis and photo optimization, friction point identification, prioritized recommendations, Airbnb listing optimization, Booking listing optimization, conversion optimization, and listing performance improvement.",
   "This context is only for creative direction. Do not imply guaranteed revenue growth, booking growth, ranking gains, or any fictional performance metric.",
 ].join(" ");

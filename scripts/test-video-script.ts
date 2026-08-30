@@ -4,7 +4,7 @@ async function main() {
   const result = await runVideoScript({
     title: "Comprendre ce qui peut freiner une annonce",
     hook: "Et si vous pouviez voir plus clairement ce qui bloque une annonce ?",
-    topic: "Présenter Norixo Optimize comme outil pour identifier les points de friction et prioriser les améliorations",
+    topic: "Présenter Norixo comme outil pour identifier les points de friction et prioriser les améliorations",
     audience: "Conciergeries et hôtes professionnels",
     cta: "Tester Norixo.io",
     language: "fr",

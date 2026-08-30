@@ -162,7 +162,7 @@ export function buildMarketingStudioOrchestratorInput(
     objective:
       typeof body.objective === "string" && body.objective.trim()
         ? body.objective.trim()
-        : "Faire découvrir Norixo Optimize aux conciergeries et aux hôtes professionnels.",
+        : "Faire découvrir Norixo aux conciergeries et aux hôtes professionnels.",
     audience:
       typeof body.audience === "string" && body.audience.trim()
         ? body.audience.trim()

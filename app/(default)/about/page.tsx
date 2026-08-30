@@ -9,7 +9,7 @@ const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://norixo.io").replac
 );
 const pageTitle = "About Norixo | Airbnb & Booking Listing Optimization";
 const pageDescription =
-  "Learn what Norixo and Norixo Optimize are: a platform and listing-audit product for analyzing Airbnb and Booking listings and prioritizing practical improvements.";
+  "Learn what Norixo does: analyze Airbnb and Booking listings, identify optimization priorities, and provide practical recommendations.";
 
 export const metadata: Metadata = {
   title: pageTitle,
@@ -99,17 +99,16 @@ export default function AboutPage() {
         </h1>
         <p className="mt-6 max-w-3xl text-lg leading-8 text-[#3F514B]">
           Norixo is a platform for analyzing and optimizing short-term-rental
-          listings. Norixo Optimize is its listing-audit product for Airbnb and
-          Booking listings: it evaluates listing and market signals, then returns
-          prioritized recommendations.
+          listings. It evaluates Airbnb and Booking listing and market signals,
+          then returns prioritized recommendations.
         </p>
       </section>
 
       <section className="mx-auto grid max-w-6xl gap-6 px-6 pb-20 sm:pb-24 lg:grid-cols-2">
         <div className="rounded-3xl bg-white p-8 shadow-sm">
-          <h2 className="text-2xl font-semibold">What Norixo Optimize does</h2>
+          <h2 className="text-2xl font-semibold">What Norixo does</h2>
           <p className="mt-4 leading-7 text-[#3F514B]">
-            Norixo Optimize helps hosts assess listing quality, photos, pricing
+            Norixo helps hosts assess listing quality, photos, pricing
             context, market positioning, guest confidence, and booking conversion.
             Its recommendations are designed to make practical improvement
             priorities clearer.
@@ -118,14 +117,14 @@ export default function AboutPage() {
             className="mt-6 inline-flex text-sm font-semibold text-[#23483B] underline underline-offset-4"
             href="/how-it-works"
           >
-            How Norixo Optimize works
+            How Norixo works
           </Link>
         </div>
 
         <div className="rounded-3xl bg-white p-8 shadow-sm">
           <h2 className="text-2xl font-semibold">What it does not do</h2>
           <p className="mt-4 leading-7 text-[#3F514B]">
-            Norixo Optimize provides analysis and recommendations, not guaranteed
+            Norixo provides analysis and recommendations, not guaranteed
             outcomes. Recommendations are indicative and should be reviewed before
             a decision. The audit reads a public listing page and does not change
             the listing itself.
@@ -156,7 +155,7 @@ export default function AboutPage() {
         <div className="rounded-3xl bg-white p-8 shadow-sm">
           <h2 className="text-2xl font-semibold">Published by Norixo</h2>
           <p className="mt-4 leading-7 text-[#3F514B]">
-            Norixo publishes the Norixo Optimize product, its public research,
+            Norixo provides listing-analysis tools, public research,
             and educational resources for short-term-rental hosts. The product and
             public resources serve different purposes: one supports listing-specific
             analysis, while the other explains market information and methodology.

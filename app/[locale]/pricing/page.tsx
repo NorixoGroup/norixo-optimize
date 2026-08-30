@@ -13,56 +13,56 @@ type Props = {
   }>;
 };
 
-const pageTitle = "Tarifs Norixo Optimize – Audits Airbnb & Booking";
+const pageTitle = "Tarifs Norixo – Audits Airbnb & Booking";
 const pageDescription =
-  "Découvrez les tarifs Norixo Optimize pour vos audits d'annonces Airbnb et Booking : crédits d'audit, packs multi-annonces et optimisation de conversion pour vos hébergements.";
+  "Découvrez les tarifs Norixo pour vos audits d'annonces Airbnb et Booking : crédits d'audit, packs multi-annonces et optimisation de conversion pour vos hébergements.";
 const socialImage = "/og-cover.png";
 
 const localizedMetadata: Partial<Record<Locale, { title: string; description: string }>> = {
   es: {
-    title: "Precios de Norixo Optimize – Auditorías Airbnb y Booking",
+    title: "Precios de Norixo – Auditorías Airbnb y Booking",
     description:
-      "Descubre los precios de Norixo Optimize para tus auditorías de anuncios de Airbnb y Booking: créditos de auditoría, packs multi anuncio y optimización de conversión para tus alojamientos.",
+      "Descubre los precios de Norixo para tus auditorías de anuncios de Airbnb y Booking: créditos de auditoría, packs multi anuncio y optimización de conversión para tus alojamientos.",
   },
   de: {
-    title: "Preise von Norixo Optimize – Airbnb- und Booking-Audits",
+    title: "Preise von Norixo – Airbnb- und Booking-Audits",
     description:
-      "Entdecken Sie die Preise von Norixo Optimize für Ihre Airbnb- und Booking-Inseratsanalysen: Audit-Guthaben, Pakete für mehrere Inserate und Conversion-Optimierung für Ihre Unterkünfte.",
+      "Entdecken Sie die Preise von Norixo für Ihre Airbnb- und Booking-Inseratsanalysen: Audit-Guthaben, Pakete für mehrere Inserate und Conversion-Optimierung für Ihre Unterkünfte.",
   },
   it: {
-    title: "Prezzi di Norixo Optimize – Audit Airbnb e Booking",
+    title: "Prezzi di Norixo – Audit Airbnb e Booking",
     description:
-      "Scopri i prezzi di Norixo Optimize per i tuoi audit di annunci Airbnb e Booking: crediti audit, pacchetti multi-annuncio e ottimizzazione della conversione per i tuoi alloggi.",
+      "Scopri i prezzi di Norixo per i tuoi audit di annunci Airbnb e Booking: crediti audit, pacchetti multi-annuncio e ottimizzazione della conversione per i tuoi alloggi.",
   },
   pt: {
-    title: "Precos da Norixo Optimize – Auditorias Airbnb e Booking",
+    title: "Precos da Norixo – Auditorias Airbnb e Booking",
     description:
-      "Descubra os precos da Norixo Optimize para as suas auditorias de anuncios Airbnb e Booking: creditos de auditoria, pacotes multi-anuncio e otimizacao da conversao para os seus alojamentos.",
+      "Descubra os precos da Norixo para as suas auditorias de anuncios Airbnb e Booking: creditos de auditoria, pacotes multi-anuncio e otimizacao da conversao para os seus alojamentos.",
   },
   nl: {
-    title: "Norixo Optimize-prijzen – Airbnb- en Booking-audits",
+    title: "Norixo-prijzen – Airbnb- en Booking-audits",
     description:
-      "Ontdek de prijzen van Norixo Optimize voor je Airbnb- en Booking-advertentie-audits: auditcredits, pakketten voor meerdere advertenties en conversie-optimalisatie voor je accommodaties.",
+      "Ontdek de prijzen van Norixo voor je Airbnb- en Booking-advertentie-audits: auditcredits, pakketten voor meerdere advertenties en conversie-optimalisatie voor je accommodaties.",
   },
   ja: {
-    title: "Norixo Optimize 料金 – Airbnb・Booking監査",
+    title: "Norixo 料金 – Airbnb・Booking監査",
     description:
-      "Airbnb と Booking の掲載監査向け Norixo Optimize の料金をご覧ください。監査クレジット、複数掲載向けパック、コンバージョン最適化を確認できます。",
+      "Airbnb と Booking の掲載監査向け Norixo の料金をご覧ください。監査クレジット、複数掲載向けパック、コンバージョン最適化を確認できます。",
   },
   zh: {
-    title: "Norixo Optimize 定价 – Airbnb 与 Booking 审计",
+    title: "Norixo 定价 – Airbnb 与 Booking 审计",
     description:
-      "了解 Norixo Optimize 针对 Airbnb 和 Booking 房源审计的定价：审计额度、多房源套餐以及转化优化方案。",
+      "了解 Norixo 针对 Airbnb 和 Booking 房源审计的定价：审计额度、多房源套餐以及转化优化方案。",
   },
   ko: {
-    title: "Norixo Optimize 요금 – Airbnb 및 Booking 감사",
+    title: "Norixo 요금 – Airbnb 및 Booking 감사",
     description:
-      "Airbnb 및 Booking 숙소 감사를 위한 Norixo Optimize 요금을 확인하세요. 감사 크레딧, 다중 숙소 패키지, 전환 최적화를 살펴볼 수 있습니다.",
+      "Airbnb 및 Booking 숙소 감사를 위한 Norixo 요금을 확인하세요. 감사 크레딧, 다중 숙소 패키지, 전환 최적화를 살펴볼 수 있습니다.",
   },
   ar: {
-    title: "أسعار Norixo Optimize – تدقيق إعلانات Airbnb وBooking",
+    title: "أسعار Norixo – تدقيق إعلانات Airbnb وBooking",
     description:
-      "اكتشف أسعار Norixo Optimize لتدقيق إعلانات Airbnb وBooking: أرصدة التدقيق، باقات متعددة الإعلانات، وتحسين التحويل لإقاماتك.",
+      "اكتشف أسعار Norixo لتدقيق إعلانات Airbnb وBooking: أرصدة التدقيق، باقات متعددة الإعلانات، وتحسين التحويل لإقاماتك.",
   },
 };
 

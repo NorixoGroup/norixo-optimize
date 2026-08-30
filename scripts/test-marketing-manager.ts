@@ -3,7 +3,7 @@ import { runMarketingBrain } from "../lib/marketing-ai/agents/marketingBrain";
 async function main() {
   const result = await runMarketingBrain({
     objective:
-      "Lancer Norixo Optimize auprès des conciergeries et gestionnaires de locations courte durée.",
+      "Lancer Norixo auprès des conciergeries et gestionnaires de locations courte durée.",
     audience:
       "Conciergeries, property managers, hôtes professionnels et agences de gestion locative",
     language: "fr",

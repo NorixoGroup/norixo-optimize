@@ -25,7 +25,7 @@ export default function OnboardingSuccessPage() {
                   Setup complete
                 </p>
                 <p className="mt-1 text-[13px] leading-6 text-emerald-50">
-                  You&apos;re ready to use Listing Conversion Optimizer.
+                  You&apos;re ready to use Norixo.
                 </p>
               </div>
             </div>
@@ -80,7 +80,7 @@ export default function OnboardingSuccessPage() {
       <section className="nk-card nk-card-hover p-6 md:p-8">
         <p className="nk-section-title">Suggested next actions</p>
         <p className="mt-2 max-w-2xl text-sm text-slate-300">
-          To get the most value from Listing Conversion Optimizer in the next few minutes, we recommend starting with these moves.
+          To get the most value from Norixo in the next few minutes, we recommend starting with these moves.
         </p>
         <div className="mt-5 grid gap-4 text-sm text-slate-200 md:grid-cols-3">
           <div className="rounded-2xl border border-slate-700/60 bg-slate-950/70 p-4">

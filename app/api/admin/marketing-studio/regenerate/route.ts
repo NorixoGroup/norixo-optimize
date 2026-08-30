@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     if (target === "planner") {
       const result = await runContentPlanner({
         marketingBrief: "Préparer une campagne marketing pour Norixo.io uniquement.",
-        objective: "Faire découvrir Norixo Optimize aux conciergeries et aux hôtes professionnels.",
+        objective: "Faire découvrir Norixo aux conciergeries et aux hôtes professionnels.",
         language: "fr",
         timeframe: "7 jours",
         channels: ["Instagram", "Facebook", "LinkedIn", "SEO"],
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
       const result = await runVideoScript({
         title: "Voir plus clairement ce qui peut freiner une annonce",
         hook: "Et si vous pouviez identifier vos priorités plus facilement ?",
-        topic: "Présenter Norixo Optimize comme outil pour identifier les points de friction et clarifier les priorités",
+        topic: "Présenter Norixo comme outil pour identifier les points de friction et clarifier les priorités",
         audience: "Conciergeries et hôtes professionnels",
         cta: "Découvrir Norixo.io",
         language: "fr",

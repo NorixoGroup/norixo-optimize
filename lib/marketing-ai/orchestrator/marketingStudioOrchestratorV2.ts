@@ -351,7 +351,7 @@ export async function runMarketingStudioOrchestratorV2(
     timeframe,
     channels: campaign.platforms,
     context:
-      "Norixo Optimize helps short-term rental hosts and conciergeries identify listing friction points, clarify priorities, and prepare realistic improvement actions before publication.",
+      "Norixo helps short-term rental hosts and conciergeries identify listing friction points, clarify priorities, and prepare realistic improvement actions before publication.",
   });
 
   const planner = await runContentPlanner({

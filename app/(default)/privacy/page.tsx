@@ -8,12 +8,12 @@ import { buildCanonicalUrl } from "@/lib/seo/seoUrls";
 export const metadata: Metadata = {
   title: "Privacy Policy | Norixo",
   description:
-    "Privacy policy for Norixo Optimize, including how we handle personal data and related rights.",
+    "Privacy policy for Norixo, including how we handle personal data and related rights.",
   alternates: buildHreflangAlternates("/privacy"),
   openGraph: {
     title: "Privacy Policy | Norixo",
     description:
-      "Privacy policy for Norixo Optimize, including how we handle personal data and related rights.",
+      "Privacy policy for Norixo, including how we handle personal data and related rights.",
     url: buildCanonicalUrl("/privacy"),
     type: "website",
   },
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Privacy Policy | Norixo",
     description:
-      "Privacy policy for Norixo Optimize, including how we handle personal data and related rights.",
+      "Privacy policy for Norixo, including how we handle personal data and related rights.",
   },
 };
 

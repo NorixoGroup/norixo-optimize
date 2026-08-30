@@ -55,7 +55,7 @@ export function HomeContent() {
         <div className="flex max-w-2xl flex-col justify-between gap-6 md:gap-7">
           <div className="space-y-4 md:space-y-6">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-orange-500">
-              NORIXO OPTIMIZE
+              NORIXO
             </p>
             <h1 className="max-w-3xl text-balance bg-gradient-to-r from-orange-500 via-amber-400 to-emerald-400 bg-clip-text text-4xl font-semibold tracking-tight text-transparent sm:text-5xl md:text-6xl">
               {copy.hero.titleLine1}

@@ -6,9 +6,9 @@ import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 const siteUrl = (
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://norixo.io"
 ).replace(/\/$/, "");
-const pageTitle = "Norixo Optimize Pricing – Airbnb & Booking listing audits";
+const pageTitle = "Norixo Pricing – Airbnb & Booking listing audits";
 const pageDescription =
-  "Explore Norixo Optimize pricing for Airbnb and Booking listing audits: audit credits, multi-listing packs, and conversion optimization for your properties.";
+  "Explore Norixo pricing for Airbnb and Booking listing audits: audit credits, multi-listing packs, and conversion optimization for your properties.";
 const alternates = buildHreflangAlternates("/pricing");
 const socialImage = "/og-cover.png";
 

@@ -73,7 +73,7 @@ export const howItWorksI18n = {
     finalCta: {
       eyebrow: "TAKE ACTION",
       title: "Ready to move from reading to action?",
-      text: "Launch your first audit and apply the priorities revealed by Norixo Optimize.",
+      text: "Launch your first audit and apply the priorities revealed by Norixo.",
     },
   },
 
@@ -151,7 +151,7 @@ export const howItWorksI18n = {
     finalCta: {
       eyebrow: "PASSER À L’ACTION",
       title: "Prêt à passer de la lecture à l’action ?",
-      text: "Lancez votre premier audit et appliquez les priorités révélées par Norixo Optimize.",
+      text: "Lancez votre premier audit et appliquez les priorités révélées par Norixo.",
     },
   },
 
@@ -229,7 +229,7 @@ export const howItWorksI18n = {
     finalCta: {
       eyebrow: "PASAR A LA ACCIÓN",
       title: "¿Listo para pasar del análisis a la acción?",
-      text: "Lanza tu primera auditoría y aplica las prioridades reveladas por Norixo Optimize.",
+      text: "Lanza tu primera auditoría y aplica las prioridades reveladas por Norixo.",
     },
   },
   de: {
@@ -306,7 +306,7 @@ export const howItWorksI18n = {
     finalCta: {
       eyebrow: "AKTIV WERDEN",
       title: "Bereit, von der Analyse zur Umsetzung zu wechseln?",
-      text: "Starten Sie Ihr erstes Audit und setzen Sie die von Norixo Optimize aufgezeigten Prioritäten um.",
+      text: "Starten Sie Ihr erstes Audit und setzen Sie die von Norixo aufgezeigten Prioritäten um.",
     },
   },
   it: {
@@ -383,7 +383,7 @@ export const howItWorksI18n = {
     finalCta: {
       eyebrow: "PASSA ALL’AZIONE",
       title: "Pronto a passare dalla lettura all’azione?",
-      text: "Avvia il tuo primo audit e applica le priorità rivelate da Norixo Optimize.",
+      text: "Avvia il tuo primo audit e applica le priorità rivelate da Norixo.",
     },
   },
   pt: {
@@ -460,7 +460,7 @@ export const howItWorksI18n = {
     finalCta: {
       eyebrow: "PASSAR À AÇÃO",
       title: "Pronto para passar da análise à ação?",
-      text: "Inicie a sua primeira auditoria e aplique as prioridades reveladas pelo Norixo Optimize.",
+      text: "Inicie a sua primeira auditoria e aplique as prioridades reveladas pelo Norixo.",
     },
   },
   nl: {
@@ -537,7 +537,7 @@ export const howItWorksI18n = {
     finalCta: {
       eyebrow: "IN ACTIE KOMEN",
       title: "Klaar om van analyse naar actie te gaan?",
-      text: "Start uw eerste audit en pas de prioriteiten toe die Norixo Optimize onthult.",
+      text: "Start uw eerste audit en pas de prioriteiten toe die Norixo onthult.",
     },
   },
   ja: {
@@ -614,7 +614,7 @@ export const howItWorksI18n = {
     finalCta: {
       eyebrow: "行動に移す",
       title: "分析からアクションへ進む準備はできていますか？",
-      text: "最初の監査を開始し、Norixo Optimize が示す優先事項を実行しましょう。",
+      text: "最初の監査を開始し、Norixo が示す優先事項を実行しましょう。",
     },
   },
   zh: {
@@ -691,7 +691,7 @@ export const howItWorksI18n = {
     finalCta: {
       eyebrow: "开始行动",
       title: "准备好从分析走向行动了吗？",
-      text: "启动你的第一次审计，并落实 Norixo Optimize 揭示出的优先事项。",
+      text: "启动你的第一次审计，并落实 Norixo 揭示出的优先事项。",
     },
   },
   ko: {
@@ -768,7 +768,7 @@ export const howItWorksI18n = {
     finalCta: {
       eyebrow: "행동 시작",
       title: "분석에서 실행으로 넘어갈 준비가 되셨나요?",
-      text: "첫 감사를 시작하고 Norixo Optimize가 드러낸 우선순위를 실행해 보세요.",
+      text: "첫 감사를 시작하고 Norixo가 드러낸 우선순위를 실행해 보세요.",
     },
   },
   ar: {
@@ -845,7 +845,7 @@ export const howItWorksI18n = {
     finalCta: {
       eyebrow: "ابدأ الآن",
       title: "هل أنت مستعد للانتقال من التحليل إلى التنفيذ؟",
-      text: "ابدأ أول تدقيق لك وطبّق الأولويات التي يكشفها Norixo Optimize.",
+      text: "ابدأ أول تدقيق لك وطبّق الأولويات التي يكشفها Norixo.",
     },
   },
 } as const;

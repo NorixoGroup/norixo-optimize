@@ -12,7 +12,7 @@ export type CitySeoContentInput = {
 const citySeoTemplates = {
   en: {
     title: (city: CitySeoContentInput["city"]) =>
-      `${city.name} Airbnb listing optimization — practical guide | Listing Conversion Optimizer`,
+      `${city.name} Airbnb listing optimization — practical guide | Norixo`,
     description: (city: CitySeoContentInput["city"]) =>
       `Optimize your Airbnb listing in ${city.name}, ${city.country}: how guests compare places, what to fix first, and practical steps to improve bookings—without guesswork.`,
     keywords: (city: CitySeoContentInput["city"]) => [

@@ -8,6 +8,22 @@ export const metadata = {
   description:
     "Explore Airbnb optimization markets by country. Find country-level Airbnb SEO, pricing, listing audit, and city optimization resources.",
   alternates: buildHreflangAlternates("/countries", { locales: [defaultLocale] }),
+  openGraph: {
+    title: "Airbnb Optimizer by Country | Norixo",
+    description:
+      "Explore Airbnb optimization markets by country. Find country-level Airbnb SEO, pricing, listing audit, and city optimization resources.",
+    url: "/countries",
+    siteName: "Norixo",
+    type: "website",
+    images: ["/og-cover.png"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Airbnb Optimizer by Country | Norixo",
+    description:
+      "Explore Airbnb optimization markets by country. Find country-level Airbnb SEO, pricing, listing audit, and city optimization resources.",
+    images: ["/og-cover.png"],
+  },
 };
 
 export default function CountriesHubPage() {

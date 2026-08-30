@@ -8,7 +8,7 @@ async function main() {
     marketingBrief:
       "Préparer une semaine de contenus pour promouvoir Norixo.io auprès des conciergeries et hôtes professionnels.",
     objective:
-      "Faire découvrir Norixo Optimize comme outil pour identifier les points de friction et clarifier les priorités d'amélioration.",
+      "Faire découvrir Norixo comme outil pour identifier les points de friction et clarifier les priorités d'amélioration.",
     language: "fr",
     timeframe: "7 jours",
     channels: ["Instagram", "Facebook", "LinkedIn", "SEO"],
@@ -48,7 +48,7 @@ async function main() {
     title: "Voir plus clairement ce qui peut freiner une annonce",
     hook: "Et si vous pouviez identifier vos priorités plus facilement ?",
     topic:
-      "Présenter Norixo Optimize comme outil pour identifier les points de friction et clarifier les priorités",
+      "Présenter Norixo comme outil pour identifier les points de friction et clarifier les priorités",
     audience: "Conciergeries et hôtes professionnels",
     cta: "Découvrir Norixo.io",
     language: "fr",

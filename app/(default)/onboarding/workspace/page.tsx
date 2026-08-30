@@ -35,7 +35,7 @@ export default function OnboardingWorkspacePage() {
         <div className="nk-card nk-card-hover p-6 md:p-8">
           <p className="nk-section-title">Workspace details</p>
           <p className="mt-2 text-sm text-slate-300">
-            This information helps Listing Conversion Optimizer tailor insights to the way
+            This information helps Norixo tailor insights to the way
             you operate.
           </p>
 

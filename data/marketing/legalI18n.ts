@@ -32,7 +32,7 @@ export const legalI18n = {
     websiteValue: "norixo.io",
     serviceSectionTitle: "Norixo service",
     serviceParagraphOne:
-      "Norixo is a software and service operated under the Norixo brand.",
+      "Norixo is a software service for short-term-rental listing analysis and optimization.",
     serviceParagraphTwo:
       "It provides tools related to analysis and optimization of short-term-rental listings and associated market and listing information.",
     serviceParagraphThree:
@@ -48,7 +48,7 @@ export const legalI18n = {
     title: "Mentions légales",
     publisherLabel: "Éditeur du site :",
     publisherText:
-      "Norixo — société ou entrepreneur individuel responsable du service « Norixo Optimize » (informations détaillées complétées selon votre statut juridique et votre siège réel).",
+      "Norixo — société ou entrepreneur individuel responsable du service « Norixo » (informations détaillées complétées selon votre statut juridique et votre siège réel).",
     hostingLabel: "Hébergement :",
     hostingText:
       "le site est hébergé sur une infrastructure cloud conforme aux usages courants des applications web (par ex. Vercel ou équivalent — à préciser en interne).",
@@ -64,7 +64,7 @@ export const legalI18n = {
     title: "Aviso legal",
     publisherLabel: "Editor del sitio:",
     publisherText:
-      "Norixo — empresa o empresario individual responsable del servicio “Norixo Optimize” (información detallada que debe completarse según tu situación jurídica y domicilio real).",
+      "Norixo — empresa o empresario individual responsable del servicio “Norixo” (información detallada que debe completarse según tu situación jurídica y domicilio real).",
     hostingLabel: "Alojamiento:",
     hostingText:
       "el sitio está alojado en una infraestructura cloud conforme a los usos habituales de las aplicaciones web (por ejemplo Vercel o equivalente — a precisar internamente).",
@@ -80,7 +80,7 @@ export const legalI18n = {
     title: "Impressum",
     publisherLabel: "Herausgeber der Website:",
     publisherText:
-      "Norixo — Unternehmen oder Einzelunternehmer, verantwortlich für den Dienst „Norixo Optimize“ (detaillierte Angaben sind entsprechend Ihrer Rechtsform und tatsächlichen Geschäftsadresse zu ergänzen).",
+      "Norixo — Unternehmen oder Einzelunternehmer, verantwortlich für den Dienst „Norixo“ (detaillierte Angaben sind entsprechend Ihrer Rechtsform und tatsächlichen Geschäftsadresse zu ergänzen).",
     hostingLabel: "Hosting:",
     hostingText:
       "die Website wird auf einer Cloud-Infrastruktur gehostet, die den üblichen Standards moderner Webanwendungen entspricht (zum Beispiel Vercel oder gleichwertig — intern zu präzisieren).",
@@ -96,7 +96,7 @@ export const legalI18n = {
     title: "Note legali",
     publisherLabel: "Editore del sito:",
     publisherText:
-      "Norixo — società o imprenditore individuale responsabile del servizio “Norixo Optimize” (informazioni dettagliate da completare in base allo status giuridico e alla sede reale).",
+      "Norixo — società o imprenditore individuale responsabile del servizio “Norixo” (informazioni dettagliate da completare in base allo status giuridico e alla sede reale).",
     hostingLabel: "Hosting:",
     hostingText:
       "il sito è ospitato su un’infrastruttura cloud conforme agli standard comuni delle applicazioni web (ad esempio Vercel o equivalente — da precisare internamente).",
@@ -112,7 +112,7 @@ export const legalI18n = {
     title: "Aviso legal",
     publisherLabel: "Editor do site:",
     publisherText:
-      "Norixo — empresa ou empresário individual responsável pelo serviço “Norixo Optimize” (informações detalhadas a completar de acordo com o estatuto jurídico e a morada real).",
+      "Norixo — empresa ou empresário individual responsável pelo serviço “Norixo” (informações detalhadas a completar de acordo com o estatuto jurídico e a morada real).",
     hostingLabel: "Alojamento:",
     hostingText:
       "o site está alojado numa infraestrutura cloud compatível com as práticas comuns das aplicações web (por exemplo Vercel ou equivalente — a precisar internamente).",
@@ -128,7 +128,7 @@ export const legalI18n = {
     title: "Juridische vermeldingen",
     publisherLabel: "Uitgever van de website:",
     publisherText:
-      "Norixo — onderneming of zelfstandig ondernemer verantwoordelijk voor de dienst “Norixo Optimize” (gedetailleerde informatie aan te vullen volgens uw juridische status en werkelijke vestigingsadres).",
+      "Norixo — onderneming of zelfstandig ondernemer verantwoordelijk voor de dienst “Norixo” (gedetailleerde informatie aan te vullen volgens uw juridische status en werkelijke vestigingsadres).",
     hostingLabel: "Hosting:",
     hostingText:
       "de website wordt gehost op een cloudinfrastructuur die aansluit bij de gangbare praktijken voor webapplicaties (bijvoorbeeld Vercel of gelijkwaardig — intern te preciseren).",
@@ -144,7 +144,7 @@ export const legalI18n = {
     title: "法的通知",
     publisherLabel: "サイト発行者:",
     publisherText:
-      "Norixo — 「Norixo Optimize」サービスの責任を負う会社または個人事業主（詳細情報は、法的地位および実際の登録住所に応じて補完される必要があります）。",
+      "Norixo — 「Norixo」サービスの責任を負う会社または個人事業主（詳細情報は、法的地位および実際の登録住所に応じて補完される必要があります）。",
     hostingLabel: "ホスティング:",
     hostingText:
       "本サイトは、一般的なウェブアプリケーションの実務に沿ったクラウドインフラストラクチャ上でホストされています（例: Vercel または同等のサービス — 社内で明記予定）。",
@@ -160,7 +160,7 @@ export const legalI18n = {
     title: "法律声明",
     publisherLabel: "网站发布者：",
     publisherText:
-      "Norixo — 负责 “Norixo Optimize” 服务的公司或个体经营者（详细信息应根据你的法律身份和实际注册地址补充完善）。",
+      "Norixo — 负责 “Norixo” 服务的公司或个体经营者（详细信息应根据你的法律身份和实际注册地址补充完善）。",
     hostingLabel: "托管：",
     hostingText:
       "本网站托管于符合常见网页应用实践的云基础设施上（例如 Vercel 或同等服务 — 需在内部明确说明）。",
@@ -176,7 +176,7 @@ export const legalI18n = {
     title: "법적 고지사항",
     publisherLabel: "웹사이트 발행자:",
     publisherText:
-      "Norixo — “Norixo Optimize” 서비스의 책임을 지는 회사 또는 개인 사업자(상세 정보는 법적 지위와 실제 등록 주소에 따라 보완되어야 합니다).",
+      "Norixo — “Norixo” 서비스의 책임을 지는 회사 또는 개인 사업자(상세 정보는 법적 지위와 실제 등록 주소에 따라 보완되어야 합니다).",
     hostingLabel: "호스팅:",
     hostingText:
       "이 사이트는 일반적인 웹 애플리케이션 운영 관행에 부합하는 클라우드 인프라에서 호스팅됩니다(예: Vercel 또는 동급 서비스 — 내부적으로 명시 예정).",
@@ -192,7 +192,7 @@ export const legalI18n = {
     title: "الإشعار القانوني",
     publisherLabel: "ناشر الموقع:",
     publisherText:
-      "Norixo — شركة أو صاحب عمل فردي مسؤول عن خدمة “Norixo Optimize” (يجب استكمال المعلومات التفصيلية وفقًا للوضع القانوني والعنوان المسجل الفعلي).",
+      "Norixo — شركة أو صاحب عمل فردي مسؤول عن خدمة “Norixo” (يجب استكمال المعلومات التفصيلية وفقًا للوضع القانوني والعنوان المسجل الفعلي).",
     hostingLabel: "الاستضافة:",
     hostingText:
       "يتم استضافة الموقع على بنية سحابية تتماشى مع الممارسات الشائعة لتطبيقات الويب (على سبيل المثال Vercel أو ما يعادله — يتم تحديده داخليًا).",

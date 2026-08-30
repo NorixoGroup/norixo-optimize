@@ -3,7 +3,7 @@ import { runMarketingStudioPipeline } from "../lib/marketing-ai/marketingStudioP
 async function main() {
   const result = await runMarketingStudioPipeline({
     objective:
-      "Faire découvrir Norixo Optimize comme outil pour identifier les points de friction et clarifier les priorités d'amélioration.",
+      "Faire découvrir Norixo comme outil pour identifier les points de friction et clarifier les priorités d'amélioration.",
     language: "fr",
     timeframe: "7 jours",
     channels: ["Instagram", "Facebook", "LinkedIn", "SEO"],

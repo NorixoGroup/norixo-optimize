@@ -8,6 +8,22 @@ export const metadata = {
   description:
     "Explore Airbnb rankings for the best cities, countries, markets, family destinations, and short-term rental optimization opportunities.",
   alternates: buildHreflangAlternates("/rankings", { locales: [defaultLocale] }),
+  openGraph: {
+    title: "Airbnb Rankings & Market Guides | Norixo",
+    description:
+      "Explore Airbnb rankings for the best cities, countries, markets, family destinations, and short-term rental optimization opportunities.",
+    url: "/rankings",
+    siteName: "Norixo",
+    type: "website",
+    images: ["/og-cover.png"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Airbnb Rankings & Market Guides | Norixo",
+    description:
+      "Explore Airbnb rankings for the best cities, countries, markets, family destinations, and short-term rental optimization opportunities.",
+    images: ["/og-cover.png"],
+  },
 };
 
 export default function RankingsHubPage() {

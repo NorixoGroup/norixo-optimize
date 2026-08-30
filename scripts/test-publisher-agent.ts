@@ -11,7 +11,7 @@ async function main() {
     title: "Identifier les points de friction d'une annonce avec plus de clarté",
     hook: "Et si vous pouviez relire votre annonce avec un regard plus structuré ?",
     caption:
-      "Norixo Optimize aide les hôtes et conciergeries à identifier les points de friction d'une annonce et à clarifier les priorités d'amélioration avant de passer à l'action.",
+      "Norixo aide les hôtes et conciergeries à identifier les points de friction d'une annonce et à clarifier les priorités d'amélioration avant de passer à l'action.",
     cta: "Découvrir Norixo.io",
     hashtags: ["#Norixo", "#LocationCourteDuree", "#Conciergerie"],
     visualBrief:

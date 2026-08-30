@@ -2,7 +2,7 @@ export const demoI18n = {
   en: {
     hero: {
       eyebrow: "PRODUCT DEMO",
-      title: "See how Norixo Optimize reveals what blocks a listing.",
+      title: "See how Norixo reveals what blocks a listing.",
       subtitle:
         "Explore a sample report, see detected priorities and understand how a listing can improve after recommendations.",
       primaryCta: "Start my audit",
@@ -255,7 +255,7 @@ export const demoI18n = {
   fr: {
     hero: {
       eyebrow: "DÉMO PRODUIT",
-      title: "Découvrez comment Norixo Optimize révèle ce qui bloque une annonce.",
+      title: "Découvrez comment Norixo révèle ce qui bloque une annonce.",
       subtitle:
         "Explorez un exemple de rapport, visualisez les priorités détectées et voyez comment une annonce peut évoluer après recommandations.",
       primaryCta: "Lancer mon audit",
@@ -512,7 +512,7 @@ export const demoI18n = {
   es: {
     hero: {
       eyebrow: "DEMO DEL PRODUCTO",
-      title: "Descubre cómo Norixo Optimize revela lo que bloquea un anuncio.",
+      title: "Descubre cómo Norixo revela lo que bloquea un anuncio.",
       subtitle:
         "Explora un informe de ejemplo, visualiza las prioridades detectadas y entiende cómo puede evolucionar un anuncio después de las recomendaciones.",
       primaryCta: "Iniciar mi auditoría",
@@ -770,7 +770,7 @@ export const demoI18n = {
   de: {
     hero: {
       eyebrow: "PRODUKTDEMO",
-      title: "Sehen Sie, wie Norixo Optimize zeigt, was ein Inserat blockiert.",
+      title: "Sehen Sie, wie Norixo zeigt, was ein Inserat blockiert.",
       subtitle:
         "Entdecken Sie einen Beispielbericht, sehen Sie erkannte Prioritäten und verstehen Sie, wie sich ein Inserat nach den Empfehlungen verbessern kann.",
       primaryCta: "Audit starten",
@@ -1029,7 +1029,7 @@ export const demoI18n = {
   it: {
     hero: {
       eyebrow: "DEMO PRODOTTO",
-      title: "Scopri come Norixo Optimize rivela cosa blocca un annuncio.",
+      title: "Scopri come Norixo rivela cosa blocca un annuncio.",
       subtitle:
         "Esplora un report di esempio, visualizza le priorità rilevate e capisci come un annuncio può migliorare dopo le raccomandazioni.",
       primaryCta: "Avvia il mio audit",
@@ -1288,7 +1288,7 @@ export const demoI18n = {
   pt: {
     hero: {
       eyebrow: "DEMONSTRAÇÃO DO PRODUTO",
-      title: "Veja como o Norixo Optimize revela o que bloqueia um anúncio.",
+      title: "Veja como o Norixo revela o que bloqueia um anúncio.",
       subtitle:
         "Explore um relatório de exemplo, veja as prioridades detetadas e perceba como um anúncio pode evoluir após as recomendações.",
       primaryCta: "Iniciar o meu audit",
@@ -1547,7 +1547,7 @@ export const demoI18n = {
   nl: {
     hero: {
       eyebrow: "PRODUCTDEMO",
-      title: "Ontdek hoe Norixo Optimize laat zien wat een advertentie tegenhoudt.",
+      title: "Ontdek hoe Norixo laat zien wat een advertentie tegenhoudt.",
       subtitle:
         "Bekijk een voorbeeldrapport, zie de gedetecteerde prioriteiten en begrijp hoe een advertentie verbetert na de aanbevelingen.",
       primaryCta: "Start mijn audit",
@@ -1805,7 +1805,7 @@ export const demoI18n = {
   ja: {
     hero: {
       eyebrow: "製品デモ",
-      title: "Norixo Optimize が掲載を妨げている要因をどう可視化するかをご覧ください。",
+      title: "Norixo が掲載を妨げている要因をどう可視化するかをご覧ください。",
       subtitle:
         "サンプルレポートを確認し、検出された優先事項を把握し、提案後に掲載がどのように改善するかを理解できます。",
       primaryCta: "監査を始める",
@@ -2056,7 +2056,7 @@ export const demoI18n = {
   zh: {
     hero: {
       eyebrow: "产品演示",
-      title: "看看 Norixo Optimize 如何揭示是什么阻碍了一个房源。",
+      title: "看看 Norixo 如何揭示是什么阻碍了一个房源。",
       subtitle:
         "浏览示例报告，查看检测出的优先事项，并了解房源在应用建议后如何改进。",
       primaryCta: "开始我的审计",
@@ -2308,7 +2308,7 @@ export const demoI18n = {
   ko: {
     hero: {
       eyebrow: "제품 데모",
-      title: "Norixo Optimize가 숙소를 막고 있는 요소를 어떻게 드러내는지 확인해 보세요.",
+      title: "Norixo가 숙소를 막고 있는 요소를 어떻게 드러내는지 확인해 보세요.",
       subtitle:
         "샘플 보고서를 살펴보고, 감지된 우선순위를 확인하며, 권장사항 적용 후 숙소가 어떻게 개선될 수 있는지 이해해 보세요.",
       primaryCta: "내 감사 시작하기",
@@ -2560,7 +2560,7 @@ export const demoI18n = {
   ar: {
     hero: {
       eyebrow: "عرض المنتج",
-      title: "اكتشف كيف يكشف Norixo Optimize ما الذي يعرقل إعلانًا ما.",
+      title: "اكتشف كيف يكشف Norixo ما الذي يعرقل إعلانًا ما.",
       subtitle:
         "استكشف تقريرًا نموذجيًا، واطلع على الأولويات المكتشفة، وافهم كيف يمكن أن يتحسن الإعلان بعد التوصيات.",
       primaryCta: "ابدأ تدقيقي",

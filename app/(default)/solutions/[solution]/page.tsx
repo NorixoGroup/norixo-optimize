@@ -58,11 +58,11 @@ export default async function SolutionPage({ params }: Props) {
     {
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
-      name: "Norixo Optimize",
+      name: "Norixo",
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web",
       description:
-        "Norixo Optimize helps Airbnb hosts audit listings, improve pricing, strengthen SEO, and identify conversion blockers.",
+        "Norixo helps Airbnb hosts audit listings, improve pricing, strengthen SEO, and identify conversion blockers.",
     },
     {
       "@context": "https://schema.org",
@@ -279,7 +279,15 @@ export default async function SolutionPage({ params }: Props) {
       </section>
 
       <section className="mx-auto max-w-6xl px-6 py-12">
-        <h2 className="text-3xl font-semibold">Related Airbnb rankings</h2>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <h2 className="text-3xl font-semibold">Related Airbnb rankings</h2>
+          <Link
+            href="/rankings"
+            className="text-sm font-semibold text-[#D96C3B] underline-offset-4 hover:underline"
+          >
+            Explore all Airbnb rankings and market guides
+          </Link>
+        </div>
 
         <div className="mt-6 grid gap-4 md:grid-cols-2">
           {rankings.slice(0, 6).map((ranking) => (
