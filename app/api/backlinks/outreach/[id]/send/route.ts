@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminPrivateEmail } from "@/lib/auth/isAdminEmail";
-import { getCampaignOpportunity } from "@/lib/backlinks/repositories/campaignOpportunitiesRepository";
-import { getBacklinkContactById, listBacklinkContactsByDomain } from "@/lib/backlinks/repositories/contactsRepository";
-import { getBacklinkOpportunityById } from "@/lib/backlinks/repositories/opportunitiesRepository";
-import { getBacklinkOutreachById, activateBacklinkOutreachAfterEmailAccepted, listBacklinkOutreachByOpportunity, updateBacklinkOutreach } from "@/lib/backlinks/repositories/outreachRepository";
-import { getBacklinkOutreachAttemptById, getBacklinkOutreachAttemptByIdempotencyKey, getOpenBacklinkOutreachAttemptForOutreach, listBacklinkOutreachAttemptSendWindowRows, reserveBacklinkOutreachAttempt, updateBacklinkOutreachAttemptState } from "@/lib/backlinks/repositories/outreachAttemptsRepository";
+import { getBacklinkOutreachById, activateBacklinkOutreachAfterEmailAccepted } from "@/lib/backlinks/repositories/outreachRepository";
+import { getBacklinkOutreachAttemptById, reserveBacklinkOutreachApprovedInitialAttempt, updateBacklinkOutreachAttemptState } from "@/lib/backlinks/repositories/outreachAttemptsRepository";
 import { getAutomationWorkspaceControl } from "@/lib/automation/repositories/automationWorkspaceControlsRepository";
 import { createEnvironmentOutreachEmailProvider } from "@/lib/backlinks/providers/outreachEmailProvider";
 import { markBacklinkOutreachAttemptAccepted, markBacklinkOutreachAttemptFailed, markBacklinkOutreachAttemptUnknown } from "@/lib/backlinks/services/outreachAttemptService";
-import { BacklinkOutreachEmailSendError, sendBacklinkOutreachEmail } from "@/lib/backlinks/services/outreachEmailSendService";
+import { sendApprovedBacklinkOutreachEmail } from "@/lib/backlinks/services/outreachApprovedAutoSendService";
+import { BacklinkOutreachEmailSendError } from "@/lib/backlinks/services/outreachEmailSendService";
 import { getBacklinkOutreachReplyTokenKeyring } from "@/lib/backlinks/services/outreachReplyCorrelationIdentity";
 import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -34,21 +32,10 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     updateAttempt: (workspaceId: string, attemptId: string, patch: Parameters<typeof updateBacklinkOutreachAttemptState>[3]) => updateBacklinkOutreachAttemptState(auth.client, workspaceId, attemptId, patch),
   };
   try {
-    const result = await sendBacklinkOutreachEmail({
-      eligibility: {
-        getMembership: (value) => getCampaignOpportunity(auth.client, value.workspaceId, value.campaignId, value.opportunityId),
-        getOpportunity: (workspaceId, opportunityId) => getBacklinkOpportunityById(auth.client, workspaceId, opportunityId),
-        listContactsByDomain: (workspaceId, domainId) => listBacklinkContactsByDomain(auth.client, workspaceId, domainId),
-        listOutreachByOpportunity: (workspaceId, opportunityId) => listBacklinkOutreachByOpportunity(auth.client, workspaceId, opportunityId),
-      },
+    const result = await sendApprovedBacklinkOutreachEmail({
       getWorkspaceControl: (workspaceId) => getAutomationWorkspaceControl(auth.client, workspaceId),
       getOutreach: (workspaceId, outreachId) => getBacklinkOutreachById(auth.client, workspaceId, outreachId),
-      getContact: (workspaceId, contactId) => getBacklinkContactById(auth.client, workspaceId, contactId),
-      listAttemptSummariesSince: (workspaceId, since) => listBacklinkOutreachAttemptSendWindowRows(auth.client, workspaceId, since),
-      getAttemptByIdempotencyKey: (workspaceId, idempotencyKey) => getBacklinkOutreachAttemptByIdempotencyKey(auth.client, workspaceId, idempotencyKey),
-      getOpenAttemptForOutreach: (workspaceId, outreachId) => getOpenBacklinkOutreachAttemptForOutreach(auth.client, workspaceId, outreachId),
-      updateOutreach: (workspaceId, outreachId, value) => updateBacklinkOutreach(auth.client, workspaceId, outreachId, value),
-      reserveAttempt: (workspaceId, value) => reserveBacklinkOutreachAttempt(adminClient, workspaceId, value),
+      reserveApprovedInitialAttempt: (input) => reserveBacklinkOutreachApprovedInitialAttempt(adminClient, input),
       markAttemptAccepted: markBacklinkOutreachAttemptAccepted(transitions),
       markAttemptFailed: markBacklinkOutreachAttemptFailed(transitions),
       markAttemptUnknown: markBacklinkOutreachAttemptUnknown(transitions),
