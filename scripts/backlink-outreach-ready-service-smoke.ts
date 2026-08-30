@@ -101,6 +101,10 @@ async function main() {
       outreach = { ...outreach, ...value };
       return outreach;
     },
+    approveInitialSend: async ({ actorUserId }) => {
+      outreach = { ...outreach, status: "ready", auto_send_approved_at: "atomic-now", auto_send_approved_by: actorUserId, auto_send_approval_fingerprint: "bl1_atomic" };
+      return { disposition: "approved" as const };
+    },
     now: () => "now",
   });
 
@@ -138,8 +142,8 @@ async function main() {
   assert(
     result.disposition === "updated" &&
       result.status === "ready" &&
-      JSON.stringify(update) === JSON.stringify({ status: "ready", channel: "email" }),
-    "Ordinary draft -> ready must stay unchanged.",
+      update === undefined,
+    "Ordinary draft -> ready must use atomic approval without a legacy update.",
   );
 
   result = await ready(input);

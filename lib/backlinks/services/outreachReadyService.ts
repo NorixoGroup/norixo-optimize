@@ -140,6 +140,7 @@ export function markBacklinkOutreachReady(deps: {
     outreachId: string,
     input: ReadyUpdate | { status: "ready"; channel?: "email" | "linkedin" | "contact_form" },
   ): Promise<Outreach>;
+  approveInitialSend(input: { workspaceId: string; outreachId: string; actorUserId: string }): Promise<{ disposition: "approved" | "already_approved" }>;
   now?: () => string;
 }) {
   return async (input: {
@@ -294,30 +295,15 @@ export function markBacklinkOutreachReady(deps: {
       throw new BacklinkOutreachReadyError("OUTREACH_NOT_READY_ELIGIBLE");
     }
 
-    const body = outreach.body?.trim();
-    const targetChannel = (contact?.eligibleChannels[0] ?? outreach.channel) as
-      | "email"
-      | "linkedin"
-      | "contact_form";
-    if (!body || (targetChannel === "email" && !outreach.subject?.trim())) {
-      throw new BacklinkOutreachReadyError("OUTREACH_DRAFT_CONTENT_INCOMPLETE");
-    }
-    if (targetChannel == null || !contact?.eligibleChannels.includes(targetChannel)) {
-      throw new BacklinkOutreachReadyError("CONTACT_OR_CHANNEL_NOT_ELIGIBLE");
-    }
-    const conflict = await deps.getActiveOutreach({
+    const approved = await deps.approveInitialSend({
       workspaceId: input.workspaceId,
-      opportunityId: outreach.opportunity_id,
-      contactId: outreach.contact_id,
-      channel: targetChannel,
+      outreachId: input.outreachId,
+      actorUserId: input.actorUserId,
     });
-    if (conflict != null && conflict.id !== outreach.id) {
-      throw new BacklinkOutreachReadyError("OUTREACH_READY_CONFLICT");
+    if (approved.disposition !== "approved" && approved.disposition !== "already_approved") {
+      throw new BacklinkOutreachReadyError("OUTREACH_NOT_READY_ELIGIBLE");
     }
-    const updated = await deps.updateOutreach(input.workspaceId, input.outreachId, {
-      status: "ready",
-      channel: targetChannel,
-    });
+    const updated = await deps.getOutreach(input.workspaceId, input.outreachId);
     return {
       outreachId: updated.id,
       outreachKey: updated.outreach_key,

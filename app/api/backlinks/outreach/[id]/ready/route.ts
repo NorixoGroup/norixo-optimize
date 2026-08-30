@@ -7,6 +7,7 @@ import { getBacklinkOpportunityById } from "@/lib/backlinks/repositories/opportu
 import { listBacklinkContactsByDomain } from "@/lib/backlinks/repositories/contactsRepository";
 import { markBacklinkOutreachReady } from "@/lib/backlinks/services/outreachReadyService";
 import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 type ReadyRequestBody = { confirm: true; reapprove?: true };
 function parseBody(value: unknown): ReadyRequestBody | null {
   if (typeof value !== "object" || value == null || Array.isArray(value)) return null;
@@ -25,6 +26,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   if (body == null) return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   const { id } = await context.params;
   try {
+    const adminClient = createSupabaseAdminClient();
     const result = await markBacklinkOutreachReady({
       eligibility: {
         getMembership: (v) => getCampaignOpportunity(auth.client, v.workspaceId, v.campaignId, v.opportunityId),
@@ -36,6 +38,17 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       getActiveOutreach: async (v) => getActiveBacklinkOutreachByIdentity(auth.client, v) as any,
       listAttemptsForOutreach: (w, o) => listBacklinkOutreachAttemptsForOutreach(auth.client, w, o),
       updateOutreach: async (w, o, v) => updateBacklinkOutreach(auth.client, w, o, v as any) as any,
+      approveInitialSend: async ({ workspaceId, outreachId, actorUserId }) => {
+        const { data, error } = await adminClient.rpc("approve_backlink_outreach_initial_send", {
+          p_workspace_id: workspaceId,
+          p_outreach_id: outreachId,
+          p_approved_by: actorUserId,
+        });
+        if (error != null || !Array.isArray(data) || data.length !== 1 || (data[0].disposition !== "approved" && data[0].disposition !== "already_approved")) {
+          throw new Error("Atomic first approval unavailable.");
+        }
+        return data[0];
+      },
     })({ workspaceId: auth.workspace.id, actorUserId: auth.user.id, outreachId: id, reapprove: body.reapprove === true });
     return NextResponse.json({ ok: true, result });
   } catch {
