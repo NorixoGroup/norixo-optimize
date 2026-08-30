@@ -44,6 +44,16 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
           p_outreach_id: outreachId,
           p_approved_by: actorUserId,
         });
+        if (error != null) {
+          console.error("[backlinks-first-approval-rpc-error]", {
+            workspaceId,
+            outreachId,
+            errorCode: error.code,
+            errorMessage: error.message,
+            errorDetails: error.details,
+            errorHint: error.hint,
+          });
+        }
         if (error != null || !Array.isArray(data) || data.length !== 1 || (data[0].disposition !== "approved" && data[0].disposition !== "already_approved")) {
           throw new Error("Atomic first approval unavailable.");
         }
