@@ -51,7 +51,19 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       },
     })({ workspaceId: auth.workspace.id, actorUserId: auth.user.id, outreachId: id, reapprove: body.reapprove === true });
     return NextResponse.json({ ok: true, result });
-  } catch {
+  } catch (error) {
+    const diagnostic = typeof error === "object" && error != null ? error as Record<string, unknown> : null;
+    const diagnosticString = (key: string) => typeof diagnostic?.[key] === "string" ? diagnostic[key] : null;
+    console.error("[backlinks-ready-approval-error]", {
+      outreachId: id,
+      workspaceId: auth.workspace.id,
+      userId: auth.user.id,
+      errorName: error instanceof Error ? error.name : diagnosticString("name") ?? "UnknownError",
+      errorMessage: error instanceof Error ? error.message : diagnosticString("message") ?? "Unknown error",
+      errorCode: diagnosticString("code"),
+      errorDetails: diagnosticString("details"),
+      errorHint: diagnosticString("hint"),
+    });
     return NextResponse.json({ error: "Ready approval unavailable." }, { status: 409 });
   }
 }
