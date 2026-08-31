@@ -285,6 +285,17 @@ export async function reserveBacklinkOutreachApprovedInitialAttempt(
   );
 
   if (error != null) {
+    const diagnostic = typeof error === "object" && error != null ? error as unknown as Record<string, unknown> : null;
+    const diagnosticString = (key: string) => typeof diagnostic?.[key] === "string" ? diagnostic[key] : null;
+    console.error("[backlinks-approved-initial-reservation-error]", {
+      workspaceId: input.workspaceId,
+      campaignId: input.campaignId,
+      outreachId: input.outreachId,
+      errorCode: diagnosticString("code"),
+      errorMessage: diagnosticString("message"),
+      errorDetails: diagnosticString("details"),
+      errorHint: diagnosticString("hint"),
+    });
     throw normalizeBacklinkRepositoryError(
       "reserveBacklinkOutreachAttemptForApprovedAutoSend",
       error,

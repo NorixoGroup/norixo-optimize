@@ -11,6 +11,28 @@ import { getBacklinkOutreachReplyTokenKeyring } from "@/lib/backlinks/services/o
 import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
+function extractSafeError(error: unknown): {
+  errorName: string;
+  errorMessage: string;
+  errorCode: string | number | null;
+} {
+  let errorName: string = typeof error;
+  let errorMessage = "Unknown error";
+  let errorCode: string | number | null = null;
+  if (error instanceof Error) {
+    errorName = "Error";
+    try { if (typeof error.name === "string" && error.name) errorName = error.name; } catch {}
+    try { if (typeof error.message === "string" && error.message) errorMessage = error.message; } catch {}
+  }
+  if (typeof error === "object" && error != null) {
+    try {
+      const code = Object.getOwnPropertyDescriptor(error, "code")?.value;
+      if (typeof code === "string" || typeof code === "number") errorCode = code;
+    } catch {}
+  }
+  return { errorName, errorMessage, errorCode };
+}
+
 function parse(value: unknown): { idempotencyKey: string } | null {
   if (typeof value !== "object" || value == null || Array.isArray(value)) return null;
   const body = value as Record<string, unknown>;
@@ -49,6 +71,14 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     if (error instanceof BacklinkOutreachEmailSendError && error.code === "OUTREACH_SEND_DISABLED_BY_DRY_RUN") return NextResponse.json({ error: { code: error.code, message: error.message === "OUTREACH_SEND_DISABLED_BY_DRY_RUN" ? "External email sending is disabled while Backlinks is in dry-run mode." : error.message } }, { status: 409 });
     if (error instanceof BacklinkOutreachEmailSendError && error.code === "OUTREACH_SEND_ATTEMPT_IN_PROGRESS") return NextResponse.json({ error: "An outreach send attempt is already in progress." }, { status: 409 });
     if (error instanceof BacklinkOutreachEmailSendError && error.code === "OUTREACH_SEND_ATTEMPT_UNRESOLVED") return NextResponse.json({ error: "Resolve the uncertain outreach attempt before sending again." }, { status: 409 });
+    const safeError = extractSafeError(error);
+    console.error("[backlinks-explicit-send-error]", {
+      workspaceId: auth.workspace.id,
+      outreachId: id,
+      errorName: safeError.errorName,
+      errorMessage: safeError.errorMessage,
+      errorCode: safeError.errorCode,
+    });
     return NextResponse.json({ error: "Outreach email send unavailable." }, { status: 409 });
   }
 }
