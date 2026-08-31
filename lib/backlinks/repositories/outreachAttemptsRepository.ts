@@ -87,6 +87,65 @@ export type ApplyBacklinkOutreachFollowUpAcceptedRpcClient = { rpc(functionName:
 export type MarkBacklinkOutreachFollowUpAttemptRequestedRpcClient = { rpc(functionName: MarkBacklinkOutreachFollowUpAttemptRequestedRpcName, args: MarkBacklinkOutreachFollowUpAttemptRequestedRpcArgs): PromiseLike<{ data: MarkBacklinkOutreachFollowUpAttemptRequestedRpcRow[] | null; error: unknown }> };
 
 function required(value: string | null | undefined, field: string): string { const normalized = value?.trim(); if (!normalized) throw new BacklinkRepositoryError({ code: "VALIDATION", operation: "createBacklinkOutreachAttempt", message: `${field} is required.` }); return normalized; }
+
+export type RecordBacklinkManualLinkedInInitialContactInput = {
+  workspaceId: string;
+  outreachId: string;
+  actorUserId: string;
+};
+
+export type RecordBacklinkManualLinkedInInitialContactResult = {
+  disposition: "created" | "existing";
+  outreachId: string;
+  attemptId: string;
+  attemptNumber: 1;
+  recordedAt: string;
+};
+
+type RecordBacklinkManualLinkedInInitialContactRpcRow = {
+  disposition: unknown;
+  outreach_id: unknown;
+  attempt_id: unknown;
+  attempt_number: unknown;
+  recorded_at: unknown;
+};
+
+export type RecordBacklinkManualLinkedInInitialContactRpcClient = {
+  rpc(
+    functionName: "record_backlink_manual_linkedin_initial_contact",
+    args: { p_workspace_id: string; p_outreach_id: string; p_actor_user_id: string },
+  ): PromiseLike<{ data: RecordBacklinkManualLinkedInInitialContactRpcRow[] | null; error: unknown }>;
+};
+
+function mapManualLinkedInInitialContact(value: unknown): RecordBacklinkManualLinkedInInitialContactResult {
+  if (!isRecord(value)) throw new BacklinkRepositoryError({ code: "DATABASE", operation: "recordBacklinkManualLinkedInInitialContact", message: "The database returned an invalid manual LinkedIn contact result." });
+  const { disposition, outreach_id: outreachId, attempt_id: attemptId, attempt_number: attemptNumber, recorded_at: recordedAt } = value;
+  if ((disposition !== "created" && disposition !== "existing") || typeof outreachId !== "string" || typeof attemptId !== "string" || attemptNumber !== 1 || typeof recordedAt !== "string") {
+    throw new BacklinkRepositoryError({ code: "DATABASE", operation: "recordBacklinkManualLinkedInInitialContact", message: "The database returned an invalid manual LinkedIn contact result." });
+  }
+  return { disposition, outreachId, attemptId, attemptNumber: 1, recordedAt };
+}
+
+function normalizeManualLinkedInInitialContactError(error: unknown): BacklinkRepositoryError {
+  if (typeof error === "object" && error != null && "message" in error && typeof error.message === "string" && error.message.startsWith("MANUAL_LINKEDIN_CONTACT_")) {
+    return new BacklinkRepositoryError({ code: "VALIDATION", operation: "recordBacklinkManualLinkedInInitialContact", message: error.message });
+  }
+  return normalizeBacklinkRepositoryError("recordBacklinkManualLinkedInInitialContact", error);
+}
+
+export async function recordBacklinkManualLinkedInInitialContact(
+  client: RecordBacklinkManualLinkedInInitialContactRpcClient,
+  input: RecordBacklinkManualLinkedInInitialContactInput,
+): Promise<RecordBacklinkManualLinkedInInitialContactResult> {
+  const { data, error } = await client.rpc("record_backlink_manual_linkedin_initial_contact", {
+    p_workspace_id: required(input.workspaceId, "workspaceId"),
+    p_outreach_id: required(input.outreachId, "outreachId"),
+    p_actor_user_id: required(input.actorUserId, "actorUserId"),
+  });
+  if (error != null) throw normalizeManualLinkedInInitialContactError(error);
+  if (!Array.isArray(data) || data.length !== 1) throw new BacklinkRepositoryError({ code: "DATABASE", operation: "recordBacklinkManualLinkedInInitialContact", message: "The database returned an invalid manual LinkedIn contact result." });
+  return mapManualLinkedInInitialContact(data[0]);
+}
 function mapInitialAttemptReservation(value: unknown): {
   disposition: "created" | "existing" | "rate_limited";
   attemptId: string | null;
