@@ -4846,7 +4846,7 @@ export type Database = {
           rate_limit_reason: string | null
         }[]
       }
-      reserve_backlink_outreach_initial_attempt_for_approved_auto_send: {
+      reserve_backlink_approved_initial_attempt_v2: {
         Args: {
           p_actor_user_id: string
           p_attempt_id: string

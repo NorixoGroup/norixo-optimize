@@ -12,7 +12,7 @@ type ReserveBacklinkOutreachInitialAttemptRpcName = "reserve_backlink_outreach_i
 type ReserveBacklinkOutreachInitialAttemptRpcArgs = Database["public"]["Functions"][ReserveBacklinkOutreachInitialAttemptRpcName]["Args"];
 type ReserveBacklinkOutreachInitialAttemptRpcRow = Database["public"]["Functions"][ReserveBacklinkOutreachInitialAttemptRpcName]["Returns"][number];
 type ReserveBacklinkOutreachApprovedInitialAttemptRpcName =
-  "reserve_backlink_outreach_initial_attempt_for_approved_auto_send";
+  "reserve_backlink_approved_initial_attempt_v2";
 type ReserveBacklinkOutreachApprovedInitialAttemptRpcArgs =
   Database["public"]["Functions"][ReserveBacklinkOutreachApprovedInitialAttemptRpcName]["Args"];
 type ReserveBacklinkOutreachApprovedInitialAttemptRpcRow =
@@ -270,7 +270,7 @@ export async function reserveBacklinkOutreachApprovedInitialAttempt(
   },
 ): Promise<BacklinkOutreachApprovedInitialAttemptResult> {
   const { data, error } = await client.rpc(
-    "reserve_backlink_outreach_initial_attempt_for_approved_auto_send",
+    "reserve_backlink_approved_initial_attempt_v2",
     {
       p_workspace_id: required(input.workspaceId, "workspaceId"),
       p_campaign_id: required(input.campaignId, "campaignId"),

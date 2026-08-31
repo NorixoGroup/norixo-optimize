@@ -15,7 +15,8 @@ function mustReject(name: string, mutate: (input: { route: string; repository: s
 
 function validate({ route, repository }: { route: string; repository: string }) {
   for (const value of ["export async function POST", "getRequestUserAndWorkspace(request)", "sendApprovedBacklinkOutreachEmail", "reserveBacklinkOutreachApprovedInitialAttempt(adminClient", '"Outreach email send unavailable."', "status: 409"]) assert(route.includes(value), `Missing route ${value}`);
-  for (const value of ["reserve_backlink_outreach_initial_attempt_for_approved_auto_send", "p_workspace_id", "p_campaign_id", "p_outreach_id", "p_attempt_id", "p_actor_user_id", "p_idempotency_key", "p_reply_token_hash", "p_reply_token_key_version", "p_requested_at", "[backlinks-approved-initial-reservation-error]"]) assert(repository.includes(value), `Missing repository ${value}`);
+  for (const value of ["reserve_backlink_approved_initial_attempt_v2", "p_workspace_id", "p_campaign_id", "p_outreach_id", "p_attempt_id", "p_actor_user_id", "p_idempotency_key", "p_reply_token_hash", "p_reply_token_key_version", "p_requested_at", "[backlinks-approved-initial-reservation-error]"]) assert(repository.includes(value), `Missing repository ${value}`);
+  for (const forbiddenRpcName of ["reserve_backlink_outreach_initial_attempt_for_approved_auto_send", "reserve_backlink_outreach_initial_attempt_for_approved_auto_sen"]) assert(!repository.includes(forbiddenRpcName), `Repository must not use ${forbiddenRpcName}`);
 
   const innerLog = between(repository, 'console.error("[backlinks-approved-initial-reservation-error]"', "throw normalizeBacklinkRepositoryError");
   for (const value of ["workspaceId", "campaignId", "outreachId", "errorCode", "errorMessage", "errorDetails", "errorHint"]) assert(innerLog.includes(value), `Missing inner ${value}`);
@@ -51,7 +52,9 @@ async function main() {
   mustReject("browser message", ({ route, repository }) => ({ route: route.replace('return NextResponse.json({ error: "Outreach email send unavailable." }, { status: 409 });', 'return NextResponse.json({ error: "changed" }, { status: 409 });'), repository }), source);
   mustReject("recipient inner", ({ route, repository }) => ({ route, repository: repository.replace('errorCode: diagnosticString("code"),', 'recipient: "unsafe",\n      errorCode: diagnosticString("code"),') }), source);
   mustReject("subject outer", ({ route, repository }) => ({ route: route.replace("errorName: safeError.errorName,", 'subject: "unsafe",\n      errorName: safeError.errorName,'), repository }), source);
-  mustReject("RPC name", ({ route, repository }) => ({ route, repository: repository.replaceAll("reserve_backlink_outreach_initial_attempt_for_approved_auto_send", "changed") }), source);
+  mustReject("stable RPC name", ({ route, repository }) => ({ route, repository: repository.replaceAll("reserve_backlink_approved_initial_attempt_v2", "changed") }), source);
+  mustReject("long RPC name", ({ route, repository }) => ({ route, repository: repository.replace("reserve_backlink_approved_initial_attempt_v2", "reserve_backlink_outreach_initial_attempt_for_approved_auto_send") }), source);
+  mustReject("truncated RPC name", ({ route, repository }) => ({ route, repository: repository.replace("reserve_backlink_approved_initial_attempt_v2", "reserve_backlink_outreach_initial_attempt_for_approved_auto_sen") }), source);
   mustReject("RPC arg", ({ route, repository }) => ({ route, repository: repository.replaceAll("p_outreach_id", "p_changed_outreach_id") }), source);
   mustReject("send service", ({ route, repository }) => ({ route: route.replaceAll("sendApprovedBacklinkOutreachEmail", "changedSend"), repository }), source);
   mustReject("provider call", ({ route, repository }) => ({ route: route.replace(outerPrefix, `${outerPrefix}\n    sendEmail({});`), repository }), source);

@@ -12,9 +12,13 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 async function main(): Promise<void> {
-  const [migration, repo] = await Promise.all([
+  const [v2Migration, wrapperMigration, repo] = await Promise.all([
     readFile(
-      "supabase/migrations/20260828120000_add_backlink_outreach_approval_aware_initial_attempt_reservation.sql",
+      "supabase/migrations/20260831130000_harden_backlink_v2_approval_fingerprint.sql",
+      "utf8",
+    ),
+    readFile(
+      "supabase/migrations/20260831150000_add_stable_backlink_v2_reservation_rpc.sql",
       "utf8",
     ),
     readFile("lib/backlinks/repositories/outreachAttemptsRepository.ts", "utf8"),
@@ -35,13 +39,26 @@ async function main(): Promise<void> {
     "grant execute on function public.reserve_backlink_outreach_initial_attempt_for_approved_auto_send",
     "to service_role",
   ]) {
-    assert(migration.includes(value), `Missing approved-admission invariant: ${value}`);
+    assert(v2Migration.includes(value), `Missing approved-admission invariant: ${value}`);
+  }
+
+  for (const value of [
+    "reserve_backlink_approved_initial_attempt_v2",
+    "security definer",
+    "set search_path = public",
+    "reserve_backlink_outreach_initial_attempt_for_approved_auto_sen",
+    "grant execute on function public.reserve_backlink_approved_initial_attempt_v2",
+    "to service_role",
+  ]) {
+    assert(wrapperMigration.includes(value), `Missing stable approved-admission wrapper invariant: ${value}`);
   }
 
   assert(
-    repo.includes("reserve_backlink_outreach_initial_attempt_for_approved_auto_send"),
+    repo.includes("reserve_backlink_approved_initial_attempt_v2"),
     "Repository must use the approved initial admission RPC.",
   );
+  assert(!repo.includes("reserve_backlink_outreach_initial_attempt_for_approved_auto_send"), "Repository must not use the long RPC name.");
+  assert(!repo.includes("reserve_backlink_outreach_initial_attempt_for_approved_auto_sen"), "Repository must not use the truncated RPC name.");
   assert(
     repo.includes("backlink_outreach_initial_attempt_snapshots"),
     "Repository must fetch the approved initial attempt snapshot.",
@@ -94,7 +111,7 @@ async function main(): Promise<void> {
   const client = {
     rpc: async (functionName: string, args: Record<string, unknown>) => {
       assert(
-        functionName === "reserve_backlink_outreach_initial_attempt_for_approved_auto_send",
+        functionName === "reserve_backlink_approved_initial_attempt_v2",
         "Approved initial admission must call the dedicated RPC.",
       );
       assert(
