@@ -1,0 +1,7 @@
+import { NextRequest, NextResponse } from "next/server";
+import { isAdminPrivateEmail } from "@/lib/auth/isAdminEmail";
+import { confirmLinkedInInteraction } from "@/lib/backlinks/services/outreachLinkedInInteractionService";
+import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+const confirmed = (value: unknown) => typeof value === "object" && value != null && !Array.isArray(value) && Object.keys(value).length === 1 && (value as { confirm?: unknown }).confirm === true;
+export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) { const auth = await getRequestUserAndWorkspace(request); if (auth.status === "unauthenticated") return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); if (auth.status === "workspace_forbidden" || !isAdminPrivateEmail(auth.user.email)) return NextResponse.json({ error: "Forbidden" }, { status: 403 }); if (!confirmed(await request.json().catch(() => null))) return NextResponse.json({ error: "Explicit confirmation is required." }, { status: 400 }); const { id } = await context.params; try { return NextResponse.json({ ok: true, result: await confirmLinkedInInteraction(createSupabaseAdminClient(), { workspaceId: auth.workspace.id, outreachId: id, actorUserId: auth.user.id, interactionType: "connection_invitation_sent" }) }); } catch { return NextResponse.json({ error: "LinkedIn invitation confirmation unavailable." }, { status: 409 }); } }
