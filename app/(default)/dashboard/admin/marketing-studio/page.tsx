@@ -2602,20 +2602,9 @@ export default function MarketingStudioPage() {
   const linkedInConnectionStatusTone = linkedInConnection?.connected
     ? "emerald"
     : linkedInUi.statusTone;
-  const linkedInOrganizationValue = linkedInConnectionLoading
-    ? "Verification en cours"
-    : linkedInConnection?.organization?.id
-      ? `urn:li:organization:${linkedInConnection.organization.id}`
-      : linkedInConnection?.organization?.urn ?? linkedInUi.organizationValue;
   const linkedInConnectLabel = linkedInConnection?.connected
     ? "Reconnecter LinkedIn"
     : "Connecter LinkedIn";
-  const linkedInOAuthValue = linkedInConnection?.connected
-    ? "connecte et persiste"
-    : linkedInUi.oauthLabel;
-  const linkedInHelperText = linkedInConnection?.connected
-    ? "Connexion LinkedIn persistee cote serveur. Publication texte-only manuelle disponible apres validation humaine."
-    : linkedInUi.helperText;
   const resolvedLinkedInAlert = linkedInLoginError ?? linkedInUi.alert;
   const tikTokConnectionStatusLabel = tikTokConnectionLoading
     ? "verification"
@@ -3717,6 +3706,47 @@ export default function MarketingStudioPage() {
               </div>
             </div>
           </SectionCard>
+
+          <SectionCard eyebrow="LinkedIn" title="Connexion LinkedIn">
+            <div className="space-y-5">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <MetricTile
+                  label="Statut"
+                  value={linkedInConnectionStatusLabel}
+                  tone={linkedInConnectionStatusTone}
+                />
+                <MetricTile label="OAuth" value="workspace actuel" />
+                <MetricTile label="Mode" value="Publication manuelle uniquement" />
+                <MetricTile
+                  label="Publication automatique"
+                  value="Publication désactivée"
+                  tone="amber"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleLinkedInConnect}
+                disabled={linkedInLoginLoading}
+                className="inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {linkedInLoginLoading
+                  ? "Connexion LinkedIn..."
+                  : linkedInConnectLabel}
+              </button>
+
+              {resolvedLinkedInAlert ? (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+                  {resolvedLinkedInAlert}
+                </div>
+              ) : null}
+
+              <p className="text-sm leading-6 text-slate-600">
+                Connexion LinkedIn liée au workspace actuel. Aucune publication automatique.
+                Validation humaine obligatoire. Aucun token affiché.
+              </p>
+            </div>
+          </SectionCard>
         </section>
 
         {bundle && submittedForm ? (
@@ -4570,94 +4600,6 @@ export default function MarketingStudioPage() {
                       </p>
                       <p className="mt-2 text-sm text-emerald-800">
                         Aucune publication automatique
-                      </p>
-                      <p className="mt-1 text-sm text-emerald-800">
-                        Validation humaine obligatoire
-                      </p>
-                      <p className="mt-1 text-sm text-emerald-800">Aucun token affiche</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-[28px] border border-slate-300/80 bg-white/95 p-5 shadow-lg shadow-slate-200/55 backdrop-blur-sm">
-                  <div className="mb-5">
-                    <BadgeList
-                      values={[
-                        "Texte-only",
-                        "Page entreprise",
-                        "Validation humaine requise",
-                      ]}
-                    />
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    <MetricTile
-                      label="Statut"
-                      value={linkedInConnectionStatusLabel}
-                      tone={linkedInConnectionStatusTone}
-                    />
-                    <MetricTile label="Mode" value="Texte-only manuel" />
-                    <MetricTile
-                      label="Publication automatique"
-                      value="Publication désactivée"
-                      tone="amber"
-                    />
-                    <MetricTile label="OAuth" value={linkedInOAuthValue} />
-                    <MetricTile
-                      label="Validation humaine"
-                      value="Validation humaine requise"
-                      tone="emerald"
-                    />
-                    <MetricTile label="Tokens" value="Jamais affichés" />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleLinkedInConnect}
-                    disabled={linkedInLoginLoading}
-                    className="mt-6 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {linkedInLoginLoading
-                      ? "Connexion LinkedIn..."
-                      : linkedInConnectLabel}
-                  </button>
-
-                  {resolvedLinkedInAlert ? (
-                    <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-                      {resolvedLinkedInAlert}
-                    </div>
-                  ) : null}
-
-                  <p className="mt-4 text-sm leading-6 text-slate-600">
-                    {linkedInHelperText}
-                  </p>
-
-                  <div className="mt-6 grid gap-4 lg:grid-cols-3">
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                        Organization URN
-                      </p>
-                      <p className="mt-2 text-sm text-slate-700">
-                        {linkedInOrganizationValue}
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                        Scope
-                      </p>
-                      <p className="mt-2 text-sm text-slate-700">
-                        {linkedInConnection?.grantedScopes?.join(", ") ||
-                          "w_organization_social"}
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                        Securite
-                      </p>
-                      <p className="mt-2 text-sm text-emerald-800">
-                        Publication entreprise uniquement
                       </p>
                       <p className="mt-1 text-sm text-emerald-800">
                         Validation humaine obligatoire
