@@ -7,10 +7,10 @@ import {
   LINKEDIN_OAUTH_STATE_COOKIE_NAME,
   buildLinkedInOAuthLoginUrl,
   createLinkedInOAuthState,
-  readLinkedInOAuthEnv,
+  readLinkedInOAuthServerEnv,
   serializeLinkedInOAuthActor,
 } from "@/lib/marketing-ai/linkedin/linkedinOAuth";
-import { createRequestSupabaseClient } from "@/lib/server/routeAuth";
+import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 
 export const runtime = "nodejs";
 
@@ -56,21 +56,15 @@ function setLinkedInOAuthCookies(
 }
 
 export async function GET(request: NextRequest) {
-  const requestClient = createRequestSupabaseClient(request);
-  const {
-    data: { user },
-    error: userError,
-  } = await requestClient.auth.getUser();
-
-  if (userError || !user) {
+  const auth = await getRequestUserAndWorkspace(request);
+  if (auth.status === "unauthenticated") {
     return NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 });
   }
-
-  if (!isAdminPrivateEmail(user.email)) {
+  if (auth.status === "workspace_forbidden" || !isAdminPrivateEmail(auth.user.email)) {
     return NextResponse.json({ ok: false, error: "Forbidden." }, { status: 403 });
   }
 
-  const envValidation = readLinkedInOAuthEnv();
+  const envValidation = readLinkedInOAuthServerEnv();
 
   if (!envValidation.ok) {
     return NextResponse.json(
@@ -83,7 +77,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const state = createLinkedInOAuthState();
+  const state = createLinkedInOAuthState({ userId: auth.user.id, workspaceId: auth.workspace.id }, envValidation.config.clientSecret);
   const loginUrl = buildLinkedInOAuthLoginUrl(envValidation.config, state);
   const wantsJson =
     request.headers.get("x-linkedin-oauth-mode")?.trim().toLowerCase() ===
@@ -97,8 +91,8 @@ export async function GET(request: NextRequest) {
 
   setLinkedInOAuthCookies(response, {
     state,
-    userId: user.id,
-    email: user.email ?? null,
+    userId: auth.user.id,
+    email: auth.user.email ?? null,
   });
 
   return response;

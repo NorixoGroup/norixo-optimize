@@ -1,3 +1,5 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
+
 export const LINKEDIN_MARKETING_STUDIO_SCOPES = [
   "w_organization_social",
 ] as const;
@@ -39,8 +41,7 @@ export const LINKEDIN_OAUTH_FLOW_COOKIE_NAME =
   "marketing_studio_linkedin_oauth_flow";
 export const LINKEDIN_OAUTH_FLOW_COOKIE_VALUE =
   "admin_company_page_only";
-export const LINKEDIN_OAUTH_ACTOR_COOKIE_NAME =
-  "marketing_studio_linkedin_oauth_actor";
+export const LINKEDIN_OAUTH_ACTOR_COOKIE_NAME = "marketing_studio_linkedin_oauth_actor";
 
 export type LinkedInOAuthActor = {
   userId: string;
@@ -123,35 +124,44 @@ export function readLinkedInOAuthServerEnv(
   };
 }
 
-export function createLinkedInOAuthState() {
-  return Buffer.from(
-    JSON.stringify({
-      nonce: crypto.randomUUID(),
-      ts: Date.now(),
-      intent: "marketing_studio_linkedin_company_page",
-    }),
-  ).toString("base64url");
+export type LinkedInOAuthStateBinding = {
+  userId: string;
+  workspaceId: string;
+};
+
+type LinkedInOAuthStatePayload = LinkedInOAuthStateBinding & {
+  nonce: string;
+  ts: number;
+  intent: "marketing_studio_linkedin_company_page";
+  signature: string;
+};
+
+function signLinkedInOAuthState(value: Omit<LinkedInOAuthStatePayload, "signature">, signingSecret: string) {
+  return createHmac("sha256", signingSecret).update(JSON.stringify(value)).digest("base64url");
 }
 
-export function isLinkedInOAuthState(value: string) {
+export function createLinkedInOAuthState(binding: LinkedInOAuthStateBinding, signingSecret: string) {
+  const payload = { nonce: crypto.randomUUID(), ts: Date.now(), intent: "marketing_studio_linkedin_company_page" as const, userId: binding.userId.trim(), workspaceId: binding.workspaceId.trim() };
+  if (!payload.userId || !payload.workspaceId || !signingSecret.trim()) throw new Error("LinkedIn OAuth state binding is required.");
+  return Buffer.from(JSON.stringify({ ...payload, signature: signLinkedInOAuthState(payload, signingSecret) })).toString("base64url");
+}
+
+export function parseLinkedInOAuthState(value: string, signingSecret: string): LinkedInOAuthStateBinding | null {
   if (!value.trim()) {
-    return false;
+    return null;
   }
 
   try {
     const parsed = JSON.parse(
       Buffer.from(value, "base64url").toString("utf8"),
-    ) as Record<string, unknown>;
-
-    return (
-      typeof parsed.nonce === "string" &&
-      parsed.nonce.trim().length > 0 &&
-      typeof parsed.ts === "number" &&
-      Number.isFinite(parsed.ts) &&
-      parsed.intent === "marketing_studio_linkedin_company_page"
-    );
+    ) as Partial<LinkedInOAuthStatePayload>;
+    if (typeof parsed.nonce !== "string" || !parsed.nonce.trim() || typeof parsed.ts !== "number" || !Number.isFinite(parsed.ts) || Date.now() - parsed.ts > 10 * 60 * 1000 || parsed.intent !== "marketing_studio_linkedin_company_page" || typeof parsed.userId !== "string" || !parsed.userId.trim() || typeof parsed.workspaceId !== "string" || !parsed.workspaceId.trim() || typeof parsed.signature !== "string" || !signingSecret.trim()) return null;
+    const payload = { nonce: parsed.nonce, ts: parsed.ts, intent: parsed.intent, userId: parsed.userId.trim(), workspaceId: parsed.workspaceId.trim() };
+    const expected = signLinkedInOAuthState(payload, signingSecret);
+    if (expected.length !== parsed.signature.length || !timingSafeEqual(Buffer.from(expected), Buffer.from(parsed.signature))) return null;
+    return { userId: payload.userId, workspaceId: payload.workspaceId };
   } catch {
-    return false;
+    return null;
   }
 }
 

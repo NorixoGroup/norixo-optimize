@@ -10,7 +10,7 @@ import {
 } from "@/lib/marketing-ai/linkedin/linkedinApi";
 import { readLinkedInConnectionForPublish } from "@/lib/marketing-ai/linkedin/linkedinConnectionStore";
 import { readLinkedInOAuthServerEnv } from "@/lib/marketing-ai/linkedin/linkedinOAuth";
-import { createRequestSupabaseClient } from "@/lib/server/routeAuth";
+import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 
 export const runtime = "nodejs";
 
@@ -33,45 +33,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const requestClient = createRequestSupabaseClient(request);
-    const {
-      data: { user },
-      error: userError,
-    } = await requestClient.auth.getUser();
-
-    if (userError || !user) {
+    const auth = await getRequestUserAndWorkspace(request);
+    if (auth.status === "unauthenticated") {
       return NextResponse.json(
         { ok: false, error: "Unauthorized." },
         { status: 401 },
       );
     }
 
-    if (!isAdminPrivateEmail(user.email)) {
+    if (auth.status === "workspace_forbidden" || !isAdminPrivateEmail(auth.user.email)) {
       return NextResponse.json(
         { ok: false, error: "Forbidden." },
         { status: 403 },
       );
     }
 
-    const { data: member } = await requestClient
-      .from("workspace_members")
-      .select("workspace_id")
-      .eq("user_id", user.id)
-      .limit(1)
-      .maybeSingle();
-
-    if (!member?.workspace_id) {
-      return NextResponse.json(
-        { ok: false, error: "Workspace not found." },
-        { status: 400 },
-      );
-    }
-
-    const { data: campaign, error: campaignError } = await requestClient
+    const { data: campaign, error: campaignError } = await auth.client
       .from("marketing_campaigns")
       .select("id, status, raw_result, updated_at")
       .eq("id", campaignId)
-      .eq("workspace_id", member.workspace_id)
+      .eq("workspace_id", auth.workspace.id)
       .maybeSingle();
 
     if (campaignError) {
@@ -123,7 +104,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const linkedInConnection = await readLinkedInConnectionForPublish();
+    const linkedInConnection = await readLinkedInConnectionForPublish(auth.workspace.id);
 
     if (!linkedInConnection || linkedInConnection.status !== "connected") {
       return NextResponse.json(
@@ -168,7 +149,7 @@ export async function POST(request: NextRequest) {
       lockStartedAt,
     );
 
-    const { data: lockedCampaign, error: lockError } = await requestClient
+    const { data: lockedCampaign, error: lockError } = await auth.client
       .from("marketing_campaigns")
       .update({
         status: "approved",
@@ -176,7 +157,7 @@ export async function POST(request: NextRequest) {
         updated_at: lockStartedAt,
       })
       .eq("id", campaign.id)
-      .eq("workspace_id", member.workspace_id)
+      .eq("workspace_id", auth.workspace.id)
       .eq("updated_at", campaign.updated_at)
       .select("id, updated_at")
       .maybeSingle();
@@ -210,7 +191,7 @@ export async function POST(request: NextRequest) {
       );
 
       const { data: rolledBackCampaign, error: rollbackError } =
-        await requestClient
+        await auth.client
           .from("marketing_campaigns")
           .update({
             status: "approved",
@@ -218,7 +199,7 @@ export async function POST(request: NextRequest) {
             updated_at: rollbackAt,
           })
           .eq("id", campaign.id)
-          .eq("workspace_id", member.workspace_id)
+          .eq("workspace_id", auth.workspace.id)
           .eq("updated_at", lockStartedAt)
           .select("id")
           .maybeSingle();
@@ -248,7 +229,7 @@ export async function POST(request: NextRequest) {
       now,
     );
 
-    const { data: updatedCampaign, error: updateError } = await requestClient
+    const { data: updatedCampaign, error: updateError } = await auth.client
       .from("marketing_campaigns")
       .update({
         status: "approved",
@@ -256,7 +237,7 @@ export async function POST(request: NextRequest) {
         updated_at: now,
       })
       .eq("id", campaign.id)
-      .eq("workspace_id", member.workspace_id)
+      .eq("workspace_id", auth.workspace.id)
       .eq("updated_at", lockStartedAt)
       .select("id")
       .maybeSingle();

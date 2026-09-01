@@ -3,6 +3,7 @@ import {
   LINKEDIN_MARKETING_STUDIO_SCOPES,
   buildLinkedInOAuthLoginUrl,
   createLinkedInOAuthState,
+  parseLinkedInOAuthState,
   readLinkedInOAuthServerEnv,
 } from "../lib/marketing-ai/linkedin/linkedinOAuth";
 import {
@@ -170,10 +171,13 @@ async function main() {
     "Expected LinkedIn scope w_organization_social.",
   );
 
-  const oauthUrl = buildLinkedInOAuthLoginUrl(
-    oauthConfig.config,
-    createLinkedInOAuthState(),
+  const oauthState = createLinkedInOAuthState(
+    { userId: "11111111-1111-4111-8111-111111111111", workspaceId: "22222222-2222-4222-8222-222222222222" },
+    oauthConfig.config.clientSecret,
   );
+  assert(parseLinkedInOAuthState(oauthState, oauthConfig.config.clientSecret)?.workspaceId === "22222222-2222-4222-8222-222222222222", "Expected OAuth state to retain the bound workspace.");
+  assert(parseLinkedInOAuthState(oauthState, "wrong-secret") === null, "Expected OAuth state signature validation to reject a different secret.");
+  const oauthUrl = buildLinkedInOAuthLoginUrl(oauthConfig.config, oauthState);
   assert(
     oauthUrl.toString().startsWith(
       "https://www.linkedin.com/oauth/v2/authorization",

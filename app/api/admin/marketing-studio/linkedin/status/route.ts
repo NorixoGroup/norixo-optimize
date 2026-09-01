@@ -1,33 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminPrivateEmail } from "@/lib/auth/isAdminEmail";
 import { readLinkedInConnectionStatus } from "@/lib/marketing-ai/linkedin/linkedinConnectionStore";
-import { createRequestSupabaseClient } from "@/lib/server/routeAuth";
+import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 
 export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
   try {
-    const requestClient = createRequestSupabaseClient(request);
-    const {
-      data: { user },
-      error: userError,
-    } = await requestClient.auth.getUser();
-
-    if (userError || !user) {
+    const auth = await getRequestUserAndWorkspace(request);
+    if (auth.status === "unauthenticated") {
       return NextResponse.json(
         { ok: false, error: "Unauthorized." },
         { status: 401 },
       );
     }
 
-    if (!isAdminPrivateEmail(user.email)) {
+    if (auth.status === "workspace_forbidden" || !isAdminPrivateEmail(auth.user.email)) {
       return NextResponse.json(
         { ok: false, error: "Forbidden." },
         { status: 403 },
       );
     }
 
-    const connection = await readLinkedInConnectionStatus();
+    const connection = await readLinkedInConnectionStatus(auth.workspace.id);
 
     return NextResponse.json(
       {

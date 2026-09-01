@@ -9,7 +9,7 @@ import {
   LINKEDIN_OAUTH_FLOW_COOKIE_NAME,
   LINKEDIN_OAUTH_FLOW_COOKIE_VALUE,
   LINKEDIN_OAUTH_STATE_COOKIE_NAME,
-  isLinkedInOAuthState,
+  parseLinkedInOAuthState,
   parseLinkedInOAuthActor,
   readLinkedInOAuthServerEnv,
 } from "@/lib/marketing-ai/linkedin/linkedinOAuth";
@@ -118,11 +118,9 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  if (
-    !isLinkedInOAuthState(callbackState) ||
-    !isLinkedInOAuthState(storedState) ||
-    storedState !== callbackState
-  ) {
+  const callbackBinding = parseLinkedInOAuthState(callbackState, envValidation.config.clientSecret);
+  const storedBinding = parseLinkedInOAuthState(storedState, envValidation.config.clientSecret);
+  if (!callbackBinding || !storedBinding || storedState !== callbackState || callbackBinding.userId !== storedBinding.userId || callbackBinding.workspaceId !== storedBinding.workspaceId) {
     return NextResponse.json(
       {
         ok: false,
@@ -152,6 +150,7 @@ export async function GET(request: NextRequest) {
 
   if (!organizationResolution.ok) {
     await persistLinkedInConnection({
+      workspaceId: callbackBinding.workspaceId,
       provider: "linkedin",
       status: "error",
       accessToken: null,
@@ -159,8 +158,8 @@ export async function GET(request: NextRequest) {
       organizationUrn: null,
       organizationId: null,
       grantedScopes: tokenExchange.grantedScopes,
-      lastConnectedByUserId: actor?.userId ?? null,
-      lastConnectedByEmail: actor?.email ?? null,
+      lastConnectedByUserId: callbackBinding.userId,
+      lastConnectedByEmail: actor?.userId === callbackBinding.userId ? actor.email : null,
     });
 
     return createNoStoreRedirect(
@@ -171,6 +170,7 @@ export async function GET(request: NextRequest) {
   }
 
   await persistLinkedInConnection({
+    workspaceId: callbackBinding.workspaceId,
     provider: "linkedin",
     status: "connected",
     accessToken: tokenExchange.accessToken,
@@ -178,8 +178,8 @@ export async function GET(request: NextRequest) {
     organizationUrn: organizationResolution.organization.organizationUrn,
     organizationId: organizationResolution.organization.organizationId,
     grantedScopes: tokenExchange.grantedScopes,
-    lastConnectedByUserId: actor?.userId ?? null,
-    lastConnectedByEmail: actor?.email ?? null,
+    lastConnectedByUserId: callbackBinding.userId,
+    lastConnectedByEmail: actor?.userId === callbackBinding.userId ? actor.email : null,
   });
 
   return createNoStoreRedirect(buildDashboardRedirect(request, "connected"));

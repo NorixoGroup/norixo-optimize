@@ -4393,6 +4393,7 @@ export type Database = {
           provider: string
           status: string
           updated_at: string
+          workspace_id: string | null
         }
         Insert: {
           access_token?: string | null
@@ -4406,6 +4407,7 @@ export type Database = {
           provider: string
           status: string
           updated_at?: string
+          workspace_id?: string | null
         }
         Update: {
           access_token?: string | null
@@ -4419,8 +4421,17 @@ export type Database = {
           provider?: string
           status?: string
           updated_at?: string
+          workspace_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "marketing_studio_linkedin_connections_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       marketing_studio_meta_connections: {
         Row: {

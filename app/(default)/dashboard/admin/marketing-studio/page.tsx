@@ -15,8 +15,16 @@ import {
   resolveMarketingStudioPendingSubmission,
 } from "@/lib/marketing-ai/runs/marketingStudioPendingSubmission";
 import { getSharedSession } from "@/lib/supabase/sharedAuth";
+import { getStoredWorkspaceId } from "@/lib/workspaces/getStoredWorkspaceId";
 
 type ActiveChannel = "facebook" | "instagram" | "linkedin" | "tiktok";
+
+function linkedInWorkspaceHeaders(accessToken: string, workspaceId: string) {
+  return {
+    Authorization: `Bearer ${accessToken}`,
+    ...(workspaceId ? { "X-Norixo-Workspace-Id": workspaceId } : {}),
+  };
+}
 type TimelineStatus = "neutral" | "running" | "done";
 type MetaUiStatus =
   | "not_connected"
@@ -2022,6 +2030,7 @@ export default function MarketingStudioPage() {
     useState<LinkedInStatusResponse["connection"] | null>(null);
   const [linkedInConnectionLoading, setLinkedInConnectionLoading] =
     useState(true);
+  const [linkedInWorkspaceId, setLinkedInWorkspaceId] = useState("");
   const [linkedInLoginLoading, setLinkedInLoginLoading] = useState(false);
   const [linkedInLoginError, setLinkedInLoginError] = useState<string | null>(null);
   const [tikTokConnection, setTikTokConnection] =
@@ -2190,6 +2199,19 @@ export default function MarketingStudioPage() {
   };
 
   useEffect(() => {
+    const syncWorkspace = () => setLinkedInWorkspaceId(getStoredWorkspaceId()?.trim() ?? "");
+    syncWorkspace();
+    window.addEventListener("focus", syncWorkspace);
+    window.addEventListener("storage", syncWorkspace);
+    window.addEventListener("norixo:active-workspace-changed", syncWorkspace);
+    return () => {
+      window.removeEventListener("focus", syncWorkspace);
+      window.removeEventListener("storage", syncWorkspace);
+      window.removeEventListener("norixo:active-workspace-changed", syncWorkspace);
+    };
+  }, []);
+
+  useEffect(() => {
     let mounted = true;
 
     async function loadMetaStatus() {
@@ -2265,9 +2287,7 @@ export default function MarketingStudioPage() {
         }
 
         const response = await fetch("/api/admin/marketing-studio/linkedin/status", {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
+          headers: linkedInWorkspaceHeaders(session.access_token, linkedInWorkspaceId),
           cache: "no-store",
         });
         const body = (await response.json().catch(() => null)) as
@@ -2299,7 +2319,7 @@ export default function MarketingStudioPage() {
     return () => {
       mounted = false;
     };
-  }, [linkedInUiStatus]);
+  }, [linkedInUiStatus, linkedInWorkspaceId]);
 
   useEffect(() => {
     let mounted = true;
@@ -3026,7 +3046,7 @@ export default function MarketingStudioPage() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
+            ...linkedInWorkspaceHeaders(session.access_token, linkedInWorkspaceId),
           },
           body: JSON.stringify({
             campaignId,
@@ -3126,7 +3146,7 @@ export default function MarketingStudioPage() {
         {
           method: "GET",
           headers: {
-            Authorization: `Bearer ${session.access_token}`,
+            ...linkedInWorkspaceHeaders(session.access_token, linkedInWorkspaceId),
             "x-linkedin-oauth-mode": "json",
           },
           cache: "no-store",

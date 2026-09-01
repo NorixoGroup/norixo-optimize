@@ -3,6 +3,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 export type StoredLinkedInConnectionStatus = "connected" | "error";
 
 export type PersistLinkedInConnectionInput = {
+  workspaceId: string;
   provider: "linkedin";
   status: StoredLinkedInConnectionStatus;
   accessToken: string | null;
@@ -28,6 +29,7 @@ export type LinkedInConnectionStatusView = {
 };
 
 type StoredLinkedInConnectionRow = {
+  workspace_id: string | null;
   provider: "linkedin";
   status: StoredLinkedInConnectionStatus;
   access_token?: string | null;
@@ -50,15 +52,21 @@ export type LinkedInConnectionPublishRecord = {
   updatedAt: string | null;
 };
 
-export async function persistLinkedInConnection(
-  input: PersistLinkedInConnectionInput,
-) {
+function requireWorkspaceId(workspaceId: string) {
+  const value = workspaceId.trim();
+  if (!value) throw new Error("workspaceId is required.");
+  return value;
+}
+
+export async function persistLinkedInConnection(input: PersistLinkedInConnectionInput) {
   const admin = createSupabaseAdminClient();
+  const workspaceId = requireWorkspaceId(input.workspaceId);
 
   const { error } = await admin
     .from("marketing_studio_linkedin_connections")
     .upsert(
       {
+        workspace_id: workspaceId,
         provider: input.provider,
         status: input.status,
         access_token: input.accessToken,
@@ -70,7 +78,7 @@ export async function persistLinkedInConnection(
         last_connected_by_email: input.lastConnectedByEmail,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: "provider" },
+      { onConflict: "provider,workspace_id" },
     );
 
   if (error) {
@@ -78,14 +86,16 @@ export async function persistLinkedInConnection(
   }
 }
 
-export async function readLinkedInConnectionStatus(): Promise<LinkedInConnectionStatusView> {
+export async function readLinkedInConnectionStatus(workspaceId: string): Promise<LinkedInConnectionStatusView> {
   const admin = createSupabaseAdminClient();
+  const scopedWorkspaceId = requireWorkspaceId(workspaceId);
   const { data, error } = await admin
     .from("marketing_studio_linkedin_connections")
     .select(
       "provider,status,expires_at,organization_urn,organization_id,granted_scopes,updated_at",
     )
     .eq("provider", "linkedin")
+    .eq("workspace_id", scopedWorkspaceId)
     .maybeSingle();
 
   if (error) {
@@ -124,14 +134,16 @@ export async function readLinkedInConnectionStatus(): Promise<LinkedInConnection
   };
 }
 
-export async function readLinkedInConnectionForPublish(): Promise<LinkedInConnectionPublishRecord | null> {
+export async function readLinkedInConnectionForPublish(workspaceId: string): Promise<LinkedInConnectionPublishRecord | null> {
   const admin = createSupabaseAdminClient();
+  const scopedWorkspaceId = requireWorkspaceId(workspaceId);
   const { data, error } = await admin
     .from("marketing_studio_linkedin_connections")
     .select(
       "provider,status,access_token,expires_at,organization_urn,organization_id,granted_scopes,updated_at",
     )
     .eq("provider", "linkedin")
+    .eq("workspace_id", scopedWorkspaceId)
     .maybeSingle();
 
   if (error) {
