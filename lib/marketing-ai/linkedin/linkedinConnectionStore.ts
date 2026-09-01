@@ -1,4 +1,10 @@
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import {
+  decryptLinkedInAccessToken,
+  encryptLinkedInAccessToken,
+  isLinkedInEncryptedCredentialUsable,
+  type EncryptedLinkedInAccessToken,
+} from "./linkedinTokenCrypto";
 
 export type StoredLinkedInConnectionStatus = "connected" | "error";
 
@@ -32,7 +38,10 @@ type StoredLinkedInConnectionRow = {
   workspace_id: string | null;
   provider: "linkedin";
   status: StoredLinkedInConnectionStatus;
-  access_token?: string | null;
+  access_token_ciphertext: string | null;
+  access_token_iv: string | null;
+  access_token_auth_tag: string | null;
+  access_token_key_version: string | null;
   expires_at: string | null;
   organization_urn: string | null;
   organization_id: string | null;
@@ -58,9 +67,69 @@ function requireWorkspaceId(workspaceId: string) {
   return value;
 }
 
+function encryptedCredentialFromRow(
+  row: Pick<
+    StoredLinkedInConnectionRow,
+    | "access_token_ciphertext"
+    | "access_token_iv"
+    | "access_token_auth_tag"
+    | "access_token_key_version"
+  >,
+): EncryptedLinkedInAccessToken | null {
+  if (
+    !row.access_token_ciphertext ||
+    !row.access_token_iv ||
+    !row.access_token_auth_tag ||
+    !row.access_token_key_version
+  ) {
+    return null;
+  }
+
+  return {
+    ciphertext: row.access_token_ciphertext,
+    iv: row.access_token_iv,
+    authTag: row.access_token_auth_tag,
+    keyVersion: row.access_token_key_version,
+  };
+}
+
+export function decryptStoredLinkedInAccessToken(
+  row: Pick<
+    StoredLinkedInConnectionRow,
+    | "access_token_ciphertext"
+    | "access_token_iv"
+    | "access_token_auth_tag"
+    | "access_token_key_version"
+  >,
+): string | null {
+  const credential = encryptedCredentialFromRow(row);
+  if (!credential) {
+    return null;
+  }
+
+  try {
+    return decryptLinkedInAccessToken(credential);
+  } catch {
+    return null;
+  }
+}
+
+export function buildLinkedInConnectionCredentialPatch(accessToken: string | null) {
+  const encrypted = accessToken ? encryptLinkedInAccessToken(accessToken) : null;
+
+  return {
+    access_token: null,
+    access_token_ciphertext: encrypted?.ciphertext ?? null,
+    access_token_iv: encrypted?.iv ?? null,
+    access_token_auth_tag: encrypted?.authTag ?? null,
+    access_token_key_version: encrypted?.keyVersion ?? null,
+  };
+}
+
 export async function persistLinkedInConnection(input: PersistLinkedInConnectionInput) {
   const admin = createSupabaseAdminClient();
   const workspaceId = requireWorkspaceId(input.workspaceId);
+  const credential = buildLinkedInConnectionCredentialPatch(input.accessToken);
 
   const { error } = await admin
     .from("marketing_studio_linkedin_connections")
@@ -69,7 +138,7 @@ export async function persistLinkedInConnection(input: PersistLinkedInConnection
         workspace_id: workspaceId,
         provider: input.provider,
         status: input.status,
-        access_token: input.accessToken,
+        ...credential,
         expires_at: input.expiresAt,
         organization_urn: input.organizationUrn,
         organization_id: input.organizationId,
@@ -92,7 +161,7 @@ export async function readLinkedInConnectionStatus(workspaceId: string): Promise
   const { data, error } = await admin
     .from("marketing_studio_linkedin_connections")
     .select(
-      "provider,status,expires_at,organization_urn,organization_id,granted_scopes,updated_at",
+      "provider,status,access_token_ciphertext,access_token_iv,access_token_auth_tag,access_token_key_version,expires_at,organization_urn,organization_id,granted_scopes,updated_at",
     )
     .eq("provider", "linkedin")
     .eq("workspace_id", scopedWorkspaceId)
@@ -116,11 +185,14 @@ export async function readLinkedInConnectionStatus(workspaceId: string): Promise
     };
   }
 
+  const credential = encryptedCredentialFromRow(row);
+
   return {
     provider: "linkedin",
     connected:
       row.status === "connected" &&
-      Boolean(row.organization_urn && row.organization_urn.trim()),
+      Boolean(row.organization_urn && row.organization_urn.trim()) &&
+      isLinkedInEncryptedCredentialUsable(credential),
     status: row.status,
     organization: row.organization_urn
       ? {
@@ -140,7 +212,7 @@ export async function readLinkedInConnectionForPublish(workspaceId: string): Pro
   const { data, error } = await admin
     .from("marketing_studio_linkedin_connections")
     .select(
-      "provider,status,access_token,expires_at,organization_urn,organization_id,granted_scopes,updated_at",
+      "provider,status,access_token_ciphertext,access_token_iv,access_token_auth_tag,access_token_key_version,expires_at,organization_urn,organization_id,granted_scopes,updated_at",
     )
     .eq("provider", "linkedin")
     .eq("workspace_id", scopedWorkspaceId)
@@ -156,10 +228,15 @@ export async function readLinkedInConnectionForPublish(workspaceId: string): Pro
     return null;
   }
 
+  const accessToken = decryptStoredLinkedInAccessToken(row);
+  if (!accessToken) {
+    return null;
+  }
+
   return {
     provider: "linkedin",
     status: row.status,
-    accessToken: row.access_token ?? null,
+    accessToken,
     expiresAt: row.expires_at ?? null,
     organizationUrn: row.organization_urn ?? null,
     organizationId: row.organization_id ?? null,

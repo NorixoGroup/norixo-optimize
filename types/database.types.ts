@@ -4383,6 +4383,10 @@ export type Database = {
       marketing_studio_linkedin_connections: {
         Row: {
           access_token: string | null
+          access_token_auth_tag: string | null
+          access_token_ciphertext: string | null
+          access_token_iv: string | null
+          access_token_key_version: string | null
           created_at: string
           expires_at: string | null
           granted_scopes: string[]
@@ -4397,6 +4401,10 @@ export type Database = {
         }
         Insert: {
           access_token?: string | null
+          access_token_auth_tag?: string | null
+          access_token_ciphertext?: string | null
+          access_token_iv?: string | null
+          access_token_key_version?: string | null
           created_at?: string
           expires_at?: string | null
           granted_scopes?: string[]
@@ -4411,6 +4419,10 @@ export type Database = {
         }
         Update: {
           access_token?: string | null
+          access_token_auth_tag?: string | null
+          access_token_ciphertext?: string | null
+          access_token_iv?: string | null
+          access_token_key_version?: string | null
           created_at?: string
           expires_at?: string | null
           granted_scopes?: string[]
