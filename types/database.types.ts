@@ -2334,6 +2334,92 @@ export type Database = {
           },
         ]
       }
+      backlink_linkedin_interactions: {
+        Row: {
+          actor_user_id: string
+          contact_id: string
+          content_fingerprint: string | null
+          created_at: string
+          evidence_reference: string | null
+          id: string
+          idempotency_key: string
+          interaction_type: string
+          occurred_at: string
+          outreach_id: string
+          provider_connection_id: string | null
+          provider_external_id: string | null
+          source: string
+          supersedes_interaction_id: string | null
+          target_profile_url: string
+          workspace_id: string
+        }
+        Insert: {
+          actor_user_id: string
+          contact_id: string
+          content_fingerprint?: string | null
+          created_at?: string
+          evidence_reference?: string | null
+          id?: string
+          idempotency_key: string
+          interaction_type: string
+          occurred_at: string
+          outreach_id: string
+          provider_connection_id?: string | null
+          provider_external_id?: string | null
+          source?: string
+          supersedes_interaction_id?: string | null
+          target_profile_url: string
+          workspace_id: string
+        }
+        Update: {
+          actor_user_id?: string
+          contact_id?: string
+          content_fingerprint?: string | null
+          created_at?: string
+          evidence_reference?: string | null
+          id?: string
+          idempotency_key?: string
+          interaction_type?: string
+          occurred_at?: string
+          outreach_id?: string
+          provider_connection_id?: string | null
+          provider_external_id?: string | null
+          source?: string
+          supersedes_interaction_id?: string | null
+          target_profile_url?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backlink_linkedin_interactions_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "backlink_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlink_linkedin_interactions_outreach_id_fkey"
+            columns: ["outreach_id"]
+            isOneToOne: false
+            referencedRelation: "backlink_outreach"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlink_linkedin_interactions_supersedes_interaction_id_fkey"
+            columns: ["supersedes_interaction_id"]
+            isOneToOne: false
+            referencedRelation: "backlink_linkedin_interactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "backlink_linkedin_interactions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       backlink_outreach_follow_up_drafts: {
         Row: { attempt_id: string; body: string; created_at: string; follow_up_number: number; id: string; outreach_id: string; prepared_at: string; subject: string; updated_at: string; updated_by: string; workspace_id: string }
         Insert: { attempt_id: string; body: string; created_at?: string; follow_up_number: number; id?: string; outreach_id: string; prepared_at: string; subject: string; updated_at: string; updated_by: string; workspace_id: string }
@@ -4867,6 +4953,35 @@ export type Database = {
       reserve_backlink_outreach_key: {
         Args: { p_workspace_id: string }
         Returns: string
+      }
+      record_backlink_manual_linkedin_interaction: {
+        Args: {
+          p_actor_user_id: string
+          p_idempotency_key: string
+          p_interaction_type: string
+          p_outreach_id: string
+          p_workspace_id: string
+        }
+        Returns: {
+          attempt_id: string | null
+          disposition: string
+          interaction_id: string
+          occurred_at: string
+        }[]
+      }
+      record_backlink_manual_linkedin_message_sent: {
+        Args: {
+          p_actor_user_id: string
+          p_idempotency_key: string
+          p_outreach_id: string
+          p_workspace_id: string
+        }
+        Returns: {
+          attempt_id: string | null
+          disposition: string
+          interaction_id: string
+          occurred_at: string
+        }[]
       }
       apply_backlink_outreach_follow_up_accepted: {
         Args: {
