@@ -120,6 +120,30 @@ async function main() {
     await send({ workspaceId: "workspace", actorUserId: "actor", outreachId: "outreach", attemptId: "00000000-0000-8000-8000-000000000123", confirm: true }).then(() => { throw new Error("legacy identity must reject"); }, () => undefined);
     assert(calls.requested === 0 && calls.provider === 0, "Legacy identity must fail before pre-send/provider.");
   }
+  for (const code of [
+    "FOLLOW_UP_SEND_WORKSPACE_CONTROL_MISSING",
+    "FOLLOW_UP_SEND_BACKLINKS_DISABLED",
+    "FOLLOW_UP_SEND_DRY_RUN",
+    "FOLLOW_UP_SEND_CAMPAIGN_MISSING",
+    "FOLLOW_UP_SEND_CAMPAIGN_NOT_ACTIVE",
+    "FOLLOW_UP_SEND_CAMPAIGN_MISMATCH",
+    "FOLLOW_UP_SEND_INBOUND_REPLY_STOPPED",
+    "FOLLOW_UP_SEND_CONTACT_UNAVAILABLE",
+  ]) {
+    const { calls, dependencies } = base();
+    const send = sendBacklinkOutreachFollowUpEmail({
+      ...dependencies,
+      markRequested: async () => {
+        calls.requested += 1;
+        throw new Error(code);
+      },
+    });
+    await send({ workspaceId: "workspace", actorUserId: "actor", outreachId: "outreach", attemptId: "00000000-0000-8000-8000-000000000123", confirm: true }).then(
+      () => { throw new Error(`${code} must reject before provider invocation`); },
+      () => undefined,
+    );
+    assert(calls.requested === 1 && calls.provider === 0 && calls.accepted === 0 && calls.failed === 0 && calls.unknown === 0, `${code} must preserve state after atomic admission rejects.`);
+  }
   console.log("PASS — Backlink outreach follow-up send service smoke");
 }
 

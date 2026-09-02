@@ -6,13 +6,13 @@ function assert(value: unknown, message: string): asserts value {
 
 async function main() {
   const [migration, repository, types] = await Promise.all([
-    readFile("supabase/migrations/20260811161000_add_backlink_outreach_follow_up_pre_send_rpc.sql", "utf8"),
+    readFile("supabase/migrations/20260902130000_gate_backlink_follow_up_send_by_workspace_and_campaign.sql", "utf8"),
     readFile("lib/backlinks/repositories/outreachAttemptsRepository.ts", "utf8"),
     readFile("types/database.types.ts", "utf8"),
   ]);
 
   for (const value of [
-    "create function public.mark_backlink_outreach_follow_up_attempt_requested",
+    "create or replace function public.mark_backlink_outreach_follow_up_attempt_requested",
     "status = 'requested'",
     "requested_at = p_requested_at",
     "'requested_now'",
@@ -28,6 +28,16 @@ async function main() {
     "attempt.status <> 'prepared'",
     "attempt.status = 'requested'",
     "FOLLOW_UP_SEND_LEGACY_IDENTITY",
+    "FOLLOW_UP_SEND_WORKSPACE_CONTROL_MISSING",
+    "FOLLOW_UP_SEND_BACKLINKS_DISABLED",
+    "FOLLOW_UP_SEND_DRY_RUN",
+    "FOLLOW_UP_SEND_CAMPAIGN_MISSING",
+    "FOLLOW_UP_SEND_CAMPAIGN_NOT_ACTIVE",
+    "FOLLOW_UP_SEND_CAMPAIGN_MISMATCH",
+    "from public.automation_workspace_controls",
+    "from public.backlink_campaigns",
+    "campaign.status <> 'active'",
+    "campaign.workspace_id <> outreach.workspace_id",
     "for update",
     "security definer",
     "set search_path = public",
@@ -36,13 +46,15 @@ async function main() {
 
   const lockOrder = [
     "from public.backlink_outreach",
+    "from public.automation_workspace_controls",
+    "from public.backlink_campaigns",
     "from public.backlink_contacts",
     "from public.backlink_outreach_attempts",
     "from public.backlink_outreach_follow_up_drafts",
     "from public.backlink_outreach_inbound_effects",
   ].map((value) => migration.indexOf(value));
   assert(lockOrder.every((index) => index >= 0), "RPC must include all lock/read participants.");
-  assert(lockOrder.every((index, position) => position === 0 || index > lockOrder[position - 1]), "RPC lock order must be Outreach → Contact → Attempt → Draft → Inbound effects.");
+  assert(lockOrder.every((index, position) => position === 0 || index > lockOrder[position - 1]), "RPC lock order must be Outreach → workspace control → campaign → Contact → Attempt → Draft → Inbound effects.");
 
   for (const forbidden of [
     "outreachEmailProvider",
@@ -51,6 +63,7 @@ async function main() {
     "next_follow_up_at =",
     "status = 'active'",
     "current_attempt = current_attempt + 1",
+    "live_initial_send_enabled",
   ]) assert(!migration.includes(forbidden), `Forbidden SQL behavior: ${forbidden}`);
 
   for (const value of [
