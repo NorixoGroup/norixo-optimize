@@ -6,6 +6,17 @@ export type ContactFormRunState = "queued" | "claimed" | "navigating" | "discove
 export type ContactFormApproval = Database["public"]["Tables"]["backlink_contact_form_approvals"]["Row"];
 export type ContactFormRun = Database["public"]["Tables"]["backlink_contact_form_runs"]["Row"];
 export type ContactFormRunEvent = Database["public"]["Tables"]["backlink_contact_form_run_events"]["Row"];
+export type ContactFormExecutionOutreach = Pick<Database["public"]["Tables"]["backlink_outreach"]["Row"], "body" | "campaign_id" | "channel" | "contact_id" | "current_attempt" | "id" | "opportunity_id" | "status" | "subject" | "workspace_id">;
+export type ContactFormExecutionContact = Pick<Database["public"]["Tables"]["backlink_contacts"]["Row"], "archived_at" | "contact_form_url" | "contact_status" | "do_not_contact_at" | "id" | "workspace_id">;
+export type ContactFormExecutionOpportunity = Pick<Database["public"]["Tables"]["backlink_opportunities"]["Row"], "id" | "target_page_url" | "workspace_id">;
+export type ContactFormRunExecutionContext = {
+  run: ContactFormRun;
+  approval: ContactFormApproval;
+  outreach: ContactFormExecutionOutreach;
+  contact: ContactFormExecutionContact;
+  opportunity: ContactFormExecutionOpportunity;
+  outreachAttemptCount: number;
+};
 
 function required(value: string, field: string) { const normalized = value.trim(); if (!normalized) throw new BacklinkRepositoryError({ code: "VALIDATION", operation: "contactFormAutomation", message: `${field} is required.` }); return normalized; }
 function rpcError(operation: string, error: unknown) { return normalizeBacklinkRepositoryError(operation, error); }
@@ -24,6 +35,26 @@ export async function listContactFormAutomationHistory(client: BacklinkRepositor
   const { data: events, error } = await client.from("backlink_contact_form_run_events").select("*").eq("workspace_id", workspaceId.trim()).eq("outreach_id", outreachId.trim()).in("run_id", runIds).order("occurred_at", { ascending: true }).order("created_at", { ascending: true }).order("id", { ascending: true });
   if (error != null) throw rpcError("listContactFormRunEvents", error);
   return { outreach: outreachResult.data, approvals: approvalsResult.data ?? [], runs: runsResult.data ?? [], events: events ?? [] };
+}
+
+export async function getContactFormRunExecutionContext(client: BacklinkRepositoryClient, run: ContactFormRun): Promise<ContactFormRunExecutionContext> {
+  const workspaceId = required(run.workspace_id, "workspaceId");
+  const outreachId = required(run.outreach_id, "outreachId");
+  const [approvalResult, outreachResult, attemptsResult] = await Promise.all([
+    client.from("backlink_contact_form_approvals").select("*").eq("workspace_id", workspaceId).eq("outreach_id", outreachId).eq("id", required(run.approval_id, "approvalId")).maybeSingle(),
+    client.from("backlink_outreach").select("id,workspace_id,campaign_id,contact_id,opportunity_id,channel,status,current_attempt,subject,body").eq("workspace_id", workspaceId).eq("id", outreachId).maybeSingle(),
+    client.from("backlink_outreach_attempts").select("id", { count: "exact", head: true }).eq("workspace_id", workspaceId).eq("outreach_id", outreachId),
+  ]);
+  if (approvalResult.error != null || approvalResult.data == null) throw rpcError("getContactFormRunApproval", approvalResult.error ?? new Error("Approval not found."));
+  if (outreachResult.error != null || outreachResult.data == null) throw rpcError("getContactFormRunOutreach", outreachResult.error ?? new Error("Outreach not found."));
+  if (attemptsResult.error != null) throw rpcError("countContactFormOutreachAttempts", attemptsResult.error);
+  const [contactResult, opportunityResult] = await Promise.all([
+    client.from("backlink_contacts").select("id,workspace_id,contact_status,do_not_contact_at,archived_at,contact_form_url").eq("workspace_id", workspaceId).eq("id", outreachResult.data.contact_id).maybeSingle(),
+    client.from("backlink_opportunities").select("id,workspace_id,target_page_url").eq("workspace_id", workspaceId).eq("id", outreachResult.data.opportunity_id).maybeSingle(),
+  ]);
+  if (contactResult.error != null || contactResult.data == null) throw rpcError("getContactFormRunContact", contactResult.error ?? new Error("Contact not found."));
+  if (opportunityResult.error != null || opportunityResult.data == null) throw rpcError("getContactFormRunOpportunity", opportunityResult.error ?? new Error("Opportunity not found."));
+  return { run, approval: approvalResult.data, outreach: outreachResult.data, contact: contactResult.data, opportunity: opportunityResult.data, outreachAttemptCount: attemptsResult.count ?? 0 };
 }
 
 export async function approveContactFormInitial(client: BacklinkRepositoryClient, input: { workspaceId: string; outreachId: string; approvedByUserId: string; senderName: string; senderEmail: string; senderCompany: string; senderWebsite: string }) {
