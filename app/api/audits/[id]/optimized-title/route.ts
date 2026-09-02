@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { openai } from "@/lib/openai";
+import { getOpenAIClient } from "@/lib/openai";
 import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 import { buildOptimizedTitlePrompt } from "@/lib/audits/prompts/optimizedTitle.prompt";
 
@@ -166,7 +166,7 @@ LANGUAGE REQUIREMENT:
 Return all generated titles strictly in ${outputLanguage}. Do not mix languages.`;
 
   try {
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAIClient().chat.completions.create({
       model: process.env.OPENAI_OPTIMIZED_TITLE_MODEL ?? "gpt-4o-mini",
       temperature: 0.8,
       messages: [

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { openai } from "@/lib/openai";
+import { getOpenAIClient } from "@/lib/openai";
 import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 
 export const runtime = "nodejs";
@@ -207,7 +207,7 @@ Return only valid JSON:
 `;
 
   try {
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAIClient().chat.completions.create({
       model: process.env.OPENAI_BOOKING_DESCRIPTION_MODEL ?? "gpt-4o-mini",
       temperature: 0.7,
       messages: [

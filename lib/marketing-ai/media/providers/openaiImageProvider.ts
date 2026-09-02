@@ -83,12 +83,13 @@ export const openaiImageProvider: MediaProviderAdapter = {
       return buildUnconfiguredResult();
     }
 
-    const { openai } = await import("../../../openai");
     const size = mapRatioToOpenAiSize(request.ratio);
     const dimensions = mapSizeToDimensions(size);
     const now = new Date().toISOString();
 
     try {
+      const { getOpenAIClient } = await import("../../../openai");
+      const openai = getOpenAIClient();
       const response = await openai.images.generate({
         model: OPENAI_IMAGE_MODEL,
         prompt: buildOpenAiImagePrompt(request),

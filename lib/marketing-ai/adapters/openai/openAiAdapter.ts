@@ -1,4 +1,4 @@
-import { openai } from "../../../openai";
+import { getOpenAIClient } from "../../../openai";
 import type {
   MarketingAiExecutionRequest,
   MarketingAiExecutionResult,
@@ -66,7 +66,7 @@ export class OpenAiAdapter implements MarketingAiProviderAdapter {
     }
 
     try {
-      const completion = await openai.chat.completions.create({
+      const completion = await getOpenAIClient().chat.completions.create({
         model,
         messages: [
           {
