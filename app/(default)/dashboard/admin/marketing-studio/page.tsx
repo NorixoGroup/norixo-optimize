@@ -38,6 +38,9 @@ type MetaUiStatus =
 type LinkedInUiStatus =
   | "not_connected"
   | "connected"
+  | "reconnect_required"
+  | "disconnected"
+  | "error"
   | "organization_error"
   | "oauth_error";
 type TikTokUiStatus =
@@ -120,7 +123,12 @@ type LinkedInStatusResponse = {
   connection?: {
     provider: "linkedin";
     connected: boolean;
-    status: "not_connected" | "connected" | "error";
+    status:
+      | "not_connected"
+      | "connected"
+      | "reconnect_required"
+      | "disconnected"
+      | "error";
     organization: {
       urn: string;
       id: string | null;
@@ -457,6 +465,9 @@ function buildMetaUiContent(status: MetaUiStatus) {
 function resolveLinkedInUiStatus(value: string | null): LinkedInUiStatus {
   if (
     value === "connected" ||
+    value === "reconnect_required" ||
+    value === "disconnected" ||
+    value === "error" ||
     value === "organization_error" ||
     value === "oauth_error"
   ) {
@@ -477,6 +488,37 @@ function buildLinkedInUiContent(status: LinkedInUiStatus) {
         helperText:
           "Connexion LinkedIn persistée côté serveur. Publication texte-only manuelle disponible après validation humaine.",
         alert: null,
+      };
+    case "reconnect_required":
+      return {
+        statusLabel: "reconnexion requise",
+        statusTone: "amber" as const,
+        oauthLabel: "connexion a renouveler",
+        organizationValue: "Connexion LinkedIn a renouveler",
+        helperText:
+          "La connexion LinkedIn doit être renouvelée avant toute publication. Aucune publication automatique.",
+        alert:
+          "Reconnectez LinkedIn manuellement. Aucun token n'est affiché.",
+      };
+    case "disconnected":
+      return {
+        statusLabel: "deconnecte",
+        statusTone: "amber" as const,
+        oauthLabel: "pret a connecter",
+        organizationValue: "Aucune Page entreprise connectee",
+        helperText:
+          "La connexion LinkedIn a été supprimée localement. Aucune publication possible.",
+        alert: null,
+      };
+    case "error":
+      return {
+        statusLabel: "erreur de connexion",
+        statusTone: "amber" as const,
+        oauthLabel: "connexion a verifier",
+        organizationValue: "Connexion LinkedIn indisponible",
+        helperText:
+          "La connexion LinkedIn est indisponible. Reconnectez-la manuellement sans partager de token.",
+        alert: "Connexion LinkedIn indisponible pour le moment.",
       };
     case "organization_error":
       return {
@@ -2033,6 +2075,7 @@ export default function MarketingStudioPage() {
   const [linkedInWorkspaceId, setLinkedInWorkspaceId] = useState("");
   const [linkedInLoginLoading, setLinkedInLoginLoading] = useState(false);
   const [linkedInLoginError, setLinkedInLoginError] = useState<string | null>(null);
+  const [linkedInDisconnectLoading, setLinkedInDisconnectLoading] = useState(false);
   const [tikTokConnection, setTikTokConnection] =
     useState<TikTokStatusResponse["connection"] | null>(null);
   const [tikTokConnectionLoading, setTikTokConnectionLoading] = useState(true);
@@ -2594,18 +2637,23 @@ export default function MarketingStudioPage() {
     ? "Connexion Meta persistee cote serveur. Aucune publication n'est active dans cette phase."
     : metaUi.helperText;
   const resolvedMetaAlert = metaLoginError ?? metaUi.alert;
+  const linkedInDisplayUi = buildLinkedInUiContent(
+    linkedInConnection?.status ?? linkedInUiStatus,
+  );
   const linkedInConnectionStatusLabel = linkedInConnectionLoading
     ? "verification"
     : linkedInConnection?.connected
       ? "connecte"
-      : linkedInUi.statusLabel;
+      : linkedInDisplayUi.statusLabel;
   const linkedInConnectionStatusTone = linkedInConnection?.connected
     ? "emerald"
-    : linkedInUi.statusTone;
+    : linkedInDisplayUi.statusTone;
   const linkedInConnectLabel = linkedInConnection?.connected
     ? "Reconnecter LinkedIn"
-    : "Connecter LinkedIn";
-  const resolvedLinkedInAlert = linkedInLoginError ?? linkedInUi.alert;
+    : linkedInConnection?.status === "reconnect_required"
+      ? "Reconnecter LinkedIn"
+      : "Connecter LinkedIn";
+  const resolvedLinkedInAlert = linkedInLoginError ?? linkedInDisplayUi.alert;
   const tikTokConnectionStatusLabel = tikTokConnectionLoading
     ? "verification"
     : tikTokConnection?.connected
@@ -3160,6 +3208,53 @@ export default function MarketingStudioPage() {
     }
   }
 
+  async function handleLinkedInDisconnect() {
+    if (!window.confirm("Déconnecter LinkedIn localement ? Aucun accès LinkedIn ne sera révoqué.")) {
+      return;
+    }
+
+    setLinkedInLoginError(null);
+    setLinkedInDisconnectLoading(true);
+
+    try {
+      const {
+        data: { session },
+      } = await getSharedSession();
+
+      if (!session?.access_token) {
+        throw new Error("Session introuvable.");
+      }
+
+      const response = await fetch(
+        "/api/admin/marketing-studio/linkedin/disconnect",
+        {
+          method: "POST",
+          headers: linkedInWorkspaceHeaders(session.access_token, linkedInWorkspaceId),
+          cache: "no-store",
+        },
+      );
+      const body = (await response.json().catch(() => null)) as
+        | { ok?: boolean; error?: string }
+        | null;
+
+      if (!response.ok || !body?.ok) {
+        throw new Error(body?.error ?? "Déconnexion LinkedIn indisponible.");
+      }
+
+      setLinkedInConnection((current) => current
+        ? { ...current, connected: false, status: "disconnected" }
+        : null);
+    } catch (caughtError) {
+      setLinkedInLoginError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Déconnexion LinkedIn indisponible.",
+      );
+    } finally {
+      setLinkedInDisconnectLoading(false);
+    }
+  }
+
   async function handleTikTokConnect() {
     setTikTokLoginError(null);
     setTikTokLoginLoading(true);
@@ -3271,6 +3366,7 @@ export default function MarketingStudioPage() {
               >
                 {loading ? "Génération en cours..." : "Générer ma campagne IA"}
               </button>
+
               <button
                 type="button"
                 onClick={() => router.push("/dashboard/admin/marketing-studio/campaigns")}
@@ -3734,6 +3830,19 @@ export default function MarketingStudioPage() {
                   ? "Connexion LinkedIn..."
                   : linkedInConnectLabel}
               </button>
+
+              {linkedInConnection?.connected ? (
+                <button
+                  type="button"
+                  onClick={handleLinkedInDisconnect}
+                  disabled={linkedInDisconnectLoading || linkedInLoginLoading}
+                  className="ml-3 inline-flex rounded-2xl border border-rose-300 px-5 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {linkedInDisconnectLoading
+                    ? "Déconnexion LinkedIn..."
+                    : "Déconnecter LinkedIn"}
+                </button>
+              ) : null}
 
               {resolvedLinkedInAlert ? (
                 <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">

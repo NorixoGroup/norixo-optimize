@@ -46,9 +46,26 @@ export type LinkedInPublishTextPostResult =
   | {
       ok: false;
       error:
+        | "unauthorized"
         | "publish_failed"
         | "access_denied"
         | "invalid_linkedin_response";
+    };
+
+type LinkedInPublishFailure = Extract<
+  LinkedInPublishTextPostResult,
+  { ok: false }
+>;
+
+export type LinkedInPublishWithRollbackResult =
+  | {
+      ok: true;
+      postId: string;
+    }
+  | {
+      ok: false;
+      error: LinkedInPublishFailure["error"];
+      rollbackSucceeded: boolean;
     };
 
 export type LinkedInPublishReadinessResult =
@@ -294,6 +311,49 @@ export function buildLinkedInRollbackResult(
   };
 }
 
+export async function executeLinkedInPublishWithRollback(params: {
+  publish: () => Promise<LinkedInPublishTextPostResult>;
+  rollback: () => Promise<boolean>;
+  markReconnectRequired: () => Promise<void>;
+}): Promise<LinkedInPublishWithRollbackResult> {
+  let publishResult: LinkedInPublishTextPostResult;
+
+  try {
+    publishResult = await params.publish();
+  } catch {
+    publishResult = { ok: false, error: "publish_failed" };
+  }
+
+  if (publishResult.ok) {
+    return publishResult;
+  }
+
+  let rollbackSucceeded = false;
+  try {
+    rollbackSucceeded = await params.rollback();
+  } catch {
+    rollbackSucceeded = false;
+  }
+
+  if (!rollbackSucceeded) {
+    return {
+      ok: false,
+      error: publishResult.error,
+      rollbackSucceeded: false,
+    };
+  }
+
+  if (publishResult.error === "unauthorized") {
+    await params.markReconnectRequired();
+  }
+
+  return {
+    ok: false,
+    error: publishResult.error,
+    rollbackSucceeded: true,
+  };
+}
+
 export async function exchangeLinkedInCodeForAccessToken(
   config: LinkedInOAuthServerConfig,
   code: string,
@@ -450,7 +510,12 @@ export async function publishLinkedInTextPost(
   if (!response.ok) {
     return {
       ok: false,
-      error: response.status === 403 ? "access_denied" : "publish_failed",
+      error:
+        response.status === 401
+          ? "unauthorized"
+          : response.status === 403
+            ? "access_denied"
+            : "publish_failed",
     };
   }
 

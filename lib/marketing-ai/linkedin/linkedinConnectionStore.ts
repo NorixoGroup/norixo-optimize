@@ -6,7 +6,11 @@ import {
   type EncryptedLinkedInAccessToken,
 } from "./linkedinTokenCrypto";
 
-export type StoredLinkedInConnectionStatus = "connected" | "error";
+export type StoredLinkedInConnectionStatus =
+  | "connected"
+  | "error"
+  | "reconnect_required"
+  | "disconnected";
 
 export type PersistLinkedInConnectionInput = {
   workspaceId: string;
@@ -67,6 +71,40 @@ function requireWorkspaceId(workspaceId: string) {
   return value;
 }
 
+export function isLinkedInConnectionExpired(
+  expiresAt: string | null,
+  now = new Date(),
+) {
+  if (!expiresAt) {
+    return false;
+  }
+
+  const expiresAtMs = Date.parse(expiresAt);
+  return Number.isFinite(expiresAtMs) && expiresAtMs <= now.getTime();
+}
+
+export function resolveLinkedInConnectionLifecycle(input: {
+  status: StoredLinkedInConnectionStatus;
+  expiresAt: string | null;
+  credentialComplete: boolean;
+  credentialDecryptable: boolean;
+  now?: Date;
+}): StoredLinkedInConnectionStatus {
+  if (input.status === "disconnected" || input.status === "reconnect_required") {
+    return input.status;
+  }
+
+  if (
+    isLinkedInConnectionExpired(input.expiresAt, input.now) ||
+    !input.credentialComplete ||
+    !input.credentialDecryptable
+  ) {
+    return "reconnect_required";
+  }
+
+  return input.status;
+}
+
 function encryptedCredentialFromRow(
   row: Pick<
     StoredLinkedInConnectionRow,
@@ -124,6 +162,52 @@ export function buildLinkedInConnectionCredentialPatch(accessToken: string | nul
     access_token_auth_tag: encrypted?.authTag ?? null,
     access_token_key_version: encrypted?.keyVersion ?? null,
   };
+}
+
+export function buildLinkedInConnectionInvalidationPatch() {
+  return {
+    status: "reconnect_required" as const,
+    ...buildLinkedInConnectionCredentialPatch(null),
+  };
+}
+
+export async function markLinkedInConnectionReconnectRequired(workspaceId: string) {
+  const admin = createSupabaseAdminClient();
+  const normalizedWorkspaceId = requireWorkspaceId(workspaceId);
+  const { error } = await admin
+    .from("marketing_studio_linkedin_connections")
+    .update({
+      ...buildLinkedInConnectionInvalidationPatch(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("provider", "linkedin")
+    .eq("workspace_id", normalizedWorkspaceId)
+    .in("status", ["connected", "error"]);
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function disconnectLinkedInConnection(workspaceId: string) {
+  const admin = createSupabaseAdminClient();
+  const scopedWorkspaceId = requireWorkspaceId(workspaceId);
+  const { error } = await admin
+    .from("marketing_studio_linkedin_connections")
+    .upsert(
+      {
+        workspace_id: scopedWorkspaceId,
+        provider: "linkedin",
+        status: "disconnected",
+        ...buildLinkedInConnectionCredentialPatch(null),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "provider,workspace_id" },
+    );
+
+  if (error) {
+    throw error;
+  }
 }
 
 export async function persistLinkedInConnection(input: PersistLinkedInConnectionInput) {
@@ -186,14 +270,27 @@ export async function readLinkedInConnectionStatus(workspaceId: string): Promise
   }
 
   const credential = encryptedCredentialFromRow(row);
+  const accessToken =
+    row.status === "disconnected" ? null : decryptStoredLinkedInAccessToken(row);
+  const status = resolveLinkedInConnectionLifecycle({
+    status: row.status,
+    expiresAt: row.expires_at ?? null,
+    credentialComplete: credential !== null,
+    credentialDecryptable: Boolean(accessToken),
+  });
+
+  if (status === "reconnect_required" && row.status !== status) {
+    await markLinkedInConnectionReconnectRequired(scopedWorkspaceId);
+  }
 
   return {
     provider: "linkedin",
     connected:
-      row.status === "connected" &&
+      status === "connected" &&
       Boolean(row.organization_urn && row.organization_urn.trim()) &&
+      Boolean(accessToken) &&
       isLinkedInEncryptedCredentialUsable(credential),
-    status: row.status,
+    status,
     organization: row.organization_urn
       ? {
           urn: row.organization_urn,
@@ -228,15 +325,24 @@ export async function readLinkedInConnectionForPublish(workspaceId: string): Pro
     return null;
   }
 
-  const accessToken = decryptStoredLinkedInAccessToken(row);
-  if (!accessToken) {
-    return null;
+  const credential = encryptedCredentialFromRow(row);
+  const accessToken =
+    row.status === "disconnected" ? null : decryptStoredLinkedInAccessToken(row);
+  const status = resolveLinkedInConnectionLifecycle({
+    status: row.status,
+    expiresAt: row.expires_at ?? null,
+    credentialComplete: credential !== null,
+    credentialDecryptable: Boolean(accessToken),
+  });
+
+  if (status === "reconnect_required" && row.status !== status) {
+    await markLinkedInConnectionReconnectRequired(scopedWorkspaceId);
   }
 
   return {
     provider: "linkedin",
-    status: row.status,
-    accessToken,
+    status,
+    accessToken: status === "connected" ? accessToken : null,
     expiresAt: row.expires_at ?? null,
     organizationUrn: row.organization_urn ?? null,
     organizationId: row.organization_id ?? null,

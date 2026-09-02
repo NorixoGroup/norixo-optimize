@@ -5,10 +5,14 @@ import {
   buildLinkedInLockedResult,
   buildLinkedInPublishedResult,
   buildLinkedInRollbackResult,
+  executeLinkedInPublishWithRollback,
   evaluateLinkedInPublishReadiness,
   publishLinkedInTextPost,
 } from "@/lib/marketing-ai/linkedin/linkedinApi";
-import { readLinkedInConnectionForPublish } from "@/lib/marketing-ai/linkedin/linkedinConnectionStore";
+import {
+  markLinkedInConnectionReconnectRequired,
+  readLinkedInConnectionForPublish,
+} from "@/lib/marketing-ai/linkedin/linkedinConnectionStore";
 import { readLinkedInOAuthServerEnv } from "@/lib/marketing-ai/linkedin/linkedinOAuth";
 import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 
@@ -127,6 +131,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const linkedInAccessToken = linkedInConnection.accessToken;
+    const linkedInOrganizationUrn = linkedInConnection.organizationUrn;
+
     const envValidation = readLinkedInOAuthServerEnv();
 
     if (!envValidation.ok) {
@@ -176,35 +183,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const publishResult = await publishLinkedInTextPost(envValidation.config, {
-      accessToken: linkedInConnection.accessToken,
-      organizationUrn: linkedInConnection.organizationUrn,
-      message: readiness.message,
+    const publishOutcome = await executeLinkedInPublishWithRollback({
+      publish: () =>
+        publishLinkedInTextPost(envValidation.config, {
+          accessToken: linkedInAccessToken,
+          organizationUrn: linkedInOrganizationUrn,
+          message: readiness.message,
+        }),
+      rollback: async () => {
+        const rollbackAt = new Date().toISOString();
+        const rollbackResult = buildLinkedInRollbackResult(
+          campaign.raw_result,
+          currentBundle,
+          rollbackAt,
+        );
+
+        const { data: rolledBackCampaign, error: rollbackError } =
+          await auth.client
+            .from("marketing_campaigns")
+            .update({
+              status: "approved",
+              raw_result: rollbackResult,
+              updated_at: rollbackAt,
+            })
+            .eq("id", campaign.id)
+            .eq("workspace_id", auth.workspace.id)
+            .eq("updated_at", lockStartedAt)
+            .select("id")
+            .maybeSingle();
+
+        return !rollbackError && Boolean(rolledBackCampaign);
+      },
+      markReconnectRequired: () =>
+        markLinkedInConnectionReconnectRequired(auth.workspace.id),
     });
 
-    if (!publishResult.ok) {
-      const rollbackAt = new Date().toISOString();
-      const rollbackResult = buildLinkedInRollbackResult(
-        campaign.raw_result,
-        currentBundle,
-        rollbackAt,
-      );
-
-      const { data: rolledBackCampaign, error: rollbackError } =
-        await auth.client
-          .from("marketing_campaigns")
-          .update({
-            status: "approved",
-            raw_result: rollbackResult,
-            updated_at: rollbackAt,
-          })
-          .eq("id", campaign.id)
-          .eq("workspace_id", auth.workspace.id)
-          .eq("updated_at", lockStartedAt)
-          .select("id")
-          .maybeSingle();
-
-      if (rollbackError || !rolledBackCampaign) {
+    if (!publishOutcome.ok) {
+      if (!publishOutcome.rollbackSucceeded) {
         return NextResponse.json(
           {
             ok: false,
@@ -216,7 +231,7 @@ export async function POST(request: NextRequest) {
       }
 
       return NextResponse.json(
-        { ok: false, error: "LinkedIn publish failed.", reason: publishResult.error },
+        { ok: false, error: "LinkedIn publish failed.", reason: publishOutcome.error },
         { status: 502 },
       );
     }
@@ -225,7 +240,7 @@ export async function POST(request: NextRequest) {
     const nextResult = buildLinkedInPublishedResult(
       campaign.raw_result,
       currentBundle,
-      publishResult.postId,
+      publishOutcome.postId,
       now,
     );
 
@@ -261,7 +276,7 @@ export async function POST(request: NextRequest) {
         status: "approved",
       },
       linkedin: {
-        postId: publishResult.postId,
+        postId: publishOutcome.postId,
       },
       result: nextResult,
     });
