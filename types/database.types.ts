@@ -2420,6 +2420,40 @@ export type Database = {
           },
         ]
       }
+      backlink_contact_form_approvals: {
+        Row: { approved_at: string; approved_by_user_id: string; body: string; campaign_id: string; contact_id: string; content_fingerprint: string; created_at: string; form_schema_fingerprint: string | null; form_url: string; id: string; opportunity_id: string; outreach_id: string; sender_company: string; sender_email: string; sender_name: string; sender_website: string; subject: string; target_url: string; workspace_id: string }
+        Insert: { approved_at?: string; approved_by_user_id: string; body: string; campaign_id: string; contact_id: string; content_fingerprint: string; created_at?: string; form_schema_fingerprint?: string | null; form_url: string; id?: string; opportunity_id: string; outreach_id: string; sender_company: string; sender_email: string; sender_name: string; sender_website: string; subject: string; target_url: string; workspace_id: string }
+        Update: { approved_at?: string; approved_by_user_id?: string; body?: string; campaign_id?: string; contact_id?: string; content_fingerprint?: string; created_at?: string; form_schema_fingerprint?: string | null; form_url?: string; id?: string; opportunity_id?: string; outreach_id?: string; sender_company?: string; sender_email?: string; sender_name?: string; sender_website?: string; subject?: string; target_url?: string; workspace_id?: string }
+        Relationships: [
+          { foreignKeyName: "backlink_contact_form_approvals_campaign_id_fkey"; columns: ["campaign_id"]; isOneToOne: false; referencedRelation: "backlink_campaigns"; referencedColumns: ["id"] },
+          { foreignKeyName: "backlink_contact_form_approvals_contact_id_fkey"; columns: ["contact_id"]; isOneToOne: false; referencedRelation: "backlink_contacts"; referencedColumns: ["id"] },
+          { foreignKeyName: "backlink_contact_form_approvals_opportunity_id_fkey"; columns: ["opportunity_id"]; isOneToOne: false; referencedRelation: "backlink_opportunities"; referencedColumns: ["id"] },
+          { foreignKeyName: "backlink_contact_form_approvals_outreach_id_fkey"; columns: ["outreach_id"]; isOneToOne: false; referencedRelation: "backlink_outreach"; referencedColumns: ["id"] },
+          { foreignKeyName: "backlink_contact_form_approvals_workspace_id_fkey"; columns: ["workspace_id"]; isOneToOne: false; referencedRelation: "workspaces"; referencedColumns: ["id"] },
+        ]
+      }
+      backlink_contact_form_runs: {
+        Row: { approval_id: string; campaign_id: string; claimed_at: string | null; claimed_by: string | null; created_at: string; evidence_reference: string | null; final_attempt_id: string | null; final_url: string | null; finished_at: string | null; form_schema_fingerprint: string | null; form_url: string; heartbeat_at: string | null; id: string; lease_expires_at: string | null; max_pre_submit_attempts: number; outreach_id: string; pre_submit_attempt_count: number; result_class: string | null; safe_error_code: string | null; started_at: string | null; state: string; submit_started_at: string | null; updated_at: string; workspace_id: string }
+        Insert: { approval_id: string; campaign_id: string; claimed_at?: string | null; claimed_by?: string | null; created_at?: string; evidence_reference?: string | null; final_attempt_id?: string | null; final_url?: string | null; finished_at?: string | null; form_schema_fingerprint?: string | null; form_url: string; heartbeat_at?: string | null; id?: string; lease_expires_at?: string | null; max_pre_submit_attempts?: number; outreach_id: string; pre_submit_attempt_count?: number; result_class?: string | null; safe_error_code?: string | null; started_at?: string | null; state?: string; submit_started_at?: string | null; updated_at?: string; workspace_id: string }
+        Update: { approval_id?: string; campaign_id?: string; claimed_at?: string | null; claimed_by?: string | null; created_at?: string; evidence_reference?: string | null; final_attempt_id?: string | null; final_url?: string | null; finished_at?: string | null; form_schema_fingerprint?: string | null; form_url?: string; heartbeat_at?: string | null; id?: string; lease_expires_at?: string | null; max_pre_submit_attempts?: number; outreach_id?: string; pre_submit_attempt_count?: number; result_class?: string | null; safe_error_code?: string | null; started_at?: string | null; state?: string; submit_started_at?: string | null; updated_at?: string; workspace_id?: string }
+        Relationships: [
+          { foreignKeyName: "backlink_contact_form_runs_approval_id_fkey"; columns: ["approval_id"]; isOneToOne: false; referencedRelation: "backlink_contact_form_approvals"; referencedColumns: ["id"] },
+          { foreignKeyName: "backlink_contact_form_runs_campaign_id_fkey"; columns: ["campaign_id"]; isOneToOne: false; referencedRelation: "backlink_campaigns"; referencedColumns: ["id"] },
+          { foreignKeyName: "backlink_contact_form_runs_final_attempt_id_fkey"; columns: ["final_attempt_id"]; isOneToOne: false; referencedRelation: "backlink_outreach_attempts"; referencedColumns: ["id"] },
+          { foreignKeyName: "backlink_contact_form_runs_outreach_id_fkey"; columns: ["outreach_id"]; isOneToOne: false; referencedRelation: "backlink_outreach"; referencedColumns: ["id"] },
+          { foreignKeyName: "backlink_contact_form_runs_workspace_id_fkey"; columns: ["workspace_id"]; isOneToOne: false; referencedRelation: "workspaces"; referencedColumns: ["id"] },
+        ]
+      }
+      backlink_contact_form_run_events: {
+        Row: { created_at: string; event_type: string; evidence_hash: string | null; evidence_reference: string | null; id: string; occurred_at: string; outreach_id: string; run_id: string; safe_error_code: string | null; safe_metadata: Json; state: string; workspace_id: string }
+        Insert: { created_at?: string; event_type: string; evidence_hash?: string | null; evidence_reference?: string | null; id?: string; occurred_at?: string; outreach_id: string; run_id: string; safe_error_code?: string | null; safe_metadata?: Json; state: string; workspace_id: string }
+        Update: { created_at?: string; event_type?: string; evidence_hash?: string | null; evidence_reference?: string | null; id?: string; occurred_at?: string; outreach_id?: string; run_id?: string; safe_error_code?: string | null; safe_metadata?: Json; state?: string; workspace_id?: string }
+        Relationships: [
+          { foreignKeyName: "backlink_contact_form_run_events_outreach_id_fkey"; columns: ["outreach_id"]; isOneToOne: false; referencedRelation: "backlink_outreach"; referencedColumns: ["id"] },
+          { foreignKeyName: "backlink_contact_form_run_events_run_id_fkey"; columns: ["run_id"]; isOneToOne: false; referencedRelation: "backlink_contact_form_runs"; referencedColumns: ["id"] },
+          { foreignKeyName: "backlink_contact_form_run_events_workspace_id_fkey"; columns: ["workspace_id"]; isOneToOne: false; referencedRelation: "workspaces"; referencedColumns: ["id"] },
+        ]
+      }
       backlink_outreach_follow_up_drafts: {
         Row: { attempt_id: string; body: string; created_at: string; follow_up_number: number; id: string; outreach_id: string; prepared_at: string; subject: string; updated_at: string; updated_by: string; workspace_id: string }
         Insert: { attempt_id: string; body: string; created_at?: string; follow_up_number: number; id?: string; outreach_id: string; prepared_at: string; subject: string; updated_at: string; updated_by: string; workspace_id: string }
@@ -5005,6 +5039,34 @@ export type Database = {
           interaction_id: string
           occurred_at: string
         }[]
+      }
+      approve_backlink_contact_form_initial_v1: {
+        Args: { p_approved_by_user_id: string; p_outreach_id: string; p_sender_company: string; p_sender_email: string; p_sender_name: string; p_sender_website: string; p_workspace_id: string }
+        Returns: { approval_id: string; content_fingerprint: string; disposition: string }[]
+      }
+      queue_backlink_contact_form_run_v1: {
+        Args: { p_approval_id: string; p_outreach_id: string; p_workspace_id: string }
+        Returns: { disposition: string; run_id: string; state: string }[]
+      }
+      claim_next_backlink_contact_form_run_v1: {
+        Args: { p_lease_duration_seconds: number; p_worker_id: string }
+        Returns: Database["public"]["Tables"]["backlink_contact_form_runs"]["Row"][]
+      }
+      heartbeat_backlink_contact_form_run_v1: {
+        Args: { p_lease_duration_seconds: number; p_run_id: string; p_worker_id: string }
+        Returns: Database["public"]["Tables"]["backlink_contact_form_runs"]["Row"]
+      }
+      transition_backlink_contact_form_run_v1: {
+        Args: { p_evidence_reference?: string | null; p_event_type: string; p_final_url?: string | null; p_next_state: string; p_run_id: string; p_safe_error_code?: string | null; p_safe_metadata?: Json; p_worker_id: string }
+        Returns: Database["public"]["Tables"]["backlink_contact_form_runs"]["Row"]
+      }
+      confirm_backlink_contact_form_submission_v1: {
+        Args: { p_evidence_reference: string; p_final_url?: string | null; p_run_id: string; p_worker_id: string }
+        Returns: { attempt_id: string; disposition: string; run_id: string }[]
+      }
+      retry_backlink_contact_form_pre_submit_v1: {
+        Args: { p_run_id: string; p_worker_id: string }
+        Returns: Database["public"]["Tables"]["backlink_contact_form_runs"]["Row"]
       }
       apply_backlink_outreach_follow_up_accepted: {
         Args: {
