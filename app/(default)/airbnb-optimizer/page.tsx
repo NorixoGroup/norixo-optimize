@@ -4,6 +4,8 @@ import type { Metadata } from "next";
 import { cities } from "@/data/cities";
 import { defaultLocale } from "@/data/i18n";
 import { localSeoTopics } from "@/data/localSeo";
+import { getSearchEligibility } from "@/lib/seo/searchEligibility";
+import { isCityTopicSitemapEligible } from "@/lib/seo/sitemapEligibility";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 
 const pageTitle = "Airbnb Optimizer | Norixo";
@@ -32,10 +34,20 @@ export const metadata: Metadata = {
 
 export default function AirbnbOptimizerHubPage() {
   const featuredCities = cities;
-  const featuredTopicLinks = cities.slice(0, 6).map((city, index) => ({
-    city,
-    topic: localSeoTopics[index],
-  }));
+  const featuredTopicLinks = cities
+    .flatMap((city) =>
+      localSeoTopics.map((topic) => ({
+        city,
+        topic,
+        pathname: `/airbnb-optimizer/${city.slug}/${topic.slug}`,
+      })),
+    )
+    .filter(
+      ({ pathname }) =>
+        getSearchEligibility(pathname).tier === "winner" &&
+        isCityTopicSitemapEligible(pathname),
+    )
+    .slice(0, 6);
 
   const jsonLd = [
     {

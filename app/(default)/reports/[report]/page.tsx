@@ -10,6 +10,7 @@ import { guides } from "@/data/guides";
 import { solutions } from "@/data/solutions";
 import { tools } from "@/data/tools";
 import { localSeoTopics } from "@/data/localSeo";
+import { isCityTopicSitemapEligible } from "@/lib/seo/sitemapEligibility";
 import EEAT from "@/components/seo/EEAT";
 import {
   IPP_REPORT_VIEW_LOCALES,
@@ -96,6 +97,14 @@ export default async function MarketReportPage({ params }: Props) {
   if (!city) {
     notFound();
   }
+
+  const relatedLocalSeoTopics = localSeoTopics
+    .filter((topic) =>
+      isCityTopicSitemapEligible(
+        `/airbnb-optimizer/${city.slug}/${topic.slug}`,
+      ),
+    )
+    .slice(0, 3);
 
   const relatedGuides = guides.filter((guide) =>
     [
@@ -268,7 +277,7 @@ export default async function MarketReportPage({ params }: Props) {
             </p>
           </Link>
 
-          {localSeoTopics.slice(0, 3).map((topic) => (
+          {relatedLocalSeoTopics.map((topic) => (
             <Link
               key={topic.slug}
               href={`/airbnb-optimizer/${city.slug}/${topic.slug}`}
