@@ -162,6 +162,38 @@ const cityTopicContentOverrides: Record<
         "Once the likely gap is clear—uncertain stay context, weak visual evidence, missing practical expectations, or a broader value issue—a Norixo audit can help prioritize the next listing change without treating every photo as the problem.",
     },
   },
+  "mexico-city": {
+    "pricing-guide": {
+      heading: "Diagnose a Mexico City pricing gap before changing the nightly rate",
+      introduction:
+        "Pricing is only useful when it reflects the offer a guest can actually compare. For a Mexico City listing, start by checking whether the current rate makes sense alongside the visible location context, amenities, photos, reviews, and booking conditions before assuming that price alone is limiting performance.",
+      sections: [
+        {
+          heading: "Compare the rate with the visible offer first",
+          body:
+            "Use the current Norixo reference price of about €95 per night only as context, not as a target or a claim about the whole Mexico City market. Compare the chosen rate with nearby listings that appear genuinely similar in location context, stay type, amenities, presentation, and guest reassurance. A price comparison is more useful when the alternatives are comparable in what a guest can actually verify.",
+        },
+        {
+          heading: "Separate a price problem from a value problem",
+          body:
+            "A listing can look expensive because the rate is high, but it can also look expensive because the visible offer does not explain its value clearly enough. Before discounting, review whether the first photos, amenity positioning, location explanation, check-in expectations, and overall listing promise make the stay easy to understand. If those signals are weak, a lower price may hide the presentation problem instead of solving it.",
+        },
+        {
+          heading: "Use booking windows and comparable listings as diagnostic inputs",
+          body:
+            "Pricing decisions should account for how far ahead guests are booking and how comparable alternatives are positioned, but those signals should be treated as inputs rather than fixed rules. Avoid assuming a seasonal pattern or demand level without evidence. The useful question is whether the current rate remains credible for the dates, visible quality, and alternatives a guest is likely to compare at that moment.",
+        },
+        {
+          heading: "Change one pricing variable at a time",
+          body:
+            "If the listing appears competitive and the value is clear, test a focused pricing adjustment instead of changing the rate, photos, title, and description together. A single-variable change makes it easier to judge whether price was actually the constraint. If performance remains weak, reassess the visible offer and guest fit before continuing to reduce the nightly rate.",
+        },
+      ],
+      auditBridge:
+        "Use the pricing calculator and related pricing resources to test the consequence of a focused rate change, then use a Norixo listing audit to check whether pricing is the real constraint or whether presentation, trust, or perceived value should be addressed first.",
+    },
+  },
+
   singapore: {
     "competitor-analysis": {
       heading: "Compare Singapore listing alternatives without copying the wrong signal",
