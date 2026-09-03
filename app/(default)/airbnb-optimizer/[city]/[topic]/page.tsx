@@ -14,6 +14,7 @@ import { rankings } from "@/data/rankings";
 import { marketReports } from "@/data/marketReports";
 import { getCityTopicContentOverride } from "@/data/cityTopicContentOverrides";
 import { buildLocalSeoMetadata } from "@/lib/seo/buildLocalSeoMetadata";
+import { getSearchEligibility } from "@/lib/seo/searchEligibility";
 
 type Props = {
   params: Promise<{
@@ -386,7 +387,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return {};
   }
 
-  return buildLocalSeoMetadata(city, topic);
+  const pathname = `/airbnb-optimizer/${city.slug}/${topic.slug}`;
+  const eligibility = getSearchEligibility(pathname);
+
+  return buildLocalSeoMetadata(city, topic, eligibility);
 }
 
 export default async function LocalSeoPage({ params }: Props) {

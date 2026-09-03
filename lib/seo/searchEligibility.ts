@@ -11,6 +11,8 @@ export type SearchEligibilityReason =
   | "consolidation-candidate"
   | "retirement-candidate";
 
+export type SearchIndexDirective = "index" | "noindex";
+
 export type SearchEligibility = Readonly<{
   tier: SearchEligibilityTier;
   searchEligible: boolean;
@@ -20,6 +22,11 @@ export type SearchEligibility = Readonly<{
   localEvidence: boolean;
   reason: SearchEligibilityReason;
 }>;
+
+export type ResolvedSearchEligibility = SearchEligibility &
+  Readonly<{
+    indexDirective: SearchIndexDirective;
+  }>;
 
 const SAFE_FALLBACK: SearchEligibility = Object.freeze({
   tier: "hold",
@@ -344,15 +351,144 @@ export function validateSearchEligibility(
   return entry;
 }
 
-export function getSearchEligibility(path: string): SearchEligibility {
-  const normalized = normalizeSearchPath(path);
-  const entry = REGISTRY[normalized];
+const CANARY_NOINDEX_PATHS = new Set<string>([
+  "/airbnb-optimizer/abu-dhabi/title-optimization",
+  "/airbnb-optimizer/agadir/guest-trust-guide",
+  "/airbnb-optimizer/aix-en-provence/ranking-factors",
+  "/airbnb-optimizer/al-hoceima/pricing-guide",
+  "/airbnb-optimizer/albufeira/booking-conversion",
+  "/airbnb-optimizer/alicante/revenue-optimization",
+  "/airbnb-optimizer/amalfi/occupancy-guide",
+  "/airbnb-optimizer/amman/amenities-guide",
+  "/airbnb-optimizer/amsterdam/seo-guide",
+  "/airbnb-optimizer/annecy/photo-tips",
+  "/airbnb-optimizer/antwerp/search-visibility",
+  "/airbnb-optimizer/arcachon/market-analysis",
+  "/airbnb-optimizer/asilah/first-photo",
+  "/airbnb-optimizer/athens/description-optimization",
+  "/airbnb-optimizer/auckland/competitor-analysis",
+  "/airbnb-optimizer/austin/conversion-guide",
+  "/airbnb-optimizer/avignon/guest-trust-guide",
+  "/airbnb-optimizer/bali-canggu/photo-tips",
+  "/airbnb-optimizer/bali/local-demand-guide",
+  "/airbnb-optimizer/bangkok/listing-audit",
+  "/airbnb-optimizer/barcelona/seo-guide",
+  "/airbnb-optimizer/benidorm/seasonality-guide",
+  "/airbnb-optimizer/bergamo/long-stay-guide",
+  "/airbnb-optimizer/berlin/pricing-guide",
+  "/airbnb-optimizer/biarritz/listing-audit",
+  "/airbnb-optimizer/bilbao/review-strategy",
+  "/airbnb-optimizer/bogota/description-optimization",
+  "/airbnb-optimizer/bologna/seo-guide",
+  "/airbnb-optimizer/bordeaux/title-optimization",
+  "/airbnb-optimizer/boston/review-strategy",
+  "/airbnb-optimizer/braga/occupancy-guide",
+  "/airbnb-optimizer/brussels/amenities-guide",
+  "/airbnb-optimizer/bucharest/pricing-positioning",
+  "/airbnb-optimizer/budapest/amenities-guide",
+  "/airbnb-optimizer/buenos-aires/photo-order",
+  "/airbnb-optimizer/cadiz/business-travel-guide",
+  "/airbnb-optimizer/cairo/revenue-optimization",
+  "/airbnb-optimizer/calgary/photo-order",
+  "/airbnb-optimizer/cancun/family-travel-guide",
+  "/airbnb-optimizer/cannes/first-photo",
+  "/airbnb-optimizer/cape-town/ranking-factors",
+  "/airbnb-optimizer/cartagena/business-travel-guide",
+  "/airbnb-optimizer/casablanca/seasonality-guide",
+  "/airbnb-optimizer/cebu/photo-tips",
+  "/airbnb-optimizer/chamonix/search-visibility",
+  "/airbnb-optimizer/chefchaouen/conversion-guide",
+  "/airbnb-optimizer/chiang-mai/listing-audit",
+  "/airbnb-optimizer/chicago/family-travel-guide",
+  "/airbnb-optimizer/coimbra/competitor-analysis",
+  "/airbnb-optimizer/colmar/pricing-guide",
+  "/airbnb-optimizer/como/ranking-factors",
+  "/airbnb-optimizer/copenhagen/local-demand-guide",
+  "/airbnb-optimizer/corfu/pricing-positioning",
+  "/airbnb-optimizer/courchevel/market-analysis",
+  "/airbnb-optimizer/crete/description-optimization",
+  "/airbnb-optimizer/cusco/title-optimization",
+  "/airbnb-optimizer/da-nang/long-stay-guide",
+  "/airbnb-optimizer/dakhla/photo-order",
+  "/airbnb-optimizer/deauville/guest-trust-guide",
+  "/airbnb-optimizer/djerba/family-travel-guide",
+  "/airbnb-optimizer/doha/review-strategy",
+  "/airbnb-optimizer/dubai/pricing-positioning",
+  "/airbnb-optimizer/dublin/search-visibility",
+  "/airbnb-optimizer/dubrovnik/first-photo",
+  "/airbnb-optimizer/edinburgh/business-travel-guide",
+  "/airbnb-optimizer/el-jadida/conversion-guide",
+  "/airbnb-optimizer/essaouira/booking-conversion",
+  "/airbnb-optimizer/evora/booking-conversion",
+  "/airbnb-optimizer/faro/long-stay-guide",
+  "/airbnb-optimizer/fes/competitor-analysis",
+  "/airbnb-optimizer/florence/guest-trust-guide",
+  "/airbnb-optimizer/fort-lauderdale/pricing-guide",
+  "/airbnb-optimizer/fukuoka/market-analysis",
+  "/airbnb-optimizer/geneva/revenue-optimization",
+  "/airbnb-optimizer/genoa/seo-guide",
+  "/airbnb-optimizer/gijon/local-demand-guide",
+  "/airbnb-optimizer/girona/family-travel-guide",
+  "/airbnb-optimizer/granada/competitor-analysis",
+  "/airbnb-optimizer/grenoble/seasonality-guide",
+  "/airbnb-optimizer/guadalajara/occupancy-guide",
+  "/airbnb-optimizer/hanoi/business-travel-guide",
+  "/airbnb-optimizer/helsinki/ranking-factors",
+  "/airbnb-optimizer/ho-chi-minh-city/title-optimization",
+  "/airbnb-optimizer/hong-kong/revenue-optimization",
+  "/airbnb-optimizer/honolulu/photo-tips",
+  "/airbnb-optimizer/hurghada/occupancy-guide",
+  "/airbnb-optimizer/ibiza/photo-order",
+  "/airbnb-optimizer/ifrane/booking-conversion",
+  "/airbnb-optimizer/jakarta/conversion-guide",
+  "/airbnb-optimizer/jeddah/pricing-positioning",
+  "/airbnb-optimizer/krakow/search-visibility",
+  "/airbnb-optimizer/kuala-lumpur/amenities-guide",
+  "/airbnb-optimizer/kyoto/local-demand-guide",
+  "/airbnb-optimizer/lagos-portugal/description-optimization",
+  "/airbnb-optimizer/larnaca/first-photo",
+  "/airbnb-optimizer/las-vegas/review-strategy",
+  "/airbnb-optimizer/lecce/seasonality-guide",
+  "/airbnb-optimizer/london/long-stay-guide",
+  "/airbnb-optimizer/lyon/market-analysis",
+  "/airbnb-optimizer/manila/listing-audit",
+]);
 
-  if (!entry) {
-    return SAFE_FALLBACK;
+export function isCanaryNoindexPath(path: string): boolean {
+  return CANARY_NOINDEX_PATHS.has(normalizeSearchPath(path));
+}
+
+export function getCanaryNoindexPaths(): readonly string[] {
+  return Object.freeze([...CANARY_NOINDEX_PATHS]);
+}
+
+export function getSearchEligibility(path: string): ResolvedSearchEligibility {
+  const normalized = normalizeSearchPath(path);
+
+  if (CANARY_NOINDEX_PATHS.has(normalized)) {
+    const canaryEntry = validateSearchEligibility({
+      tier: "hold",
+      searchEligible: false,
+      sitemapEligible: false,
+      uniqueIntent: false,
+      uniqueValue: false,
+      localEvidence: false,
+      reason: "quality-review-pending",
+    });
+
+    return Object.freeze({
+      ...canaryEntry,
+      indexDirective: "noindex",
+    });
   }
 
-  return validateSearchEligibility(entry);
+  const entry = REGISTRY[normalized] ?? SAFE_FALLBACK;
+  const validated = validateSearchEligibility(entry);
+
+  return Object.freeze({
+    ...validated,
+    indexDirective: validated.searchEligible ? "index" : "noindex",
+  });
 }
 
 export function getRegisteredSearchEligibilityPaths(): readonly string[] {

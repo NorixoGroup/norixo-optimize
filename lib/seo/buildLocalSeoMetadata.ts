@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
+import type { ResolvedSearchEligibility } from "@/lib/seo/searchEligibility";
 import type { City } from "@/data/cities";
 import type { LocalSeoTopic } from "@/data/localSeo";
 
-export function buildLocalSeoMetadata(city: City, topic: LocalSeoTopic): Metadata {
+export function buildLocalSeoMetadata(
+  city: City,
+  topic: LocalSeoTopic,
+  eligibility?: ResolvedSearchEligibility,
+): Metadata {
   const title = `${city.name} ${topic.label} | Airbnb optimization`;
   const description = `${topic.description} Optimize Airbnb performance in ${city.name}, ${city.country}.`;
   const url = `https://norixo.io/airbnb-optimizer/${city.slug}/${topic.slug}`;
@@ -22,6 +27,10 @@ export function buildLocalSeoMetadata(city: City, topic: LocalSeoTopic): Metadat
     ],
     alternates: {
       canonical: url,
+    },
+    robots: {
+      index: eligibility?.indexDirective !== "noindex",
+      follow: true,
     },
     openGraph: {
       title,
