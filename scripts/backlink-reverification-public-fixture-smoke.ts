@@ -1,4 +1,4 @@
-import { GET } from "../app/__backlink-fixtures/reverification/bl-p1-03/route";
+import { GET } from "../app/backlink-fixtures/reverification/bl-p1-03/route";
 
 function assert(value: unknown, message: string): asserts value {
   if (!value) throw new Error(message);
