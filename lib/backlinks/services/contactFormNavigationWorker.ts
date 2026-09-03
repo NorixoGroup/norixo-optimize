@@ -5,6 +5,7 @@ import type { Browser, BrowserContext, Page } from "playwright-core";
 
 import {
   claimNextContactFormRun,
+  confirmContactFormSubmission,
   getContactFormRunExecutionContext,
   heartbeatContactFormRun,
   transitionContactFormRun,
@@ -13,13 +14,22 @@ import {
   type ContactFormRunState,
 } from "@/lib/backlinks/repositories/contactFormAutomationRepository";
 import type { BacklinkRepositoryClient } from "@/lib/backlinks/repositories/repositoryClient";
-import { buildContactFormApprovalFingerprint } from "@/lib/backlinks/services/contactFormApprovalFingerprint";
 import {
   buildContactFormMappingPreview,
   contactFormMappingPreviewToSafeMetadata,
   type ContactFormDiscoveredPage,
   type ContactFormMappingPreview,
 } from "@/lib/backlinks/services/contactFormMappingPreview";
+import {
+  contactFormSafeFingerprint,
+  executeContactFormControlledSubmission,
+  isKnownSameHostConfirmationPath,
+  revalidateContactFormExecutionContext,
+  type ContactFormConfirmationObservation,
+  type ContactFormFieldLocator,
+  type ContactFormSubmitControl,
+  type ContactFormSubmitRequestAllowance,
+} from "@/lib/backlinks/services/contactFormSubmission";
 import type { Json } from "@/types/database.types";
 
 const UNSAFE_MUTATION_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -30,7 +40,6 @@ const DEFAULT_HEARTBEAT_INTERVAL_MS = 15_000;
 const DEFAULT_NAVIGATION_TIMEOUT_MS = 15_000;
 const DEFAULT_RUN_TIMEOUT_MS = 60_000;
 const DEFAULT_REDIRECT_LIMIT = 5;
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export type ContactFormDnsAddress = Readonly<{ address: string; family: 4 | 6 }>;
 export type ContactFormDnsResolver = (hostname: string) => Promise<readonly ContactFormDnsAddress[]>;
@@ -44,6 +53,11 @@ export type ContactFormBrowserPage = {
   count: (selector: string) => Promise<number>;
   evaluatePageSignals: () => Promise<ContactFormPageSignals>;
   inspectForms: () => Promise<ContactFormDiscoveredPage>;
+  readFieldValue: (locator: ContactFormFieldLocator) => Promise<string | null>;
+  fillField: (locator: ContactFormFieldLocator, value: string, options: { timeoutMs: number }) => Promise<void>;
+  listSubmitControls: (formOrdinal: number) => Promise<readonly ContactFormSubmitControl[]>;
+  clickSubmitControl: (control: ContactFormSubmitControl, options: { timeoutMs: number }) => Promise<void>;
+  observeSubmissionConfirmation: (input: { expectedOrigin: string; selectedFormOrdinal: number; selectedFormFingerprint: string; timeoutMs: number }) => Promise<ContactFormConfirmationObservation>;
   onPopup: (handler: () => void) => void;
   onDownload: (handler: () => void) => void;
 };
@@ -69,6 +83,7 @@ export type ContactFormNavigationDependencies = Readonly<{
   claimNextRun: (workerId: string, leaseDurationSeconds: number) => Promise<ContactFormRun | null>;
   heartbeatRun: (input: { runId: string; workerId: string; leaseDurationSeconds: number }) => Promise<ContactFormRun>;
   transitionRun: (input: { runId: string; workerId: string; nextState: ContactFormRunState; eventType: string; safeMetadata?: Json; safeErrorCode?: string; evidenceReference?: string; finalUrl?: string }) => Promise<ContactFormRun>;
+  confirmSubmission: (input: { runId: string; workerId: string; evidenceReference: string; finalUrl?: string }) => Promise<{ run_id: string; attempt_id: string; disposition: string }>;
   loadExecutionContext: (run: ContactFormRun) => Promise<ContactFormRunExecutionContext>;
   resolveHostname: ContactFormDnsResolver;
   browserRuntime: ContactFormBrowserRuntime;
@@ -78,6 +93,8 @@ export type ContactFormNavigationResult =
   | { kind: "empty" }
   | { kind: "discovered"; run: ContactFormRun; metadata: ContactFormNavigationMetadata; cleanup: "success" | "failed" }
   | { kind: "mapped"; run: ContactFormRun; metadata: ContactFormNavigationMetadata; mapping: ContactFormMappingPreview; cleanup: "success" | "failed" }
+  | { kind: "submission_confirmed"; run: ContactFormRun; metadata: ContactFormNavigationMetadata; mapping: ContactFormMappingPreview; confirmation: Extract<ContactFormConfirmationObservation, { confirmed: true }>; cleanup: "success" | "failed" }
+  | { kind: "submission_ambiguous"; run: ContactFormRun; metadata: ContactFormNavigationMetadata; mapping: ContactFormMappingPreview; cleanup: "success" | "failed" }
   | { kind: "blocked"; run: ContactFormRun; state: "blocked_policy" | "blocked_captcha" | "manual_review" | "failed_pre_submit"; safeErrorCode: string; cleanup: "success" | "failed" }
   | { kind: "lease_lost"; runId: string; cleanup: "success" | "failed" };
 export type ContactFormNavigationMetadata = Readonly<{
@@ -96,7 +113,6 @@ export type ContactFormNavigationMetadata = Readonly<{
 type UrlValidationOk = Readonly<{ ok: true; url: URL; hostname: string; dns: Json }>;
 type UrlValidationFailure = Readonly<{ ok: false; code: string; reason: string; metadata: Json }>;
 type UrlValidationResult = UrlValidationOk | UrlValidationFailure;
-type RevalidationResult = { ok: true } | { ok: false; state: "manual_review"; code: string; eventType: string; metadata: Json };
 
 export function isContactFormNavigationWorkerEnabled(env: Readonly<Record<string, string | undefined>> = process.env): boolean {
   return env.CONTACT_FORM_NAVIGATION_WORKER_ENABLED === "true";
@@ -107,6 +123,7 @@ export function createContactFormNavigationDependencies(client: BacklinkReposito
     claimNextRun: (workerId, leaseDurationSeconds) => claimNextContactFormRun(client, workerId, leaseDurationSeconds),
     heartbeatRun: (input) => heartbeatContactFormRun(client, input),
     transitionRun: (input) => transitionContactFormRun(client, input),
+    confirmSubmission: (input) => confirmContactFormSubmission(client, input),
     loadExecutionContext: (run) => getContactFormRunExecutionContext(client, run),
     resolveHostname: resolveHostnamePublicAddresses,
     browserRuntime,
@@ -137,6 +154,7 @@ async function createPlaywrightBrowserSession(browser: Browser): Promise<Contact
 }
 
 function adaptPlaywrightPage(page: Page): ContactFormBrowserPage {
+  const controlLocator = (locator: ContactFormFieldLocator) => page.locator("form").nth(locator.formOrdinal).locator("input, textarea, select, button").nth(locator.controlOrdinal);
   return {
     routeRequests: async (handler) => {
       await page.route("**/*", async (route) => {
@@ -253,6 +271,106 @@ function adaptPlaywrightPage(page: Page): ContactFormBrowserPage {
             })),
         };
       }),
+    readFieldValue: (locator) => controlLocator(locator).inputValue({ timeout: 5_000 }).catch(() => null),
+    fillField: async (locator, value, options) => {
+      await controlLocator(locator).fill(value, { timeout: options.timeoutMs });
+    },
+    listSubmitControls: async (formOrdinal) => {
+      type SubmitControlRaw = Omit<ContactFormSubmitControl, "fingerprint">;
+      const controls = await page.evaluate((ordinal): SubmitControlRaw[] => {
+        const form = document.forms.item(ordinal);
+        if (!form) return [];
+        const visible = (element: Element) => {
+          const htmlElement = element as HTMLElement;
+          const style = window.getComputedStyle(htmlElement);
+          return style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0" && htmlElement.getClientRects().length > 0;
+        };
+        const allControls = Array.from(form.querySelectorAll("input, textarea, select, button"));
+        return Array.from(form.querySelectorAll('button[type="submit"], input[type="submit"]')).map((element) => {
+          const input = element as HTMLButtonElement | HTMLInputElement;
+          const controlOrdinal = allControls.indexOf(element);
+          const tag = element.tagName.toLowerCase() === "button" ? "button" : "input";
+          const hidden = tag === "input" && (input as HTMLInputElement).type.toLowerCase() === "hidden";
+          const disabled = input.disabled === true || input.getAttribute("aria-disabled") === "true";
+          return {
+            formOrdinal: ordinal,
+            controlOrdinal,
+            tag,
+            type: "submit",
+            name: input.getAttribute("name")?.trim() || null,
+            id: input.id?.trim() || null,
+            visible: visible(input),
+            enabled: !disabled,
+            disabled,
+            hidden,
+          };
+        });
+      }, formOrdinal);
+      return controls.map((control) => ({
+        ...control,
+        fingerprint: contactFormSafeFingerprint({
+          form_ordinal: control.formOrdinal,
+          control_ordinal: control.controlOrdinal,
+          tag: control.tag,
+          type: control.type,
+          name: control.name,
+          id: control.id,
+          visible: control.visible,
+          enabled: control.enabled,
+          hidden: control.hidden,
+        }),
+      }));
+    },
+    clickSubmitControl: async (control, options) => {
+      await page.locator("form").nth(control.formOrdinal).locator("input, textarea, select, button").nth(control.controlOrdinal).click({ timeout: options.timeoutMs });
+    },
+    observeSubmissionConfirmation: async (input) => {
+      await page.waitForLoadState("domcontentloaded", { timeout: input.timeoutMs }).catch(() => undefined);
+      const finalUrl = page.url();
+      try {
+        const url = new URL(finalUrl);
+        if (url.origin === input.expectedOrigin && isKnownSameHostConfirmationPath(url.pathname)) {
+          return {
+            confirmed: true,
+            kind: "KNOWN_SAME_HOST_CONFIRMATION_PATH",
+            finalUrl,
+            evidenceFingerprint: contactFormSafeFingerprint({ kind: "known_same_host_confirmation_path", final_url: finalUrl, selected_form_fingerprint: input.selectedFormFingerprint }),
+            markerId: null,
+          };
+        }
+      } catch {
+        return { confirmed: false, reason: "final_url_invalid", finalUrl };
+      }
+      const marker = await page.evaluate((selectedFormOrdinal) => {
+        const visible = (element: Element) => {
+          const htmlElement = element as HTMLElement;
+          const style = window.getComputedStyle(htmlElement);
+          return style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0" && htmlElement.getClientRects().length > 0;
+        };
+        const success = Array.from(document.querySelectorAll('[data-norixo-contact-form-confirmation="success"], [data-contact-form-confirmation="success"], [data-contact-form-success="true"], [role="status"][data-contact-form-result="success"], [role="alert"][data-contact-form-result="success"]')).find(visible);
+        const replacement = Array.from(document.querySelectorAll('[data-norixo-contact-form-replacement="success"], [data-contact-form-replacement="success"]')).find(visible);
+        const selectedFormPresent = selectedFormOrdinal >= 0 ? document.forms.item(selectedFormOrdinal) != null : false;
+        const element = replacement && !selectedFormPresent ? replacement : success;
+        return element
+          ? {
+              replacement: Boolean(replacement && !selectedFormPresent),
+              id: (element as HTMLElement).id?.trim() || null,
+              role: element.getAttribute("role"),
+              textLength: (element.textContent ?? "").trim().replace(/\s+/g, " ").length,
+            }
+          : { replacement: false, id: null, role: null, textLength: 0 };
+      }, input.selectedFormOrdinal);
+      if (marker.textLength > 0) {
+        return {
+          confirmed: true,
+          kind: marker.replacement ? "EXPLICIT_SUCCESS_REPLACEMENT" : "EXPLICIT_SUCCESS_ELEMENT",
+          finalUrl,
+          evidenceFingerprint: contactFormSafeFingerprint({ kind: marker.replacement ? "explicit_success_replacement" : "explicit_success_element", id: marker.id, role: marker.role, text_length: marker.textLength }),
+          markerId: marker.id,
+        };
+      }
+      return { confirmed: false, reason: "no_explicit_confirmation", finalUrl, formPresent: input.selectedFormOrdinal >= 0 };
+    },
     onPopup: (handler) => {
       page.on("popup", (popup) => {
         handler();
@@ -365,7 +483,7 @@ export async function executeContactFormNavigationWorkerOnceWithDependencies(
   try {
     await keepLease();
     const context = await deps.loadExecutionContext(claimedRun);
-    const revalidation = revalidateExecutionContext(context);
+    const revalidation = revalidateContactFormExecutionContext(context);
     if (!revalidation.ok) {
       const run = await deps.transitionRun({
         runId: claimedRun.id,
@@ -388,6 +506,7 @@ export async function executeContactFormNavigationWorkerOnceWithDependencies(
     let networkMutationBlockedCount = 0;
     let navigationRequestCount = 0;
     const networkPolicy: { violation: UrlValidationFailure | null } = { violation: null };
+    const submitAllowance = createSubmitAllowanceState();
     session = await deps.browserRuntime.openContext();
     session.page.onPopup(() => {
       popupBlockedCount += 1;
@@ -397,6 +516,14 @@ export async function executeContactFormNavigationWorkerOnceWithDependencies(
     });
     await session.page.routeRequests(async (request) => {
       const method = request.method.toUpperCase();
+      if (consumeSubmitAllowanceIfMatched(submitAllowance, claimedRun.id, request)) {
+        const requestTarget = await validateContactFormNavigationUrl(request.url, deps.resolveHostname);
+        if (!requestTarget.ok) {
+          networkPolicy.violation ??= requestTarget;
+          return "abort";
+        }
+        return "continue";
+      }
       if (UNSAFE_MUTATION_METHODS.has(method)) {
         networkMutationBlockedCount += 1;
         networkPolicy.violation ??= validationFailure("CONTACT_FORM_TARGET_MUTATION_BLOCKED", "target_mutation_blocked", { method });
@@ -500,7 +627,29 @@ export async function executeContactFormNavigationWorkerOnceWithDependencies(
         evidenceReference: `c4_mapping:${discovered.id}`,
         safeMetadata: mappingMetadata,
       });
-      return finish({ kind: "mapped", run: mapped, metadata, mapping, cleanup: "success" });
+      const submission = await executeContactFormControlledSubmission({
+        run: mapped,
+        workerId,
+        page: session.page,
+        mapping,
+        expectedPageUrl: metadata.finalUrl,
+        dependencies: {
+          loadExecutionContext: deps.loadExecutionContext,
+          transitionRun: deps.transitionRun,
+          confirmSubmission: deps.confirmSubmission,
+          keepLease,
+          armSubmitRequest: (allowance) => {
+            armSubmitAllowance(submitAllowance, allowance);
+          },
+          revokeSubmitRequest: () => {
+            revokeSubmitAllowance(submitAllowance);
+          },
+        },
+      });
+      if (submission.kind === "submission_confirmed") return finish({ kind: "submission_confirmed", run: submission.run, metadata, mapping, confirmation: submission.confirmation, cleanup: "success" });
+      if (submission.kind === "submission_ambiguous") return finish({ kind: "submission_ambiguous", run: submission.run, metadata, mapping, cleanup: "success" });
+      if (submission.kind === "lease_lost") return finish({ kind: "lease_lost", runId: submission.runId, cleanup: "success" });
+      return finish({ kind: "blocked", run: submission.run, state: submission.state, safeErrorCode: submission.safeErrorCode, cleanup: "success" });
     }
     if (mapping.result === "blocked_captcha") {
       const run = await deps.transitionRun({ runId: discovered.id, workerId, nextState: "blocked_captcha", eventType: "captcha_detected", safeErrorCode: "CONTACT_FORM_CAPTCHA_DETECTED", safeMetadata: mappingMetadata });
@@ -574,52 +723,33 @@ function startLeaseHeartbeat(params: {
   };
 }
 
-function revalidateExecutionContext(context: ContactFormRunExecutionContext): RevalidationResult {
-  const run = context.run;
-  const approval = context.approval;
-  const outreach = context.outreach;
-  const contact = context.contact;
-  const opportunity = context.opportunity;
-  const formUrl = trimToNull(contact.contact_form_url);
-  const targetUrl = trimToNull(opportunity.target_page_url);
-  const subject = trimToNull(outreach.subject);
-  const body = trimToNull(outreach.body);
-  if (run.id !== run.id.trim() || !UUID.test(run.id) || run.workspace_id !== approval.workspace_id || run.outreach_id !== approval.outreach_id || run.approval_id !== approval.id || run.form_url !== approval.form_url) {
-    return stale("CONTACT_FORM_RUN_APPROVAL_STALE", "run_approval_binding");
-  }
-  if (outreach.workspace_id !== run.workspace_id || outreach.id !== run.outreach_id || outreach.campaign_id !== run.campaign_id || outreach.contact_id !== approval.contact_id || outreach.opportunity_id !== approval.opportunity_id) {
-    return stale("CONTACT_FORM_APPROVAL_STALE", "outreach_binding");
-  }
-  if (outreach.channel !== "contact_form" || outreach.status !== "draft" || outreach.current_attempt !== 0 || context.outreachAttemptCount !== 0) {
-    return stale("CONTACT_FORM_OUTREACH_NOT_APPROVABLE", "outreach_state");
-  }
-  if (contact.workspace_id !== run.workspace_id || contact.id !== approval.contact_id || contact.contact_status === "do_not_contact" || contact.contact_status === "archived" || contact.do_not_contact_at !== null || contact.archived_at !== null) {
-    return { ok: false, state: "manual_review", code: "CONTACT_FORM_CONTACT_SUPPRESSED", eventType: "dnc_revalidation_failed", metadata: { reason: "contact_suppressed" } };
-  }
-  if (opportunity.workspace_id !== run.workspace_id || opportunity.id !== approval.opportunity_id || formUrl == null || targetUrl == null || subject == null || body == null || approval.form_url !== formUrl || approval.target_url !== targetUrl) {
-    return stale("CONTACT_FORM_APPROVAL_STALE", "content_binding");
-  }
-  const fingerprint = buildContactFormApprovalFingerprint({
-    workspaceId: run.workspace_id,
-    campaignId: outreach.campaign_id,
-    outreachId: outreach.id,
-    contactId: contact.id,
-    opportunityId: opportunity.id,
-    targetUrl,
-    formUrl,
-    senderName: approval.sender_name,
-    senderEmail: approval.sender_email,
-    senderCompany: approval.sender_company,
-    senderWebsite: approval.sender_website,
-    subject,
-    body,
-  });
-  if (fingerprint !== approval.content_fingerprint) return stale("CONTACT_FORM_APPROVAL_STALE", "fingerprint_mismatch");
-  return { ok: true };
+type SubmitAllowanceState = { current: ContactFormSubmitRequestAllowance | null; consumed: boolean };
+
+function createSubmitAllowanceState(): SubmitAllowanceState {
+  return { current: null, consumed: false };
 }
 
-function stale(code: string, reason: string): RevalidationResult {
-  return { ok: false, state: "manual_review", code, eventType: "approval_revalidation_failed", metadata: { reason } };
+function armSubmitAllowance(state: SubmitAllowanceState, allowance: ContactFormSubmitRequestAllowance): void {
+  state.current = allowance;
+  state.consumed = false;
+}
+
+function revokeSubmitAllowance(state: SubmitAllowanceState): void {
+  state.current = null;
+}
+
+function consumeSubmitAllowanceIfMatched(state: SubmitAllowanceState, runId: string, request: ContactFormBrowserRequest): boolean {
+  const allowance = state.current;
+  if (allowance == null || state.consumed || allowance.runId !== runId || request.method.toUpperCase() !== allowance.method || !request.isNavigationRequest) return false;
+  try {
+    const url = new URL(request.url);
+    if (url.protocol !== "https:" || url.origin !== allowance.origin || url.pathname !== allowance.path || url.search !== allowance.search) return false;
+  } catch {
+    return false;
+  }
+  state.consumed = true;
+  state.current = null;
+  return true;
 }
 
 async function transitionPolicyBlocked(deps: ContactFormNavigationDependencies, runId: string, workerId: string, code: string, metadata: Json) {
@@ -742,11 +872,6 @@ function expandIpv6(address: string): number[] | null {
   const values = [...head, ...Array.from({ length: missing }, () => "0"), ...tail].map((piece) => Number.parseInt(piece, 16));
   if (values.length !== 8 || values.some((value) => !Number.isInteger(value) || value < 0 || value > 0xffff)) return null;
   return values;
-}
-
-function trimToNull(value: string | null): string | null {
-  const trimmed = value?.trim() ?? "";
-  return trimmed ? trimmed : null;
 }
 
 function isTimeoutError(error: unknown): boolean {

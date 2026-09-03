@@ -94,6 +94,7 @@ export type ContactFormMappingPreview = Readonly<{
   selectedFormFingerprint: string | null;
   formActionOrigin: string | null;
   formActionPath: string | null;
+  formActionSearch: string | null;
   formMethod: "GET" | "POST" | "UNKNOWN" | null;
   formCount: number;
   candidateCount: number;
@@ -159,6 +160,7 @@ export function contactFormMappingPreviewToSafeMetadata(preview: ContactFormMapp
     selected_form_fingerprint: preview.selectedFormFingerprint,
     form_action_origin: preview.formActionOrigin,
     form_action_path: preview.formActionPath,
+    form_action_search_fingerprint: preview.formActionSearch == null ? null : fingerprint(preview.formActionSearch),
     form_method: preview.formMethod,
     form_count: preview.formCount,
     candidate_count: preview.candidateCount,
@@ -221,6 +223,7 @@ function analyzeForm(form: ContactFormDiscoveredForm, pageUrl: string, approvedC
   const formFingerprint = fingerprint({
     action_origin: action.origin,
     action_path: action.path,
+    action_search: action.search,
     method,
     fields: fields.map((field) => ({ fingerprint: field.fieldFingerprint, classification: field.classification, required: field.required, candidates: [...field.semanticCandidates] })),
   });
@@ -236,6 +239,7 @@ function analyzeForm(form: ContactFormDiscoveredForm, pageUrl: string, approvedC
       selectedFormFingerprint: formFingerprint,
       formActionOrigin: action.origin,
       formActionPath: action.path,
+      formActionSearch: action.search,
       formMethod: method,
       formCount,
       candidateCount: result === "mapped" ? 1 : 0,
@@ -281,6 +285,7 @@ function analyzeForm(form: ContactFormDiscoveredForm, pageUrl: string, approvedC
       selectedFormFingerprint: formFingerprint,
       formActionOrigin: action.origin,
       formActionPath: action.path,
+      formActionSearch: action.search,
       formMethod: method,
       formCount,
       candidateCount: 1,
@@ -464,6 +469,7 @@ function terminalPreview(result: ContactFormMappingStatus, forms: readonly Conta
     selectedFormFingerprint: null,
     formActionOrigin: null,
     formActionPath: null,
+    formActionSearch: null,
     formMethod: null,
     formCount: Math.min(forms.length, MAX_FORMS),
     candidateCount: 0,
@@ -497,12 +503,12 @@ function normalizeFormMethod(method: string | null): "GET" | "POST" | "UNKNOWN" 
   return normalized === "GET" || normalized === "POST" ? normalized : "UNKNOWN";
 }
 
-function normalizeFormAction(action: string | null, pageUrl: string): { origin: string | null; path: string | null } {
+function normalizeFormAction(action: string | null, pageUrl: string): { origin: string | null; path: string | null; search: string | null } {
   try {
     const url = new URL(action?.trim() || pageUrl, pageUrl);
-    return { origin: url.origin, path: url.pathname || "/" };
+    return { origin: url.origin, path: url.pathname || "/", search: url.search || "" };
   } catch {
-    return { origin: null, path: null };
+    return { origin: null, path: null, search: null };
   }
 }
 

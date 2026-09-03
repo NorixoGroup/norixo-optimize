@@ -16,6 +16,7 @@ import {
   type ContactFormDnsResolver,
   type ContactFormNavigationDependencies,
 } from "../lib/backlinks/services/contactFormNavigationWorker";
+import { contactFormSafeFingerprint, type ContactFormConfirmationObservation, type ContactFormFieldLocator, type ContactFormSubmitControl } from "../lib/backlinks/services/contactFormSubmission";
 import { buildContactFormApprovalFingerprint } from "../lib/backlinks/services/contactFormApprovalFingerprint";
 import type {
   ContactFormApproval,
@@ -193,11 +194,18 @@ class FakePage implements ContactFormBrowserPage {
   ]);
   signals = { hasCaptcha: false, hasLoginWall: false, hasPasswordField: false };
   forms: ContactFormDiscoveredForm[] = [discoveredContactForm()];
-  requests: ContactFormBrowserRequest[] = [];
-  submitted = false;
-  popupHandler: (() => void) | null = null;
-  downloadHandler: (() => void) | null = null;
-  throwOnGoto: Error | null = null;
+	  requests: ContactFormBrowserRequest[] = [];
+	  submitRequests: ContactFormBrowserRequest[] | null = null;
+	  submitConcurrent = false;
+	  submitDecisions: Array<{ url: string; method: string; decision: ContactFormBrowserRequestDecision }> = [];
+	  afterConcurrentSubmitDispatchStarted: (() => Promise<void> | void) | null = null;
+	  submitted = false;
+	  filledValues = new Map<number, string>();
+	  clickCount = 0;
+	  confirmation: ContactFormConfirmationObservation = { confirmed: true, kind: "EXPLICIT_SUCCESS_ELEMENT", finalUrl: "https://forms.example/contact", evidenceFingerprint: contactFormSafeFingerprint({ fixture: "explicit_success_element" }), markerId: "success" };
+	  popupHandler: (() => void) | null = null;
+	  downloadHandler: (() => void) | null = null;
+	  throwOnGoto: Error | null = null;
   async routeRequests(handler: (request: ContactFormBrowserRequest) => Promise<ContactFormBrowserRequestDecision>) {
     this.handler = handler;
   }
@@ -222,12 +230,57 @@ class FakePage implements ContactFormBrowserPage {
   async evaluatePageSignals() {
     return this.signals;
   }
-  async inspectForms() {
-    return { pageUrl: this.currentUrl, pageTitle: this.titleValue, forms: this.forms };
-  }
-  onPopup(handler: () => void) {
-    this.popupHandler = handler;
-  }
+	  async inspectForms() {
+	    return { pageUrl: this.currentUrl, pageTitle: this.titleValue, forms: this.forms };
+	  }
+	  async readFieldValue(locator: ContactFormFieldLocator) {
+	    return this.filledValues.get(locator.controlOrdinal) ?? "";
+	  }
+	  async fillField(locator: ContactFormFieldLocator, value: string) {
+	    this.filledValues.set(locator.controlOrdinal, value);
+	  }
+	  async listSubmitControls(formOrdinal: number) {
+	    const form = this.forms.find((current) => current.ordinal === formOrdinal);
+	    if (!form) return [];
+	    return form.controls
+	      .filter((control) => (control.tag === "button" || control.tag === "input") && control.type.toLowerCase() === "submit")
+	      .map((control): ContactFormSubmitControl => ({
+	        formOrdinal,
+	        controlOrdinal: control.ordinal,
+	        tag: control.tag === "button" ? "button" : "input",
+	        type: "submit",
+	        name: control.name,
+	        id: control.id,
+	        visible: control.visible,
+	        enabled: !control.disabled,
+	        disabled: control.disabled,
+	        hidden: control.hidden,
+	        fingerprint: contactFormSafeFingerprint({ form_ordinal: formOrdinal, control_ordinal: control.ordinal, tag: control.tag, type: control.type, name: control.name, id: control.id }),
+	      }));
+	  }
+	  async clickSubmitControl(control: ContactFormSubmitControl) {
+	    this.clickCount += 1;
+	    this.submitted = true;
+	    const form = this.forms.find((current) => current.ordinal === control.formOrdinal);
+	    assert.ok(form, "submit form exists");
+	    const action = new URL(form.action ?? this.currentUrl, this.currentUrl);
+	    const method = (form.method ?? "get").toUpperCase();
+	    const requests = this.submitRequests ?? [{ url: action.href, method, resourceType: "document", isNavigationRequest: true }];
+	    const record = async (request: ContactFormBrowserRequest) => {
+	      const decision = await this.dispatch(request);
+	      this.submitDecisions.push({ url: request.url, method: request.method, decision });
+	      if (decision === "continue" && request.isNavigationRequest) this.currentUrl = request.url;
+	      return { request, decision };
+	    };
+	    const decisions = this.submitConcurrent ? await Promise.all(requests.map(record)) : await serialSubmitRequests(requests, record);
+	    if (decisions.some((result) => result.decision === "abort" && result.request.isNavigationRequest)) throw new Error("blockedbyclient");
+	  }
+	  async observeSubmissionConfirmation() {
+	    return this.confirmation;
+	  }
+	  onPopup(handler: () => void) {
+	    this.popupHandler = handler;
+	  }
   onDownload(handler: () => void) {
     this.downloadHandler = handler;
   }
@@ -235,6 +288,15 @@ class FakePage implements ContactFormBrowserPage {
     assert.ok(this.handler, "route handler registered");
     return this.handler(request);
   }
+}
+
+async function serialSubmitRequests<T extends ContactFormBrowserRequest>(
+  requests: readonly T[],
+  handler: (request: T) => Promise<{ request: T; decision: ContactFormBrowserRequestDecision }>,
+) {
+  const results: Array<{ request: T; decision: ContactFormBrowserRequestDecision }> = [];
+  for (const request of requests) results.push(await handler(request));
+  return results;
 }
 
 function runtime(page = new FakePage(), closeFailure = false): ContactFormBrowserRuntime & { opened: number; closed: number; page: FakePage } {
@@ -262,18 +324,22 @@ function deps(input: {
   dns?: ContactFormDnsResolver;
   heartbeatError?: Error;
   closeFailure?: boolean;
-} = {}): ContactFormNavigationDependencies & { transitions: Array<{ state: ContactFormRunState; eventType: string; safeErrorCode: string | null; metadata: Json | undefined; finalUrl: string | null }>; runtime: ReturnType<typeof runtime>; heartbeats: number; claims: number } {
+} = {}): ContactFormNavigationDependencies & { transitions: Array<{ state: ContactFormRunState; eventType: string; safeErrorCode: string | null; metadata: Json | undefined; finalUrl: string | null }>; runtime: ReturnType<typeof runtime>; heartbeats: number; claims: number; confirmations: number } {
   const ctx = input.ctx ?? context();
   const fakeRuntime = runtime(input.page, input.closeFailure);
   const transitions: Array<{ state: ContactFormRunState; eventType: string; safeErrorCode: string | null; metadata: Json | undefined; finalUrl: string | null }> = [];
   let heartbeats = 0;
   let claims = 0;
+  let confirmations = 0;
   return {
     get heartbeats() {
       return heartbeats;
     },
     get claims() {
       return claims;
+    },
+    get confirmations() {
+      return confirmations;
     },
     runtime: fakeRuntime,
     transitions,
@@ -288,7 +354,11 @@ function deps(input: {
     },
     async transitionRun(transition) {
       transitions.push({ state: transition.nextState, eventType: transition.eventType, safeErrorCode: transition.safeErrorCode ?? null, metadata: transition.safeMetadata, finalUrl: transition.finalUrl ?? null });
-      return { ...ctx.run, state: transition.nextState, final_url: transition.finalUrl ?? ctx.run.final_url, safe_error_code: transition.safeErrorCode ?? ctx.run.safe_error_code };
+      return { ...ctx.run, state: transition.nextState, final_url: transition.finalUrl ?? ctx.run.final_url, safe_error_code: transition.safeErrorCode ?? ctx.run.safe_error_code, submit_started_at: transition.nextState === "submitting" ? now : ctx.run.submit_started_at };
+    },
+    async confirmSubmission(input) {
+      confirmations += 1;
+      return { run_id: input.runId, attempt_id: "10000000-0000-4000-8000-000000000099", disposition: "created" };
     },
     async loadExecutionContext() {
       return ctx;
@@ -321,10 +391,10 @@ test("safe redirect", async () => {
     { url: "https://forms.example/contact", method: "GET", resourceType: "document", isNavigationRequest: true },
     { url: "https://forms.example/contact-us", method: "GET", resourceType: "document", isNavigationRequest: true },
   ];
-  const d = deps({ page });
-  const result = await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId);
-  assert.equal(result.kind, "mapped");
-  assert.equal(d.transitions.at(-1)?.finalUrl, "https://forms.example/contact-us");
+	  const d = deps({ page });
+	  const result = await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId);
+	  assert.equal(result.kind, "submission_confirmed");
+	  assert.equal(d.transitions.find((transition) => transition.state === "discovered")?.finalUrl, "https://forms.example/contact-us");
 });
 test("private redirect rejection", async () => {
   const page = new FakePage();
@@ -401,19 +471,21 @@ for (const method of ["PUT", "PATCH", "DELETE"]) {
 test("GET navigation allowed", async () => {
   const d = deps();
   const result = await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId);
-  assert.equal(result.kind, "mapped");
+  assert.equal(result.kind, "submission_confirmed");
 });
-test("form metadata inspection without mutation", async () => {
+test("form metadata inspection precedes controlled submit", async () => {
   const page = new FakePage();
   const d = deps({ page });
   const result = await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId);
-  assert.equal(result.kind, "mapped");
+  assert.equal(result.kind, "submission_confirmed");
   assert.equal(result.metadata.formCount, 1);
-  assert.equal(page.submitted, false);
+  assert.equal(page.submitted, true);
+  assert.equal(page.clickCount, 1);
 });
-test("no form submission primitives in C3 source", () => {
-  const source = readFileSync(join(process.cwd(), "lib/backlinks/services/contactFormNavigationWorker.ts"), "utf8");
-  assert.doesNotMatch(source, /\.fill\(|\.type\(|\.click\(|press\(|requestSubmit|form\.submit|confirmContactFormSubmission|backlink_outreach_attempts/);
+test("no alternate submit primitives in worker source", () => {
+  const worker = readFileSync(join(process.cwd(), "lib/backlinks/services/contactFormNavigationWorker.ts"), "utf8");
+  const submission = readFileSync(join(process.cwd(), "lib/backlinks/services/contactFormSubmission.ts"), "utf8");
+  assert.doesNotMatch(`${worker}\n${submission}`, /\.type\(|press\(|requestSubmit|form\.submit|dispatchEvent|SubmitEvent|backlink_outreach_attempts/);
 });
 test("CAPTCHA classification only", async () => {
   const page = new FakePage();
@@ -461,22 +533,24 @@ test("DNC race", async () => {
   assert.equal(result.state, "manual_review");
   assert.equal(d.transitions.at(-1)?.eventType, "dnc_revalidation_failed");
 });
-test("successful C4 progression reaches mapped and stops", async () => {
+test("successful C5 progression preserves ordered C3/C4/C5 states", async () => {
   const d = deps();
   const result = await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId);
-  assert.equal(result.kind, "mapped");
-  assert.deepEqual(d.transitions.map((transition) => transition.state), ["navigating", "discovered", "mapped"]);
+  assert.equal(result.kind, "submission_confirmed");
+  assert.deepEqual(d.transitions.map((transition) => transition.state), ["navigating", "discovered", "mapped", "filled", "pre_submit_validated", "submitting"]);
+  assert.equal(d.confirmations, 1);
 });
-for (const forbiddenState of ["filled", "pre_submit_validated", "submitting", "submission_confirmed"] as const) {
-  test(`cannot reach ${forbiddenState}`, async () => {
+for (const requiredState of ["filled", "pre_submit_validated", "submitting"] as const) {
+  test(`C5 reaches ${requiredState} before confirmation RPC`, async () => {
     const d = deps();
     await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId);
-    assert.equal(d.transitions.some((transition) => transition.state === forbiddenState), false);
+    assert.equal(d.transitions.some((transition) => transition.state === requiredState), true);
   });
 }
-test("no accepted initial attempt", async () => {
+test("accepted initial attempt is delegated to confirmation RPC only", async () => {
   const d = deps();
   await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId);
+  assert.equal(d.confirmations, 1);
   assert.equal(d.transitions.some((transition) => transition.eventType === "submission_confirmed"), false);
 });
 test("no outreach activation", () => {

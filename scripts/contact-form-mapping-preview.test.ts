@@ -118,6 +118,10 @@ function mappingSource(): string {
   return readFileSync(join(process.cwd(), "lib/backlinks/services/contactFormMappingPreview.ts"), "utf8");
 }
 
+function submissionSource(): string {
+  return readFileSync(join(process.cwd(), "lib/backlinks/services/contactFormSubmission.ts"), "utf8");
+}
+
 async function expectNavigationUrlRejected(rawUrl: string) {
   const result = await validateContactFormNavigationUrl(rawUrl, async () => [{ address: "93.184.216.34", family: 4 }]);
   assert.equal(result.ok, false, rawUrl);
@@ -422,44 +426,44 @@ test("T47 mapped state reachable after safe mapping", () => {
   assert.match(source, /form_mapping_previewed/);
 });
 
-test("T48 filled state unreachable", () => {
-  assert.doesNotMatch(workerSource(), /nextState:\s*"filled"/);
+test("T48 C4 mapping preview remains independent from filled state", () => {
+  assert.doesNotMatch(mappingSource(), /nextState:\s*"filled"/);
 });
 
-test("T49 pre_submit_validated unreachable", () => {
-  assert.doesNotMatch(workerSource(), /nextState:\s*"pre_submit_validated"/);
+test("T49 C4 mapping preview remains independent from pre_submit_validated state", () => {
+  assert.doesNotMatch(mappingSource(), /nextState:\s*"pre_submit_validated"/);
 });
 
-test("T50 submitting unreachable", () => {
-  assert.doesNotMatch(workerSource(), /nextState:\s*"submitting"/);
+test("T50 C4 mapping preview remains independent from submitting state", () => {
+  assert.doesNotMatch(mappingSource(), /nextState:\s*"submitting"/);
 });
 
-test("T51 submission_confirmed unreachable", () => {
-  assert.doesNotMatch(workerSource(), /nextState:\s*"submission_confirmed"/);
+test("T51 C4 mapping preview remains independent from submission_confirmed state", () => {
+  assert.doesNotMatch(mappingSource(), /nextState:\s*"submission_confirmed"/);
 });
 
-test("T52 no accepted initial created", () => {
-  assert.doesNotMatch(workerSource(), /backlink_outreach_attempts|accepted_initial|submission_confirmed/);
+test("T52 accepted initial creation remains delegated outside C4 mapping preview", () => {
+  assert.doesNotMatch(mappingSource(), /backlink_outreach_attempts|accepted_initial|submission_confirmed/);
 });
 
 test("T53 no outreach activation", () => {
   assert.doesNotMatch(workerSource(), /status\s*=\s*["']active|current_attempt\s*=\s*1|activate/i);
 });
 
-test("T54 no page fill/type/select/check", () => {
-  assert.doesNotMatch(workerSource(), /\.(?:fill|type|selectOption|check|uncheck|setInputFiles)\(/);
+test("T54 C4 mapping preview does not fill/type/select/check", () => {
+  assert.doesNotMatch(mappingSource(), /\.(?:fill|type|selectOption|check|uncheck|setInputFiles)\(/);
 });
 
-test("T55 no submit click", () => {
-  assert.doesNotMatch(workerSource(), /\.click\(/);
+test("T55 C4 mapping preview does not click submit", () => {
+  assert.doesNotMatch(mappingSource(), /\.click\(/);
 });
 
 test("T56 no form.submit/requestSubmit", () => {
-  assert.doesNotMatch(workerSource(), /requestSubmit|form\.submit\(/);
+  assert.doesNotMatch(`${workerSource()}\n${mappingSource()}`, /requestSubmit|form\.submit\(/);
 });
 
 test("T57 no synthetic input/change/submit events", () => {
-  assert.doesNotMatch(workerSource(), /dispatchEvent|InputEvent|SubmitEvent|ChangeEvent/);
+  assert.doesNotMatch(`${workerSource()}\n${mappingSource()}`, /dispatchEvent|InputEvent|SubmitEvent|ChangeEvent/);
 });
 
 test("T58 C3 POST/PUT/PATCH/DELETE browser request guards remain active", () => {
@@ -487,14 +491,14 @@ test("T60 lease loss during discovery/mapping fails closed", () => {
 
 test("T61 stale approval before mapping fails closed", () => {
   const source = workerSource();
-  assert.ok(source.indexOf("const revalidation = revalidateExecutionContext(context)") < source.indexOf("const mapping = buildContactFormMappingPreview"));
-  assert.match(source, /CONTACT_FORM_APPROVAL_STALE/);
+  assert.ok(source.indexOf("const revalidation = revalidateContactFormExecutionContext(context)") < source.indexOf("const mapping = buildContactFormMappingPreview"));
+  assert.match(submissionSource(), /CONTACT_FORM_APPROVAL_STALE/);
 });
 
 test("T62 DNC before mapping fails closed", () => {
   const source = workerSource();
-  assert.ok(source.indexOf("const revalidation = revalidateExecutionContext(context)") < source.indexOf("const mapping = buildContactFormMappingPreview"));
-  assert.match(source, /CONTACT_FORM_CONTACT_SUPPRESSED/);
+  assert.ok(source.indexOf("const revalidation = revalidateContactFormExecutionContext(context)") < source.indexOf("const mapping = buildContactFormMappingPreview"));
+  assert.match(submissionSource(), /CONTACT_FORM_CONTACT_SUPPRESSED/);
 });
 
 test("T63 deterministic repeated fixture result", () => {
