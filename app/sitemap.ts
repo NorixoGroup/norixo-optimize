@@ -9,6 +9,7 @@ import { tools } from "@/data/tools";
 import { articles } from "@/data/articles";
 import { guides } from "@/data/guides";
 import { localSeoTopics } from "@/data/localSeo";
+import { isCityTopicSitemapEligible } from "@/lib/seo/sitemapEligibility";
 import {
   buildDefaultNextPublicationCatalog,
   buildNextSitemapEntries,
@@ -70,8 +71,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   for (const city of cities) {
     for (const topic of localSeoTopics) {
+      const pathname =
+        `/airbnb-optimizer/${city.slug}/${topic.slug}`;
+
+      if (!isCityTopicSitemapEligible(pathname)) {
+        continue;
+      }
+
       entries.push({
-        url: `${publicSiteUrl}/airbnb-optimizer/${city.slug}/${topic.slug}`,
+        url: `${publicSiteUrl}${pathname}`,
       });
     }
   }
