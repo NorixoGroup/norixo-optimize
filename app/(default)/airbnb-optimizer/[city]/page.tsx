@@ -6,6 +6,7 @@ import { countries } from "@/data/countries";
 import { cities, getCityBySlug, type City } from "@/data/cities";
 import { getCityHubContentOverride } from "@/data/cityHubContentOverrides";
 import { localSeoTopics } from "@/data/localSeo";
+import { isCityTopicSitemapEligible } from "@/lib/seo/sitemapEligibility";
 import { buildCitySchema } from "@/lib/seo/buildCitySchema";
 import { buildCityMetadata } from "@/lib/seo/buildCityMetadata";
 
@@ -139,6 +140,11 @@ export default async function CityOptimizerPage({ params }: PageProps) {
   const baseUrl = publicSiteUrl;
   const relatedHubCities = relatedHubCitiesFor(city.slug, 4);
   const contentOverride = getCityHubContentOverride(city.slug);
+  const eligibleTopics = localSeoTopics.filter((topic) =>
+    isCityTopicSitemapEligible(
+      `/airbnb-optimizer/${city.slug}/${topic.slug}`,
+    ),
+  );
   const schema = buildCitySchema({
     city: {
       slug: city.slug,
@@ -318,7 +324,12 @@ export default async function CityOptimizerPage({ params }: PageProps) {
             {contentOverride.priorities.map((priority) => {
               const topic = localSeoTopics.find((item) => item.slug === priority.topicSlug);
 
-              if (!topic) {
+              if (
+                !topic ||
+                !isCityTopicSitemapEligible(
+                  `/airbnb-optimizer/${city.slug}/${topic.slug}`,
+                )
+              ) {
                 return null;
               }
 
@@ -439,9 +450,10 @@ export default async function CityOptimizerPage({ params }: PageProps) {
         </div>
       </section>
 
-      <section className="nk-card nk-card-hover p-6" aria-labelledby="topics-heading">
-        <h2 id="topics-heading" className="nk-section-title">
-          Explore Airbnb optimization topics for {name}
+      {eligibleTopics.length > 0 ? (
+        <section className="nk-card nk-card-hover p-6" aria-labelledby="topics-heading">
+          <h2 id="topics-heading" className="nk-section-title">
+            Explore Airbnb optimization topics for {name}
         </h2>
         <p className="mt-2 text-[15px] leading-7 text-slate-700">
           Browse every city-specific guide for {name} to move from high-level market context to
@@ -451,7 +463,7 @@ export default async function CityOptimizerPage({ params }: PageProps) {
           className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
           aria-label={`${name} Airbnb optimization topics`}
         >
-          {localSeoTopics.map((topic) => (
+          {eligibleTopics.map((topic) => (
             <Link
               key={topic.slug}
               href={`/airbnb-optimizer/${city.slug}/${topic.slug}`}
@@ -460,8 +472,9 @@ export default async function CityOptimizerPage({ params }: PageProps) {
               {city.name} {topic.titleSuffix}
             </Link>
           ))}
-        </nav>
-      </section>
+          </nav>
+        </section>
+      ) : null}
 
       {/* Internal links — discrete crawl paths */}
       <section className="nk-section-card">

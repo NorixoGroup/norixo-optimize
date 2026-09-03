@@ -5,6 +5,7 @@ import { cities } from "@/data/cities";
 import type { City } from "@/data/cities";
 import { localSeoTopics, getLocalSeoTopicBySlug } from "@/data/localSeo";
 import type { LocalSeoTopic } from "@/data/localSeo";
+import { isCityTopicSitemapEligible } from "@/lib/seo/sitemapEligibility";
 import { guides } from "@/data/guides";
 import { articles } from "@/data/articles";
 import { tools } from "@/data/tools";
@@ -400,7 +401,12 @@ export default async function LocalSeoPage({ params }: Props) {
   const executiveSummary = buildExecutiveSummary(city, topic);
   const topicAnalysis = buildTopicSpecificAnalysis(city, topic);
   const contentOverride = getCityTopicContentOverride(city.slug, topic.slug);
-  const relatedTopics = buildRelatedTopics(topic);
+  const relatedTopics = buildRelatedTopics(topic).filter(
+    (relatedTopic) =>
+      isCityTopicSitemapEligible(
+        `/airbnb-optimizer/${city.slug}/${relatedTopic.slug}`,
+      ),
+  );
   const recommendedResources = buildRecommendedResources(city, topic);
 
   const pageUrl = `https://norixo.io/airbnb-optimizer/${city.slug}/${topic.slug}`;
