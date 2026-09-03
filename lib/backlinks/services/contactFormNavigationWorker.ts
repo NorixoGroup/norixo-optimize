@@ -14,6 +14,12 @@ import {
 } from "@/lib/backlinks/repositories/contactFormAutomationRepository";
 import type { BacklinkRepositoryClient } from "@/lib/backlinks/repositories/repositoryClient";
 import { buildContactFormApprovalFingerprint } from "@/lib/backlinks/services/contactFormApprovalFingerprint";
+import {
+  buildContactFormMappingPreview,
+  contactFormMappingPreviewToSafeMetadata,
+  type ContactFormDiscoveredPage,
+  type ContactFormMappingPreview,
+} from "@/lib/backlinks/services/contactFormMappingPreview";
 import type { Json } from "@/types/database.types";
 
 const UNSAFE_MUTATION_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -37,6 +43,7 @@ export type ContactFormBrowserPage = {
   title: () => Promise<string>;
   count: (selector: string) => Promise<number>;
   evaluatePageSignals: () => Promise<ContactFormPageSignals>;
+  inspectForms: () => Promise<ContactFormDiscoveredPage>;
   onPopup: (handler: () => void) => void;
   onDownload: (handler: () => void) => void;
 };
@@ -70,6 +77,7 @@ export type ContactFormNavigationDependencies = Readonly<{
 export type ContactFormNavigationResult =
   | { kind: "empty" }
   | { kind: "discovered"; run: ContactFormRun; metadata: ContactFormNavigationMetadata; cleanup: "success" | "failed" }
+  | { kind: "mapped"; run: ContactFormRun; metadata: ContactFormNavigationMetadata; mapping: ContactFormMappingPreview; cleanup: "success" | "failed" }
   | { kind: "blocked"; run: ContactFormRun; state: "blocked_policy" | "blocked_captcha" | "manual_review" | "failed_pre_submit"; safeErrorCode: string; cleanup: "success" | "failed" }
   | { kind: "lease_lost"; runId: string; cleanup: "success" | "failed" };
 export type ContactFormNavigationMetadata = Readonly<{
@@ -153,11 +161,97 @@ function adaptPlaywrightPage(page: Page): ContactFormBrowserPage {
       page.evaluate(() => {
         const bodyText = document.body?.innerText?.toLowerCase() ?? "";
         const hasCaptcha =
-          Boolean(document.querySelector('[class*="captcha" i], [id*="captcha" i], iframe[src*="captcha" i], iframe[src*="recaptcha" i], iframe[src*="hcaptcha" i]')) ||
-          /\b(captcha|recaptcha|hcaptcha|verify you are human|human verification)\b/i.test(bodyText);
+          Boolean(document.querySelector('[class*="captcha" i], [id*="captcha" i], iframe[src*="captcha" i], iframe[src*="recaptcha" i], iframe[src*="hcaptcha" i], iframe[src*="turnstile" i], [class*="cf-turnstile" i], [name="cf-turnstile-response"]')) ||
+          /\b(captcha|recaptcha|hcaptcha|turnstile|verify you are human|human verification)\b/i.test(bodyText);
         const hasPasswordField = Boolean(document.querySelector('input[type="password"]'));
         const hasLoginWall = hasPasswordField || /\b(sign in|log in|login required|create an account|members only)\b/i.test(bodyText);
         return { hasCaptcha, hasLoginWall, hasPasswordField };
+      }),
+    inspectForms: () =>
+      page.evaluate(() => {
+        const maxForms = 5;
+        const maxControlsPerForm = 30;
+        const maxTextLength = 80;
+        const clamp = (value: string | null | undefined, limit = maxTextLength) => {
+          const text = (value ?? "").trim().replace(/\s+/g, " ");
+          return text.length > limit ? `${text.slice(0, limit - 1)}…` : text;
+        };
+        const nullable = (value: string | null | undefined, limit = maxTextLength) => {
+          const text = clamp(value, limit);
+          return text ? text : null;
+        };
+        const visible = (element: Element) => {
+          const htmlElement = element as HTMLElement;
+          const style = window.getComputedStyle(htmlElement);
+          return style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0" && htmlElement.getClientRects().length > 0;
+        };
+        const textOf = (element: Element | null) => nullable(element?.textContent ?? null);
+        const textByIds = (ids: string | null) => {
+          if (!ids) return null;
+          return nullable(
+            ids
+              .split(/\s+/)
+              .map((id) => document.getElementById(id)?.textContent ?? "")
+              .join(" "),
+          );
+        };
+        const labelsFor = (control: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | HTMLButtonElement) => {
+          const direct = Array.from(control.labels ?? []).map((label) => label.textContent ?? "");
+          const id = control.id ? Array.from(document.querySelectorAll(`label[for="${CSS.escape(control.id)}"]`)).map((label) => label.textContent ?? "") : [];
+          return nullable([...direct, ...id].join(" "));
+        };
+        const formHeading = (form: HTMLFormElement) => {
+          const labelled = textByIds(form.getAttribute("aria-labelledby"));
+          if (labelled) return labelled;
+          const aria = nullable(form.getAttribute("aria-label"));
+          if (aria) return aria;
+          const previous = form.previousElementSibling;
+          if (previous && /^(H1|H2|H3|H4|H5|H6)$/.test(previous.tagName)) return textOf(previous);
+          return null;
+        };
+        const controlsFor = (form: HTMLFormElement) =>
+          Array.from(form.querySelectorAll("input, textarea, select, button"))
+            .slice(0, maxControlsPerForm)
+            .map((element, ordinal) => {
+              const tag = element.tagName.toLowerCase() as "input" | "textarea" | "select" | "button";
+              const input = element as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | HTMLButtonElement;
+              const rawType = tag === "input" || tag === "button" ? (input as HTMLInputElement | HTMLButtonElement).type : tag;
+              const value = "value" in input ? input.value : "";
+              return {
+                ordinal,
+                tag,
+                type: clamp(rawType || tag, 32),
+                name: nullable(input.getAttribute("name")),
+                id: nullable(input.id),
+                autocomplete: nullable(input.getAttribute("autocomplete")),
+                labelText: labelsFor(input),
+                ariaLabel: nullable(input.getAttribute("aria-label")),
+                ariaLabelledbyText: textByIds(input.getAttribute("aria-labelledby")),
+                placeholder: nullable(input.getAttribute("placeholder")),
+                required: input.hasAttribute("required"),
+                disabled: (input as HTMLInputElement).disabled === true,
+                readOnly: "readOnly" in input ? input.readOnly === true : false,
+                hidden: tag === "input" && rawType.toLowerCase() === "hidden",
+                visible: visible(input),
+                valuePresent: value.trim().length > 0,
+                optionsCount: tag === "select" ? (input as HTMLSelectElement).options.length : undefined,
+              };
+            });
+        return {
+          pageUrl: window.location.href,
+          pageTitle: clamp(document.title),
+          forms: Array.from(document.forms)
+            .slice(0, maxForms)
+            .map((form, ordinal) => ({
+              ordinal,
+              action: nullable(form.getAttribute("action"), 300),
+              method: nullable(form.getAttribute("method"), 12),
+              labelText: formHeading(form),
+              legendText: textOf(form.querySelector("fieldset legend")),
+              buttonText: nullable(Array.from(form.querySelectorAll("button, input[type='submit'], input[type='button']")).map((button) => button.textContent || button.getAttribute("value") || "").join(" ")),
+              controls: controlsFor(form),
+            })),
+        };
       }),
     onPopup: (handler) => {
       page.on("popup", (popup) => {
@@ -382,7 +476,42 @@ export async function executeContactFormNavigationWorkerOnceWithDependencies(
       evidenceReference: `c3_navigation:${navigatingRun.id}`,
       safeMetadata: toSafeMetadata(metadata),
     });
-    return finish({ kind: "discovered", run: discovered, metadata, cleanup: "success" });
+    await keepLease();
+    const mapping = buildContactFormMappingPreview({
+      page: await session.page.inspectForms(),
+      approvedContent: {
+        senderName: context.approval.sender_name,
+        senderEmail: context.approval.sender_email,
+        senderCompany: context.approval.sender_company,
+        senderWebsite: context.approval.sender_website,
+        subject: context.approval.subject,
+        body: context.approval.body,
+      },
+      pageSignals: signals,
+    });
+    const mappingMetadata = contactFormMappingPreviewToSafeMetadata(mapping);
+    if (mapping.result === "mapped") {
+      const mapped = await deps.transitionRun({
+        runId: discovered.id,
+        workerId,
+        nextState: "mapped",
+        eventType: "form_mapping_previewed",
+        finalUrl: metadata.finalUrl,
+        evidenceReference: `c4_mapping:${discovered.id}`,
+        safeMetadata: mappingMetadata,
+      });
+      return finish({ kind: "mapped", run: mapped, metadata, mapping, cleanup: "success" });
+    }
+    if (mapping.result === "blocked_captcha") {
+      const run = await deps.transitionRun({ runId: discovered.id, workerId, nextState: "blocked_captcha", eventType: "captcha_detected", safeErrorCode: "CONTACT_FORM_CAPTCHA_DETECTED", safeMetadata: mappingMetadata });
+      return finish({ kind: "blocked", run, state: "blocked_captcha", safeErrorCode: "CONTACT_FORM_CAPTCHA_DETECTED", cleanup: "success" });
+    }
+    if (mapping.result === "blocked_policy") {
+      const run = await deps.transitionRun({ runId: discovered.id, workerId, nextState: "blocked_policy", eventType: "mapping_policy_blocked", safeErrorCode: "CONTACT_FORM_MAPPING_POLICY_BLOCKED", safeMetadata: mappingMetadata });
+      return finish({ kind: "blocked", run, state: "blocked_policy", safeErrorCode: "CONTACT_FORM_MAPPING_POLICY_BLOCKED", cleanup: "success" });
+    }
+    const run = await deps.transitionRun({ runId: discovered.id, workerId, nextState: "manual_review", eventType: "mapping_manual_review", safeErrorCode: "CONTACT_FORM_MAPPING_MANUAL_REVIEW", safeMetadata: mappingMetadata });
+    return finish({ kind: "blocked", run, state: "manual_review", safeErrorCode: "CONTACT_FORM_MAPPING_MANUAL_REVIEW", cleanup: "success" });
   } catch (error) {
     if (isLeaseLostError(error)) return finish({ kind: "lease_lost", runId: claimedRun.id, cleanup: "success" });
     const code = isRunTimeoutError(error) ? "CONTACT_FORM_NAVIGATION_RUN_TIMEOUT" : "CONTACT_FORM_NAVIGATION_FAILED";

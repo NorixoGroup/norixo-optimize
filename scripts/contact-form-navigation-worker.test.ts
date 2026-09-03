@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import type { Json } from "../types/database.types";
+import type { ContactFormDiscoveredForm } from "../lib/backlinks/services/contactFormMappingPreview";
 import {
   executeContactFormNavigationWorkerOnceWithDependencies,
   isContactFormNavigationWorkerEnabled,
@@ -160,6 +161,25 @@ function resolver(records: readonly { address: string; family: 4 | 6 }[] | Error
   };
 }
 
+function discoveredContactForm(overrides: Partial<ContactFormDiscoveredForm> = {}): ContactFormDiscoveredForm {
+  return {
+    ordinal: 0,
+    action: "/contact",
+    method: "post",
+    labelText: "Contact us",
+    legendText: null,
+    buttonText: "Send message",
+    controls: [
+      { ordinal: 0, tag: "input", type: "text", name: "name", id: "name", autocomplete: "name", labelText: "Your name", ariaLabel: null, ariaLabelledbyText: null, placeholder: null, required: true, disabled: false, readOnly: false, hidden: false, visible: true, valuePresent: false },
+      { ordinal: 1, tag: "input", type: "email", name: "email", id: "email", autocomplete: "email", labelText: "Email", ariaLabel: null, ariaLabelledbyText: null, placeholder: null, required: true, disabled: false, readOnly: false, hidden: false, visible: true, valuePresent: false },
+      { ordinal: 2, tag: "input", type: "text", name: "subject", id: "subject", autocomplete: null, labelText: "Subject", ariaLabel: null, ariaLabelledbyText: null, placeholder: null, required: false, disabled: false, readOnly: false, hidden: false, visible: true, valuePresent: false },
+      { ordinal: 3, tag: "textarea", type: "textarea", name: "message", id: "message", autocomplete: null, labelText: "Message", ariaLabel: null, ariaLabelledbyText: null, placeholder: null, required: true, disabled: false, readOnly: false, hidden: false, visible: true, valuePresent: false },
+      { ordinal: 4, tag: "button", type: "submit", name: null, id: null, autocomplete: null, labelText: null, ariaLabel: null, ariaLabelledbyText: null, placeholder: null, required: false, disabled: false, readOnly: false, hidden: false, visible: true, valuePresent: false },
+    ],
+    ...overrides,
+  };
+}
+
 class FakePage implements ContactFormBrowserPage {
   private handler: ((request: ContactFormBrowserRequest) => Promise<ContactFormBrowserRequestDecision>) | null = null;
   currentUrl = "about:blank";
@@ -172,6 +192,7 @@ class FakePage implements ContactFormBrowserPage {
     ["button", 1],
   ]);
   signals = { hasCaptcha: false, hasLoginWall: false, hasPasswordField: false };
+  forms: ContactFormDiscoveredForm[] = [discoveredContactForm()];
   requests: ContactFormBrowserRequest[] = [];
   submitted = false;
   popupHandler: (() => void) | null = null;
@@ -200,6 +221,9 @@ class FakePage implements ContactFormBrowserPage {
   }
   async evaluatePageSignals() {
     return this.signals;
+  }
+  async inspectForms() {
+    return { pageUrl: this.currentUrl, pageTitle: this.titleValue, forms: this.forms };
   }
   onPopup(handler: () => void) {
     this.popupHandler = handler;
@@ -299,7 +323,7 @@ test("safe redirect", async () => {
   ];
   const d = deps({ page });
   const result = await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId);
-  assert.equal(result.kind, "discovered");
+  assert.equal(result.kind, "mapped");
   assert.equal(d.transitions.at(-1)?.finalUrl, "https://forms.example/contact-us");
 });
 test("private redirect rejection", async () => {
@@ -377,13 +401,13 @@ for (const method of ["PUT", "PATCH", "DELETE"]) {
 test("GET navigation allowed", async () => {
   const d = deps();
   const result = await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId);
-  assert.equal(result.kind, "discovered");
+  assert.equal(result.kind, "mapped");
 });
 test("form metadata inspection without mutation", async () => {
   const page = new FakePage();
   const d = deps({ page });
   const result = await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId);
-  assert.equal(result.kind, "discovered");
+  assert.equal(result.kind, "mapped");
   assert.equal(result.metadata.formCount, 1);
   assert.equal(page.submitted, false);
 });
@@ -437,11 +461,11 @@ test("DNC race", async () => {
   assert.equal(result.state, "manual_review");
   assert.equal(d.transitions.at(-1)?.eventType, "dnc_revalidation_failed");
 });
-test("successful progression stops at discovered", async () => {
+test("successful C4 progression reaches mapped and stops", async () => {
   const d = deps();
   const result = await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId);
-  assert.equal(result.kind, "discovered");
-  assert.deepEqual(d.transitions.map((transition) => transition.state), ["navigating", "discovered"]);
+  assert.equal(result.kind, "mapped");
+  assert.deepEqual(d.transitions.map((transition) => transition.state), ["navigating", "discovered", "mapped"]);
 });
 for (const forbiddenState of ["filled", "pre_submit_validated", "submitting", "submission_confirmed"] as const) {
   test(`cannot reach ${forbiddenState}`, async () => {
