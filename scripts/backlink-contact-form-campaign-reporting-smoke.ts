@@ -1,0 +1,65 @@
+import fs from "node:fs";
+
+const page = fs.readFileSync("app/(default)/dashboard/backlinks/page.tsx", "utf8");
+const component = fs.readFileSync(
+  "app/(default)/dashboard/backlinks/_components/ContactFormCampaignReportDialog.tsx",
+  "utf8",
+);
+const route = fs.readFileSync(
+  "app/api/backlinks/campaigns/[id]/contact-form-report/route.ts",
+  "utf8",
+);
+const service = fs.readFileSync(
+  "lib/backlinks/services/contactFormCampaignReportingService.ts",
+  "utf8",
+);
+
+function requireText(source: string, value: string, label: string) {
+  if (!source.includes(value)) throw new Error(`Missing ${label}: ${value}`);
+}
+
+function forbid(source: string, pattern: RegExp, label: string) {
+  if (pattern.test(source)) throw new Error(`Forbidden ${label}: ${pattern}`);
+}
+
+requireText(page, "Reporting formulaires", "campaign reporting action");
+requireText(page, "openContactFormCampaignReport", "campaign report handler");
+requireText(page, "/contact-form-report", "campaign report GET endpoint");
+requireText(page, "ContactFormCampaignReportDialog", "campaign report dialog");
+
+requireText(component, "Vue de reporting uniquement", "read-only UI boundary");
+requireText(component, "ni la livraison au destinataire", "delivery proof boundary");
+requireText(component, "ni une réponse", "reply proof boundary");
+requireText(component, "ni la publication d’un backlink", "backlink proof boundary");
+
+requireText(route, "export async function GET", "GET route");
+requireText(route, 'code === "NOT_FOUND"', "404 not-found contract");
+requireText(route, "status: 404", "404 response");
+forbid(route, /export async function (POST|PUT|PATCH|DELETE)/, "mutation route");
+
+requireText(
+  service,
+  "await getCampaign(client, normalizedWorkspaceId, normalizedCampaignId);",
+  "campaign existence validation",
+);
+requireText(service, '.eq("workspace_id", normalizedWorkspaceId)', "workspace scope");
+requireText(service, '.eq("campaign_id", normalizedCampaignId)', "campaign scope");
+requireText(service, '.eq("channel", "contact_form")', "contact form scope");
+requireText(service, 'delivery_state: "unknown"', "delivery independence");
+requireText(service, 'reply_state: "unknown"', "reply independence");
+requireText(service, 'backlink_state: "unknown"', "backlink independence");
+
+for (const [label, source] of [
+  ["service", service],
+  ["route", route],
+  ["component", component],
+] as const) {
+  forbid(source, /approveContactFormInitial/, `${label} approval mutation`);
+  forbid(source, /queueContactFormRun/, `${label} queue mutation`);
+  forbid(source, /claimNextContactFormRun/, `${label} worker claim`);
+  forbid(source, /transitionContactFormRun/, `${label} worker transition`);
+  forbid(source, /confirmContactFormSubmission/, `${label} submission mutation`);
+  forbid(source, /retryContactFormPreSubmitRun/, `${label} retry mutation`);
+}
+
+console.log("BACKLINK_CONTACT_FORM_CAMPAIGN_REPORTING_SMOKE=PASS");
