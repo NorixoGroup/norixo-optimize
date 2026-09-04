@@ -2,12 +2,22 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { buildContactFormApprovalFingerprint } from "../lib/backlinks/services/contactFormApprovalFingerprint";
+import { getContactFormDashboardNextAction } from "../lib/backlinks/services/contactFormAutomationService";
 
 const input = { workspaceId: " workspace ", campaignId: " campaign ", outreachId: " outreach ", contactId: " contact ", opportunityId: " opportunity ", targetUrl: " https://norixo.example/target ", formUrl: " https://example.com/contact ", senderName: " Norixo ", senderEmail: " team@norixo.example ", senderCompany: " Norixo ", senderWebsite: " https://norixo.example ", subject: " Hello ", body: " Body " };
 const fingerprint = buildContactFormApprovalFingerprint(input);
 assert.match(fingerprint, /^cf1_[0-9a-f]{64}$/);
 assert.equal(fingerprint, buildContactFormApprovalFingerprint({ ...input }));
 for (const key of ["subject", "body", "formUrl", "targetUrl"] as const) assert.notEqual(fingerprint, buildContactFormApprovalFingerprint({ ...input, [key]: `${input[key]} changed` }));
+
+assert.equal(getContactFormDashboardNextAction(null), "approve");
+for (const state of ["queued", "claimed", "navigating", "discovered", "mapped", "filled", "pre_submit_validated", "submitting"]) {
+  assert.equal(getContactFormDashboardNextAction({ state }), "worker", `${state} should route to worker`);
+}
+assert.equal(getContactFormDashboardNextAction({ state: "submission_confirmed" }), "submission_complete");
+for (const state of ["submission_ambiguous", "blocked_captcha", "blocked_policy", "failed_pre_submit", "manual_review"]) {
+  assert.equal(getContactFormDashboardNextAction({ state }), "manual_review", `${state} should route to manual review`);
+}
 
 const migration = readFileSync(join(process.cwd(), "supabase/migrations/20260902120000_add_backlink_contact_form_automation_foundation.sql"), "utf8");
 for (const clause of [
@@ -50,6 +60,12 @@ const sourceFiles = [
   "lib/backlinks/services/contactFormAutomationService.ts",
   "lib/backlinks/services/contactFormApprovalFingerprint.ts",
 ];
+const automationService = readFileSync(join(process.cwd(), "lib/backlinks/services/contactFormAutomationService.ts"), "utf8");
+assert.match(automationService, /finalAttemptStatus: currentRun\?\.state === "submission_confirmed" \? "accepted" : null/);
+assert.match(automationService, /delivery_state: "unknown"/);
+assert.match(automationService, /reply_state: "unknown"/);
+assert.match(automationService, /backlink_state: "unknown"/);
+
 const executionPrimitive = /(?:from\s+["'](?:playwright|playwright-core|puppeteer)["']|require\(["'](?:playwright|playwright-core|puppeteer)["']\)|\b(?:chromium|firefox|webkit)\s*\.\s*launch\s*\(|\b(?:scheduleJob|setInterval|setTimeout|cron)\s*\()/;
 for (const file of sourceFiles) {
   const source = readFileSync(join(process.cwd(), file), "utf8").replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "");

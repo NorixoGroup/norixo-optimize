@@ -11,6 +11,16 @@ const dialog = fs.readFileSync(
   "utf8",
 );
 
+function requireSafeSubmissionCompleteLabel(source: string) {
+  const match = source.match(/submission_complete:\s*"([^"]+)"/);
+  assert.ok(match, "submission_complete next action label is present");
+  assert.equal(
+    match[1],
+    "Soumission confirmée — aucune action automatique suivante",
+  );
+  assert.doesNotMatch(match[1], /livr|reçu|répon|backlink|obtenu|succès complet/i);
+}
+
 assert.match(
   page,
   /row\.channel === "contact_form"[\s\S]{0,500}Suivi formulaire/,
@@ -60,6 +70,13 @@ assert.match(
   dialog,
   /backlink_state/,
 );
+
+assert.match(
+  dialog,
+  /nextActionLabel\(dashboard\.next_action\)/,
+);
+
+requireSafeSubmissionCompleteLabel(dialog);
 
 assert.match(
   dialog,

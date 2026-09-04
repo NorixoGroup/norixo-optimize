@@ -56,6 +56,18 @@ function Stat({ label, value }: { label: string; value: number }) {
   );
 }
 
+const NEXT_ACTION_LABELS: Record<string, string> = {
+  approve: "Approbation requise",
+  worker: "Traitement automatisé en attente",
+  manual_review: "Revue manuelle requise",
+  submission_complete: "Soumission confirmée — aucune action automatique suivante",
+};
+
+function nextActionLabel(input: string | null | undefined) {
+  if (!input || !input.trim()) return "—";
+  return NEXT_ACTION_LABELS[input] ?? input;
+}
+
 export default function ContactFormCampaignReportDialog({
   campaignLabel,
   loading,
@@ -133,7 +145,7 @@ export default function ContactFormCampaignReportDialog({
                       <td className="px-3 py-3">{item.reply_state}</td>
                       <td className="px-3 py-3">{item.backlink_state}</td>
                       <td className="px-3 py-3">
-                        {item.next_action}
+                        {nextActionLabel(item.next_action)}
                         {item.block_reason ? <div className="mt-1 text-xs text-red-700">{item.block_reason}</div> : null}
                       </td>
                     </tr>

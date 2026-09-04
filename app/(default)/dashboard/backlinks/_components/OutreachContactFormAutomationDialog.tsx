@@ -60,6 +60,18 @@ function value(input: string | null | undefined) {
   return input && input.trim() ? input : "—";
 }
 
+const NEXT_ACTION_LABELS: Record<string, string> = {
+  approve: "Approbation requise",
+  worker: "Traitement automatisé en attente",
+  manual_review: "Revue manuelle requise",
+  submission_complete: "Soumission confirmée — aucune action automatique suivante",
+};
+
+function nextActionLabel(input: string | null | undefined) {
+  const raw = value(input);
+  return raw === "—" ? raw : NEXT_ACTION_LABELS[raw] ?? raw;
+}
+
 export default function OutreachContactFormAutomationDialog({
   outreachKey,
   loading,
@@ -156,7 +168,7 @@ export default function OutreachContactFormAutomationDialog({
 
                 <div>
                   <dt className="text-slate-500">Prochaine action</dt>
-                  <dd>{value(dashboard.next_action)}</dd>
+                  <dd>{nextActionLabel(dashboard.next_action)}</dd>
                 </div>
 
                 <div>
