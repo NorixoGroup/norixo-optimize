@@ -325,12 +325,17 @@ function deps(input: {
   dns?: ContactFormDnsResolver;
   heartbeatError?: Error;
   closeFailure?: boolean;
-} = {}): ContactFormNavigationDependencies & { transitions: Array<{ state: ContactFormRunState; eventType: string; safeErrorCode: string | null; metadata: Json | undefined; finalUrl: string | null }>; runtime: ReturnType<typeof runtime>; heartbeats: number; claims: number; confirmations: number } {
+  claimNextRunResult?: ContactFormRun | null;
+  claimRunByIdResult?: ContactFormRun | null;
+} = {}): ContactFormNavigationDependencies & { transitions: Array<{ state: ContactFormRunState; eventType: string; safeErrorCode: string | null; metadata: Json | undefined; finalUrl: string | null }>; runtime: ReturnType<typeof runtime>; heartbeats: number; claims: number; targetClaims: number; targetClaimRunIds: string[]; loadedRunIds: string[]; confirmations: number } {
   const ctx = input.ctx ?? context();
   const fakeRuntime = runtime(input.page, input.closeFailure);
   const transitions: Array<{ state: ContactFormRunState; eventType: string; safeErrorCode: string | null; metadata: Json | undefined; finalUrl: string | null }> = [];
   let heartbeats = 0;
   let claims = 0;
+  let targetClaims = 0;
+  const targetClaimRunIds: string[] = [];
+  const loadedRunIds: string[] = [];
   let confirmations = 0;
   return {
     get heartbeats() {
@@ -339,6 +344,11 @@ function deps(input: {
     get claims() {
       return claims;
     },
+    get targetClaims() {
+      return targetClaims;
+    },
+    targetClaimRunIds,
+    loadedRunIds,
     get confirmations() {
       return confirmations;
     },
@@ -346,7 +356,13 @@ function deps(input: {
     transitions,
     async claimNextRun() {
       claims += 1;
-      return ctx.run;
+      return "claimNextRunResult" in input ? input.claimNextRunResult ?? null : ctx.run;
+    },
+    async claimRunById(targetRunId) {
+      targetClaims += 1;
+      targetClaimRunIds.push(targetRunId);
+      if ("claimRunByIdResult" in input) return input.claimRunByIdResult ?? null;
+      return targetRunId === ctx.run.id ? ctx.run : null;
     },
     async heartbeatRun() {
       heartbeats += 1;
@@ -355,14 +371,15 @@ function deps(input: {
     },
     async transitionRun(transition) {
       transitions.push({ state: transition.nextState, eventType: transition.eventType, safeErrorCode: transition.safeErrorCode ?? null, metadata: transition.safeMetadata, finalUrl: transition.finalUrl ?? null });
-      return { ...ctx.run, state: transition.nextState, final_url: transition.finalUrl ?? ctx.run.final_url, safe_error_code: transition.safeErrorCode ?? ctx.run.safe_error_code, submit_started_at: transition.nextState === "submitting" ? now : ctx.run.submit_started_at };
+      return { ...ctx.run, id: transition.runId, state: transition.nextState, final_url: transition.finalUrl ?? ctx.run.final_url, safe_error_code: transition.safeErrorCode ?? ctx.run.safe_error_code, submit_started_at: transition.nextState === "submitting" ? now : ctx.run.submit_started_at };
     },
     async confirmSubmission(input) {
       confirmations += 1;
       return { run_id: input.runId, attempt_id: "10000000-0000-4000-8000-000000000099", disposition: "created" };
     },
-    async loadExecutionContext() {
-      return ctx;
+    async loadExecutionContext(run) {
+      loadedRunIds.push(run.id);
+      return { ...ctx, run };
     },
     resolveHostname: input.dns ?? (async (hostname) => publicDns(hostname)),
     browserRuntime: fakeRuntime,
@@ -375,7 +392,7 @@ async function expectUrl(rawUrl: string, expected: boolean, dns: ContactFormDnsR
   assert.equal(result.ok, expected, `${rawUrl} expected ${expected ? "accepted" : "rejected"}`);
 }
 
-async function expectRealSubmissionDisabled(options?: { allowRealSubmission?: boolean }) {
+async function expectRealSubmissionDisabled(options?: { allowRealSubmission?: boolean; targetRunId?: string }) {
   const page = new FakePage();
   const d = deps({ page });
   const result = await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId, options);
@@ -395,9 +412,86 @@ async function expectRealSubmissionDisabled(options?: { allowRealSubmission?: bo
   assert.equal(page.clickCount, 0);
   assert.equal(page.submitDecisions.length, 0);
   assert.equal(d.confirmations, 0);
+  if (options?.targetRunId != null) {
+    assert.equal(d.claims, 0);
+    assert.equal(d.targetClaims, 1);
+  }
 }
 
 test("HTTPS URL acceptance", () => expectUrl("https://forms.example/contact", true));
+test("generic mode uses claimNextRun when targetRunId is absent", async () => {
+  const d = deps();
+  await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId);
+  assert.equal(d.claims, 1);
+  assert.equal(d.targetClaims, 0);
+});
+test("target mode uses claimRunById and never claimNextRun", async () => {
+  const d = deps();
+  await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId, { targetRunId: ` ${runId} ` });
+  assert.equal(d.claims, 0);
+  assert.equal(d.targetClaims, 1);
+  assert.deepEqual(d.targetClaimRunIds, [runId]);
+});
+test("target unavailable returns safe result without opening browser or fallback", async () => {
+  const targetRunId = "10000000-0000-4000-8000-0000000000f1";
+  const d = deps({ claimRunByIdResult: null });
+  const result = await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId, { targetRunId });
+  assert.deepEqual(result, { kind: "target_unavailable", runId: targetRunId });
+  assert.equal(d.claims, 0);
+  assert.equal(d.targetClaims, 1);
+  assert.equal(d.runtime.opened, 0);
+  assert.equal(d.loadedRunIds.length, 0);
+});
+test("target not queued exact claim returns none without fallback or browser", async () => {
+  const targetRunId = "10000000-0000-4000-8000-0000000000f2";
+  const d = deps({ claimRunByIdResult: null });
+  const result = await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId, { targetRunId });
+  assert.equal(result.kind, "target_unavailable");
+  assert.equal(d.claims, 0);
+  assert.equal(d.runtime.opened, 0);
+});
+test("target exact claim succeeds and processes returned target", async () => {
+  const targetRunId = "10000000-0000-4000-8000-0000000000f3";
+  const d = deps({ ctx: context({ run: { id: targetRunId } }) });
+  const result = await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId, { targetRunId });
+  assert.equal(d.claims, 0);
+  assert.equal(d.targetClaims, 1);
+  assert.deepEqual(d.loadedRunIds, [targetRunId]);
+  assert.notEqual(result.kind, "empty");
+  assert.notEqual(result.kind, "target_unavailable");
+  if ("run" in result) assert.equal(result.run.id, targetRunId);
+});
+test("targeted invocation ignores another queued run", async () => {
+  const targetRunId = "10000000-0000-4000-8000-0000000000f4";
+  const otherQueuedRun = rowRun({ id: "10000000-0000-4000-8000-0000000000f5", state: "queued" });
+  const d = deps({ ctx: context({ run: { id: targetRunId } }), claimNextRunResult: otherQueuedRun });
+  const result = await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId, { targetRunId });
+  assert.equal(d.claims, 0);
+  assert.equal(d.targetClaims, 1);
+  assert.deepEqual(d.loadedRunIds, [targetRunId]);
+  assert.notEqual(result.kind, "empty");
+  assert.notEqual(result.kind, "target_unavailable");
+  if ("run" in result) assert.equal(result.run.id, targetRunId);
+});
+test("targeted invocation processes max one run", async () => {
+  const targetRunId = "10000000-0000-4000-8000-0000000000f6";
+  const d = deps({ ctx: context({ run: { id: targetRunId } }) });
+  await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId, { targetRunId });
+  assert.equal(d.targetClaims, 1);
+  assert.equal(d.claims, 0);
+  assert.equal(d.runtime.opened, 1);
+  assert.deepEqual(d.loadedRunIds, [targetRunId]);
+});
+test("targetRunId does not enable real submission when disabled", () => expectRealSubmissionDisabled({ targetRunId: runId, allowRealSubmission: false }));
+test("targetRunId with real submission true proceeds exact fake target without second claim", async () => {
+  const d = deps();
+  const result = await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId, { targetRunId: runId, allowRealSubmission: true });
+  assert.equal(result.kind, "submission_confirmed");
+  assert.equal(d.claims, 0);
+  assert.equal(d.targetClaims, 1);
+  assert.equal(d.confirmations, 1);
+  assert.equal(d.runtime.opened, 1);
+});
 test("HTTP rejection", () => expectUrl("http://forms.example/contact", false));
 test("unsupported protocol rejection", () => expectUrl("ftp://forms.example/contact", false));
 test("URL credentials rejection", () => expectUrl("https://user:pass@forms.example/contact", false));
@@ -528,9 +622,17 @@ test("CLI real submission opt-in is independent from worker enabled flag", () =>
   const worker = readFileSync(join(process.cwd(), "lib/backlinks/services/contactFormNavigationWorker.ts"), "utf8");
   assert.match(cli, /isContactFormNavigationWorkerEnabled\(\)/);
   assert.match(cli, /allowRealSubmission:\s*isContactFormRealSubmissionEnabled\(\)/);
+  assert.match(cli, /CONTACT_FORM_TARGET_RUN_ID/);
+  assert.match(cli, /targetRunId:\s*readTargetRunId\(\)/);
   assert.match(worker, /CONTACT_FORM_REAL_SUBMISSION_ENABLED/);
   assert.doesNotMatch(cli, /allowRealSubmission:\s*isContactFormNavigationWorkerEnabled\(\)/);
   assert.doesNotMatch(cli, /allowRealSubmission:\s*true/);
+});
+test("target run id never enables real submission", () => {
+  const cli = readFileSync(join(process.cwd(), "scripts/contact-form-navigation-worker.ts"), "utf8");
+  const worker = readFileSync(join(process.cwd(), "lib/backlinks/services/contactFormNavigationWorker.ts"), "utf8");
+  assert.match(worker, /targetRunId\?:\s*string/);
+  assert.doesNotMatch(`${cli}\n${worker}`, /CONTACT_FORM_TARGET_RUN_ID[\s\S]{0,240}allowRealSubmission:\s*true/);
 });
 test("CAPTCHA classification only", async () => {
   const page = new FakePage();
@@ -625,14 +727,16 @@ test("cleanup success", async () => {
   const d = deps();
   const result = await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId);
   assert.notEqual(result.kind, "empty");
-  if (result.kind !== "empty") assert.equal(result.cleanup, "success");
+  assert.notEqual(result.kind, "target_unavailable");
+  if (result.kind !== "empty" && result.kind !== "target_unavailable") assert.equal(result.cleanup, "success");
   assert.equal(d.runtime.closed, 1);
 });
 test("cleanup failure", async () => {
   const d = deps({ closeFailure: true });
   const result = await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId);
   assert.notEqual(result.kind, "empty");
-  if (result.kind !== "empty") assert.equal(result.cleanup, "failed");
+  assert.notEqual(result.kind, "target_unavailable");
+  if (result.kind !== "empty" && result.kind !== "target_unavailable") assert.equal(result.cleanup, "failed");
 });
 test("concurrency equals one claimed run per execution", async () => {
   const d = deps();

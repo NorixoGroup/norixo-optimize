@@ -4,6 +4,7 @@ import { isIP } from "node:net";
 import type { Browser, BrowserContext, Page } from "playwright-core";
 
 import {
+  claimContactFormRunById,
   claimNextContactFormRun,
   confirmContactFormSubmission,
   getContactFormRunExecutionContext,
@@ -79,9 +80,11 @@ export type ContactFormWorkerOptions = Readonly<{
   runTimeoutMs?: number;
   redirectLimit?: number;
   allowRealSubmission?: boolean;
+  targetRunId?: string;
 }>;
 export type ContactFormNavigationDependencies = Readonly<{
   claimNextRun: (workerId: string, leaseDurationSeconds: number) => Promise<ContactFormRun | null>;
+  claimRunById: (runId: string, workerId: string, leaseDurationSeconds: number) => Promise<ContactFormRun | null>;
   heartbeatRun: (input: { runId: string; workerId: string; leaseDurationSeconds: number }) => Promise<ContactFormRun>;
   transitionRun: (input: { runId: string; workerId: string; nextState: ContactFormRunState; eventType: string; safeMetadata?: Json; safeErrorCode?: string; evidenceReference?: string; finalUrl?: string }) => Promise<ContactFormRun>;
   confirmSubmission: (input: { runId: string; workerId: string; evidenceReference: string; finalUrl?: string }) => Promise<{ run_id: string; attempt_id: string; disposition: string }>;
@@ -92,6 +95,7 @@ export type ContactFormNavigationDependencies = Readonly<{
 }>;
 export type ContactFormNavigationResult =
   | { kind: "empty" }
+  | { kind: "target_unavailable"; runId: string }
   | { kind: "discovered"; run: ContactFormRun; metadata: ContactFormNavigationMetadata; cleanup: "success" | "failed" }
   | { kind: "mapped"; run: ContactFormRun; metadata: ContactFormNavigationMetadata; mapping: ContactFormMappingPreview; cleanup: "success" | "failed" }
   | { kind: "submission_confirmed"; run: ContactFormRun; metadata: ContactFormNavigationMetadata; mapping: ContactFormMappingPreview; confirmation: Extract<ContactFormConfirmationObservation, { confirmed: true }>; cleanup: "success" | "failed" }
@@ -126,6 +130,7 @@ export function isContactFormRealSubmissionEnabled(env: Readonly<Record<string, 
 export function createContactFormNavigationDependencies(client: BacklinkRepositoryClient, browserRuntime: ContactFormBrowserRuntime): ContactFormNavigationDependencies {
   return {
     claimNextRun: (workerId, leaseDurationSeconds) => claimNextContactFormRun(client, workerId, leaseDurationSeconds),
+    claimRunById: (runId, workerId, leaseDurationSeconds) => claimContactFormRunById(client, runId, workerId, leaseDurationSeconds),
     heartbeatRun: (input) => heartbeatContactFormRun(client, input),
     transitionRun: (input) => transitionContactFormRun(client, input),
     confirmSubmission: (input) => confirmContactFormSubmission(client, input),
@@ -447,6 +452,17 @@ export async function executeContactFormNavigationWorkerOnce(input: {
   browserRuntime?: ContactFormBrowserRuntime;
   options?: ContactFormWorkerOptions;
 }): Promise<ContactFormNavigationResult> {
+  const settings = resolveContactFormWorkerSettings(input.workerId, input.options ?? {});
+  if (input.browserRuntime == null && settings.targetRunId != null) {
+    const claimedRun = await claimContactFormRunById(input.client, settings.targetRunId, settings.workerId, settings.leaseDurationSeconds);
+    if (claimedRun == null) return { kind: "target_unavailable", runId: settings.targetRunId };
+    const runtime = await createPlaywrightChromiumBrowserRuntime();
+    try {
+      return await executeClaimedContactFormNavigationWorkerOnce(createContactFormNavigationDependencies(input.client, runtime), settings, claimedRun);
+    } finally {
+      await runtime.close?.();
+    }
+  }
   const ownsRuntime = input.browserRuntime == null;
   const runtime = input.browserRuntime ?? (await createPlaywrightChromiumBrowserRuntime());
   try {
@@ -461,6 +477,27 @@ export async function executeContactFormNavigationWorkerOnceWithDependencies(
   workerIdInput: string,
   options: ContactFormWorkerOptions = {},
 ): Promise<ContactFormNavigationResult> {
+  const settings = resolveContactFormWorkerSettings(workerIdInput, options);
+  const claimedRun =
+    settings.targetRunId == null
+      ? await deps.claimNextRun(settings.workerId, settings.leaseDurationSeconds)
+      : await deps.claimRunById(settings.targetRunId, settings.workerId, settings.leaseDurationSeconds);
+  if (claimedRun == null) return settings.targetRunId == null ? { kind: "empty" } : { kind: "target_unavailable", runId: settings.targetRunId };
+  return executeClaimedContactFormNavigationWorkerOnce(deps, settings, claimedRun);
+}
+
+type ResolvedContactFormWorkerSettings = Readonly<{
+  workerId: string;
+  leaseDurationSeconds: number;
+  heartbeatIntervalMs: number;
+  navigationTimeoutMs: number;
+  runTimeoutMs: number;
+  redirectLimit: number;
+  allowRealSubmission: boolean;
+  targetRunId: string | null;
+}>;
+
+function resolveContactFormWorkerSettings(workerIdInput: string, options: ContactFormWorkerOptions): ResolvedContactFormWorkerSettings {
   const workerId = workerIdInput.trim();
   if (!workerId) throw new Error("workerId must not be empty");
   const leaseDurationSeconds = options.leaseDurationSeconds ?? DEFAULT_LEASE_DURATION_SECONDS;
@@ -468,15 +505,30 @@ export async function executeContactFormNavigationWorkerOnceWithDependencies(
   const navigationTimeoutMs = options.navigationTimeoutMs ?? DEFAULT_NAVIGATION_TIMEOUT_MS;
   const runTimeoutMs = options.runTimeoutMs ?? DEFAULT_RUN_TIMEOUT_MS;
   const redirectLimit = options.redirectLimit ?? DEFAULT_REDIRECT_LIMIT;
-  const allowRealSubmission = options.allowRealSubmission === true;
   validateWorkerOptions({ leaseDurationSeconds, heartbeatIntervalMs, navigationTimeoutMs, runTimeoutMs, redirectLimit });
+  return {
+    workerId,
+    leaseDurationSeconds,
+    heartbeatIntervalMs,
+    navigationTimeoutMs,
+    runTimeoutMs,
+    redirectLimit,
+    allowRealSubmission: options.allowRealSubmission === true,
+    targetRunId: options.targetRunId?.trim() || null,
+  };
+}
+
+async function executeClaimedContactFormNavigationWorkerOnce(
+  deps: ContactFormNavigationDependencies,
+  settings: ResolvedContactFormWorkerSettings,
+  claimedRun: ContactFormRun,
+): Promise<Exclude<ContactFormNavigationResult, { kind: "empty" } | { kind: "target_unavailable" }>> {
+  const { workerId, leaseDurationSeconds, heartbeatIntervalMs, navigationTimeoutMs, runTimeoutMs, redirectLimit, allowRealSubmission } = settings;
   const nowMs = deps.nowMs ?? Date.now;
   const runDeadline = nowMs() + runTimeoutMs;
-  const claimedRun = await deps.claimNextRun(workerId, leaseDurationSeconds);
-  if (claimedRun == null) return { kind: "empty" };
   let session: ContactFormBrowserSession | null = null;
-  const pendingResult: { value: Exclude<ContactFormNavigationResult, { kind: "empty" }> | null } = { value: null };
-  const finish = <T extends Exclude<ContactFormNavigationResult, { kind: "empty" }>>(result: T): T => {
+  const pendingResult: { value: Exclude<ContactFormNavigationResult, { kind: "empty" } | { kind: "target_unavailable" }> | null } = { value: null };
+  const finish = <T extends Exclude<ContactFormNavigationResult, { kind: "empty" } | { kind: "target_unavailable" }>>(result: T): T => {
     pendingResult.value = result;
     return result;
   };

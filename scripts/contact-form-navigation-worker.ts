@@ -1,7 +1,6 @@
 import { pathToFileURL } from "node:url";
 
 import {
-  createPlaywrightChromiumBrowserRuntime,
   executeContactFormNavigationWorkerOnce,
   isContactFormNavigationWorkerEnabled,
   isContactFormRealSubmissionEnabled,
@@ -16,28 +15,27 @@ function readWorkerId() {
   return process.env.CONTACT_FORM_NAVIGATION_WORKER_ID?.trim() || crypto.randomUUID();
 }
 
+function readTargetRunId() {
+  return process.env.CONTACT_FORM_TARGET_RUN_ID?.trim() || undefined;
+}
+
 async function main() {
   if (!isContactFormNavigationWorkerEnabled()) {
     console.info("[contact-form-navigation-worker] disabled");
     return;
   }
-  const runtime = await createPlaywrightChromiumBrowserRuntime();
-  try {
-    const result = await executeContactFormNavigationWorkerOnce({
-      client: createSupabaseAdminClient(),
-      workerId: readWorkerId(),
-      browserRuntime: runtime,
-      options: {
-        allowRealSubmission: isContactFormRealSubmissionEnabled(),
-      },
-    });
-    console.info("[contact-form-navigation-worker] one-shot completed", {
-      kind: result.kind,
-      runId: "run" in result ? result.run.id : "runId" in result ? result.runId : null,
-    });
-  } finally {
-    await runtime.close?.();
-  }
+  const result = await executeContactFormNavigationWorkerOnce({
+    client: createSupabaseAdminClient(),
+    workerId: readWorkerId(),
+    options: {
+      allowRealSubmission: isContactFormRealSubmissionEnabled(),
+      targetRunId: readTargetRunId(),
+    },
+  });
+  console.info("[contact-form-navigation-worker] one-shot completed", {
+    kind: result.kind,
+    runId: "run" in result ? result.run.id : "runId" in result ? result.runId : null,
+  });
 }
 
 if (isMainModule()) {
