@@ -7,6 +7,7 @@ import type { ContactFormDiscoveredForm } from "../lib/backlinks/services/contac
 import {
   executeContactFormNavigationWorkerOnceWithDependencies,
   isContactFormNavigationWorkerEnabled,
+  isContactFormRealSubmissionEnabled,
   isPublicIpAddress,
   validateContactFormNavigationUrl,
   type ContactFormBrowserPage,
@@ -374,6 +375,28 @@ async function expectUrl(rawUrl: string, expected: boolean, dns: ContactFormDnsR
   assert.equal(result.ok, expected, `${rawUrl} expected ${expected ? "accepted" : "rejected"}`);
 }
 
+async function expectRealSubmissionDisabled(options?: { allowRealSubmission?: boolean }) {
+  const page = new FakePage();
+  const d = deps({ page });
+  const result = await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId, options);
+  assert.equal(result.kind, "blocked");
+  if (result.kind === "blocked") {
+    assert.equal(result.state, "manual_review");
+    assert.equal(result.safeErrorCode, "CONTACT_FORM_REAL_SUBMISSION_DISABLED");
+  }
+  assert.deepEqual(d.transitions.map((transition) => transition.state), ["navigating", "discovered", "mapped", "manual_review"]);
+  assert.equal(d.transitions.at(-1)?.eventType, "real_submission_disabled");
+  assert.equal(d.transitions.at(-1)?.safeErrorCode, "CONTACT_FORM_REAL_SUBMISSION_DISABLED");
+  assert.equal(d.transitions.some((transition) => transition.state === "filled"), false);
+  assert.equal(d.transitions.some((transition) => transition.state === "pre_submit_validated"), false);
+  assert.equal(d.transitions.some((transition) => transition.state === "submitting"), false);
+  assert.equal(page.submitted, false);
+  assert.equal(page.filledValues.size, 0);
+  assert.equal(page.clickCount, 0);
+  assert.equal(page.submitDecisions.length, 0);
+  assert.equal(d.confirmations, 0);
+}
+
 test("HTTPS URL acceptance", () => expectUrl("https://forms.example/contact", true));
 test("HTTP rejection", () => expectUrl("http://forms.example/contact", false));
 test("unsupported protocol rejection", () => expectUrl("ftp://forms.example/contact", false));
@@ -391,10 +414,14 @@ test("safe redirect", async () => {
     { url: "https://forms.example/contact", method: "GET", resourceType: "document", isNavigationRequest: true },
     { url: "https://forms.example/contact-us", method: "GET", resourceType: "document", isNavigationRequest: true },
   ];
-	  const d = deps({ page });
-	  const result = await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId);
-	  assert.equal(result.kind, "submission_confirmed");
-	  assert.equal(d.transitions.find((transition) => transition.state === "discovered")?.finalUrl, "https://forms.example/contact-us");
+  const d = deps({ page });
+  const result = await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId);
+  assert.equal(result.kind, "blocked");
+  if (result.kind === "blocked") {
+    assert.equal(result.state, "manual_review");
+    assert.equal(result.safeErrorCode, "CONTACT_FORM_REAL_SUBMISSION_DISABLED");
+  }
+  assert.equal(d.transitions.find((transition) => transition.state === "discovered")?.finalUrl, "https://forms.example/contact-us");
 });
 test("private redirect rejection", async () => {
   const page = new FakePage();
@@ -470,13 +497,13 @@ for (const method of ["PUT", "PATCH", "DELETE"]) {
 }
 test("GET navigation allowed", async () => {
   const d = deps();
-  const result = await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId);
+  const result = await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId, { allowRealSubmission: true });
   assert.equal(result.kind, "submission_confirmed");
 });
 test("form metadata inspection precedes controlled submit", async () => {
   const page = new FakePage();
   const d = deps({ page });
-  const result = await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId);
+  const result = await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId, { allowRealSubmission: true });
   assert.equal(result.kind, "submission_confirmed");
   assert.equal(result.metadata.formCount, 1);
   assert.equal(page.submitted, true);
@@ -486,6 +513,24 @@ test("no alternate submit primitives in worker source", () => {
   const worker = readFileSync(join(process.cwd(), "lib/backlinks/services/contactFormNavigationWorker.ts"), "utf8");
   const submission = readFileSync(join(process.cwd(), "lib/backlinks/services/contactFormSubmission.ts"), "utf8");
   assert.doesNotMatch(`${worker}\n${submission}`, /\.type\(|press\(|requestSubmit|form\.submit|dispatchEvent|SubmitEvent|backlink_outreach_attempts/);
+});
+test("real submission env helper requires exact true", () => {
+  assert.equal(isContactFormRealSubmissionEnabled({}), false);
+  assert.equal(isContactFormRealSubmissionEnabled({ CONTACT_FORM_REAL_SUBMISSION_ENABLED: "false" }), false);
+  assert.equal(isContactFormRealSubmissionEnabled({ CONTACT_FORM_REAL_SUBMISSION_ENABLED: "TRUE" }), false);
+  assert.equal(isContactFormRealSubmissionEnabled({ CONTACT_FORM_REAL_SUBMISSION_ENABLED: "1" }), false);
+  assert.equal(isContactFormRealSubmissionEnabled({ CONTACT_FORM_REAL_SUBMISSION_ENABLED: "true" }), true);
+});
+test("mapped contact form defaults to manual review when real submission is omitted", () => expectRealSubmissionDisabled());
+test("mapped contact form stays manual review when real submission is false", () => expectRealSubmissionDisabled({ allowRealSubmission: false }));
+test("CLI real submission opt-in is independent from worker enabled flag", () => {
+  const cli = readFileSync(join(process.cwd(), "scripts/contact-form-navigation-worker.ts"), "utf8");
+  const worker = readFileSync(join(process.cwd(), "lib/backlinks/services/contactFormNavigationWorker.ts"), "utf8");
+  assert.match(cli, /isContactFormNavigationWorkerEnabled\(\)/);
+  assert.match(cli, /allowRealSubmission:\s*isContactFormRealSubmissionEnabled\(\)/);
+  assert.match(worker, /CONTACT_FORM_REAL_SUBMISSION_ENABLED/);
+  assert.doesNotMatch(cli, /allowRealSubmission:\s*isContactFormNavigationWorkerEnabled\(\)/);
+  assert.doesNotMatch(cli, /allowRealSubmission:\s*true/);
 });
 test("CAPTCHA classification only", async () => {
   const page = new FakePage();
@@ -535,7 +580,7 @@ test("DNC race", async () => {
 });
 test("successful C5 progression preserves ordered C3/C4/C5 states", async () => {
   const d = deps();
-  const result = await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId);
+  const result = await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId, { allowRealSubmission: true });
   assert.equal(result.kind, "submission_confirmed");
   assert.deepEqual(d.transitions.map((transition) => transition.state), ["navigating", "discovered", "mapped", "filled", "pre_submit_validated", "submitting"]);
   assert.equal(d.confirmations, 1);
@@ -543,13 +588,13 @@ test("successful C5 progression preserves ordered C3/C4/C5 states", async () => 
 for (const requiredState of ["filled", "pre_submit_validated", "submitting"] as const) {
   test(`C5 reaches ${requiredState} before confirmation RPC`, async () => {
     const d = deps();
-    await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId);
+    await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId, { allowRealSubmission: true });
     assert.equal(d.transitions.some((transition) => transition.state === requiredState), true);
   });
 }
 test("accepted initial attempt is delegated to confirmation RPC only", async () => {
   const d = deps();
-  await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId);
+  await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId, { allowRealSubmission: true });
   assert.equal(d.confirmations, 1);
   assert.equal(d.transitions.some((transition) => transition.eventType === "submission_confirmed"), false);
 });
@@ -563,7 +608,7 @@ test("no automatic retry", () => {
 });
 test("safe redacted evidence", async () => {
   const d = deps();
-  await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId);
+  await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId, { allowRealSubmission: true });
   const metadata = JSON.stringify(d.transitions.at(-1)?.metadata ?? {});
   assert.match(metadata, /full_html_persisted/);
   assert.doesNotMatch(metadata, /Approved body|<html|ops@norixo/);

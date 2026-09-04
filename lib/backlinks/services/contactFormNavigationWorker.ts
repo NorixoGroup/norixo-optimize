@@ -78,6 +78,7 @@ export type ContactFormWorkerOptions = Readonly<{
   navigationTimeoutMs?: number;
   runTimeoutMs?: number;
   redirectLimit?: number;
+  allowRealSubmission?: boolean;
 }>;
 export type ContactFormNavigationDependencies = Readonly<{
   claimNextRun: (workerId: string, leaseDurationSeconds: number) => Promise<ContactFormRun | null>;
@@ -116,6 +117,10 @@ type UrlValidationResult = UrlValidationOk | UrlValidationFailure;
 
 export function isContactFormNavigationWorkerEnabled(env: Readonly<Record<string, string | undefined>> = process.env): boolean {
   return env.CONTACT_FORM_NAVIGATION_WORKER_ENABLED === "true";
+}
+
+export function isContactFormRealSubmissionEnabled(env: Readonly<Record<string, string | undefined>> = process.env): boolean {
+  return env.CONTACT_FORM_REAL_SUBMISSION_ENABLED === "true";
 }
 
 export function createContactFormNavigationDependencies(client: BacklinkRepositoryClient, browserRuntime: ContactFormBrowserRuntime): ContactFormNavigationDependencies {
@@ -463,6 +468,7 @@ export async function executeContactFormNavigationWorkerOnceWithDependencies(
   const navigationTimeoutMs = options.navigationTimeoutMs ?? DEFAULT_NAVIGATION_TIMEOUT_MS;
   const runTimeoutMs = options.runTimeoutMs ?? DEFAULT_RUN_TIMEOUT_MS;
   const redirectLimit = options.redirectLimit ?? DEFAULT_REDIRECT_LIMIT;
+  const allowRealSubmission = options.allowRealSubmission === true;
   validateWorkerOptions({ leaseDurationSeconds, heartbeatIntervalMs, navigationTimeoutMs, runTimeoutMs, redirectLimit });
   const nowMs = deps.nowMs ?? Date.now;
   const runDeadline = nowMs() + runTimeoutMs;
@@ -627,6 +633,18 @@ export async function executeContactFormNavigationWorkerOnceWithDependencies(
         evidenceReference: `c4_mapping:${discovered.id}`,
         safeMetadata: mappingMetadata,
       });
+      if (!allowRealSubmission) {
+        const run = await deps.transitionRun({
+          runId: mapped.id,
+          workerId,
+          nextState: "manual_review",
+          eventType: "real_submission_disabled",
+          safeErrorCode: "CONTACT_FORM_REAL_SUBMISSION_DISABLED",
+          finalUrl: metadata.finalUrl,
+          safeMetadata: mappingMetadata,
+        });
+        return finish({ kind: "blocked", run, state: "manual_review", safeErrorCode: "CONTACT_FORM_REAL_SUBMISSION_DISABLED", cleanup: "success" });
+      }
       const submission = await executeContactFormControlledSubmission({
         run: mapped,
         workerId,

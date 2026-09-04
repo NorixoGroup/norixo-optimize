@@ -4,6 +4,7 @@ import {
   createPlaywrightChromiumBrowserRuntime,
   executeContactFormNavigationWorkerOnce,
   isContactFormNavigationWorkerEnabled,
+  isContactFormRealSubmissionEnabled,
 } from "../lib/backlinks/services/contactFormNavigationWorker";
 import { createSupabaseAdminClient } from "../lib/supabase-admin";
 
@@ -26,6 +27,9 @@ async function main() {
       client: createSupabaseAdminClient(),
       workerId: readWorkerId(),
       browserRuntime: runtime,
+      options: {
+        allowRealSubmission: isContactFormRealSubmissionEnabled(),
+      },
     });
     console.info("[contact-form-navigation-worker] one-shot completed", {
       kind: result.kind,
