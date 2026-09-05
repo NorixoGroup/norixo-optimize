@@ -37,6 +37,7 @@ function createFixture() {
       getOpportunity: async () => ({ id: "opportunity", domain_id: "domain", asset_id: "asset", target_page_url: "https://example.com/resources" }),
       listContactsByDomain: async () => [...contacts.values()].filter((contact) => contact.domain_id === "domain"),
       listOutreachByOpportunity: async () => outreach,
+      listCurrentVerifiedContactFormEvidenceContactIds: async () => new Set(["form"]),
     },
     getCampaign: async () => ({ name: "Editorial partnerships", objective: "relevant resource references" }),
     getContact: async (_workspaceId, contactId) => {

@@ -6,9 +6,11 @@ export type ContactFormRunState = "queued" | "claimed" | "navigating" | "discove
 export type ContactFormApproval = Database["public"]["Tables"]["backlink_contact_form_approvals"]["Row"];
 export type ContactFormRun = Database["public"]["Tables"]["backlink_contact_form_runs"]["Row"];
 export type ContactFormRunEvent = Database["public"]["Tables"]["backlink_contact_form_run_events"]["Row"];
+export type ContactFormVerification = Database["public"]["Tables"]["backlink_contact_form_verifications"]["Row"];
 export type ContactFormExecutionOutreach = Pick<Database["public"]["Tables"]["backlink_outreach"]["Row"], "body" | "campaign_id" | "channel" | "contact_id" | "current_attempt" | "id" | "opportunity_id" | "status" | "subject" | "workspace_id">;
 export type ContactFormExecutionContact = Pick<Database["public"]["Tables"]["backlink_contacts"]["Row"], "archived_at" | "contact_form_url" | "contact_status" | "do_not_contact_at" | "id" | "workspace_id">;
 export type ContactFormExecutionOpportunity = Pick<Database["public"]["Tables"]["backlink_opportunities"]["Row"], "id" | "target_page_url" | "workspace_id">;
+export type ContactFormVerificationContact = Pick<Database["public"]["Tables"]["backlink_contacts"]["Row"], "contact_form_url" | "id">;
 export type ContactFormRunExecutionContext = {
   run: ContactFormRun;
   approval: ContactFormApproval;
@@ -20,6 +22,86 @@ export type ContactFormRunExecutionContext = {
 
 function required(value: string, field: string) { const normalized = value.trim(); if (!normalized) throw new BacklinkRepositoryError({ code: "VALIDATION", operation: "contactFormAutomation", message: `${field} is required.` }); return normalized; }
 function rpcError(operation: string, error: unknown) { return normalizeBacklinkRepositoryError(operation, error); }
+function contactFormVerificationKey(contactId: string, formUrl: string) { return `${contactId}\n${formUrl}`; }
+
+export function normalizeContactFormVerificationUrl(value: string | null | undefined): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  if (!normalized || normalized !== value || !/^https:\/\/[^\s\\]+$/.test(normalized)) return null;
+  return normalized;
+}
+
+export function isValidContactFormVerificationEvidence(value: Json): boolean {
+  if (typeof value !== "object" || value == null || Array.isArray(value)) return false;
+  const evidence = value as Record<string, Json | undefined>;
+  const formCount = evidence.form_count;
+  return (
+    evidence.actual_form_observed === true &&
+    typeof formCount === "number" &&
+    Number.isInteger(formCount) &&
+    formCount >= 1 &&
+    evidence.message_field_present === true &&
+    evidence.submit_control_present === true &&
+    evidence.contact_intent === true &&
+    evidence.newsletter_only === false &&
+    evidence.login_only === false &&
+    evidence.support_only === false &&
+    evidence.sales_demo_only === false
+  );
+}
+
+export function hasCurrentVerifiedContactFormEvidence(
+  contact: ContactFormVerificationContact,
+  verification: ContactFormVerification | null | undefined,
+): boolean {
+  const formUrl = normalizeContactFormVerificationUrl(contact.contact_form_url);
+  return (
+    formUrl != null &&
+    verification?.contact_id === contact.id &&
+    verification.form_url === formUrl &&
+    verification.verification_state === "verified" &&
+    verification.verified_at != null &&
+    isValidContactFormVerificationEvidence(verification.safe_evidence)
+  );
+}
+
+export async function listCurrentVerifiedContactFormEvidenceContactIds(
+  client: BacklinkRepositoryClient,
+  workspaceId: string,
+  contacts: readonly ContactFormVerificationContact[],
+): Promise<ReadonlySet<string>> {
+  const candidates = contacts.flatMap((contact) => {
+    const formUrl = normalizeContactFormVerificationUrl(contact.contact_form_url);
+    return formUrl == null ? [] : [{ contact, formUrl }];
+  });
+  if (candidates.length === 0) return new Set<string>();
+
+  const contactIds = [...new Set(candidates.map(({ contact }) => contact.id))];
+  const formUrls = [...new Set(candidates.map(({ formUrl }) => formUrl))];
+  const { data, error } = await client
+    .from("backlink_contact_form_verifications")
+    .select("*")
+    .eq("workspace_id", required(workspaceId, "workspaceId"))
+    .in("contact_id", contactIds)
+    .in("form_url", formUrls)
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false });
+
+  if (error != null) throw rpcError("listContactFormVerifications", error);
+
+  const latestByContactAndUrl = new Map<string, ContactFormVerification>();
+  for (const verification of data ?? []) {
+    const key = contactFormVerificationKey(verification.contact_id, verification.form_url);
+    if (!latestByContactAndUrl.has(key)) latestByContactAndUrl.set(key, verification);
+  }
+
+  const verifiedContactIds = new Set<string>();
+  for (const { contact, formUrl } of candidates) {
+    const verification = latestByContactAndUrl.get(contactFormVerificationKey(contact.id, formUrl));
+    if (hasCurrentVerifiedContactFormEvidence(contact, verification)) verifiedContactIds.add(contact.id);
+  }
+  return verifiedContactIds;
+}
 
 export async function listContactFormAutomationHistory(client: BacklinkRepositoryClient, workspaceId: string, outreachId: string) {
   const [outreachResult, approvalsResult, runsResult] = await Promise.all([

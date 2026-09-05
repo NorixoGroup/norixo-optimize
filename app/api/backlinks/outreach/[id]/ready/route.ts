@@ -5,6 +5,7 @@ import { listBacklinkOutreachAttemptsForOutreach } from "@/lib/backlinks/reposit
 import { getCampaignOpportunity } from "@/lib/backlinks/repositories/campaignOpportunitiesRepository";
 import { getBacklinkOpportunityById } from "@/lib/backlinks/repositories/opportunitiesRepository";
 import { listBacklinkContactsByDomain } from "@/lib/backlinks/repositories/contactsRepository";
+import { listCurrentVerifiedContactFormEvidenceContactIds } from "@/lib/backlinks/repositories/contactFormAutomationRepository";
 import { markBacklinkOutreachReady } from "@/lib/backlinks/services/outreachReadyService";
 import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -33,6 +34,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
         getOpportunity: (w, o) => getBacklinkOpportunityById(auth.client, w, o),
         listContactsByDomain: (w, d) => listBacklinkContactsByDomain(auth.client, w, d),
         listOutreachByOpportunity: (w, o) => listBacklinkOutreachByOpportunity(auth.client, w, o),
+        listCurrentVerifiedContactFormEvidenceContactIds: (w, contacts) => listCurrentVerifiedContactFormEvidenceContactIds(auth.client, w, contacts),
       },
       getOutreach: async (w, o) => getBacklinkOutreachById(auth.client, w, o) as any,
       getActiveOutreach: async (v) => getActiveBacklinkOutreachByIdentity(auth.client, v) as any,

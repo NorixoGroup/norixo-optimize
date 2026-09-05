@@ -6,6 +6,7 @@ import { getBacklinkDomainById } from "../repositories/domainsRepository";
 import { getBacklinkOpportunityById } from "../repositories/opportunitiesRepository";
 import { createBacklinkOutreach, getActiveBacklinkOutreachByIdentity, listBacklinkOutreachByOpportunity } from "../repositories/outreachRepository";
 import { reserveBacklinkOutreachKey } from "../repositories/outreachKeyRepository";
+import { listCurrentVerifiedContactFormEvidenceContactIds } from "../repositories/contactFormAutomationRepository";
 import type { BacklinkRepositoryClient } from "../repositories/repositoryClient";
 import { createBacklinkOutreachDraftPreviewService, createBacklinkOutreachDraftService } from "./outreachDraftService";
 
@@ -19,6 +20,7 @@ export function createBacklinkOutreachDraftRouteServices(
       getOpportunity: (workspaceId: string, opportunityId: string) => getBacklinkOpportunityById(client, workspaceId, opportunityId),
       listContactsByDomain: (workspaceId: string, domainId: string) => listBacklinkContactsByDomain(client, workspaceId, domainId),
       listOutreachByOpportunity: (workspaceId: string, opportunityId: string) => listBacklinkOutreachByOpportunity(client, workspaceId, opportunityId),
+      listCurrentVerifiedContactFormEvidenceContactIds: (workspaceId: string, contacts: readonly { id: string; contact_form_url: string | null }[]) => listCurrentVerifiedContactFormEvidenceContactIds(client, workspaceId, contacts),
     },
     getCampaign: (workspaceId: string, campaignId: string) => getBacklinkCampaignById(client, workspaceId, campaignId),
     getContact: (workspaceId: string, contactId: string) => getBacklinkContactById(client, workspaceId, contactId),
