@@ -169,6 +169,7 @@ async function createPlaywrightBrowserSession(browser: Browser): Promise<Contact
 const INSPECT_FORMS_EXPRESSION = String.raw`(() => {
   const maxForms = 5;
   const maxControlsPerForm = 30;
+  const maxOptionsPerSelect = 50;
   const maxTextLength = 80;
   const clamp = (value, limit = maxTextLength) => {
     const text = (value || "").trim().replace(/\s+/g, " ");
@@ -178,6 +179,7 @@ const INSPECT_FORMS_EXPRESSION = String.raw`(() => {
     const text = clamp(value, limit);
     return text ? text : null;
   };
+  const normalizeText = (value) => clamp(value).normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
   const visible = (element) => {
     const style = window.getComputedStyle(element);
     return style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0" && element.getClientRects().length > 0;
@@ -205,6 +207,14 @@ const INSPECT_FORMS_EXPRESSION = String.raw`(() => {
     const tag = element.tagName.toLowerCase();
     const rawType = tag === "input" || tag === "button" ? element.type : tag;
     const value = "value" in element ? element.value : "";
+    const options = tag === "select" ? Array.from(element.options).slice(0, maxOptionsPerSelect).map((option, optionOrdinal) => ({
+      ordinal: optionOrdinal,
+      labelText: clamp(option.label || option.textContent || ""),
+      normalizedLabel: normalizeText(option.label || option.textContent || ""),
+      valuePresent: Boolean(option.value && option.value.trim().length > 0),
+      disabled: option.disabled === true,
+      selected: option.selected === true,
+    })) : undefined;
     return {
       ordinal,
       tag,
@@ -223,6 +233,7 @@ const INSPECT_FORMS_EXPRESSION = String.raw`(() => {
       visible: visible(element),
       valuePresent: value.trim().length > 0,
       optionsCount: tag === "select" ? element.options.length : undefined,
+      options,
     };
   });
   return {
