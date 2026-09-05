@@ -5056,6 +5056,10 @@ export type Database = {
         Args: { p_lease_duration_seconds: number; p_run_id: string; p_worker_id: string }
         Returns: Database["public"]["Tables"]["backlink_contact_form_runs"]["Row"][]
       }
+      reject_backlink_contact_form_queued_run_v1: {
+        Args: { p_reason_code: string; p_run_id: string }
+        Returns: Database["public"]["Tables"]["backlink_contact_form_runs"]["Row"][]
+      }
       heartbeat_backlink_contact_form_run_v1: {
         Args: { p_lease_duration_seconds: number; p_run_id: string; p_worker_id: string }
         Returns: Database["public"]["Tables"]["backlink_contact_form_runs"]["Row"]

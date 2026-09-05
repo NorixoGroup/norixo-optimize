@@ -78,6 +78,11 @@ export async function claimContactFormRunById(client: BacklinkRepositoryClient, 
   const { data, error } = await client.rpc("claim_backlink_contact_form_run_by_id_v1", args);
   if (error != null) throw rpcError("claimContactFormRunById", error); return data?.[0] ?? null;
 }
+export async function rejectQueuedContactFormRun(client: BacklinkRepositoryClient, input: { runId: string; reasonCode: string }) {
+  const args: Database["public"]["Functions"]["reject_backlink_contact_form_queued_run_v1"]["Args"] = { p_run_id: required(input.runId, "runId"), p_reason_code: required(input.reasonCode, "reasonCode") };
+  const { data, error } = await client.rpc("reject_backlink_contact_form_queued_run_v1", args);
+  if (error != null) throw rpcError("rejectQueuedContactFormRun", error); return data?.[0] ?? null;
+}
 export async function heartbeatContactFormRun(client: BacklinkRepositoryClient, input: { runId: string; workerId: string; leaseDurationSeconds: number }) {
   const { data, error } = await client.rpc("heartbeat_backlink_contact_form_run_v1", { p_run_id: required(input.runId, "runId"), p_worker_id: required(input.workerId, "workerId"), p_lease_duration_seconds: input.leaseDurationSeconds });
   if (error != null || data == null) throw rpcError("heartbeatContactFormRun", error ?? new Error("Missing heartbeat result.")); return data;
