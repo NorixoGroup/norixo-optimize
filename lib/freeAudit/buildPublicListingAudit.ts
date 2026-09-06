@@ -29,6 +29,7 @@ type PublicListingAuditSource = Readonly<{
   reviewCount?: unknown;
   trustBadge?: unknown;
   trustSignals?: unknown;
+  marketComparison?: unknown;
   marketPositioning?: unknown;
   occupancyObservation?: unknown;
   extractionFailed?: unknown;
@@ -140,8 +141,7 @@ export function buildPublicListingAudit(
     asNonEmptyString(source.trustBadge) ?? asNonEmptyString(trustSignals.trustBadge);
 
   const marketSummary =
-    asNonEmptyString(marketPositioning.summary) ??
-    asNonEmptyString((source as Record<string, unknown>).marketComparison);
+    asNonEmptyString(marketPositioning.summary) ?? asNonEmptyString(source.marketComparison);
 
   const result: FreeListingAuditAvailable = {
     status: "available",
