@@ -177,7 +177,6 @@ export function MarketingTopNav() {
                       ORIXO
                     </span>
                   </div>
-                  <span className="text-xs tracking-wide text-white/70">Optimizer</span>
                 </div>
               </Link>
             </div>

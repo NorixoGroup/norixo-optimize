@@ -9,7 +9,7 @@ const siteUrl = (
 ).replace(/\/$/, "");
 const seoCopy = getFreeAuditListingSeoCopy("en");
 const alternates = buildHreflangAlternates("/free-audit");
-const socialImage = "/og/free-airbnb-market-snapshot.png";
+const socialImage = "/og/free-listing-audit.png";
 
 export const metadata: Metadata = {
   title: seoCopy.title,

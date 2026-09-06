@@ -266,7 +266,9 @@ export function FreeAuditListingContent() {
             <div className="mt-8 space-y-5 rounded-[24px] border border-slate-200 bg-slate-50/70 p-5">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{copy.premium.revealTitle}</p>
-                <p className="mt-2 text-sm leading-6 text-slate-600">{copy.premium.revealSubtitle}</p>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{locale === "fr"
+                  ? "L'audit gratuit analyse déjà une partie de votre annonce. L'audit complet débloque le positionnement détaillé, l'occupation, la conversion et le plan d'action."
+                  : copy.premium.revealSubtitle}</p>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 {copy.premium.revealCards.map((card, index) => (

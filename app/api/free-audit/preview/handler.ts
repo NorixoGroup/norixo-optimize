@@ -272,7 +272,15 @@ async function buildListingPreviewFromGuestAudit(
   const guestRequest = new NextRequest(guestRequestUrl, {
     method: "POST",
     headers: copyClientHeaders(request),
-    body: JSON.stringify({ url: input.listingUrl }),
+    body: JSON.stringify({
+      url: input.listingUrl,
+      forceComparables: true,
+      comparables: {
+        city: input.city,
+        country: input.country,
+        propertyType: input.propertyType,
+      },
+    }),
   });
 
   const guestResponse = await runGuestAuditRequest(guestRequest);
