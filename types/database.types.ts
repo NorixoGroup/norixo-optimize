@@ -2421,9 +2421,9 @@ export type Database = {
         ]
       }
       backlink_contact_form_approvals: {
-        Row: { approved_at: string; approved_by_user_id: string; body: string; campaign_id: string; contact_id: string; content_fingerprint: string; created_at: string; form_schema_fingerprint: string | null; form_url: string; id: string; opportunity_id: string; outreach_id: string; sender_company: string; sender_email: string; sender_name: string; sender_website: string; subject: string; target_url: string; workspace_id: string }
-        Insert: { approved_at?: string; approved_by_user_id: string; body: string; campaign_id: string; contact_id: string; content_fingerprint: string; created_at?: string; form_schema_fingerprint?: string | null; form_url: string; id?: string; opportunity_id: string; outreach_id: string; sender_company: string; sender_email: string; sender_name: string; sender_website: string; subject: string; target_url: string; workspace_id: string }
-        Update: { approved_at?: string; approved_by_user_id?: string; body?: string; campaign_id?: string; contact_id?: string; content_fingerprint?: string; created_at?: string; form_schema_fingerprint?: string | null; form_url?: string; id?: string; opportunity_id?: string; outreach_id?: string; sender_company?: string; sender_email?: string; sender_name?: string; sender_website?: string; subject?: string; target_url?: string; workspace_id?: string }
+        Row: { approved_at: string; approved_by_user_id: string; body: string; campaign_id: string; contact_id: string; content_fingerprint: string; created_at: string; form_schema_fingerprint: string | null; form_url: string; id: string; opportunity_id: string; outreach_id: string; sender_company: string; sender_email: string; sender_first_name: string | null; sender_last_name: string | null; sender_name: string; sender_website: string; subject: string; target_url: string; workspace_id: string }
+        Insert: { approved_at?: string; approved_by_user_id: string; body: string; campaign_id: string; contact_id: string; content_fingerprint: string; created_at?: string; form_schema_fingerprint?: string | null; form_url: string; id?: string; opportunity_id: string; outreach_id: string; sender_company: string; sender_email: string; sender_first_name?: string | null; sender_last_name?: string | null; sender_name: string; sender_website: string; subject: string; target_url: string; workspace_id: string }
+        Update: { approved_at?: string; approved_by_user_id?: string; body?: string; campaign_id?: string; contact_id?: string; content_fingerprint?: string; created_at?: string; form_schema_fingerprint?: string | null; form_url?: string; id?: string; opportunity_id?: string; outreach_id?: string; sender_company?: string; sender_email?: string; sender_first_name?: string | null; sender_last_name?: string | null; sender_name?: string; sender_website?: string; subject?: string; target_url?: string; workspace_id?: string }
         Relationships: [
           { foreignKeyName: "backlink_contact_form_approvals_campaign_id_fkey"; columns: ["campaign_id"]; isOneToOne: false; referencedRelation: "backlink_campaigns"; referencedColumns: ["id"] },
           { foreignKeyName: "backlink_contact_form_approvals_contact_id_fkey"; columns: ["contact_id"]; isOneToOne: false; referencedRelation: "backlink_contacts"; referencedColumns: ["id"] },
@@ -5058,7 +5058,7 @@ export type Database = {
         Returns: boolean
       }
       approve_backlink_contact_form_initial_v1: {
-        Args: { p_approved_by_user_id: string; p_outreach_id: string; p_sender_company: string; p_sender_email: string; p_sender_name: string; p_sender_website: string; p_workspace_id: string }
+        Args: { p_approved_by_user_id: string; p_outreach_id: string; p_sender_company: string; p_sender_email: string; p_sender_first_name?: string | null; p_sender_last_name?: string | null; p_sender_name: string; p_sender_website: string; p_workspace_id: string }
         Returns: { approval_id: string; content_fingerprint: string; disposition: string }[]
       }
       queue_backlink_contact_form_run_v1: {

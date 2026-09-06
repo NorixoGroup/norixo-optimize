@@ -669,6 +669,8 @@ async function executeClaimedContactFormNavigationWorkerOnce(
       page: await session.page.inspectForms(),
       approvedContent: {
         senderName: context.approval.sender_name,
+        senderFirstName: context.approval.sender_first_name,
+        senderLastName: context.approval.sender_last_name,
         senderEmail: context.approval.sender_email,
         senderCompany: context.approval.sender_company,
         senderWebsite: context.approval.sender_website,

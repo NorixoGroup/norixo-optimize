@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import type { Json } from "@/types/database.types";
 
-export const CONTACT_FORM_SUPPORTED_SEMANTIC_FIELDS = ["sender_name", "sender_email", "sender_company", "sender_website", "subject", "message"] as const;
+export const CONTACT_FORM_SUPPORTED_SEMANTIC_FIELDS = ["sender_name", "sender_first_name", "sender_last_name", "sender_email", "sender_company", "sender_website", "subject", "message"] as const;
 export const CONTACT_FORM_SUPPORTED_CONTROL_TYPES = ["text", "email", "url", "textarea"] as const;
 
 export type ContactFormSupportedSemanticField = (typeof CONTACT_FORM_SUPPORTED_SEMANTIC_FIELDS)[number];
@@ -13,6 +13,8 @@ export type ContactFormMappingStatus = "mapped" | "manual_review" | "blocked_pol
 
 export type ContactFormApprovedContent = Readonly<{
   senderName: string;
+  senderFirstName?: string | null;
+  senderLastName?: string | null;
   senderEmail: string;
   senderCompany: string;
   senderWebsite: string;
@@ -141,7 +143,7 @@ type FormAnalysis = Readonly<{
 }>;
 
 const REQUIRED_SEMANTIC_FIELDS = new Set<ContactFormSupportedSemanticField>(["sender_name", "sender_email", "message"]);
-const OPTIONAL_SEMANTIC_FIELDS = new Set<ContactFormSupportedSemanticField>(["sender_company", "sender_website", "subject"]);
+const OPTIONAL_SEMANTIC_FIELDS = new Set<ContactFormSupportedSemanticField>(["sender_first_name", "sender_last_name", "sender_company", "sender_website", "subject"]);
 const MAX_FORMS = 5;
 const MAX_CONTROLS_PER_FORM = 30;
 const MAX_SELECT_OPTIONS = 50;
@@ -435,10 +437,12 @@ function mapFields(
   const reasons: string[] = [];
   const mapped: ContactFormMappedFieldPreview[] = [];
   const usedControls = new Set<number>();
-  const requiresSplitSenderName = hasRequiredSplitSenderName(form);
+  const requiredNameParts = requiredSenderNameParts(form);
+  const hasRequiredSplitControls = requiredNameParts.has("first") && requiredNameParts.has("last");
+  const requiresSplitSenderName = hasRequiredSplitControls && !hasApprovedSplitSenderName(approvedContent);
   if (requiresSplitSenderName) reasons.push("required_split_sender_name");
+  const requiredSemanticFields = requiredSemanticFieldsForForm(fields);
   for (const semantic of CONTACT_FORM_SUPPORTED_SEMANTIC_FIELDS) {
-    if (semantic === "sender_name" && requiresSplitSenderName) continue;
     const candidates = fields.filter((field) => field.semanticCandidates.includes(semantic));
     if (candidates.length > 1) {
       reasons.push(`ambiguous_${semantic}`);
@@ -446,11 +450,11 @@ function mapFields(
     }
     const candidate = candidates[0];
     if (!candidate) {
-      if (REQUIRED_SEMANTIC_FIELDS.has(semantic)) reasons.push(`missing_${semantic}`);
+      if (requiredSemanticFields.has(semantic)) reasons.push(`missing_${semantic}`);
       continue;
     }
     if (usedControls.has(candidate.controlOrdinal)) {
-      if (REQUIRED_SEMANTIC_FIELDS.has(semantic)) reasons.push(`duplicate_control_${semantic}`);
+      if (requiredSemanticFields.has(semantic)) reasons.push(`duplicate_control_${semantic}`);
       continue;
     }
     const control = form.controls.find((current) => current.ordinal === candidate.controlOrdinal);
@@ -480,8 +484,12 @@ function mapFields(
       reasons.push(control?.valuePresent ? `prefilled_${semantic}` : `unsupported_${semantic}`);
       continue;
     }
-    usedControls.add(candidate.controlOrdinal);
     const sourceValue = sourceValueForSemantic(approvedContent, semantic);
+    if (!sourceValue) {
+      if (candidate.required || requiredSemanticFields.has(semantic)) reasons.push(`missing_${semantic}`);
+      continue;
+    }
+    usedControls.add(candidate.controlOrdinal);
     mapped.push({
       semanticField: semantic,
       fieldFingerprint: candidate.fieldFingerprint,
@@ -582,7 +590,15 @@ function scoreSemantics(control: ContactFormDiscoveredControl): readonly Semanti
   add("message", (control.tag === "textarea" ? 4 : 0) + keywordScore(strong, ["message", "comment", "comments", "inquiry", "enquiry", "details", "body"]) + weakKeywordScore(weak, ["message", "comment", "inquiry", "enquiry"]), control.tag === "textarea" || keywordScore(strong, ["message", "comment", "inquiry", "enquiry"]) > 0 ? "strong" : "weak");
   add("subject", keywordScore(strong, ["subject", "topic", "title", "objet"]) + weakKeywordScore(weak, ["subject", "topic"]), keywordScore(strong, ["subject", "topic", "title", "objet"]) > 0 ? "strong" : "weak");
   const companyPenalty = /\b(company|organisation|organization|business|agency|hotel)\b/.test(strong) ? -5 : 0;
-  add("sender_name", keywordScore(strong, ["full name", "your name", "name", "nom"]) + autocompleteNameScore(control.autocomplete) + weakKeywordScore(weak, ["name"]) + companyPenalty, keywordScore(strong, ["full name", "your name", "name", "nom"]) > 0 || autocompleteNameScore(control.autocomplete) > 0 ? "strong" : "weak");
+  const namePart = senderNamePartFromText(strong, control.autocomplete);
+  if (namePart === "first") {
+    add("sender_first_name", 6, "strong");
+  } else if (namePart === "last") {
+    add("sender_last_name", 6, "strong");
+  } else {
+    const senderNameScore = senderFullNameScore(strong, control.autocomplete, weak);
+    add("sender_name", senderNameScore + companyPenalty, senderNameScore > 0 ? "strong" : "weak");
+  }
   add("sender_company", keywordScore(strong, ["company", "organisation", "organization", "business", "agency", "hotel"]) + weakKeywordScore(weak, ["company", "organization"]), keywordScore(strong, ["company", "organisation", "organization", "business", "agency", "hotel"]) > 0 ? "strong" : "weak");
   return scores.filter((score) => score.source === "strong" || score.score >= MAPPING_SCORE_THRESHOLD);
 }
@@ -616,7 +632,7 @@ function scoreForm(form: ContactFormDiscoveredForm, fields: readonly ContactForm
   let score = 0;
   if (/\b(contact|message|inquiry|enquiry|feedback|get in touch|reach us)\b/.test(text)) score += 4;
   if (fields.some((field) => field.semanticCandidates.includes("sender_email"))) score += 3;
-  if (fields.some((field) => field.semanticCandidates.includes("sender_name"))) score += 2;
+  if (fields.some((field) => field.semanticCandidates.includes("sender_name") || field.semanticCandidates.includes("sender_first_name") || field.semanticCandidates.includes("sender_last_name"))) score += 2;
   if (fields.some((field) => field.semanticCandidates.includes("message"))) score += 4;
   if (fields.some((field) => field.semanticCandidates.includes("subject"))) score += 1;
   return score;
@@ -648,22 +664,56 @@ function isWritablePreviewCandidate(control: ContactFormDiscoveredControl): bool
   return control.visible && !control.disabled && !control.readOnly && !control.hidden && isSupportedControlType(normalizeControlType(control)) && !control.valuePresent;
 }
 
-function hasRequiredSplitSenderName(form: ContactFormDiscoveredForm): boolean {
-  const requiredParts = form.controls
-    .filter((control) => control.required && control.visible && !control.disabled && !control.readOnly && !control.hidden && isSupportedControlType(normalizeControlType(control)))
-    .map((control) => ({ ordinal: control.ordinal, part: senderNamePart(form, control) }))
-    .filter((item): item is { ordinal: number; part: "first" | "last" } => item.part != null);
-  return requiredParts.some((item) => item.part === "first") && requiredParts.some((item) => item.part === "last");
+function requiredSenderNameParts(form: ContactFormDiscoveredForm): ReadonlySet<"first" | "last"> {
+  return new Set(
+    form.controls
+      .filter((control) => control.required && control.visible && !control.disabled && !control.readOnly && !control.hidden && isSupportedControlType(normalizeControlType(control)))
+      .map((control) => ({ ordinal: control.ordinal, part: senderNamePart(form, control) }))
+      .filter((item): item is { ordinal: number; part: "first" | "last" } => item.part != null)
+      .map((item) => item.part),
+  );
+}
+
+function requiredSemanticFieldsForForm(fields: readonly ContactFormFieldPreview[]): ReadonlySet<ContactFormSupportedSemanticField> {
+  const required = new Set(REQUIRED_SEMANTIC_FIELDS);
+  const requiredIdentityFields = new Set<ContactFormSupportedSemanticField>();
+  for (const field of fields) {
+    if (!field.required) continue;
+    for (const semantic of field.semanticCandidates) {
+      if (semantic === "sender_name" || semantic === "sender_first_name" || semantic === "sender_last_name") requiredIdentityFields.add(semantic);
+    }
+  }
+  if (requiredIdentityFields.size > 0) {
+    required.delete("sender_name");
+    for (const semantic of requiredIdentityFields) required.add(semantic);
+  }
+  return required;
+}
+
+function hasApprovedSplitSenderName(content: ContactFormApprovedContent): boolean {
+  return trimToNull(content.senderFirstName) != null && trimToNull(content.senderLastName) != null;
 }
 
 function senderNamePart(form: ContactFormDiscoveredForm, control: ContactFormDiscoveredControl): "first" | "last" | null {
-  const text = controlText(form, control);
-  const autocomplete = normalizeText(control.autocomplete ?? "");
-  const first = autocomplete === "given-name" || /\b(first|given|forename|prenom)\b/.test(text);
-  const last = autocomplete === "family-name" || /\b(last|family|surname|nom de famille)\b/.test(text);
+  return senderNamePartFromText(controlText(form, control), control.autocomplete);
+}
+
+function senderNamePartFromText(text: string, autocompleteValue: string | null): "first" | "last" | null {
+  const autocomplete = (autocompleteValue ?? "").trim().toLowerCase();
+  const first = autocomplete === "given-name" || /\b(first name|firstname|given name|givenname|forename|prenom)\b/.test(text);
+  const last = autocomplete === "family-name" || /\b(last name|lastname|family name|familyname|surname|sur name|nom de famille)\b/.test(text);
   if (first && !last) return "first";
   if (last && !first) return "last";
   return null;
+}
+
+function senderFullNameScore(text: string, autocompleteValue: string | null, weakText: string): number {
+  const autocomplete = normalizeText(autocompleteValue ?? "");
+  let score = 0;
+  if (/\b(full name|your name|name|nom)\b/.test(text)) score += 4;
+  if (["name", "additional-name"].includes(autocomplete)) score += 4;
+  if (/\bname\b/.test(weakText)) score += 1;
+  return score;
 }
 
 function isSupportedControlType(type: string): type is ContactFormSupportedControlType {
@@ -693,6 +743,8 @@ function normalizeFormAction(action: string | null, pageUrl: string): { origin: 
 
 function sourceValueForSemantic(content: ContactFormApprovedContent, semantic: ContactFormSupportedSemanticField): string {
   if (semantic === "sender_name") return content.senderName;
+  if (semantic === "sender_first_name") return trimToNull(content.senderFirstName) ?? "";
+  if (semantic === "sender_last_name") return trimToNull(content.senderLastName) ?? "";
   if (semantic === "sender_email") return content.senderEmail;
   if (semantic === "sender_company") return content.senderCompany;
   if (semantic === "sender_website") return content.senderWebsite;
@@ -710,11 +762,6 @@ function keywordScore(value: string, keywords: readonly string[]): number {
 
 function weakKeywordScore(value: string, keywords: readonly string[]): number {
   return keywords.some((keyword) => value.includes(keyword)) ? 1 : 0;
-}
-
-function autocompleteNameScore(value: string | null): number {
-  const normalized = normalizeText(value ?? "");
-  return ["name", "given-name", "family-name", "additional-name"].includes(normalized) ? 4 : 0;
 }
 
 function sanitizePage(page: ContactFormDiscoveredPage): ContactFormDiscoveredPage {
@@ -780,6 +827,11 @@ function normalizeText(value: string): string {
     .replace(/[_-]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function trimToNull(value: string | null | undefined): string | null {
+  const normalized = value?.trim() ?? "";
+  return normalized.length > 0 ? normalized : null;
 }
 
 function fingerprint(value: Json): string {

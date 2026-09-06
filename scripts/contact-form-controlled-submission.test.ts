@@ -17,6 +17,7 @@ import {
   contactFormSafeFingerprint,
   executeContactFormControlledSubmission,
   isKnownSameHostConfirmationPath,
+  sourceValueForSemantic,
   type ContactFormConfirmationObservation,
   type ContactFormControlledSubmissionDependencies,
   type ContactFormFieldLocator,
@@ -60,6 +61,12 @@ const approvedContent: ContactFormApprovedContent = {
   senderWebsite: "https://norixo.example",
   subject: "Approved subject",
   body: "Approved body",
+};
+const splitApprovedContent: ContactFormApprovedContent = {
+  ...approvedContent,
+  senderName: "Test Sender",
+  senderFirstName: "Test",
+  senderLastName: "Sender",
 };
 
 function rowRun(overrides: Partial<ContactFormRun> = {}): ContactFormRun {
@@ -114,6 +121,8 @@ function rowApproval(input: {
   const contact = input.contact ?? rowContact();
   const opportunity = input.opportunity ?? rowOpportunity();
   const senderName = input.overrides?.sender_name ?? approvedContent.senderName;
+  const senderFirstName = input.overrides?.sender_first_name ?? null;
+  const senderLastName = input.overrides?.sender_last_name ?? null;
   const senderEmail = input.overrides?.sender_email ?? approvedContent.senderEmail;
   const senderCompany = input.overrides?.sender_company ?? approvedContent.senderCompany;
   const senderWebsite = input.overrides?.sender_website ?? approvedContent.senderWebsite;
@@ -130,6 +139,8 @@ function rowApproval(input: {
     targetUrl,
     formUrl,
     senderName,
+    senderFirstName,
+    senderLastName,
     senderEmail,
     senderCompany,
     senderWebsite,
@@ -151,6 +162,8 @@ function rowApproval(input: {
     outreach_id: outreachId,
     sender_company: senderCompany,
     sender_email: senderEmail,
+    sender_first_name: senderFirstName,
+    sender_last_name: senderLastName,
     sender_name: senderName,
     sender_website: senderWebsite,
     subject: subject.trim(),
@@ -239,12 +252,25 @@ function allFieldsForm(overrides: Partial<ContactFormDiscoveredForm> = {}): Cont
   });
 }
 
+function splitNameForm(overrides: Partial<ContactFormDiscoveredForm> = {}): ContactFormDiscoveredForm {
+  return contactForm({
+    controls: [textInput(0, "First Name", { autocomplete: "given-name", required: true }), textInput(1, "Last Name", { autocomplete: "family-name", required: true }), emailInput(2), textarea(3), submitButton(4)],
+    ...overrides,
+  });
+}
+
 function discoveredPage(form: ContactFormDiscoveredForm): ContactFormDiscoveredPage {
   return { pageUrl, pageTitle: "Contact", forms: [form] };
 }
 
 function mappingFor(form: ContactFormDiscoveredForm): ContactFormMappingPreview {
   const mapping = buildContactFormMappingPreview({ page: discoveredPage(form), approvedContent });
+  assert.equal(mapping.result, "mapped");
+  return mapping;
+}
+
+function mappingForContent(form: ContactFormDiscoveredForm, content: ContactFormApprovedContent): ContactFormMappingPreview {
+  const mapping = buildContactFormMappingPreview({ page: discoveredPage(form), approvedContent: content });
   assert.equal(mapping.result, "mapped");
   return mapping;
 }
@@ -464,6 +490,42 @@ for (const [index, semantic] of (["sender_name", "sender_email", "sender_company
     assert.equal(h.page.fillCalls.some((call) => call.semantic === semantic), true);
   });
 }
+
+test("T18a explicit sender_first_name and sender_last_name source values are resolved only from approval fields", () => {
+  const splitContext = context({ approval: { sender_name: "Test Sender", sender_first_name: "Test", sender_last_name: "Sender" } });
+  assert.equal(sourceValueForSemantic(splitContext, "sender_first_name"), "Test");
+  assert.equal(sourceValueForSemantic(splitContext, "sender_last_name"), "Sender");
+  const legacyContext = context({ approval: { sender_name: "Test Sender", sender_first_name: null, sender_last_name: null } });
+  assert.equal(sourceValueForSemantic(legacyContext, "sender_first_name"), null);
+  assert.equal(sourceValueForSemantic(legacyContext, "sender_last_name"), null);
+});
+
+test("T18b explicit split-name form fills only with approved split identity", async () => {
+  const form = splitNameForm();
+  const h = harness({
+    page: new FakeC5Page(form),
+    mapping: mappingForContent(form, splitApprovedContent),
+    contexts: [context({ approval: { sender_name: "Test Sender", sender_first_name: "Test", sender_last_name: "Sender" } })],
+  });
+  const result = await h.run();
+  assert.equal(result.kind, "submission_confirmed");
+  assert.equal(h.page.values.get(0), "Test");
+  assert.equal(h.page.values.get(1), "Sender");
+});
+
+test("T18c legacy approval cannot satisfy required split-name mapping and fails before fill", async () => {
+  const form = splitNameForm();
+  const h = harness({
+    page: new FakeC5Page(form),
+    mapping: mappingForContent(form, splitApprovedContent),
+    contexts: [context({ approval: { sender_name: "Test Sender", sender_first_name: null, sender_last_name: null } })],
+  });
+  const result = await h.run();
+  assert.equal(result.kind, "blocked");
+  assert.equal(result.kind === "blocked" ? result.safeErrorCode : null, "CONTACT_FORM_MAPPING_STALE");
+  assert.equal(h.page.values.size, 0);
+  assertNoSubmit(h.page);
+});
 
 for (const [index, controlType] of (["text", "email", "url", "textarea"] as const).entries()) {
   test(`T${String(18 + index).padStart(2, "0")} ${controlType} allowed`, async () => {

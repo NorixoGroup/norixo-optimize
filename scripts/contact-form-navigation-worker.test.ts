@@ -96,6 +96,9 @@ function rowApproval(input?: {
   const outreach = input?.outreach ?? rowOutreach();
   const contact = input?.contact ?? rowContact();
   const opportunity = input?.opportunity ?? rowOpportunity();
+  const senderName = input?.overrides?.sender_name ?? "Norixo";
+  const senderFirstName = input?.overrides?.sender_first_name ?? null;
+  const senderLastName = input?.overrides?.sender_last_name ?? null;
   const content_fingerprint = buildContactFormApprovalFingerprint({
     workspaceId,
     campaignId,
@@ -104,7 +107,9 @@ function rowApproval(input?: {
     opportunityId,
     targetUrl: opportunity.target_page_url.trim(),
     formUrl: contact.contact_form_url?.trim() ?? "",
-    senderName: "Norixo",
+    senderName,
+    senderFirstName,
+    senderLastName,
     senderEmail: "ops@norixo.example",
     senderCompany: "Norixo",
     senderWebsite: "https://norixo.example",
@@ -126,7 +131,9 @@ function rowApproval(input?: {
     outreach_id: outreachId,
     sender_company: "Norixo",
     sender_email: "ops@norixo.example",
-    sender_name: "Norixo",
+    sender_first_name: senderFirstName,
+    sender_last_name: senderLastName,
+    sender_name: senderName,
     sender_website: "https://norixo.example",
     subject: outreach.subject ?? "",
     target_url: opportunity.target_page_url.trim(),
@@ -180,6 +187,19 @@ function discoveredContactForm(overrides: Partial<ContactFormDiscoveredForm> = {
     ],
     ...overrides,
   };
+}
+
+function discoveredSplitNameContactForm(overrides: Partial<ContactFormDiscoveredForm> = {}): ContactFormDiscoveredForm {
+  return discoveredContactForm({
+    controls: [
+      { ordinal: 0, tag: "input", type: "text", name: "first_name", id: "first_name", autocomplete: "given-name", labelText: "First Name", ariaLabel: null, ariaLabelledbyText: null, placeholder: null, required: true, disabled: false, readOnly: false, hidden: false, visible: true, valuePresent: false },
+      { ordinal: 1, tag: "input", type: "text", name: "last_name", id: "last_name", autocomplete: "family-name", labelText: "Last Name", ariaLabel: null, ariaLabelledbyText: null, placeholder: null, required: true, disabled: false, readOnly: false, hidden: false, visible: true, valuePresent: false },
+      { ordinal: 2, tag: "input", type: "email", name: "email", id: "email", autocomplete: "email", labelText: "Email", ariaLabel: null, ariaLabelledbyText: null, placeholder: null, required: true, disabled: false, readOnly: false, hidden: false, visible: true, valuePresent: false },
+      { ordinal: 3, tag: "textarea", type: "textarea", name: "message", id: "message", autocomplete: null, labelText: "Message", ariaLabel: null, ariaLabelledbyText: null, placeholder: null, required: true, disabled: false, readOnly: false, hidden: false, visible: true, valuePresent: false },
+      { ordinal: 4, tag: "button", type: "submit", name: null, id: null, autocomplete: null, labelText: null, ariaLabel: null, ariaLabelledbyText: null, placeholder: null, required: false, disabled: false, readOnly: false, hidden: false, visible: true, valuePresent: false },
+    ],
+    ...overrides,
+  });
 }
 
 class FakePage implements ContactFormBrowserPage {
@@ -491,6 +511,18 @@ test("targetRunId with real submission true proceeds exact fake target without s
   assert.equal(d.targetClaims, 1);
   assert.equal(d.confirmations, 1);
   assert.equal(d.runtime.opened, 1);
+});
+test("explicit split identity reaches mapping preview without split-name blocker", async () => {
+  const page = new FakePage();
+  page.forms = [discoveredSplitNameContactForm()];
+  const d = deps({ page, ctx: context({ approval: { sender_name: "Test Sender", sender_first_name: "Test", sender_last_name: "Sender" } }) });
+  const result = await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId);
+  assert.equal(result.kind, "blocked");
+  assert.equal(d.transitions.map((transition) => transition.state).includes("mapped"), true);
+  const metadata = JSON.stringify(d.transitions.find((transition) => transition.state === "mapped")?.metadata ?? {});
+  assert.match(metadata, /sender_first_name/);
+  assert.match(metadata, /sender_last_name/);
+  assert.doesNotMatch(metadata, /required_split_sender_name|Test Sender|ops@norixo/);
 });
 test("HTTP rejection", () => expectUrl("http://forms.example/contact", false));
 test("unsupported protocol rejection", () => expectUrl("ftp://forms.example/contact", false));

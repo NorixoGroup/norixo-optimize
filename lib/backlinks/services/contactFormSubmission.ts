@@ -157,6 +157,7 @@ export async function executeContactFormControlledSubmission(input: {
   const fillEvidence: Json[] = [];
   for (const field of fields) {
     const sourceValue = sourceValueForSemantic(beforeFill.context, field.semanticField);
+    if (sourceValue == null) return transitionBlocked(input.run, input.workerId, deps, missingApprovedSourceFailure(field));
     await input.page.fillField(field.locator, sourceValue, { timeoutMs: fieldTimeoutMs });
     const readback = await input.page.readFieldValue(field.locator);
     const normalizedReadback = normalizeSubmittedValue(readback ?? "");
@@ -334,6 +335,8 @@ export function revalidateContactFormExecutionContext(context: ContactFormRunExe
     targetUrl,
     formUrl,
     senderName: approval.sender_name,
+    senderFirstName: approval.sender_first_name,
+    senderLastName: approval.sender_last_name,
     senderEmail: approval.sender_email,
     senderCompany: approval.sender_company,
     senderWebsite: approval.sender_website,
@@ -344,8 +347,10 @@ export function revalidateContactFormExecutionContext(context: ContactFormRunExe
   return { ok: true };
 }
 
-export function sourceValueForSemantic(context: ContactFormRunExecutionContext, semantic: ContactFormSupportedSemanticField): string {
+export function sourceValueForSemantic(context: ContactFormRunExecutionContext, semantic: ContactFormSupportedSemanticField): string | null {
   if (semantic === "sender_name") return context.approval.sender_name;
+  if (semantic === "sender_first_name") return trimToNull(context.approval.sender_first_name);
+  if (semantic === "sender_last_name") return trimToNull(context.approval.sender_last_name);
   if (semantic === "sender_email") return context.approval.sender_email;
   if (semantic === "sender_company") return context.approval.sender_company;
   if (semantic === "sender_website") return context.approval.sender_website;
@@ -404,6 +409,8 @@ async function validateSubmissionCheckpoint(input: {
     page: await input.page.inspectForms(),
     approvedContent: {
       senderName: context.approval.sender_name,
+      senderFirstName: context.approval.sender_first_name,
+      senderLastName: context.approval.sender_last_name,
       senderEmail: context.approval.sender_email,
       senderCompany: context.approval.sender_company,
       senderWebsite: context.approval.sender_website,
@@ -420,7 +427,9 @@ async function validateSubmissionCheckpoint(input: {
 
   if (input.phase === "before_submit") {
     for (const field of input.filledFields ?? []) {
-      const expectedValue = normalizeSubmittedValue(sourceValueForSemantic(context, field.semanticField));
+      const sourceValue = sourceValueForSemantic(context, field.semanticField);
+      if (sourceValue == null) return missingApprovedSourceFailure(field);
+      const expectedValue = normalizeSubmittedValue(sourceValue);
       const currentValue = normalizeSubmittedValue((await input.page.readFieldValue(field.locator)) ?? "");
       if (currentValue !== expectedValue) {
         return failure("failed_pre_submit", "CONTACT_FORM_FILLED_VALUE_TAMPERED", "filled_value_revalidation_failed", { semantic_field: field.semanticField, control_fingerprint: field.fieldFingerprint });
@@ -449,6 +458,10 @@ function compareMapping(expected: ContactFormMappingPreview, current: ContactFor
     return failure("manual_review", "CONTACT_FORM_MAPPING_FINGERPRINT_DRIFT", "mapping_fingerprint_drift", { expected_mapping_fingerprint: expected.mappingFingerprint, current_mapping_fingerprint: current.mappingFingerprint });
   }
   return null;
+}
+
+function missingApprovedSourceFailure(field: ContactFormMappedFieldPreview): SubmissionFailure {
+  return failure("manual_review", "CONTACT_FORM_APPROVED_SOURCE_MISSING", "approved_source_missing", { semantic_field: field.semanticField, control_fingerprint: field.fieldFingerprint });
 }
 
 async function selectStrictSubmitControl(page: ContactFormSubmissionPage, mapping: ContactFormMappingPreview): Promise<{ ok: true; control: ContactFormSubmitControl } | { ok: false; failure: SubmissionFailure }> {
