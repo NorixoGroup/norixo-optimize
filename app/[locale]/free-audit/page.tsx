@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { FreeAuditContent } from "@/app/(default)/free-audit/FreeAuditContent";
-import { getFreeAuditSeoCopy } from "@/app/(default)/free-audit/freeAuditTranslations";
+import { FreeAuditListingContent } from "@/app/(default)/free-audit/FreeAuditListingContent";
+import { getFreeAuditListingSeoCopy } from "@/app/(default)/free-audit/freeAuditListingSeoCopy";
 import { defaultLocale, isLocale } from "@/data/i18n";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 import { getSeoLocaleConfig } from "@/lib/seo/seoLocales";
@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return {};
   }
 
-  const metadataCopy = getFreeAuditSeoCopy(locale);
+  const metadataCopy = getFreeAuditListingSeoCopy(locale);
   const alternates = buildHreflangAlternates("/free-audit");
 
   return {
@@ -65,5 +65,5 @@ export default async function LocalizedFreeAuditPage({ params }: Props) {
     notFound();
   }
 
-  return <FreeAuditContent />;
+  return <FreeAuditListingContent />;
 }
