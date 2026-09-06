@@ -40,7 +40,6 @@ function main() {
     "raw_payload",
     "scoreBreakdown",
     "subScores",
-    "comparables",
     "metrics",
     "priceSource",
     "availableDays",
@@ -55,6 +54,11 @@ function main() {
   assert.equal(result.includes("result.insights"), true);
   assert.equal(result.includes("result.recommendations"), true);
   assert.equal(result.includes("result.market.comparableCount"), true);
+  assert.equal(
+    result.includes("result.market.comparables"),
+    false,
+    "Public teaser UI must not reference detailed market comparables",
+  );
   assert.equal(result.includes("result.availability.detected"), true);
   assert.equal(result.includes("result.lockedSections"), true);
 

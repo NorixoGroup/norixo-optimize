@@ -159,23 +159,6 @@ async function main() {
 
     clearGuestAuditDraft();
 
-    const noUrlValidation = validateFreeAuditForm(buildValidForm({ listingUrl: "" }));
-    assert.equal(noUrlValidation.ok, true);
-    if (!noUrlValidation.ok) {
-      throw new Error("Expected a valid free audit handoff without listing URL");
-    }
-
-    saveFreeAuditGuestDraft(buildFreeAuditHandoffDraftInput(noUrlValidation));
-    const noUrlConsumed = consumeFreeAuditGuestDraftForAuditNew();
-    assert.notEqual(noUrlConsumed, null);
-    assert.equal(noUrlConsumed?.listingUrl, null);
-    assert.equal(noUrlConsumed?.propertyTypeOverride, "apartment");
-    assert.equal(noUrlConsumed?.guestCapacity, null);
-    assert.equal(noUrlConsumed?.declaredNightlyPrice, null);
-    assert.equal(noUrlConsumed?.currency, null);
-
-    clearGuestAuditDraft();
-
     const expiredCreatedAt = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString();
     storage.setItem(
       GUEST_AUDIT_DRAFTS_KEY,

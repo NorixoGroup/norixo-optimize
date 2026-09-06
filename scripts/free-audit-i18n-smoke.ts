@@ -4,6 +4,8 @@ import { resolve } from "node:path";
 
 import { FREE_AUDIT_PLATFORM_OPTIONS, FREE_AUDIT_PROPERTY_TYPE_OPTIONS } from "../app/(default)/free-audit/freeAuditPageModel";
 import { freeAuditTranslations, getFreeAuditSeoCopy } from "../app/(default)/free-audit/freeAuditTranslations";
+import { getFreeAuditListingSeoCopy } from "../app/(default)/free-audit/freeAuditListingSeoCopy";
+import { freeAuditListingModeCopy } from "../app/(default)/free-audit/freeAuditListingModeCopy";
 import { defaultLocale, locales, type Locale } from "../data/i18n";
 import { buildLocalizedUrl } from "../lib/seo/seoUrls";
 
@@ -157,8 +159,12 @@ async function main() {
     "Select a property type",
   );
   assert.equal(
-    freeAuditTranslations.en.form.submitIdle,
-    "See my free analysis",
+    freeAuditListingModeCopy.en.submitIdle,
+    "Run my free audit",
+  );
+  assert.equal(
+    freeAuditListingModeCopy.fr.submitIdle,
+    "Lancer mon audit gratuit",
   );
   assert.equal(
     freeAuditTranslations.en.hero.reassurance,
@@ -339,7 +345,7 @@ async function main() {
     "FreeAuditContent.tsx should keep the RTL timeline spine adjustment",
   );
 
-  const englishSeo = getFreeAuditSeoCopy("en");
+  const englishSeo = getFreeAuditListingSeoCopy("en");
   assert.equal(rootFreeAuditMetadata.title, englishSeo.title);
   assert.equal(rootFreeAuditMetadata.description, englishSeo.description);
 
@@ -347,7 +353,7 @@ async function main() {
     const localizedMetadata = await generateLocalizedFreeAuditMetadata({
       params: Promise.resolve({ locale }),
     });
-    const seoCopy = getFreeAuditSeoCopy(locale);
+    const seoCopy = getFreeAuditListingSeoCopy(locale);
 
     assert.equal(localizedMetadata.title, seoCopy.title);
     assert.equal(localizedMetadata.description, seoCopy.description);
@@ -358,7 +364,7 @@ async function main() {
     );
     assert.equal(
       localizedMetadata.alternates?.languages?.["x-default"],
-      "https://norixo.io",
+      "https://norixo.io/free-audit",
     );
   }
 

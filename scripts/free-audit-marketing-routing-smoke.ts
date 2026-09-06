@@ -45,7 +45,7 @@ async function main() {
   assert.equal(rootFreeAuditMetadata.alternates?.canonical, "https://norixo.io/free-audit");
   assert.equal(
     rootFreeAuditMetadata.alternates?.languages?.["x-default"],
-    "https://norixo.io",
+    "https://norixo.io/free-audit",
   );
 
   const localizedMetadata = await generateLocalizedFreeAuditMetadata({
@@ -58,7 +58,7 @@ async function main() {
   );
   assert.equal(
     localizedMetadata.alternates?.languages?.["x-default"],
-    "https://norixo.io",
+    "https://norixo.io/free-audit",
   );
 
   console.log("PASS — Free audit marketing routing smoke");
