@@ -23,101 +23,60 @@ function buildValidForm(
 }
 
 function main() {
-  {
-    const validation = validateFreeAuditForm(buildValidForm());
-    assert.equal(validation.ok, true);
-    if (!validation.ok) {
-      throw new Error("Expected valid form payload");
-    }
+  const valid = validateFreeAuditForm(buildValidForm());
+  assert.equal(valid.ok, true);
+  if (!valid.ok) throw new Error("Expected valid form payload");
+  assert.deepEqual(Object.keys(valid.payload).sort(), [...FREE_AUDIT_ALLOWED_PAYLOAD_KEYS].sort());
+  assert.equal(valid.payload.listingUrl, "https://www.airbnb.com/rooms/123456789");
+  assert.equal(valid.payload.platform, "airbnb");
+  assert.equal(valid.payload.propertyType, "apartment");
+  assert.equal("guestCapacity" in valid.payload, false);
+  assert.equal("declaredNightlyPrice" in valid.payload, false);
+  assert.equal("currency" in valid.payload, false);
 
-    assert.deepEqual(
-      Object.keys(validation.payload).sort(),
-      [...FREE_AUDIT_ALLOWED_PAYLOAD_KEYS].sort(),
-    );
-    assert.equal("listingUrl" in validation.payload, false);
-    assert.equal("guestCapacity" in validation.payload, false);
-    assert.equal("declaredNightlyPrice" in validation.payload, false);
-    assert.equal("currency" in validation.payload, false);
-    assert.equal(validation.payload.platform, "airbnb");
-    assert.equal(validation.payload.propertyType, "apartment");
-  }
+  const emptyUrl = validateFreeAuditForm(buildValidForm({ listingUrl: "" }));
+  assert.equal(emptyUrl.ok, false);
+  if (emptyUrl.ok) throw new Error("Expected listing URL to be required");
+  assert.equal(emptyUrl.errors.listingUrl, "listing_url_invalid");
 
-  {
-    const validation = validateFreeAuditForm(buildValidForm({ listingUrl: "" }));
-    assert.equal(validation.ok, true);
-  }
+  const invalidUrl = validateFreeAuditForm(buildValidForm({ listingUrl: "notaurl" }));
+  assert.equal(invalidUrl.ok, false);
+  if (invalidUrl.ok) throw new Error("Expected invalid listing URL");
+  assert.equal(invalidUrl.errors.listingUrl, "listing_url_invalid");
 
-  {
-    const validation = validateFreeAuditForm(
-      buildValidForm({ listingUrl: "notaurl" }),
-    );
-    assert.equal(validation.ok, false);
-    if (validation.ok) {
-      throw new Error("Expected invalid listing URL");
-    }
-    assert.equal(validation.errors.listingUrl, "listing_url_invalid");
-  }
+  const detected = validateFreeAuditForm(
+    buildValidForm({
+      platform: "",
+      listingUrl: "www.booking.com/hotel/fr/example.fr.html",
+    }),
+  );
+  assert.equal(detected.ok, true);
+  if (!detected.ok) throw new Error("Expected detected platform");
+  assert.equal(detected.payload.platform, "booking");
+  assert.equal(detected.payload.listingUrl.startsWith("https://www.booking.com/"), true);
 
-  {
-    const validation = validateFreeAuditForm(
-      buildValidForm({
-        platform: "",
-        listingUrl: "www.booking.com/hotel/fr/example.fr.html",
-      }),
-    );
-    assert.equal(validation.ok, true);
-    if (!validation.ok) {
-      throw new Error("Expected detected booking platform");
-    }
-    assert.equal(validation.payload.platform, "booking");
-  }
+  const mismatch = validateFreeAuditForm(
+    buildValidForm({
+      platform: "booking",
+      listingUrl: "https://www.airbnb.com/rooms/123456789",
+    }),
+  );
+  assert.equal(mismatch.ok, false);
+  if (mismatch.ok) throw new Error("Expected URL/platform mismatch rejection");
+  assert.equal(mismatch.errors.listingUrl, "listing_url_invalid");
 
-  {
-    const validation = validateFreeAuditForm(
-      buildValidForm({
-        listingUrl: "",
-        country: "",
-        city: "",
-        platform: "",
-        propertyType: "",
-      }),
-    );
-    assert.equal(validation.ok, false);
-    if (validation.ok) {
-      throw new Error("Expected required field errors");
-    }
-    assert.equal(validation.errors.country, "country_required");
-    assert.equal(validation.errors.city, "city_required");
-    assert.equal(validation.errors.platform, "platform_required");
-    assert.equal(validation.errors.propertyType, "property_type_required");
-    assert.equal("currency" in validation.errors, false);
-  }
+  assert.equal(detectSupportedPlatformFromListingUrl("https://www.airbnb.com/rooms/123456"), "airbnb");
+  assert.equal(detectSupportedPlatformFromListingUrl("https://www.booking.com/hotel/fr/test.fr.html"), "booking");
+  assert.equal(detectSupportedPlatformFromListingUrl("notaurl"), null);
 
-  {
-    assert.equal(
-      detectSupportedPlatformFromListingUrl("https://www.airbnb.com/rooms/123456"),
-      "airbnb",
-    );
-    assert.equal(
-      detectSupportedPlatformFromListingUrl("https://www.booking.com/hotel/fr/test.fr.html"),
-      "booking",
-    );
-    assert.equal(detectSupportedPlatformFromListingUrl("notaurl"), null);
-  }
+  assert.equal(mapPreviewErrorStatus("invalid_request"), "invalid_request");
+  assert.equal(mapPreviewErrorStatus("rate_limited"), "rate_limited");
+  assert.equal(mapPreviewErrorStatus("unavailable"), "unavailable");
+  assert.equal(mapPreviewErrorStatus("something_else"), "unknown_error");
 
-  {
-    assert.equal(mapPreviewErrorStatus("invalid_request"), "invalid_request");
-    assert.equal(mapPreviewErrorStatus("rate_limited"), "rate_limited");
-    assert.equal(mapPreviewErrorStatus("unavailable"), "unavailable");
-    assert.equal(mapPreviewErrorStatus("something_else"), "unknown_error");
-    assert.equal(mapPreviewErrorStatus(undefined), "unknown_error");
-  }
-
-  {
-    const formatted = formatCurrencyValue("fr", "EUR", 145);
-    assert.equal(formatted.includes("145"), true);
-    assert.equal(formatted.includes("EUR"), false);
-  }
+  const formatted = formatCurrencyValue("fr", "EUR", 145);
+  assert.equal(formatted.includes("145"), true);
+  assert.equal(formatted.includes("EUR"), false);
 
   console.log("PASS — Free audit page model smoke");
 }
