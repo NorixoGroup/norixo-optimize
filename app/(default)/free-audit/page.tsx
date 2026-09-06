@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 
-import { FreeAuditContent } from "@/app/(default)/free-audit/FreeAuditContent";
-import { getFreeAuditSeoCopy } from "@/app/(default)/free-audit/freeAuditTranslations";
+import { FreeAuditListingContent } from "@/app/(default)/free-audit/FreeAuditListingContent";
+import { getFreeAuditListingSeoCopy } from "@/app/(default)/free-audit/freeAuditListingSeoCopy";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 
 const siteUrl = (
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://norixo.io"
 ).replace(/\/$/, "");
-const seoCopy = getFreeAuditSeoCopy("en");
+const seoCopy = getFreeAuditListingSeoCopy("en");
 const alternates = buildHreflangAlternates("/free-audit");
 const socialImage = "/og/free-airbnb-market-snapshot.png";
 
@@ -80,7 +80,7 @@ export default function FreeAuditPage() {
           __html: JSON.stringify(freeAuditJsonLd).replace(/</g, "\\u003c"),
         }}
       />
-      <FreeAuditContent />
+      <FreeAuditListingContent />
     </>
   );
 }
