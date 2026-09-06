@@ -28,6 +28,7 @@ import {
   revalidateContactFormExecutionContext,
   type ContactFormConfirmationObservation,
   type ContactFormFieldLocator,
+  type ContactFormSelectOptionExpectation,
   type ContactFormSubmitControl,
   type ContactFormSubmitRequestAllowance,
 } from "@/lib/backlinks/services/contactFormSubmission";
@@ -56,6 +57,11 @@ export type ContactFormBrowserPage = {
   inspectForms: () => Promise<ContactFormDiscoveredPage>;
   readFieldValue: (locator: ContactFormFieldLocator) => Promise<string | null>;
   fillField: (locator: ContactFormFieldLocator, value: string, options: { timeoutMs: number }) => Promise<void>;
+  selectFieldOption: (
+    locator: ContactFormFieldLocator,
+    option: ContactFormSelectOptionExpectation,
+    options: { timeoutMs: number },
+  ) => Promise<void>;
   listSubmitControls: (formOrdinal: number) => Promise<readonly ContactFormSubmitControl[]>;
   clickSubmitControl: (control: ContactFormSubmitControl, options: { timeoutMs: number }) => Promise<void>;
   observeSubmissionConfirmation: (input: { expectedOrigin: string; selectedFormOrdinal: number; selectedFormFingerprint: string; timeoutMs: number }) => Promise<ContactFormConfirmationObservation>;
@@ -287,6 +293,63 @@ function adaptPlaywrightPage(page: Page): ContactFormBrowserPage {
     readFieldValue: (locator) => controlLocator(locator).inputValue({ timeout: 5_000 }).catch(() => null),
     fillField: async (locator, value, options) => {
       await controlLocator(locator).fill(value, { timeout: options.timeoutMs });
+    },
+    selectFieldOption: async (locator, expectedOption, options) => {
+      if (
+        !Number.isInteger(expectedOption.ordinal) ||
+        expectedOption.ordinal < 0 ||
+        !expectedOption.valuePresent ||
+        expectedOption.disabled
+      ) {
+        throw new Error("CONTACT_FORM_SELECT_OPTION_EXPECTATION_INVALID");
+      }
+
+      const select = controlLocator(locator);
+      const optionsLocator = select.locator("option");
+      const optionCount = await optionsLocator.count();
+
+      if (expectedOption.ordinal >= optionCount) {
+        throw new Error("CONTACT_FORM_SELECT_OPTION_DRIFT");
+      }
+
+      const option = optionsLocator.nth(expectedOption.ordinal);
+      const rawLabel =
+        (await option.getAttribute("label")) ??
+        (await option.textContent()) ??
+        "";
+
+      const compactLabel = rawLabel.trim().replace(/\s+/g, " ");
+      const boundedLabel =
+        compactLabel.length > 80
+          ? `${compactLabel.slice(0, 79)}…`
+          : compactLabel;
+
+      const rawValue = (await option.getAttribute("value")) ?? "";
+      const disabled = await option.isDisabled();
+
+      if (
+        boundedLabel !== expectedOption.labelText ||
+        rawValue.trim().length === 0 ||
+        disabled
+      ) {
+        throw new Error("CONTACT_FORM_SELECT_OPTION_DRIFT");
+      }
+
+      await select.selectOption(
+        { index: expectedOption.ordinal },
+        { timeout: options.timeoutMs },
+      );
+
+      const selectedValue = await select.inputValue({
+        timeout: options.timeoutMs,
+      });
+
+      if (
+        selectedValue.trim().length === 0 ||
+        selectedValue !== rawValue
+      ) {
+        throw new Error("CONTACT_FORM_SELECT_OPTION_READBACK_MISMATCH");
+      }
     },
     listSubmitControls: async (formOrdinal) => {
       type SubmitControlRaw = Omit<ContactFormSubmitControl, "fingerprint">;

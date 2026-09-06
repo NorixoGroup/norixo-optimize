@@ -23,6 +23,15 @@ export type ContactFormSubmissionSignals = Readonly<{
 
 export type ContactFormFieldLocator = ContactFormMappedFieldPreview["locator"];
 
+export type ContactFormSelectOptionExpectation = Readonly<{
+  ordinal: number;
+  labelText: string;
+  normalizedLabel: string;
+  valuePresent: boolean;
+  disabled: boolean;
+  optionFingerprint: string;
+}>;
+
 export type ContactFormSubmitControl = Readonly<{
   formOrdinal: number;
   controlOrdinal: number;
@@ -43,6 +52,11 @@ export type ContactFormSubmissionPage = {
   inspectForms: () => Promise<ContactFormDiscoveredPage>;
   readFieldValue: (locator: ContactFormFieldLocator) => Promise<string | null>;
   fillField: (locator: ContactFormFieldLocator, value: string, options: { timeoutMs: number }) => Promise<void>;
+  selectFieldOption: (
+    locator: ContactFormFieldLocator,
+    option: ContactFormSelectOptionExpectation,
+    options: { timeoutMs: number },
+  ) => Promise<void>;
   listSubmitControls: (formOrdinal: number) => Promise<readonly ContactFormSubmitControl[]>;
   clickSubmitControl: (control: ContactFormSubmitControl, options: { timeoutMs: number }) => Promise<void>;
   observeSubmissionConfirmation: (input: {
@@ -155,17 +169,141 @@ export async function executeContactFormControlledSubmission(input: {
   if (prefillFailure != null) return transitionBlocked(input.run, input.workerId, deps, prefillFailure);
 
   const fillEvidence: Json[] = [];
+
   for (const field of fields) {
-    const sourceValue = sourceValueForSemantic(beforeFill.context, field.semanticField);
-    if (sourceValue == null) return transitionBlocked(input.run, input.workerId, deps, missingApprovedSourceFailure(field));
-    await input.page.fillField(field.locator, sourceValue, { timeoutMs: fieldTimeoutMs });
+    if (field.assignmentType === "select_option") {
+      const expectedOption = field.selectOption;
+
+      if (
+        field.controlType !== "select" ||
+        expectedOption == null ||
+        !expectedOption.valuePresent ||
+        expectedOption.disabled ||
+        field.sourceValueFingerprint !== expectedOption.optionFingerprint
+      ) {
+        return transitionBlocked(
+          input.run,
+          input.workerId,
+          deps,
+          failure(
+            "manual_review",
+            "CONTACT_FORM_SELECT_OPTION_INVALID",
+            "select_option_invalid",
+            {
+              semantic_field: field.semanticField,
+              control_fingerprint: field.fieldFingerprint,
+            },
+          ),
+        );
+      }
+
+      const selectPreflight = await revalidateSelectBeforeMutation(
+        input.page,
+        beforeFill.context,
+        input.mapping,
+        field,
+      );
+
+      if (selectPreflight != null) {
+        return transitionBlocked(
+          input.run,
+          input.workerId,
+          deps,
+          selectPreflight,
+        );
+      }
+
+      try {
+        await input.page.selectFieldOption(
+          field.locator,
+          expectedOption,
+          { timeoutMs: fieldTimeoutMs },
+        );
+      } catch {
+        return transitionBlocked(
+          input.run,
+          input.workerId,
+          deps,
+          failure(
+            "manual_review",
+            "CONTACT_FORM_SELECT_OPTION_DRIFT",
+            "select_option_mutation_failed",
+            {
+              semantic_field: field.semanticField,
+              control_fingerprint: field.fieldFingerprint,
+              option_fingerprint: expectedOption.optionFingerprint,
+            },
+          ),
+        );
+      }
+
+      const postSelectPage = await input.page.inspectForms();
+
+      const selectedFailure = verifySelectedOptionState(
+        postSelectPage,
+        field,
+      );
+
+      if (selectedFailure != null) {
+        return transitionBlocked(
+          input.run,
+          input.workerId,
+          deps,
+          selectedFailure,
+        );
+      }
+
+      fillEvidence.push(
+        selectOptionEvidence(field),
+      );
+
+      continue;
+    }
+
+    const sourceValue = sourceValueForSemantic(
+      beforeFill.context,
+      field.semanticField,
+    );
+
+    if (sourceValue == null) {
+      return transitionBlocked(
+        input.run,
+        input.workerId,
+        deps,
+        missingApprovedSourceFailure(field),
+      );
+    }
+
+    await input.page.fillField(
+      field.locator,
+      sourceValue,
+      { timeoutMs: fieldTimeoutMs },
+    );
+
     const readback = await input.page.readFieldValue(field.locator);
     const normalizedReadback = normalizeSubmittedValue(readback ?? "");
     const normalizedSource = normalizeSubmittedValue(sourceValue);
+
     if (normalizedReadback !== normalizedSource) {
-      return transitionBlocked(input.run, input.workerId, deps, failure("failed_pre_submit", "CONTACT_FORM_FIELD_VALUE_MISMATCH", "field_value_mismatch", { semantic_field: field.semanticField, control_fingerprint: field.fieldFingerprint }));
+      return transitionBlocked(
+        input.run,
+        input.workerId,
+        deps,
+        failure(
+          "failed_pre_submit",
+          "CONTACT_FORM_FIELD_VALUE_MISMATCH",
+          "field_value_mismatch",
+          {
+            semantic_field: field.semanticField,
+            control_fingerprint: field.fieldFingerprint,
+          },
+        ),
+      );
     }
-    fillEvidence.push(fieldValueEvidence(field, normalizedReadback));
+
+    fillEvidence.push(
+      fieldValueEvidence(field, normalizedReadback),
+    );
   }
 
   let filledRun: ContactFormRun;
@@ -371,16 +509,52 @@ function orderedMappedFields(mapping: ContactFormMappingPreview): readonly Conta
   return [...mapping.mappedFields].sort((left, right) => left.locator.formOrdinal - right.locator.formOrdinal || left.locator.controlOrdinal - right.locator.controlOrdinal || CONTACT_FORM_SUPPORTED_SEMANTIC_FIELDS.indexOf(left.semanticField) - CONTACT_FORM_SUPPORTED_SEMANTIC_FIELDS.indexOf(right.semanticField));
 }
 
-async function ensureMappedFieldsAreEmpty(page: ContactFormSubmissionPage, fields: readonly ContactFormMappedFieldPreview[]): Promise<SubmissionFailure | null> {
+async function ensureMappedFieldsAreEmpty(
+  page: ContactFormSubmissionPage,
+  fields: readonly ContactFormMappedFieldPreview[],
+): Promise<SubmissionFailure | null> {
   for (const field of fields) {
-    if (!CONTACT_FORM_SUPPORTED_CONTROL_TYPES.includes(field.controlType as ContactFormSupportedControlType)) {
-      return failure("blocked_policy", "CONTACT_FORM_UNSUPPORTED_CONTROL_TYPE", "field_control_policy_blocked", { semantic_field: field.semanticField, control_type: field.controlType });
+    const supportedFieldValue =
+      field.assignmentType === "field_value" &&
+      CONTACT_FORM_SUPPORTED_CONTROL_TYPES.includes(
+        field.controlType as ContactFormSupportedControlType,
+      );
+
+    const supportedSelectOption =
+      field.assignmentType === "select_option" &&
+      field.controlType === "select" &&
+      field.selectOption != null &&
+      field.selectOption.valuePresent &&
+      !field.selectOption.disabled;
+
+    if (!supportedFieldValue && !supportedSelectOption) {
+      return failure(
+        "blocked_policy",
+        "CONTACT_FORM_UNSUPPORTED_CONTROL_TYPE",
+        "field_control_policy_blocked",
+        {
+          semantic_field: field.semanticField,
+          control_type: field.controlType,
+          assignment_type: field.assignmentType,
+        },
+      );
     }
+
     const currentValue = await page.readFieldValue(field.locator);
+
     if (normalizeSubmittedValue(currentValue ?? "").length > 0) {
-      return failure("manual_review", "CONTACT_FORM_PREFILLED_VALUE_PRESENT", "prefilled_value_detected", { semantic_field: field.semanticField, control_fingerprint: field.fieldFingerprint });
+      return failure(
+        "manual_review",
+        "CONTACT_FORM_PREFILLED_VALUE_PRESENT",
+        "prefilled_value_detected",
+        {
+          semantic_field: field.semanticField,
+          control_fingerprint: field.fieldFingerprint,
+        },
+      );
     }
   }
+
   return null;
 }
 
@@ -395,49 +569,388 @@ async function validateSubmissionCheckpoint(input: {
   filledFields?: readonly ContactFormMappedFieldPreview[];
 }): Promise<SubmissionCheckpoint | SubmissionFailure> {
   await input.dependencies.keepLease();
-  const context = await input.dependencies.loadExecutionContext(input.run);
-  const contextValidation = revalidateContactFormExecutionContext(context);
+
+  const context =
+    await input.dependencies.loadExecutionContext(input.run);
+
+  const contextValidation =
+    revalidateContactFormExecutionContext(context);
+
   if (!contextValidation.ok) return contextValidation;
+
   if (input.page.url() !== input.expectedPageUrl) {
-    return failure("manual_review", "CONTACT_FORM_PAGE_URL_DRIFT", "page_url_drift", { expected_url_fingerprint: contactFormSafeFingerprint(input.expectedPageUrl), current_url_fingerprint: contactFormSafeFingerprint(input.page.url()) });
+    return failure(
+      "manual_review",
+      "CONTACT_FORM_PAGE_URL_DRIFT",
+      "page_url_drift",
+      {
+        expected_url_fingerprint:
+          contactFormSafeFingerprint(input.expectedPageUrl),
+        current_url_fingerprint:
+          contactFormSafeFingerprint(input.page.url()),
+      },
+    );
   }
+
   const signals = await input.page.evaluatePageSignals();
-  if (signals.hasCaptcha) return failure("blocked_captcha", "CONTACT_FORM_CAPTCHA_DETECTED", "captcha_detected", { has_captcha: true, phase: input.phase });
-  if (signals.hasLoginWall || signals.hasPasswordField) return failure("manual_review", "CONTACT_FORM_LOGIN_WALL_DETECTED", "login_wall_detected", { has_login_wall: true, has_password_field: signals.hasPasswordField, phase: input.phase });
+
+  if (signals.hasCaptcha) {
+    return failure(
+      "blocked_captcha",
+      "CONTACT_FORM_CAPTCHA_DETECTED",
+      "captcha_detected",
+      {
+        has_captcha: true,
+        phase: input.phase,
+      },
+    );
+  }
+
+  if (signals.hasLoginWall || signals.hasPasswordField) {
+    return failure(
+      "manual_review",
+      "CONTACT_FORM_LOGIN_WALL_DETECTED",
+      "login_wall_detected",
+      {
+        has_login_wall: true,
+        has_password_field: signals.hasPasswordField,
+        phase: input.phase,
+      },
+    );
+  }
+
+  const observedPage = await input.page.inspectForms();
+
+  const mappingPage =
+    input.phase === "before_submit"
+      ? restoreFilledControlsForMapping(
+          observedPage,
+          input.expectedMapping,
+          input.filledFields ?? [],
+        )
+      : observedPage;
 
   const currentMapping = buildContactFormMappingPreview({
-    page: await input.page.inspectForms(),
-    approvedContent: {
-      senderName: context.approval.sender_name,
-      senderFirstName: context.approval.sender_first_name,
-      senderLastName: context.approval.sender_last_name,
-      senderEmail: context.approval.sender_email,
-      senderCompany: context.approval.sender_company,
-      senderWebsite: context.approval.sender_website,
-      subject: context.approval.subject,
-      body: context.approval.body,
-    },
+    page: mappingPage,
+    approvedContent: approvedContentForMapping(context),
     pageSignals: signals,
   });
-  if (currentMapping.result === "blocked_captcha") return failure("blocked_captcha", "CONTACT_FORM_CAPTCHA_DETECTED", "captcha_detected", contactFormMappingPreviewToSafeMetadata(currentMapping));
-  if (currentMapping.result === "blocked_policy") return failure("blocked_policy", "CONTACT_FORM_MAPPING_POLICY_BLOCKED", "mapping_policy_blocked", contactFormMappingPreviewToSafeMetadata(currentMapping));
-  if (currentMapping.result !== "mapped") return failure("manual_review", "CONTACT_FORM_MAPPING_STALE", "mapping_revalidation_failed", contactFormMappingPreviewToSafeMetadata(currentMapping));
-  const mappingFailure = compareMapping(input.expectedMapping, currentMapping);
+
+  if (currentMapping.result === "blocked_captcha") {
+    return failure(
+      "blocked_captcha",
+      "CONTACT_FORM_CAPTCHA_DETECTED",
+      "captcha_detected",
+      contactFormMappingPreviewToSafeMetadata(currentMapping),
+    );
+  }
+
+  if (currentMapping.result === "blocked_policy") {
+    return failure(
+      "blocked_policy",
+      "CONTACT_FORM_MAPPING_POLICY_BLOCKED",
+      "mapping_policy_blocked",
+      contactFormMappingPreviewToSafeMetadata(currentMapping),
+    );
+  }
+
+  if (currentMapping.result !== "mapped") {
+    return failure(
+      "manual_review",
+      "CONTACT_FORM_MAPPING_STALE",
+      "mapping_revalidation_failed",
+      contactFormMappingPreviewToSafeMetadata(currentMapping),
+    );
+  }
+
+  const mappingFailure =
+    compareMapping(input.expectedMapping, currentMapping);
+
   if (mappingFailure != null) return mappingFailure;
 
   if (input.phase === "before_submit") {
     for (const field of input.filledFields ?? []) {
-      const sourceValue = sourceValueForSemantic(context, field.semanticField);
-      if (sourceValue == null) return missingApprovedSourceFailure(field);
-      const expectedValue = normalizeSubmittedValue(sourceValue);
-      const currentValue = normalizeSubmittedValue((await input.page.readFieldValue(field.locator)) ?? "");
+      if (field.assignmentType === "select_option") {
+        const selectedFailure =
+          verifySelectedOptionState(observedPage, field);
+
+        if (selectedFailure != null) return selectedFailure;
+
+        continue;
+      }
+
+      const sourceValue =
+        sourceValueForSemantic(context, field.semanticField);
+
+      if (sourceValue == null) {
+        return missingApprovedSourceFailure(field);
+      }
+
+      const expectedValue =
+        normalizeSubmittedValue(sourceValue);
+
+      const currentValue =
+        normalizeSubmittedValue(
+          (await input.page.readFieldValue(field.locator)) ?? "",
+        );
+
       if (currentValue !== expectedValue) {
-        return failure("failed_pre_submit", "CONTACT_FORM_FILLED_VALUE_TAMPERED", "filled_value_revalidation_failed", { semantic_field: field.semanticField, control_fingerprint: field.fieldFingerprint });
+        return failure(
+          "failed_pre_submit",
+          "CONTACT_FORM_FILLED_VALUE_TAMPERED",
+          "filled_value_revalidation_failed",
+          {
+            semantic_field: field.semanticField,
+            control_fingerprint: field.fieldFingerprint,
+          },
+        );
       }
     }
   }
 
-  return { ok: true, context, mapping: currentMapping };
+  return {
+    ok: true,
+    context,
+    mapping: currentMapping,
+  };
+}
+
+function approvedContentForMapping(
+  context: ContactFormRunExecutionContext,
+) {
+  return {
+    senderName: context.approval.sender_name,
+    senderFirstName: context.approval.sender_first_name,
+    senderLastName: context.approval.sender_last_name,
+    senderEmail: context.approval.sender_email,
+    senderCompany: context.approval.sender_company,
+    senderWebsite: context.approval.sender_website,
+    subject: context.approval.subject,
+    body: context.approval.body,
+  };
+}
+
+async function revalidateSelectBeforeMutation(
+  page: ContactFormSubmissionPage,
+  context: ContactFormRunExecutionContext,
+  expectedMapping: ContactFormMappingPreview,
+  field: ContactFormMappedFieldPreview,
+): Promise<SubmissionFailure | null> {
+  const observedPage = await page.inspectForms();
+
+  const currentMapping = buildContactFormMappingPreview({
+    page: observedPage,
+    approvedContent: approvedContentForMapping(context),
+  });
+
+  if (currentMapping.result !== "mapped") {
+    return failure(
+      "manual_review",
+      "CONTACT_FORM_SELECT_OPTION_DRIFT",
+      "select_option_revalidation_failed",
+      contactFormMappingPreviewToSafeMetadata(currentMapping),
+    );
+  }
+
+  const mappingFailure =
+    compareMapping(expectedMapping, currentMapping);
+
+  if (mappingFailure != null) return mappingFailure;
+
+  const expectedOption = field.selectOption;
+
+  const currentField = currentMapping.mappedFields.find(
+    (candidate) =>
+      candidate.semanticField === field.semanticField &&
+      candidate.locator.formOrdinal ===
+        field.locator.formOrdinal &&
+      candidate.locator.controlOrdinal ===
+        field.locator.controlOrdinal,
+  );
+
+  if (
+    expectedOption == null ||
+    currentField == null ||
+    currentField.assignmentType !== "select_option" ||
+    currentField.controlType !== "select" ||
+    currentField.selectOption == null ||
+    currentField.selectOption.ordinal !==
+      expectedOption.ordinal ||
+    currentField.selectOption.labelText !==
+      expectedOption.labelText ||
+    currentField.selectOption.normalizedLabel !==
+      expectedOption.normalizedLabel ||
+    currentField.selectOption.valuePresent !== true ||
+    currentField.selectOption.disabled ||
+    currentField.selectOption.selected !==
+      expectedOption.selected ||
+    currentField.selectOption.optionFingerprint !==
+      expectedOption.optionFingerprint
+  ) {
+    return failure(
+      "manual_review",
+      "CONTACT_FORM_SELECT_OPTION_DRIFT",
+      "select_option_revalidation_failed",
+      {
+        semantic_field: field.semanticField,
+        control_fingerprint: field.fieldFingerprint,
+        expected_option_fingerprint:
+          expectedOption?.optionFingerprint ?? null,
+        current_option_fingerprint:
+          currentField?.selectOption?.optionFingerprint ?? null,
+      },
+    );
+  }
+
+  return null;
+}
+
+function verifySelectedOptionState(
+  page: ContactFormDiscoveredPage,
+  field: ContactFormMappedFieldPreview,
+): SubmissionFailure | null {
+  const expectedOption = field.selectOption;
+
+  if (
+    field.assignmentType !== "select_option" ||
+    field.controlType !== "select" ||
+    expectedOption == null
+  ) {
+    return failure(
+      "blocked_policy",
+      "CONTACT_FORM_SELECT_OPTION_INVALID",
+      "select_option_invalid",
+      {
+        semantic_field: field.semanticField,
+        control_fingerprint: field.fieldFingerprint,
+      },
+    );
+  }
+
+  const form = page.forms.find(
+    (candidate) =>
+      candidate.ordinal === field.locator.formOrdinal,
+  );
+
+  const control = form?.controls.find(
+    (candidate) =>
+      candidate.ordinal === field.locator.controlOrdinal,
+  );
+
+  const matchingOption = control?.options?.find(
+    (candidate) =>
+      candidate.ordinal === expectedOption.ordinal,
+  );
+
+  const selectedOptions =
+    control?.options?.filter(
+      (candidate) => candidate.selected,
+    ) ?? [];
+
+  const observedNormalizedLabel =
+    matchingOption?.normalizedLabel?.trim() ??
+    matchingOption?.labelText?.trim().toLowerCase() ??
+    "";
+
+  if (
+    form == null ||
+    control == null ||
+    control.tag !== "select" ||
+    matchingOption == null ||
+    matchingOption.labelText !== expectedOption.labelText ||
+    observedNormalizedLabel !==
+      expectedOption.normalizedLabel ||
+    !matchingOption.valuePresent ||
+    matchingOption.disabled ||
+    !matchingOption.selected ||
+    selectedOptions.length !== 1
+  ) {
+    return failure(
+      "failed_pre_submit",
+      "CONTACT_FORM_SELECT_OPTION_TAMPERED",
+      "select_option_selected_state_invalid",
+      {
+        semantic_field: field.semanticField,
+        control_fingerprint: field.fieldFingerprint,
+        option_fingerprint:
+          expectedOption.optionFingerprint,
+        option_ordinal:
+          expectedOption.ordinal,
+        selected_count:
+          selectedOptions.length,
+      },
+    );
+  }
+
+  return null;
+}
+
+function restoreFilledControlsForMapping(
+  page: ContactFormDiscoveredPage,
+  expectedMapping: ContactFormMappingPreview,
+  filledFields: readonly ContactFormMappedFieldPreview[],
+): ContactFormDiscoveredPage {
+  if (filledFields.length === 0) return page;
+
+  const filledByControl = new Map(
+    filledFields.map((field) => [
+      `${field.locator.formOrdinal}:${field.locator.controlOrdinal}`,
+      field,
+    ]),
+  );
+
+  const expectedDiscoveredByControl = new Map(
+    expectedMapping.discoveredFields.map((field) => [
+      field.controlOrdinal,
+      field,
+    ]),
+  );
+
+  return {
+    ...page,
+    forms: page.forms.map((form) => ({
+      ...form,
+      controls: form.controls.map((control) => {
+        const field = filledByControl.get(
+          `${form.ordinal}:${control.ordinal}`,
+        );
+
+        if (field == null) return control;
+
+        if (field.assignmentType !== "select_option") {
+          return {
+            ...control,
+            valuePresent: false,
+          };
+        }
+
+        const expectedDiscovered =
+          form.ordinal === expectedMapping.selectedFormOrdinal
+            ? expectedDiscoveredByControl.get(control.ordinal)
+            : undefined;
+
+        const expectedSelectedByOrdinal = new Map(
+          (expectedDiscovered?.selectOptions ?? []).map(
+            (option) => [
+              option.ordinal,
+              option.selected,
+            ],
+          ),
+        );
+
+        return {
+          ...control,
+          valuePresent: false,
+          options: (control.options ?? []).map((option) => ({
+            ...option,
+            selected:
+              expectedSelectedByOrdinal.get(option.ordinal) ??
+              false,
+          })),
+        };
+      }),
+    })),
+  };
 }
 
 function compareMapping(expected: ContactFormMappingPreview, current: ContactFormMappingPreview): SubmissionFailure | null {
@@ -516,6 +1029,28 @@ function submittingMetadata(mapping: ContactFormMappingPreview, control: Contact
 
 function fieldValueEvidence(field: ContactFormMappedFieldPreview, normalizedValue: string): Json {
   return { semantic_field: field.semanticField, control_fingerprint: field.fieldFingerprint, control_type: field.controlType, required: field.required, normalized_length: normalizedValue.length, value_fingerprint: contactFormSafeFingerprint({ semantic_field: field.semanticField, normalized_value: normalizedValue }), raw_value_persisted: false };
+}
+
+function selectOptionEvidence(
+  field: ContactFormMappedFieldPreview,
+): Json {
+  const option = field.selectOption;
+
+  return {
+    semantic_field: field.semanticField,
+    control_fingerprint: field.fieldFingerprint,
+    control_type: field.controlType,
+    required: field.required,
+    assignment_type: field.assignmentType,
+    option_ordinal: option?.ordinal ?? null,
+    normalized_label:
+      option?.normalizedLabel ?? null,
+    option_fingerprint:
+      option?.optionFingerprint ?? null,
+    raw_option_value_persisted: false,
+    raw_content_persisted: false,
+    evidence_bounded: true,
+  };
 }
 
 async function transitionBlocked(run: ContactFormRun, workerId: string, deps: ContactFormControlledSubmissionDependencies, failureValue: SubmissionFailure): Promise<ContactFormControlledSubmissionResult> {

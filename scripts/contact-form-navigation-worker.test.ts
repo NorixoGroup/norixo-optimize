@@ -260,6 +260,13 @@ class FakePage implements ContactFormBrowserPage {
 	  async fillField(locator: ContactFormFieldLocator, value: string) {
 	    this.filledValues.set(locator.controlOrdinal, value);
 	  }
+
+  async selectFieldOption(
+    ...args: Parameters<ContactFormBrowserPage["selectFieldOption"]>
+  ) {
+    void args;
+    throw new Error("UNEXPECTED_SELECT_FIELD_OPTION");
+  }
 	  async listSubmitControls(formOrdinal: number) {
 	    const form = this.forms.find((current) => current.ordinal === formOrdinal);
 	    if (!form) return [];

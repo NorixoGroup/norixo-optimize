@@ -263,6 +263,113 @@ function discoveredPage(form: ContactFormDiscoveredForm): ContactFormDiscoveredP
   return { pageUrl, pageTitle: "Contact", forms: [form] };
 }
 
+
+function safeSelectOption(input: {
+  ordinal: number;
+  labelText: string;
+  normalizedLabel: string;
+  valuePresent: boolean;
+  selected: boolean;
+  disabled?: boolean;
+}) {
+  return {
+    ordinal: input.ordinal,
+    labelText: input.labelText,
+    normalizedLabel: input.normalizedLabel,
+    valuePresent: input.valuePresent,
+    disabled: input.disabled ?? false,
+    selected: input.selected,
+    optionFingerprint: contactFormSafeFingerprint({
+      fixture: "c9ay-select-option",
+      ordinal: input.ordinal,
+      normalized_label: input.normalizedLabel,
+      value_present: input.valuePresent,
+      disabled: input.disabled ?? false,
+    }),
+  };
+}
+
+function subjectSelect(
+  overrides: Partial<ContactFormDiscoveredControl> = {},
+): ContactFormDiscoveredControl {
+  return control({
+    ordinal: 3,
+    tag: "select",
+    type: "select-one",
+    name: "subject",
+    id: "subject",
+    labelText: "Subject",
+    required: true,
+    visible: true,
+    valuePresent: false,
+    options: [
+      safeSelectOption({
+        ordinal: 0,
+        labelText: "Select a topic...",
+        normalizedLabel: "select a topic...",
+        valuePresent: false,
+        selected: true,
+      }),
+      safeSelectOption({
+        ordinal: 1,
+        labelText: "Membership question",
+        normalizedLabel: "membership question",
+        valuePresent: true,
+        selected: false,
+      }),
+      safeSelectOption({
+        ordinal: 2,
+        labelText: "Other",
+        normalizedLabel: "other",
+        valuePresent: true,
+        selected: false,
+      }),
+    ],
+    ...overrides,
+  });
+}
+
+function selectContactForm(
+  selectOverrides: Partial<ContactFormDiscoveredControl> = {},
+): ContactFormDiscoveredForm {
+  return contactForm({
+    controls: [
+      textInput(0, "Your name", {
+        autocomplete: "name",
+        required: true,
+      }),
+      emailInput(1),
+      textarea(2),
+      subjectSelect(selectOverrides),
+      submitButton(4),
+    ],
+  });
+}
+
+function mutateSelectOption(
+  form: ContactFormDiscoveredForm,
+  targetOrdinal: number,
+  mutate: (
+    option: NonNullable<ContactFormDiscoveredControl["options"]>[number],
+  ) => NonNullable<ContactFormDiscoveredControl["options"]>[number],
+): ContactFormDiscoveredForm {
+  return {
+    ...form,
+    controls: form.controls.map((current) =>
+      current.tag !== "select"
+        ? current
+        : {
+            ...current,
+            options: (current.options ?? []).map((option) =>
+              option.ordinal === targetOrdinal
+                ? mutate(option)
+                : option,
+            ),
+          },
+    ),
+  };
+}
+
 function mappingFor(form: ContactFormDiscoveredForm): ContactFormMappingPreview {
   const mapping = buildContactFormMappingPreview({ page: discoveredPage(form), approvedContent });
   assert.equal(mapping.result, "mapped");
@@ -288,6 +395,7 @@ class FakeC5Page implements ContactFormSubmissionPage {
   signalsSequence: Array<{ hasCaptcha: boolean; hasLoginWall: boolean; hasPasswordField: boolean }> | null = null;
   values = new Map<number, string>();
   fillCalls: Array<{ semantic: string | null; controlOrdinal: number; valueLength: number }> = [];
+  selectCalls: Array<{ controlOrdinal: number; optionOrdinal: number; normalizedLabel: string }> = [];
   readCounts = new Map<number, number>();
   clickCount = 0;
   listSubmitCount = 0;
@@ -328,6 +436,69 @@ class FakeC5Page implements ContactFormSubmissionPage {
     const semantic = mapping.result === "mapped" ? mapping.mappedFields.find((field) => field.locator.controlOrdinal === locator.controlOrdinal)?.semanticField ?? null : null;
     this.fillCalls.push({ semantic, controlOrdinal: locator.controlOrdinal, valueLength: value.length });
     this.values.set(locator.controlOrdinal, value);
+  }
+
+  async selectFieldOption(
+    locator: ContactFormFieldLocator,
+    option: {
+      ordinal: number;
+      labelText: string;
+      normalizedLabel: string;
+      valuePresent: boolean;
+      disabled: boolean;
+      optionFingerprint: string;
+    },
+  ) {
+    const form = this.forms.find(
+      (candidate) => candidate.ordinal === locator.formOrdinal,
+    );
+    assert.ok(form, "select form exists");
+
+    const controlIndex = form.controls.findIndex(
+      (candidate) => candidate.ordinal === locator.controlOrdinal,
+    );
+    assert.ok(controlIndex >= 0, "select control exists");
+
+    const current = form.controls[controlIndex];
+    assert.equal(current.tag, "select");
+
+    const candidate = current.options?.find(
+      (item) => item.ordinal === option.ordinal,
+    );
+
+    assert.ok(candidate, "select option exists");
+    assert.equal(candidate.labelText, option.labelText);
+    assert.equal(candidate.normalizedLabel, option.normalizedLabel);
+    assert.equal(candidate.valuePresent, true);
+    assert.equal(candidate.disabled, false);
+
+    this.selectCalls.push({
+      controlOrdinal: locator.controlOrdinal,
+      optionOrdinal: option.ordinal,
+      normalizedLabel: option.normalizedLabel,
+    });
+
+    const nextForm = {
+      ...form,
+      controls: form.controls.map((item, index) =>
+        index !== controlIndex
+          ? item
+          : {
+              ...item,
+              valuePresent: true,
+              options: (item.options ?? []).map((currentOption) => ({
+                ...currentOption,
+                selected: currentOption.ordinal === option.ordinal,
+              })),
+            },
+      ),
+    };
+
+    this.forms = this.forms.map((currentForm) =>
+      currentForm.ordinal === form.ordinal ? nextForm : currentForm,
+    );
+
+    this.values.set(locator.controlOrdinal, option.normalizedLabel);
   }
 
   async listSubmitControls(formOrdinal: number) {
@@ -945,6 +1116,270 @@ function sourceText(): string {
 function migrationText(): string {
   return readFileSync(join(process.cwd(), "supabase/migrations/20260902120000_add_backlink_contact_form_automation_foundation.sql"), "utf8");
 }
+
+
+test("T121 controlled safe select chooses exact mapped Other option", async () => {
+  const form = selectContactForm();
+  const mapping = mappingFor(form);
+
+  const selectField = mapping.mappedFields.find(
+    (field) => field.assignmentType === "select_option",
+  );
+
+  assert.ok(selectField);
+  assert.equal(selectField.controlType, "select");
+  assert.equal(selectField.semanticField, "subject");
+  assert.equal(selectField.selectOption?.normalizedLabel, "other");
+
+  const page = new FakeC5Page(form);
+  const h = harness({ page, mapping });
+  const result = await h.run();
+
+  assert.equal(result.kind, "submission_confirmed");
+  assert.equal(page.selectCalls.length, 1);
+  assert.equal(
+    page.selectCalls[0]?.controlOrdinal,
+    selectField.locator.controlOrdinal,
+  );
+  assert.equal(
+    page.selectCalls[0]?.optionOrdinal,
+    selectField.selectOption?.ordinal,
+  );
+  assert.equal(page.selectCalls[0]?.normalizedLabel, "other");
+
+  assert.equal(
+    page.fillCalls.some(
+      (call) =>
+        call.controlOrdinal === selectField.locator.controlOrdinal,
+    ),
+    false,
+  );
+
+  assert.equal(page.clickCount, 1);
+});
+
+test("T122 select option ordinal drift blocks before select mutation", async () => {
+  const original = selectContactForm();
+  const mapping = mappingFor(original);
+
+  const drifted = mutateSelectOption(
+    original,
+    2,
+    (option) => ({
+      ...option,
+      ordinal: 7,
+    }),
+  );
+
+  const page = new FakeC5Page(original);
+  page.formsSequence = [drifted];
+
+  const h = harness({ page, mapping });
+  const result = await h.run();
+
+  assert.equal(result.kind, "blocked");
+  assert.equal(page.selectCalls.length, 0);
+  assert.equal(page.clickCount, 0);
+  assert.equal(h.armedAllowanceHistory.length, 0);
+});
+
+test("T123 select option label drift blocks before select mutation", async () => {
+  const original = selectContactForm();
+  const mapping = mappingFor(original);
+
+  const drifted = mutateSelectOption(
+    original,
+    2,
+    (option) => ({
+      ...option,
+      labelText: "Changed option",
+      normalizedLabel: "changed option",
+    }),
+  );
+
+  const page = new FakeC5Page(original);
+  page.formsSequence = [drifted];
+
+  const h = harness({ page, mapping });
+  const result = await h.run();
+
+  assert.equal(result.kind, "blocked");
+  assert.equal(page.selectCalls.length, 0);
+  assert.equal(page.clickCount, 0);
+  assert.equal(h.armedAllowanceHistory.length, 0);
+});
+
+test("T124 disabled safe select option blocks before select mutation", async () => {
+  const original = selectContactForm();
+  const mapping = mappingFor(original);
+
+  const drifted = mutateSelectOption(
+    original,
+    2,
+    (option) => ({
+      ...option,
+      disabled: true,
+    }),
+  );
+
+  const page = new FakeC5Page(original);
+  page.formsSequence = [drifted];
+
+  const h = harness({ page, mapping });
+  const result = await h.run();
+
+  assert.equal(result.kind, "blocked");
+  assert.equal(page.selectCalls.length, 0);
+  assert.equal(page.clickCount, 0);
+  assert.equal(h.armedAllowanceHistory.length, 0);
+});
+
+test("T125 safe select option without value blocks before select mutation", async () => {
+  const original = selectContactForm();
+  const mapping = mappingFor(original);
+
+  const drifted = mutateSelectOption(
+    original,
+    2,
+    (option) => ({
+      ...option,
+      valuePresent: false,
+    }),
+  );
+
+  const page = new FakeC5Page(original);
+  page.formsSequence = [drifted];
+
+  const h = harness({ page, mapping });
+  const result = await h.run();
+
+  assert.equal(result.kind, "blocked");
+  assert.equal(page.selectCalls.length, 0);
+  assert.equal(page.clickCount, 0);
+  assert.equal(h.armedAllowanceHistory.length, 0);
+});
+
+
+test("T126 selected option state drift immediately after selection blocks before submit", async () => {
+  const original = selectContactForm();
+  const mapping = mappingFor(original);
+
+  const selectField = mapping.mappedFields.find(
+    (field) => field.assignmentType === "select_option",
+  );
+
+  assert.ok(selectField);
+  assert.ok(selectField.selectOption);
+
+  /*
+   * inspectForms sequence:
+   * 1. before_fill checkpoint -> original
+   * 2. select preflight       -> original
+   * 3. post-select verify     -> drifted state
+   *
+   * The fake select mutation itself still occurs exactly once.
+   * The following inspection deliberately reports that the expected
+   * option is no longer selected.
+   */
+  const postSelectDrift = {
+    ...original,
+    controls: original.controls.map((control) =>
+      control.ordinal !== selectField.locator.controlOrdinal
+        ? control
+        : {
+            ...control,
+            valuePresent: true,
+            options: (control.options ?? []).map((option) => ({
+              ...option,
+              selected: false,
+            })),
+          },
+    ),
+  };
+
+  const page = new FakeC5Page(original);
+  page.formsSequence = [
+    original,
+    original,
+    postSelectDrift,
+  ];
+
+  const h = harness({ page, mapping });
+  const result = await h.run();
+
+  assert.equal(result.kind, "blocked");
+  assert.equal(page.selectCalls.length, 1);
+  assert.equal(page.clickCount, 0);
+  assert.equal(h.armedAllowanceHistory.length, 0);
+});
+
+test("T127 selected option drifts before before_submit checkpoint and blocks before arm or click", async () => {
+  const original = selectContactForm();
+  const mapping = mappingFor(original);
+
+  const selectField = mapping.mappedFields.find(
+    (field) => field.assignmentType === "select_option",
+  );
+
+  assert.ok(selectField);
+  assert.ok(selectField.selectOption);
+
+  /*
+   * inspectForms sequence:
+   * 1. before_fill checkpoint -> original
+   * 2. select preflight       -> original
+   * 3. post-select verify     -> correct selected state
+   * 4. before_submit          -> drifted selected state
+   */
+
+  const correctlySelected = {
+    ...original,
+    controls: original.controls.map((control) =>
+      control.ordinal !== selectField.locator.controlOrdinal
+        ? control
+        : {
+            ...control,
+            valuePresent: true,
+            options: (control.options ?? []).map((option) => ({
+              ...option,
+              selected:
+                option.ordinal === selectField.selectOption?.ordinal,
+            })),
+          },
+    ),
+  };
+
+  const beforeSubmitDrift = {
+    ...correctlySelected,
+    controls: correctlySelected.controls.map((control) =>
+      control.ordinal !== selectField.locator.controlOrdinal
+        ? control
+        : {
+            ...control,
+            options: (control.options ?? []).map((option) => ({
+              ...option,
+              selected: false,
+            })),
+          },
+    ),
+  };
+
+  const page = new FakeC5Page(original);
+  page.formsSequence = [
+    original,
+    original,
+    correctlySelected,
+    beforeSubmitDrift,
+  ];
+
+  const h = harness({ page, mapping });
+  const result = await h.run();
+
+  assert.equal(result.kind, "blocked");
+  assert.equal(page.selectCalls.length, 1);
+  assert.equal(page.clickCount, 0);
+  assert.equal(h.armedAllowanceHistory.length, 0);
+});
 
 async function main() {
   let passed = 0;
