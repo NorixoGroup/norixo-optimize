@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { handleFreeAuditPreviewRequest } from "../app/api/free-audit/preview/route";
+import { handleFreeAuditPreviewRequest } from "../app/api/free-audit/preview/handler";
 import { buildPublicListingAudit } from "../lib/freeAudit/buildPublicListingAudit";
 
 const FORBIDDEN_KEYS = [
