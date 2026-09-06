@@ -7,6 +7,35 @@ function extractAirbnbRoomId(url?: string | null) {
   return url?.match(/\/rooms\/(\d+)/)?.[1] ?? null;
 }
 
+function readEnv(name: string) {
+  const value = process.env[name]?.trim();
+  return value ? value : null;
+}
+
+function getBrightDataCdpEndpoint() {
+  const browserHost = readEnv("BRIGHTDATA_BROWSER_HOST");
+  const browserUsername = readEnv("BRIGHTDATA_BROWSER_USERNAME");
+  const browserPassword = readEnv("BRIGHTDATA_BROWSER_PASSWORD");
+
+  if (browserHost && browserUsername && browserPassword) {
+    const port = readEnv("BRIGHTDATA_BROWSER_PORT") ?? "9222";
+    const hostWithPort = browserHost.includes(":") ? browserHost : `${browserHost}:${port}`;
+    return `wss://${encodeURIComponent(browserUsername)}:${encodeURIComponent(
+      browserPassword
+    )}@${hostWithPort}`;
+  }
+
+  const host = readEnv("BRIGHTDATA_HOST");
+  const port = readEnv("BRIGHTDATA_PORT");
+  const username = readEnv("BRIGHTDATA_USERNAME");
+  const password = readEnv("BRIGHTDATA_PASSWORD");
+
+  if (!host || port !== "9222" || !username || !password) return null;
+
+  const hostWithPort = host.includes(":") ? host : `${host}:${port}`;
+  return `wss://${encodeURIComponent(username)}:${encodeURIComponent(password)}@${hostWithPort}`;
+}
+
 function normalizeSearchToken(value: string) {
   return value
     .normalize("NFD")
@@ -804,10 +833,13 @@ export async function searchAirbnbCompetitorCandidates(
   const fallbackQuery =
     target.locationLabel || target.title || target.description?.slice(0, 80) || "";
   const targetStayNights = airbnbStayNightsFromUrl(target.url ?? null);
+  const cdpEndpoint = getBrightDataCdpEndpoint();
 
-  const browser = await chromium.launch({
-    headless: true,
-  });
+  const browser = cdpEndpoint
+    ? await chromium.connectOverCDP(cdpEndpoint)
+    : await chromium.launch({
+        headless: true,
+      });
 
   const page = await browser.newPage();
 
