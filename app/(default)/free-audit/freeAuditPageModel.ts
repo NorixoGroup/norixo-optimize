@@ -7,6 +7,7 @@ import type {
 const SUPPORTED_PROTOCOLS = new Set(["https:", "http:"]);
 
 export const FREE_AUDIT_ALLOWED_PAYLOAD_KEYS = Object.freeze([
+  "listingUrl",
   "country",
   "city",
   "platform",
@@ -74,12 +75,16 @@ export type FreeAuditFormValues = Readonly<{
   propertyType: "" | FreeAuditPricingPreviewPropertyType;
 }>;
 
+export type FreeAuditListingPreviewInput = FreeAuditMarketOverviewInput & Readonly<{
+  listingUrl: string;
+}>;
+
 export type FreeAuditFormValidationResult =
   | {
       ok: true;
-      payload: FreeAuditMarketOverviewInput;
-      normalizedListingUrl: string | null;
-      detectedPlatform: FreeAuditPricingPreviewPlatform | null;
+      payload: FreeAuditListingPreviewInput;
+      normalizedListingUrl: string;
+      detectedPlatform: FreeAuditPricingPreviewPlatform;
     }
   | {
       ok: false;
@@ -89,7 +94,7 @@ export type FreeAuditFormValidationResult =
     };
 
 export type FreeAuditHandoffDraftInput = Readonly<{
-  listingUrl: string | null;
+  listingUrl: string;
   platform: FreeAuditPricingPreviewPlatform;
   country: string;
   city: string;
@@ -187,14 +192,10 @@ export function validateFreeAuditForm(
   values: FreeAuditFormValues,
 ): FreeAuditFormValidationResult {
   const errors: Partial<Record<FreeAuditFormField, FreeAuditFormErrorCode>> = {};
-  const normalizedListingUrl = values.listingUrl.trim()
-    ? normalizeListingUrl(values.listingUrl)
-    : null;
-  const detectedPlatform = values.listingUrl.trim()
-    ? detectSupportedPlatformFromListingUrl(values.listingUrl)
-    : null;
+  const normalizedListingUrl = normalizeListingUrl(values.listingUrl);
+  const detectedPlatform = detectSupportedPlatformFromListingUrl(values.listingUrl);
 
-  if (values.listingUrl.trim() && (normalizedListingUrl == null || detectedPlatform == null)) {
+  if (normalizedListingUrl == null || detectedPlatform == null) {
     errors.listingUrl = "listing_url_invalid";
   }
 
@@ -215,6 +216,10 @@ export function validateFreeAuditForm(
     errors.platform = "platform_required";
   }
 
+  if (platform != null && detectedPlatform != null && platform !== detectedPlatform) {
+    errors.listingUrl = "listing_url_invalid";
+  }
+
   const propertyType = FREE_AUDIT_PROPERTY_TYPE_OPTIONS.find(
     (candidate) => candidate === values.propertyType,
   );
@@ -224,6 +229,8 @@ export function validateFreeAuditForm(
 
   if (
     Object.keys(errors).length > 0 ||
+    normalizedListingUrl == null ||
+    detectedPlatform == null ||
     platform == null ||
     propertyType == null
   ) {
@@ -238,6 +245,7 @@ export function validateFreeAuditForm(
   return {
     ok: true,
     payload: Object.freeze({
+      listingUrl: normalizedListingUrl,
       country,
       city,
       platform,
