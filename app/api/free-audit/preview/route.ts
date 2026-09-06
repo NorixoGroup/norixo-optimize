@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
+import { POST as runGuestAuditRequest } from "../../guest-audit/route";
+import { buildPublicListingAudit } from "@/lib/freeAudit/buildPublicListingAudit";
+import type { FreeListingAuditPublicResult } from "@/lib/freeAudit/publicListingAuditContract";
 import {
   buildFreeAuditPricingPreview,
 } from "@/lib/freeAudit/publicPricingPreview";
@@ -17,15 +20,20 @@ const FREE_AUDIT_RATE_LIMIT = 10;
 const FREE_AUDIT_RATE_WINDOW_MS = 15 * 60 * 1000;
 const FREE_AUDIT_RATE_SCOPE = "free-audit-preview:";
 const MAX_BODY_BYTES = 8 * 1024;
+const MAX_LISTING_URL_LENGTH = 2048;
 const INVALID_REQUEST_MESSAGE = "La demande d'apercu est invalide.";
 const UNAVAILABLE_MESSAGE = "L'apercu gratuit est temporairement indisponible.";
 const RATE_LIMITED_MESSAGE =
   "Trop de demandes ont ete effectuees. Veuillez reessayer plus tard.";
-const ALLOWED_KEYS = [
+const MARKET_ALLOWED_KEYS = [
   "country",
   "city",
   "platform",
   "propertyType",
+] as const;
+const LISTING_ALLOWED_KEYS = [
+  "listingUrl",
+  ...MARKET_ALLOWED_KEYS,
 ] as const;
 const PLATFORM_VALUES = new Set(["airbnb", "booking", "expedia", "agoda", "vrbo"]);
 const PROPERTY_TYPE_VALUES = new Set([
@@ -39,8 +47,16 @@ const PROPERTY_TYPE_VALUES = new Set([
 const MAX_COUNTRY_LENGTH = 100;
 const MAX_CITY_LENGTH = 120;
 
+type FreeAuditPreviewRouteInput = FreeAuditMarketOverviewInput & Readonly<{
+  listingUrl?: string;
+}>;
+
 type FreeAuditPreviewRouteDependencies = Readonly<{
   buildPreview?: typeof buildFreeAuditPricingPreview;
+  buildListingPreview?: (
+    input: FreeAuditPreviewRouteInput,
+    request: Request,
+  ) => Promise<FreeListingAuditPublicResult>;
   checkRateLimit?: typeof checkInMemoryRateLimit;
   env?: FreeAuditPreviewRouteEnv;
 }>;
@@ -184,22 +200,57 @@ function hasSimpleObjectShape(value: unknown): value is Record<string, unknown> 
   return prototype === Object.prototype || prototype === null;
 }
 
+function hasExactKeys(
+  keys: readonly string[],
+  allowedKeys: readonly string[],
+): boolean {
+  return (
+    keys.length === allowedKeys.length &&
+    keys.every((key) => allowedKeys.includes(key))
+  );
+}
+
+function normalizeListingUrl(
+  value: unknown,
+  platform: FreeAuditMarketOverviewInput["platform"],
+): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > MAX_LISTING_URL_LENGTH) return null;
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null;
+
+    const hostname = parsed.hostname.toLowerCase().replace(/^www\./, "");
+    const pathname = parsed.pathname.toLowerCase();
+    const matchesPlatform =
+      (platform === "airbnb" && /^(.+\.)?airbnb\.[a-z.]+$/i.test(hostname) && pathname.includes("/rooms/")) ||
+      (platform === "booking" && /^(.+\.)?booking\.[a-z.]+$/i.test(hostname) && pathname.startsWith("/hotel/")) ||
+      (platform === "expedia" && /^(.+\.)?expedia\.[a-z.]+$/i.test(hostname) && pathname.length > 1) ||
+      (platform === "agoda" && /^(.+\.)?agoda\.[a-z.]+$/i.test(hostname) && pathname.length > 1) ||
+      (platform === "vrbo" && /^(?:.+\.)?(?:vrbo|homeaway|abritel)\.[a-z.]+$/i.test(hostname) && pathname.length > 1);
+
+    if (!matchesPlatform) return null;
+    parsed.hash = "";
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
 function normalizeInputBody(
   value: unknown,
-): FreeAuditMarketOverviewInput | null {
+): FreeAuditPreviewRouteInput | null {
   if (!hasSimpleObjectShape(value)) {
     return null;
   }
 
   const keys = Object.keys(value);
-  if (keys.length !== ALLOWED_KEYS.length) {
+  const isMarketRequest = hasExactKeys(keys, MARKET_ALLOWED_KEYS);
+  const isListingRequest = hasExactKeys(keys, LISTING_ALLOWED_KEYS);
+  if (!isMarketRequest && !isListingRequest) {
     return null;
-  }
-
-  for (const key of keys) {
-    if (!ALLOWED_KEYS.includes(key as (typeof ALLOWED_KEYS)[number])) {
-      return null;
-    }
   }
 
   const country = typeof value.country === "string" ? value.country.trim() : "";
@@ -226,11 +277,20 @@ function normalizeInputBody(
     return null;
   }
 
+  const normalizedPlatform = platform as FreeAuditMarketOverviewInput["platform"];
+  const listingUrl = isListingRequest
+    ? normalizeListingUrl(value.listingUrl, normalizedPlatform)
+    : null;
+  if (isListingRequest && listingUrl == null) {
+    return null;
+  }
+
   return Object.freeze({
     country,
     city,
-    platform: platform as FreeAuditMarketOverviewInput["platform"],
+    platform: normalizedPlatform,
     propertyType: propertyType as FreeAuditMarketOverviewInput["propertyType"],
+    ...(listingUrl ? { listingUrl } : {}),
   });
 }
 
@@ -271,6 +331,49 @@ async function readJsonBody(request: Request): Promise<
   }
 }
 
+function copyClientHeaders(request: Request): Headers {
+  const headers = new Headers({ "content-type": "application/json" });
+  for (const name of ["x-forwarded-for", "x-real-ip", "cf-connecting-ip"] as const) {
+    const value = request.headers.get(name);
+    if (value) headers.set(name, value);
+  }
+  return headers;
+}
+
+async function buildListingPreviewFromGuestAudit(
+  input: FreeAuditPreviewRouteInput,
+  request: Request,
+): Promise<FreeListingAuditPublicResult> {
+  if (!input.listingUrl) {
+    return { status: "unavailable", reason: "listing_url_unavailable" };
+  }
+
+  const guestRequestUrl = new URL("/api/guest-audit", request.url);
+  const guestRequest = new NextRequest(guestRequestUrl, {
+    method: "POST",
+    headers: copyClientHeaders(request),
+    body: JSON.stringify({ url: input.listingUrl }),
+  });
+
+  const guestResponse = await runGuestAuditRequest(guestRequest);
+  if (!guestResponse.ok) {
+    return {
+      status: "unavailable",
+      reason:
+        guestResponse.status === 429
+          ? "listing_audit_rate_limited"
+          : "listing_audit_unavailable",
+    };
+  }
+
+  const payload: unknown = await guestResponse.json().catch(() => null);
+  if (!hasSimpleObjectShape(payload) || !hasSimpleObjectShape(payload.guestAudit)) {
+    return { status: "unavailable", reason: "listing_audit_unavailable" };
+  }
+
+  return buildPublicListingAudit(payload.guestAudit);
+}
+
 export async function handleFreeAuditPreviewRequest(
   request: Request,
   dependencies: FreeAuditPreviewRouteDependencies = {},
@@ -309,9 +412,19 @@ export async function handleFreeAuditPreviewRequest(
 
   const rateLimitHeaders = buildRateLimitHeaders(rateLimitResult);
 
-  const buildPreview = dependencies.buildPreview ?? buildFreeAuditPricingPreview;
-
   try {
+    if (normalizedInput.listingUrl) {
+      const buildListingPreview =
+        dependencies.buildListingPreview ?? buildListingPreviewFromGuestAudit;
+      const result = await buildListingPreview(normalizedInput, request);
+      return jsonResponse(
+        result,
+        result.status === "available" ? 200 : 503,
+        rateLimitHeaders,
+      );
+    }
+
+    const buildPreview = dependencies.buildPreview ?? buildFreeAuditPricingPreview;
     const result = await buildPreview(normalizedInput);
 
     if (result.status === "available" || result.status === "insufficient_coverage") {
