@@ -6,6 +6,25 @@ import type { StructuredAuditResultPayload } from "@/lib/audits/formatResultPayl
 import type { ExtractedListing, SupportedPlatform } from "@/lib/extractors/types";
 import { extractListing } from "@/lib/extractors";
 import {
+  evaluateAirbnbExtractionReliability,
+  isUnreliableAirbnbExtraction,
+} from "@/lib/extractors/airbnbExtractionReliability";
+import {
+  isUnreliableBookingExtraction,
+} from "@/lib/extractors/bookingExtractionReliability";
+import {
+  evaluateExpediaExtractionReliability,
+  isUnreliableExpediaExtraction,
+} from "@/lib/extractors/expediaExtractionReliability";
+import {
+  evaluateAgodaExtractionReliability,
+  isUnreliableAgodaExtraction,
+} from "@/lib/extractors/agodaExtractionReliability";
+import {
+  evaluateVrboExtractionReliability,
+  isUnreliableVrboExtraction,
+} from "@/lib/extractors/vrboExtractionReliability";
+import {
   rankRefinedComparables,
   isPremiumRefinementMode,
   type RefinementInput,
@@ -1790,12 +1809,43 @@ async function runPremiumExtraction(
 
       const hasTitle = typeof normalizedTitle === "string" && normalizedTitle.trim().length > 0;
       const hasPrice = normalizedPrice !== null || normalizedRawStayPrice !== null;
-      const ok = normalized !== null && (hasTitle || hasPrice);
+
+      const unreliableAirbnb =
+        normalized !== null && isUnreliableAirbnbExtraction(normalized);
+      const unreliableBooking =
+        normalized !== null && isUnreliableBookingExtraction(normalized);
+      const unreliableExpedia =
+        normalized !== null && isUnreliableExpediaExtraction(normalized);
+      const unreliableVrbo =
+        normalized !== null && isUnreliableVrboExtraction(normalized);
+
+      const unreliableAgoda =
+        normalized !== null && isUnreliableAgodaExtraction(normalized);
+
+      const extractionReliabilityReason =
+        unreliableAirbnb && normalized !== null
+          ? `airbnb_extraction_unreliable:${evaluateAirbnbExtractionReliability(normalized).reasons.join(",")}`
+          : unreliableBooking
+            ? "booking_extraction_unreliable"
+            : unreliableExpedia && normalized !== null
+              ? `expedia_extraction_unreliable:${evaluateExpediaExtractionReliability(normalized).reasons.join(",")}`
+            : unreliableVrbo && normalized !== null
+              ? `vrbo_extraction_unreliable:${evaluateVrboExtractionReliability(normalized).reasons.join(",")}`
+              : unreliableAgoda && normalized !== null
+                ? `agoda_extraction_unreliable:${evaluateAgodaExtractionReliability(normalized).reasons.join(",")}`
+                : null;
+
+      const ok =
+        normalized !== null &&
+        extractionReliabilityReason === null &&
+        (hasTitle || hasPrice);
+
       const reason = ok
         ? null
-        : normalized === null
-          ? "normalize_returned_null"
-          : "missing_title_and_price";
+        : extractionReliabilityReason ??
+          (normalized === null
+            ? "normalize_returned_null"
+            : "missing_title_and_price");
 
       const inferred =
         ok && normalized !== null

@@ -5,6 +5,11 @@ import {
   INVALID_BOOKING_TARGET_URL_MESSAGE,
 } from "@/lib/extractors";
 import {
+  AIRBNB_EXTRACTION_UNAVAILABLE_BODY,
+  evaluateAirbnbExtractionReliability,
+  isUnreliableAirbnbExtraction,
+} from "@/lib/extractors/airbnbExtractionReliability";
+import {
   BOOKING_EXTRACTION_UNAVAILABLE_BODY,
   isUnreliableBookingExtraction,
   logBookingTargetExtractionUnreliableNoCredit,
@@ -15,7 +20,22 @@ import {
   enrichAirbnbCompetitorPrices,
   searchCompetitorsAroundTarget,
 } from "@/lib/competitors/searchCompetitors";
+import {
+  EXPEDIA_EXTRACTION_UNAVAILABLE_BODY,
+  evaluateExpediaExtractionReliability,
+  isUnreliableExpediaExtraction,
+} from "@/lib/extractors/expediaExtractionReliability";
+import {
+  AGODA_EXTRACTION_UNAVAILABLE_BODY,
+  evaluateAgodaExtractionReliability,
+  isUnreliableAgodaExtraction,
+} from "@/lib/extractors/agodaExtractionReliability";
 import type { ExtractedListing } from "@/lib/extractors/types";
+import {
+  evaluateVrboExtractionReliability,
+  isUnreliableVrboExtraction,
+  VRBO_EXTRACTION_UNAVAILABLE_BODY,
+} from "@/lib/extractors/vrboExtractionReliability";
 import { runAudit } from "@/ai/runAudit";
 import { canCreateAudit } from "@/lib/billing/canCreateAudit";
 import {
@@ -640,6 +660,98 @@ export async function POST(request: NextRequest) {
               : 0,
       })
     );
+    const airbnbExtractionReliability =
+      evaluateAirbnbExtractionReliability(extractedRaw);
+
+    if (isUnreliableAirbnbExtraction(extractedRaw)) {
+      console.warn("[audit][target-extraction-unreliable-airbnb]", {
+        platform: extractedRaw.platform ?? null,
+        titleLength: airbnbExtractionReliability.titleLength,
+        descriptionLength: airbnbExtractionReliability.descriptionLength,
+        photoCount: airbnbExtractionReliability.photoCount,
+        amenityCount: airbnbExtractionReliability.amenityCount,
+        challengeDetected: airbnbExtractionReliability.challengeDetected,
+        errorPageDetected: airbnbExtractionReliability.errorPageDetected,
+        reasons: airbnbExtractionReliability.reasons,
+      });
+
+      await releaseHeldEntitlement(
+        "target_extraction_unreliable_airbnb",
+      );
+
+      return NextResponse.json(
+        { ...AIRBNB_EXTRACTION_UNAVAILABLE_BODY },
+        { status: 503 },
+      );
+    }
+
+    const vrboExtractionReliability =
+      evaluateVrboExtractionReliability(extractedRaw);
+
+    if (isUnreliableVrboExtraction(extractedRaw)) {
+      console.warn("[target-extraction-unreliable-vrbo]", {
+        titleLength: vrboExtractionReliability.titleLength,
+        descriptionLength: vrboExtractionReliability.descriptionLength,
+        photoCount: vrboExtractionReliability.photoCount,
+        amenityCount: vrboExtractionReliability.amenityCount,
+        challengeDetected: vrboExtractionReliability.challengeDetected,
+        reasons: vrboExtractionReliability.reasons,
+      });
+
+      await releaseHeldEntitlement(
+        "target_extraction_unreliable_vrbo",
+      );
+
+      return NextResponse.json(
+        { ...VRBO_EXTRACTION_UNAVAILABLE_BODY },
+        { status: 503 },
+      );
+    }
+
+    const agodaExtractionReliability =
+      evaluateAgodaExtractionReliability(extractedRaw);
+
+    if (isUnreliableAgodaExtraction(extractedRaw)) {
+      console.warn("[audit][target-extraction-unreliable-agoda]", {
+        platform: extractedRaw.platform ?? null,
+        titleLength: agodaExtractionReliability.titleLength,
+        descriptionLength: agodaExtractionReliability.descriptionLength,
+        photoCount: agodaExtractionReliability.photoCount,
+        amenityCount: agodaExtractionReliability.amenityCount,
+        reasons: agodaExtractionReliability.reasons,
+      });
+
+      await releaseHeldEntitlement(
+        "target_extraction_unreliable_agoda",
+      );
+
+      return NextResponse.json(
+        { ...AGODA_EXTRACTION_UNAVAILABLE_BODY },
+        { status: 503 },
+      );
+    }
+
+    const expediaExtractionReliability =
+      evaluateExpediaExtractionReliability(extractedRaw);
+
+    if (isUnreliableExpediaExtraction(extractedRaw)) {
+      console.warn("[audit][target-extraction-unreliable-expedia]", {
+        platform: extractedRaw.platform ?? null,
+        titleLength: expediaExtractionReliability.titleLength,
+        descriptionLength: expediaExtractionReliability.descriptionLength,
+        photoCount: expediaExtractionReliability.photoCount,
+        amenityCount: expediaExtractionReliability.amenityCount,
+        reasons: expediaExtractionReliability.reasons,
+      });
+
+      await releaseHeldEntitlement("target_extraction_unreliable_expedia");
+
+      return NextResponse.json(
+        { ...EXPEDIA_EXTRACTION_UNAVAILABLE_BODY },
+        { status: 503 },
+      );
+    }
+
     const unreliableBookingExtraction = isUnreliableBookingExtraction(extractedRaw);
     const challengeFallbackCountryLabel =
       typeof extractedRaw.locationLabel === "string" && extractedRaw.locationLabel.trim()

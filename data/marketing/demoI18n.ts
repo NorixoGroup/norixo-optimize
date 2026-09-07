@@ -48,7 +48,7 @@ export const demoI18n = {
     reportPreview: {
       eyebrow: "REPORT PREVIEW",
       globalScore: "Global score",
-      scorePotential: "+18% to +32%",
+      scorePotential: "Audit-based estimate",
       scoreHint: "Potential based on comparable data",
       marketPosition: "Market position",
       competitive: "Competitive",
@@ -301,13 +301,13 @@ export const demoI18n = {
     reportPreview: {
       eyebrow: "APERÇU DU RAPPORT",
       globalScore: "Score global",
-      scorePotential: "+18% à +32%",
+      scorePotential: "Estimation basée sur l’audit",
       scoreHint: "Potentiel basé sur des données comparables",
       marketPosition: "Position marché",
       competitive: "Compétitif",
       estimatedImpact: "Impact estimé",
       monthlyRevenue: "Revenu mensuel",
-      monthlyRevenueValue: "≈ +320 €/mois (lié à l’augmentation des réservations)",
+      monthlyRevenueValue: "Estimé selon votre annonce et le contexte marché",
       prioritiesTitle: "Top priorités",
       priorities: [
         "• Photo principale : afficher rooftop et bassin dès l’ouverture.",
@@ -558,13 +558,13 @@ export const demoI18n = {
     reportPreview: {
       eyebrow: "VISTA PREVIA DEL INFORME",
       globalScore: "Puntuación global",
-      scorePotential: "+18% a +32%",
+      scorePotential: "Estimación basada en la auditoría",
       scoreHint: "Potencial basado en datos comparables",
       marketPosition: "Posición de mercado",
       competitive: "Competitivo",
       estimatedImpact: "Impacto estimado",
       monthlyRevenue: "Ingresos mensuales",
-      monthlyRevenueValue: "≈ +320 €/mes (vinculado al aumento de reservas)",
+      monthlyRevenueValue: "Estimado según tu anuncio y el contexto de mercado",
       prioritiesTitle: "Prioridades principales",
       priorities: [
         "• Foto principal: mostrar rooftop y piscina desde el inicio.",
@@ -816,13 +816,13 @@ export const demoI18n = {
     reportPreview: {
       eyebrow: "BERICHTSVORSCHAU",
       globalScore: "Gesamtscore",
-      scorePotential: "+18% bis +32%",
+      scorePotential: "Auditbasierte Schätzung",
       scoreHint: "Potenzial basierend auf vergleichbaren Daten",
       marketPosition: "Marktposition",
       competitive: "Wettbewerbsfähig",
       estimatedImpact: "Geschätzter Effekt",
       monthlyRevenue: "Monatlicher Umsatz",
-      monthlyRevenueValue: "≈ +320 €/Monat (verbunden mit mehr Buchungen)",
+      monthlyRevenueValue: "Basierend auf Inserat und Marktkontext geschätzt",
       prioritiesTitle: "Wichtigste Prioritäten",
       priorities: [
         "• Hauptfoto: Dachterrasse und Pool direkt am Anfang zeigen.",
@@ -1075,13 +1075,13 @@ export const demoI18n = {
     reportPreview: {
       eyebrow: "ANTEPRIMA DEL REPORT",
       globalScore: "Punteggio globale",
-      scorePotential: "+18% a +32%",
+      scorePotential: "Estimación basada en la auditoría",
       scoreHint: "Potenziale basato su dati comparabili",
       marketPosition: "Posizione di mercato",
       competitive: "Competitivo",
       estimatedImpact: "Impatto stimato",
       monthlyRevenue: "Ricavi mensili",
-      monthlyRevenueValue: "≈ +320 €/mese (legato all’aumento delle prenotazioni)",
+      monthlyRevenueValue: "Stimato in base all’annuncio e al contesto di mercato",
       prioritiesTitle: "Priorità principali",
       priorities: [
         "• Foto principale: mostrare rooftop e piscina fin dall’inizio.",
@@ -1334,13 +1334,13 @@ export const demoI18n = {
     reportPreview: {
       eyebrow: "PRÉ-VISUALIZAÇÃO DO RELATÓRIO",
       globalScore: "Pontuação global",
-      scorePotential: "+18% a +32%",
+      scorePotential: "Estimación basada en la auditoría",
       scoreHint: "Potencial baseado em dados comparáveis",
       marketPosition: "Posição no mercado",
       competitive: "Competitivo",
       estimatedImpact: "Impacto estimado",
       monthlyRevenue: "Receita mensal",
-      monthlyRevenueValue: "≈ +320 €/mês (ligado ao aumento das reservas)",
+      monthlyRevenueValue: "Estimado com base no anúncio e no contexto de mercado",
       prioritiesTitle: "Principais prioridades",
       priorities: [
         "• Foto principal: mostrar rooftop e piscina logo no início.",
@@ -1593,13 +1593,13 @@ export const demoI18n = {
     reportPreview: {
       eyebrow: "VOORBEELDRAPPORT",
       globalScore: "Totale score",
-      scorePotential: "+18% tot +32%",
+      scorePotential: "Auditgebaseerde schatting",
       scoreHint: "Potentieel gebaseerd op vergelijkbare gegevens",
       marketPosition: "Marktpositie",
       competitive: "Concurrerend",
       estimatedImpact: "Geschatte impact",
       monthlyRevenue: "Maandelijkse omzet",
-      monthlyRevenueValue: "≈ +320 €/maand (gekoppeld aan meer boekingen)",
+      monthlyRevenueValue: "Geschat op basis van advertentie en marktcontext",
       prioritiesTitle: "Belangrijkste prioriteiten",
       priorities: [
         "• Hoofdfoto: toon dakterras en zwembad direct.",
@@ -1851,7 +1851,7 @@ export const demoI18n = {
     reportPreview: {
       eyebrow: "レポートプレビュー",
       globalScore: "総合スコア",
-      scorePotential: "+18% から +32%",
+      scorePotential: "監査に基づく推定",
       scoreHint: "比較データに基づくポテンシャル",
       marketPosition: "市場ポジション",
       competitive: "競争力あり",
@@ -2102,7 +2102,7 @@ export const demoI18n = {
     reportPreview: {
       eyebrow: "报告预览",
       globalScore: "总分",
-      scorePotential: "+18% 到 +32%",
+      scorePotential: "基于审计的估算",
       scoreHint: "基于可比数据的潜力",
       marketPosition: "市场位置",
       competitive: "有竞争力",
@@ -2354,7 +2354,7 @@ export const demoI18n = {
     reportPreview: {
       eyebrow: "보고서 미리보기",
       globalScore: "종합 점수",
-      scorePotential: "+18%~+32%",
+      scorePotential: "감사 기반 추정",
       scoreHint: "비교 가능한 데이터를 기반으로 한 잠재력",
       marketPosition: "시장 위치",
       competitive: "경쟁력 있음",
@@ -2606,7 +2606,7 @@ export const demoI18n = {
     reportPreview: {
       eyebrow: "معاينة التقرير",
       globalScore: "النتيجة العامة",
-      scorePotential: "+18% إلى +32%",
+      scorePotential: "تقدير قائم على التدقيق",
       scoreHint: "إمكانات مبنية على بيانات قابلة للمقارنة",
       marketPosition: "الموقع في السوق",
       competitive: "تنافسي",

@@ -2,6 +2,10 @@ import type { ExtractedListing } from "@/lib/extractors/types";
 import { logMarketPipelineStage } from "@/lib/competitors/marketPipelineDebug";
 import { normalizeListing } from "@/lib/listings/normalizeListing";
 import { scorePhotos } from "@/lib/scoring/scorePhotos";
+import {
+  analyzeListingPhotos,
+  type ListingVisualAnalysis,
+} from "@/lib/audits/analyzeListingPhotos";
 import { scoreDescription } from "@/lib/scoring/scoreDescription";
 import { scoreAmenities } from "@/lib/scoring/scoreAmenities";
 import { scoreSeo } from "@/lib/scoring/scoreSeo";
@@ -167,6 +171,20 @@ export type AuditResult = {
     seo?: number | null;
     conversion?: number | null;
   };
+
+  /**
+   * Shadow-only visual analysis.
+   *
+   * Observational enrichment only:
+   * - does not change overallScore
+   * - does not change photoQuality
+   * - does not change photoOrder
+   * - does not change conversionStrength
+   * - does not change booking/revenue projections
+   *
+   * This remains isolated until live cross-platform validation is complete.
+   */
+  visualAnalysis?: ListingVisualAnalysis | null;
 
   businessInsights?: {
     pricing: PricingBusinessInsight | null;
@@ -632,9 +650,9 @@ function buildStrengths(scores: {
 
   if (scores.photos >= 7) {
     if (scores.photos >= 9) {
-      strengths.push("La galerie photo atteint un niveau quasi premium : les premières images portent efficacement la première impression.");
+      strengths.push("La galerie présente une couverture très fournie au regard des informations disponibles dans l’annonce.");
     } else {
-      strengths.push("La présentation visuelle est déjà suffisamment solide pour soutenir une bonne première impression.");
+      strengths.push("La galerie présente une couverture suffisamment fournie au regard des informations disponibles dans l’annonce.");
     }
   }
   if (scores.description >= 7) {
@@ -1059,6 +1077,23 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
   const seoScore = scoreSeo(normalizedTarget);
   const trustScore = scoreTrust(normalizedTarget);
 
+  // Shadow-only visual analysis.
+  //
+  // Product-truth guard:
+  // this result is observational only and MUST NOT feed any production score,
+  // booking-lift estimate, revenue estimate or customer-facing recommendation
+  // until live cross-platform validation has passed.
+  const visualAnalysis =
+    process.env.NORIXO_VISION_SHADOW_ENABLED === "true"
+      ? await analyzeListingPhotos({
+          photos: normalizedTarget.photos,
+          title: normalizedTarget.title,
+          description: normalizedTarget.description,
+          amenities: normalizedTarget.amenities,
+          platform: normalizedTarget.platform,
+        })
+      : null;
+
   // Derive simple market pricing context from competitors when available
   const competitorPrices = normalizedCompetitors
     .map((c) => c.price)
@@ -1264,33 +1299,16 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
           ),
         )
       : null;
-  const pricingFallbackSource: "market_memory_median" | null =
-    market.position.avgCompetitorPrice == null && shouldUseMarketMemoryPricingFallback
-      ? "market_memory_median"
-      : null;
+  // Product-truth invariant:
+  // `avgCompetitorPrice` must only represent an aggregate derived from
+  // actually priced competitors. Market-memory medians and the listing's
+  // own price remain separate references and must never masquerade as a
+  // competitor average.
+  const pricingFallbackSource: "market_memory_median" | null = null;
 
   const avgCompetitorPrice =
-    market.position.avgCompetitorPrice ??
-    marketMemoryMedianNightlyPrice ??
-    (effectiveListingPrice != null ? roundToOne(effectiveListingPrice) : null);
-  if (
-    DEBUG_BOOKING_PIPELINE &&
-    market.position.avgCompetitorPrice == null &&
-    (marketMemoryMedianNightlyPrice != null || normalizedTarget.price != null) &&
-    avgCompetitorPrice != null
-  ) {
-    console.log("[audit][market][booking_fallback]", {
-      note:
-        pricingFallbackSource === "market_memory_median"
-          ? "avg_competitor_price_absent_used_market_memory_median"
-          : "avg_competitor_price_absent_used_listing_price_rounded",
-      competitorCount: normalizedCompetitors.length,
-      listingPrice: normalizedTarget.price,
-      marketMemoryMedianNightlyPrice,
-      pricingFallbackSource,
-      avgCompetitorPriceFilled: avgCompetitorPrice,
-    });
-  }
+    pricedCompetitorCount > 0 ? market.position.avgCompetitorPrice : null;
+
   const avgCompetitorScore =
     market.position.avgCompetitorScore ?? competitorAverageScoreFromPrices;
   const avgCompetitorRating =
@@ -1385,11 +1403,11 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
       auto.push({
         title: "Améliorer les photos",
         description:
-          "Les photos actuelles peuvent être renforcées pour mieux porter la première impression.",
+          "La galerie peut être complétée pour mieux couvrir les informations et atouts mentionnés dans l’annonce.",
         impact: "high",
         priority: "high",
         category: "photos",
-        reason: `Score photos ${photoScore.score}/10`,
+        reason: `Score de complétude de galerie ${photoScore.score}/10`,
         source: "score_fallback",
         orderIndex: orderIndex++,
       });
@@ -1786,6 +1804,7 @@ export async function runAudit(input: RunAuditInput): Promise<AuditResult> {
     market: minimalMarket,
     business,
     scoreBreakdown,
+    visualAnalysis,
     businessInsights,
     marketIntelligence: marketIntelligence ?? null,
     seasonality: seasonality ?? null,

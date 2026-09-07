@@ -1998,8 +1998,7 @@ const SHOW_ADVANCED_MARKET_SETTINGS = false;
                     <option value="airbnb">Airbnb</option>
                     <option value="booking">Booking</option>
                     <option value="agoda">Agoda</option>
-                    <option value="vrbo">VRBO — admin test</option>
-                    <option value="expedia">Expedia — admin test</option>
+                    <option value="vrbo">Vrbo</option>
                   </select>
                 </div>
               </div>

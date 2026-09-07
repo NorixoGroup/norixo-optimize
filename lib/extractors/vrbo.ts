@@ -397,6 +397,45 @@ function extractReadableVrboEmbeddedDescription(value: string): string {
   return normalizeWhitespace(cleaned);
 }
 
+function extractVrboRawHtmlPhotoUrls(html: string): string[] {
+  const decoded = html
+    .replaceAll("&amp;", "&")
+    .replaceAll("\\u002F", "/")
+    .replaceAll("\\/", "/")
+    .replaceAll("\\u003A", ":")
+    .replaceAll("\\u0026", "&")
+    .replaceAll("\\u003D", "=");
+
+  const matches =
+    decoded.match(
+      /https?:\/\/media\.vrbo\.com\/[^"'<>\\\s]+/gi
+    ) ?? [];
+
+  return uniqueStrings(
+    matches
+      .map((value) =>
+        value
+          .replaceAll("\\/", "/")
+          .replace(/[),}\]]+$/, "")
+      )
+      .filter((value) => {
+        try {
+          const url = new URL(value);
+
+          return (
+            url.protocol === "https:" &&
+            url.hostname === "media.vrbo.com" &&
+            !url.username &&
+            !url.password &&
+            (!url.port || url.port === "443")
+          );
+        } catch {
+          return false;
+        }
+      })
+  );
+}
+
 function parseVrboPhotoCountFromText(text: string): number | null {
   return findFirstMatchNumber(text, [
     /(\d{1,3})\s*\/\s*(?:\d{1,3}\s*)?photos?/i,
@@ -1221,6 +1260,9 @@ function isValidVrboHostName(value: string): boolean {
   if (normalized.length < 3 || normalized.length > 60) return false;
   if (/\d/.test(normalized)) return false;
 
+  // Fail closed on web/UI fragments that are not evidence of a real host identity.
+  if (/\b(?:web|www|https?)\b/i.test(normalized)) return false;
+
   const lower = normalized.toLowerCase();
   const blockedPhrases = [
     "sub sections",
@@ -1329,9 +1371,6 @@ function extractVrboHostName($: cheerio.CheerioAPI, bodyText: string): string | 
         captures.push(anchoredMatch[1]);
       }
 
-      for (const token of text.matchAll(/([A-ZÀ-ÖØ-Ý][\p{L}\p{M}'’.-]+(?:\s+[A-ZÀ-ÖØ-Ý][\p{L}\p{M}'’.-]+){1,3})/gu)) {
-        captures.push(token[1]);
-      }
 
       return captures.map(cleanVrboHostNameCandidate).filter(Boolean);
     }),
@@ -1358,10 +1397,20 @@ function extractStructureFromDom(bodyText: string): {
   bedCount: number | null;
   bathrooms: number | null;
 } {
+  const capacityPatterns = [
+    /(\d+)\s+voyageurs?/i,
+    /(\d+)\s+guests?/i,
+    /(\d+)\s+personnes?/i,
+  ];
+
+  const domCapacity =
+    findFirstMatchNumber(
+      bodyText,
+      capacityPatterns
+    ) ?? null;
+
   return {
-    capacity:
-      findFirstMatchNumber(bodyText, [/(\d+)\s+voyageurs?/i, /(\d+)\s+guests?/i, /(\d+)\s+personnes?/i]) ??
-      null,
+    capacity: domCapacity,
     bedrooms:
       findFirstMatchNumber(bodyText, [/(\d+)\s+chambres?/i, /(\d+)\s+bedrooms?/i]) ?? null,
     bedCount: findFirstMatchNumber(bodyText, [/(\d+)\s+lits?/i, /(\d+)\s+beds?/i]) ?? null,
@@ -2060,7 +2109,12 @@ export async function extractVrbo(url: string): Promise<ExtractorResult> {
       source: "json_ld_name",
       value: typeof lodgingJson?.name === "string" ? lodgingJson.name : "",
     },
-  ];
+  ].filter(
+    (candidate) =>
+      !/(^|\.)(?:experiments?|abtests?|tests?)(?:\.|$)/i.test(
+        candidate.source
+      )
+  );
   debugVrboLog("[vrbo][title-candidates-safe]", {
     titleCandidates: titleCandidates
       .map((candidate) => {
@@ -2079,6 +2133,7 @@ export async function extractVrbo(url: string): Promise<ExtractorResult> {
       preview: normalizeWhitespace(candidate.value).slice(0, 200),
     })),
   });
+
   const selectedTitleCandidate =
     pickBestTitleCandidate(titleCandidates) ?? {
       source: "fallback_default",
@@ -2194,8 +2249,17 @@ export async function extractVrbo(url: string): Promise<ExtractorResult> {
       .get(),
   ].filter(isLikelyVrboListingPhotoUrl);
 
+  const rawHtmlPhotos =
+    extractVrboRawHtmlPhotoUrls(html);
+
   const photos = dedupeImageUrls(
-    uniqueStrings([...payloadPhotos, ...embeddedPhotos, ...jsonLdPhotos, ...domPhotos]).filter(
+    uniqueStrings([
+      ...payloadPhotos,
+      ...embeddedPhotos,
+      ...jsonLdPhotos,
+      ...rawHtmlPhotos,
+      ...domPhotos,
+    ]).filter(
       isLikelyVrboListingPhotoUrl
     )
   ).slice(0, 120);
@@ -2266,9 +2330,11 @@ export async function extractVrbo(url: string): Promise<ExtractorResult> {
         ? "json_embedded_images"
         : jsonLdPhotos.length > 0
           ? "json_ld_images"
-          : domPhotos.length > 0
-            ? "html_gallery"
-            : null);
+          : rawHtmlPhotos.length > 0
+            ? "raw_html_media_vrbo"
+            : domPhotos.length > 0
+              ? "html_gallery"
+              : null);
 
   const amenityCandidates = buildAmenityCandidates($, payloadBlocks, structuredScriptData, bodyText);
   console.log("[vrbo][debug][amenities-candidates]", {
@@ -2319,21 +2385,44 @@ export async function extractVrbo(url: string): Promise<ExtractorResult> {
   );
   const structureFromDom = extractStructureFromDom(bodyText);
 
+  const capacityCandidates = [
+    ...payloadBlocks.flatMap((block, index) =>
+      collectNumberValuesByKeyPattern(
+        block,
+        /(sleeps|maxguests|guestcount|capacity)/i,
+        `payload.${index}`
+      )
+    ),
+    ...structuredScriptData.flatMap((block, index) =>
+      collectNumberValuesByKeyPattern(
+        block,
+        /(sleeps|maxguests|guestcount|capacity)/i,
+        `json_embedded.${index}`
+      )
+    ),
+  ];
+
+  const structuredCapacityCandidate =
+    capacityCandidates.find(
+      (candidate) =>
+        candidate.value > 0 &&
+        candidate.value <= 50
+    ) ?? null;
+
+  const bodyCapacity =
+    findFirstMatchNumber(
+      bodyText,
+      [
+        /sleeps\s+(\d+)/i,
+        /(\d+)\s+guests?/i,
+        /accommodates\s+(\d+)/i,
+      ]
+    );
+
   const capacity =
-    [
-      ...payloadBlocks.flatMap((block, index) =>
-        collectNumberValuesByKeyPattern(block, /(sleeps|maxguests|guestcount|capacity)/i, `payload.${index}`)
-      ),
-      ...structuredScriptData.flatMap((block, index) =>
-        collectNumberValuesByKeyPattern(
-          block,
-          /(sleeps|maxguests|guestcount|capacity)/i,
-          `json_embedded.${index}`
-        )
-      ),
-    ].find((candidate) => candidate.value > 0 && candidate.value <= 50)?.value ??
-    findFirstMatchNumber(bodyText, [/sleeps\s+(\d+)/i, /(\d+)\s+guests?/i, /accommodates\s+(\d+)/i]) ??
-    structureFromDom.capacity;
+    structuredCapacityCandidate?.value ??
+    bodyCapacity ??
+    null;
 
   const bedrooms =
     [
@@ -2643,7 +2732,7 @@ export async function extractVrbo(url: string): Promise<ExtractorResult> {
           selectedDescriptionCandidate.source.includes("body_fallback")
         ? "description_partial"
         : null,
-    photosCount === 0 ? "photos_not_found" : photosCount < 10 ? "photos_weak" : null,
+    photos.length === 0 ? "photos_not_found" : photos.length < 10 ? "photos_weak" : null,
   ].filter((warning): warning is string => Boolean(warning));
 
   const titleConfidence = selectedTitleCandidate.source.startsWith("payload")

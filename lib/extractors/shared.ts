@@ -65,10 +65,17 @@ export function dedupeImageUrls(values: string[]): string[] {
   const result: string[] = [];
 
   for (const value of values) {
-    const normalized = normalizeImageUrlForDedup(value);
+    const originalUrl = value.trim();
+    const normalized = normalizeImageUrlForDedup(originalUrl);
+
     if (!normalized || seen.has(normalized)) continue;
+
     seen.add(normalized);
-    result.push(normalized);
+
+    // Normalize only to identify duplicate assets.
+    // Preserve the original resource URL because CDN query parameters
+    // can be required to access the image.
+    result.push(originalUrl);
   }
 
   return result;
@@ -79,10 +86,13 @@ export function dedupeBookingListingPhotoUrls(values: string[]): string[] {
   const result: string[] = [];
 
   for (const value of values) {
-    const assetKey = getBookingImageAssetKey(value);
+    const originalUrl = value.trim();
+    const assetKey = getBookingImageAssetKey(originalUrl);
     if (!assetKey || seen.has(assetKey)) continue;
     seen.add(assetKey);
-    result.push(normalizeImageUrlForDedup(value));
+    // Use normalization only to identify duplicate Booking assets.
+    // Preserve the original CDN resource URL for downstream consumers.
+    result.push(originalUrl);
   }
 
   return result;

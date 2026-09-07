@@ -16,9 +16,61 @@ type ResolvedExtractor = {
   run: (url: string, options?: ExtractListingOptions) => Promise<ExtractorResult>;
 };
 
-function isVrboLikeExpediaUrl(lowerUrl: string): boolean {
-  const isExpediaFamily = lowerUrl.includes("expedia.") || lowerUrl.includes("hotels.");
-  if (!isExpediaFamily) return false;
+function getHostname(url: string): string {
+  try {
+    return new URL(url)
+      .hostname
+      .toLowerCase()
+      .replace(/\.$/, "");
+  } catch {
+    return "";
+  }
+}
+
+function hostnameMatchesDomain(
+  hostname: string,
+  domain: string
+): boolean {
+  return (
+    hostname === domain ||
+    hostname.endsWith(`.${domain}`)
+  );
+}
+
+function isExpediaFamilyHostname(
+  hostname: string
+): boolean {
+  return (
+    hostnameMatchesDomain(hostname, "expedia.com") ||
+    hostnameMatchesDomain(hostname, "expedia.fr") ||
+    hostnameMatchesDomain(hostname, "hotels.com")
+  );
+}
+
+function isVrboLikeExpediaUrl(
+  url: string
+): boolean {
+  let parsed: URL;
+
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+
+  const hostname =
+    parsed.hostname
+      .toLowerCase()
+      .replace(/\.$/, "");
+
+  if (!isExpediaFamilyHostname(hostname)) {
+    return false;
+  }
+
+  // Route semantics must come from the Expedia path itself.
+  // Query parameters are referral / campaign metadata and must not
+  // reclassify an Expedia hotel URL as a Vrbo-family listing.
+  const routeText = parsed.pathname.toLowerCase();
 
   return [
     "vacation-rental",
@@ -30,15 +82,9 @@ function isVrboLikeExpediaUrl(lowerUrl: string): boolean {
     "abritel",
     "vrbo",
     "homeaway",
-  ].some((needle) => lowerUrl.includes(needle));
-}
-
-function isVrboFamilyUrl(lowerUrl: string): boolean {
-  return (
-    lowerUrl.includes("vrbo.") ||
-    lowerUrl.includes("homeaway.") ||
-    lowerUrl.includes("abritel.") ||
-    isVrboLikeExpediaUrl(lowerUrl)
+  ].some(
+    (needle) =>
+      routeText.includes(needle)
   );
 }
 
@@ -97,63 +143,95 @@ function buildOtherListing(url: string): ExtractedListing {
   };
 }
 
-export function detectPlatform(url: string): SupportedPlatform {
-  const lower = url.toLowerCase();
 
-  if (lower.includes("airbnb.")) return "airbnb";
-  if (lower.includes("booking.")) return "booking";
-  if (isVrboFamilyUrl(lower)) return "vrbo";
-  if (lower.includes("agoda.")) return "agoda";
+export function detectPlatform(url: string): SupportedPlatform {
+  const hostname = getHostname(url);
+
+  if (
+    hostnameMatchesDomain(hostname, "airbnb.com") ||
+    hostnameMatchesDomain(hostname, "airbnb.fr")
+  ) {
+    return "airbnb";
+  }
+
+  if (
+    hostnameMatchesDomain(hostname, "booking.com")
+  ) {
+    return "booking";
+  }
+
+  if (
+    hostnameMatchesDomain(hostname, "agoda.com")
+  ) {
+    return "agoda";
+  }
+
+  if (
+    hostnameMatchesDomain(hostname, "abritel.fr") ||
+    hostnameMatchesDomain(hostname, "vrbo.com") ||
+    hostnameMatchesDomain(hostname, "homeaway.com")
+  ) {
+    return "vrbo";
+  }
+
+  if (isVrboLikeExpediaUrl(url)) {
+    return "vrbo";
+  }
+
+  if (isExpediaFamilyHostname(hostname)) {
+    return "expedia";
+  }
 
   return "other";
 }
 
 export function resolveExtractor(url: string): ResolvedExtractor {
-  const lower = url.toLowerCase();
+  const platform = detectPlatform(url);
 
-  if (lower.includes("airbnb.")) {
-    return {
-      platform: "airbnb",
-      extractorKey: "airbnb",
-      run: extractAirbnb,
-    };
+  switch (platform) {
+    case "airbnb":
+      return {
+        platform: "airbnb",
+        extractorKey: "airbnb",
+        run: extractAirbnb,
+      };
+
+    case "booking":
+      return {
+        platform: "booking",
+        extractorKey: "booking",
+        run: extractBooking,
+      };
+
+    case "vrbo":
+      return {
+        platform: "vrbo",
+        extractorKey: "vrbo",
+        run: extractVrbo,
+      };
+
+    case "expedia":
+      return {
+        platform: "expedia",
+        extractorKey: "expedia",
+        run: extractExpedia,
+      };
+
+    case "agoda":
+      return {
+        platform: "agoda",
+        extractorKey: "agoda",
+        run: extractAgoda,
+      };
+
+    default:
+      return {
+        platform: "other",
+        extractorKey: "other",
+        run: async (
+          inputUrl: string,
+          _options?: ExtractListingOptions
+        ) => buildOtherListing(inputUrl),
+      };
   }
-
-  if (lower.includes("booking.")) {
-    return {
-      platform: "booking",
-      extractorKey: "booking",
-      run: extractBooking,
-    };
-  }
-
-  if (isVrboFamilyUrl(lower)) {
-    return {
-      platform: "vrbo",
-      extractorKey: "vrbo",
-      run: extractVrbo,
-    };
-  }
-
-  if (lower.includes("expedia.") || lower.includes("hotels.")) {
-    return {
-      platform: "other",
-      extractorKey: "expedia",
-      run: extractExpedia,
-    };
-  }
-
-  if (lower.includes("agoda.")) {
-    return {
-      platform: "agoda",
-      extractorKey: "agoda",
-      run: extractAgoda,
-    };
-  }
-
-  return {
-    platform: "other",
-    extractorKey: "other",
-    run: async (inputUrl: string, _options?: ExtractListingOptions) => buildOtherListing(inputUrl),
-  };
 }
