@@ -4348,7 +4348,7 @@ async function getCandidateUrls(
 
       const airbnbUrls = await (async () => {
         try {
-          const candidates = await searchAirbnbCompetitorCandidates(target, maxResults);
+          const candidates = await searchAirbnbCompetitorCandidates(target, maxResults, abortSignal);
           return candidates
             .map((c) => ({
               url: (c.url ?? "").trim(),
@@ -5500,7 +5500,11 @@ export async function searchCompetitorsAroundTarget(
       if (isCompetitorSearchAborted(input)) {
         errorMessage = "aborted_before_airbnb_primary_search";
       } else {
-        const rows = await searchAirbnbCompetitorCandidates(airbnbComparableTarget, fetchCapPrimary);
+        const rows = await searchAirbnbCompetitorCandidates(
+          airbnbComparableTarget,
+          fetchCapPrimary,
+          input.abortSignal
+        );
         discoveredRaw = rows.length;
         const valid = rows.filter((c) =>
           airbnbPrimaryComparablePasses(c, targetTypePrimary, targetPricePrimary)
@@ -5622,7 +5626,8 @@ export async function searchCompetitorsAroundTarget(
       } else {
         const rows = await searchAirbnbCompetitorCandidates(
           agodaAirbnbComparableTarget,
-          fetchCapTopUp
+          fetchCapTopUp,
+          input.abortSignal
         );
         agodaAirbnbTopUpDiscoveredRaw = rows.length;
         const valid = rows.filter((c) =>
@@ -8175,7 +8180,11 @@ export async function searchCompetitorsAroundTarget(
 
       for (const discoveryTarget of discoveryTargets) {
         if (airbnbFallbackUrlBag.length >= discoverCap) break;
-        const found = await searchAirbnbCompetitorCandidates(discoveryTarget, discoverCap);
+        const found = await searchAirbnbCompetitorCandidates(
+          discoveryTarget,
+          discoverCap,
+          input.abortSignal
+        );
         for (const item of found) {
           const url = item.url?.trim() ?? "";
           if (!url || url === searchInput.target.url) continue;
@@ -10154,9 +10163,11 @@ export async function searchCompetitorsAroundTarget(
     let topupCandidates: CompetitorCandidate[] = [];
     try {
       const raceResult = await Promise.race([
-        searchAirbnbCompetitorCandidates(comparableTarget, proposedMaxAirbnbComparables).then(
-          (rows) => ({ kind: "ok" as const, rows })
-        ),
+        searchAirbnbCompetitorCandidates(
+          comparableTarget,
+          proposedMaxAirbnbComparables,
+          input.abortSignal
+        ).then((rows) => ({ kind: "ok" as const, rows })),
         new Promise<{ kind: "timeout" }>((resolve) => {
           setTimeout(() => resolve({ kind: "timeout" }), AIRBNB_FALLBACK_TIMEOUT_MS);
         }),
@@ -10360,7 +10371,8 @@ export async function searchCompetitorsAroundTarget(
           const raceResult = await Promise.race([
             searchAirbnbCompetitorCandidates(
               comparableTarget,
-              debugProposedMaxAirbnbComparables
+              debugProposedMaxAirbnbComparables,
+              input.abortSignal
             ).then((rows) => ({ kind: "ok" as const, rows })),
             new Promise<{ kind: "timeout" }>((resolve) => {
               setTimeout(() => resolve({ kind: "timeout" }), AIRBNB_FALLBACK_TIMEOUT_MS);

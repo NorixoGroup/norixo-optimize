@@ -1,4 +1,4 @@
-import { chromium } from "playwright";
+import { chromium, type Browser } from "playwright";
 import type { CompetitorCandidate } from "./types";
 import type { ExtractedListing } from "@/lib/extractors/types";
 import { getNormalizedComparableType } from "./filterComparableListings";
@@ -34,6 +34,102 @@ function getBrightDataCdpEndpoint() {
 
   const hostWithPort = host.includes(":") ? host : `${host}:${port}`;
   return `wss://${encodeURIComponent(username)}:${encodeURIComponent(password)}@${hostWithPort}`;
+}
+
+const AIRBNB_NAVIGATION_TIMEOUT_MS = 12000;
+const AIRBNB_PAGE_SETTLE_DELAY_MS = 2000;
+
+function createAbortError() {
+  const error = new Error("The operation was aborted.");
+  error.name = "AbortError";
+  return error;
+}
+
+function isAbortError(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    (error as { name?: unknown }).name === "AbortError"
+  );
+}
+
+function throwIfAborted(signal?: AbortSignal) {
+  if (signal?.aborted) {
+    throw createAbortError();
+  }
+}
+
+function runWithAbort<T>(operation: Promise<T>, signal?: AbortSignal): Promise<T> {
+  throwIfAborted(signal);
+  if (!signal) return operation;
+
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => {
+      signal.removeEventListener("abort", onAbort);
+      reject(createAbortError());
+    };
+    signal.addEventListener("abort", onAbort, { once: true });
+
+    operation.then(
+      (value) => {
+        signal.removeEventListener("abort", onAbort);
+        resolve(value);
+      },
+      (error) => {
+        signal.removeEventListener("abort", onAbort);
+        reject(error);
+      }
+    );
+
+    if (signal.aborted) {
+      onAbort();
+    }
+  });
+}
+
+function waitForAirbnbPageSettle(signal?: AbortSignal): Promise<void> {
+  throwIfAborted(signal);
+
+  return new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, AIRBNB_PAGE_SETTLE_DELAY_MS);
+
+    const onAbort = () => {
+      signal?.removeEventListener("abort", onAbort);
+      clearTimeout(timeout);
+      reject(createAbortError());
+    };
+
+    signal?.addEventListener("abort", onAbort, { once: true });
+    if (signal?.aborted) {
+      onAbort();
+    }
+  });
+}
+
+function safeAirbnbDiscoveryError(error: unknown) {
+  if (error instanceof Error) {
+    return {
+      errorName: (error.name || "Error").slice(0, 80),
+    };
+  }
+  return {
+    errorName: typeof error,
+  };
+}
+
+function logAirbnbDiscoveryFailure(payload: {
+  phase: "target_hint" | "search_query";
+  queryIndex?: number;
+  queryCount?: number;
+  collectedCount?: number;
+  errorName: string;
+}): void {
+  if (process.env.DEBUG_MARKET_PIPELINE !== "true") return;
+  console.warn("[market][airbnb-discovery-query-failed]", JSON.stringify(payload));
 }
 
 function normalizeSearchToken(value: string) {
@@ -828,35 +924,54 @@ function buildOrderedAirbnbSearchQueries(input: {
 
 export async function searchAirbnbCompetitorCandidates(
   target: ExtractedListing,
-  maxResults = 5
+  maxResults = 5,
+  abortSignal?: AbortSignal
 ): Promise<CompetitorCandidate[]> {
   const fallbackQuery =
     target.locationLabel || target.title || target.description?.slice(0, 80) || "";
   const targetStayNights = airbnbStayNightsFromUrl(target.url ?? null);
-  const cdpEndpoint = getBrightDataCdpEndpoint();
-
-  const browser = cdpEndpoint
-    ? await chromium.connectOverCDP(cdpEndpoint)
-    : await chromium.launch({
-        headless: true,
-      });
-
-  const page = await browser.newPage();
+  let browser: Browser | null = null;
 
   try {
+    throwIfAborted(abortSignal);
+    const cdpEndpoint = getBrightDataCdpEndpoint();
+    browser = cdpEndpoint
+      ? await runWithAbort(chromium.connectOverCDP(cdpEndpoint), abortSignal)
+      : await runWithAbort(
+          chromium.launch({
+            headless: true,
+          }),
+          abortSignal
+        );
+
+    throwIfAborted(abortSignal);
+    const page = await browser.newPage();
     const htmlHints: string[] = [];
 
     if (target.url) {
-      await page.goto(target.url, {
-        waitUntil: "domcontentloaded",
-        timeout: 60000,
-      });
+      try {
+        throwIfAborted(abortSignal);
+        await runWithAbort(
+          page.goto(target.url, {
+            waitUntil: "commit",
+            timeout: AIRBNB_NAVIGATION_TIMEOUT_MS,
+          }),
+          abortSignal
+        );
+        throwIfAborted(abortSignal);
+        await waitForAirbnbPageSettle(abortSignal);
+        throwIfAborted(abortSignal);
 
-      await page.waitForTimeout(5000);
-
-      const html = await page.content();
-      for (const value of extractLocationHintsFromHtml(html)) {
-        if (value) htmlHints.push(value);
+        const html = await runWithAbort(page.content(), abortSignal);
+        for (const value of extractLocationHintsFromHtml(html)) {
+          if (value) htmlHints.push(value);
+        }
+      } catch (error) {
+        if (isAbortError(error) || abortSignal?.aborted) throw error;
+        logAirbnbDiscoveryFailure({
+          phase: "target_hint",
+          ...safeAirbnbDiscoveryError(error),
+        });
       }
     }
 
@@ -868,7 +983,7 @@ export async function searchAirbnbCompetitorCandidates(
     });
 
     if (queries.length === 0) {
-      await browser.close();
+      throwIfAborted(abortSignal);
       return [];
     }
 
@@ -890,60 +1005,84 @@ export async function searchAirbnbCompetitorCandidates(
       }
     };
 
-    for (const query of queries) {
+    for (const [queryIndex, query] of queries.entries()) {
+      throwIfAborted(abortSignal);
       const searchUrl = `https://www.airbnb.com/s/${encodeURIComponent(query)}/homes`;
 
-      await page.goto(searchUrl, {
-        waitUntil: "domcontentloaded",
-        timeout: 60000,
-      });
+      const rows = await (async () => {
+        try {
+          await runWithAbort(
+            page.goto(searchUrl, {
+              waitUntil: "commit",
+              timeout: AIRBNB_NAVIGATION_TIMEOUT_MS,
+            }),
+            abortSignal
+          );
+          throwIfAborted(abortSignal);
+          await waitForAirbnbPageSettle(abortSignal);
+          throwIfAborted(abortSignal);
 
-      await page.waitForTimeout(5000);
-
-      const rows = await page.$$eval(
-        'a[href*="/rooms/"]',
-        (elements) => {
-          const MAX_LEN = 240;
-          const clean = (s: string | null | undefined) => {
-            if (!s) return "";
-            return s.replace(/\s+/g, " ").trim().slice(0, MAX_LEN);
-          };
-          const resolveNearbyParent = (linkEl: Element): Element | null => {
-            const byItemprop = linkEl.closest("[itemprop]");
-            if (byItemprop) return byItemprop;
-            const byTestid = linkEl.closest("[data-testid]");
-            if (byTestid) return byTestid;
-            const byDiv = linkEl.closest("div");
-            if (byDiv) return byDiv;
-            let cur: Element | null = linkEl.parentElement;
-            let last: Element | null = null;
-            for (let i = 0; i < 4 && cur; i++) {
-              last = cur;
-              cur = cur.parentElement;
-            }
-            return last;
-          };
-          return elements.map((el) => {
-            const href = el.getAttribute("href");
-            const abs = href ? `https://www.airbnb.com${href.split("?")[0]}` : null;
-            const aria = el.getAttribute("aria-label");
-            const titleAttr = el.getAttribute("title");
-            const linkText = (el.textContent || "").replace(/\s+/g, " ").trim();
-            const parentEl = resolveNearbyParent(el);
-            const parentText = parentEl
-              ? (parentEl.textContent || "").replace(/\s+/g, " ").trim()
-              : "";
-            const candidates = [
-              clean(aria),
-              clean(titleAttr),
-              clean(linkText),
-              clean(parentText),
-            ];
-            const titleGuess = candidates.find((c) => c.length > 0) || null;
-            return { href: abs, title: titleGuess };
+          return await runWithAbort(
+            page.$$eval(
+              'a[href*="/rooms/"]',
+              (elements) => {
+                const MAX_LEN = 240;
+                const clean = (s: string | null | undefined) => {
+                  if (!s) return "";
+                  return s.replace(/\s+/g, " ").trim().slice(0, MAX_LEN);
+                };
+                const resolveNearbyParent = (linkEl: Element): Element | null => {
+                  const byItemprop = linkEl.closest("[itemprop]");
+                  if (byItemprop) return byItemprop;
+                  const byTestid = linkEl.closest("[data-testid]");
+                  if (byTestid) return byTestid;
+                  const byDiv = linkEl.closest("div");
+                  if (byDiv) return byDiv;
+                  let cur: Element | null = linkEl.parentElement;
+                  let last: Element | null = null;
+                  for (let i = 0; i < 4 && cur; i++) {
+                    last = cur;
+                    cur = cur.parentElement;
+                  }
+                  return last;
+                };
+                return elements.map((el) => {
+                  const href = el.getAttribute("href");
+                  const abs = href ? `https://www.airbnb.com${href.split("?")[0]}` : null;
+                  const aria = el.getAttribute("aria-label");
+                  const titleAttr = el.getAttribute("title");
+                  const linkText = (el.textContent || "").replace(/\s+/g, " ").trim();
+                  const parentEl = resolveNearbyParent(el);
+                  const parentText = parentEl
+                    ? (parentEl.textContent || "").replace(/\s+/g, " ").trim()
+                    : "";
+                  const candidates = [
+                    clean(aria),
+                    clean(titleAttr),
+                    clean(linkText),
+                    clean(parentText),
+                  ];
+                  const titleGuess = candidates.find((c) => c.length > 0) || null;
+                  return { href: abs, title: titleGuess };
+                });
+              }
+            ),
+            abortSignal
+          );
+        } catch (error) {
+          if (isAbortError(error) || abortSignal?.aborted) throw error;
+          logAirbnbDiscoveryFailure({
+            phase: "search_query",
+            queryIndex,
+            queryCount: queries.length,
+            collectedCount: collectedTitles.size,
+            ...safeAirbnbDiscoveryError(error),
           });
+          return [];
         }
-      );
+      })();
+
+      throwIfAborted(abortSignal);
 
       const byHref = new Map<string, string | null>();
       for (const row of rows) {
@@ -975,6 +1114,8 @@ export async function searchAirbnbCompetitorCandidates(
 
       if (collectedTitles.size >= collectCap) break;
     }
+
+    throwIfAborted(abortSignal);
 
     const geoFilteredCandidates = filterAirbnbCandidatesByGeo(
       [...collectedTitles.entries()].map(([url, title]) => ({
@@ -1027,8 +1168,7 @@ export async function searchAirbnbCompetitorCandidates(
 
     const uniqueUrls = rankedCandidates.slice(0, maxResults).map((candidate) => candidate.url);
 
-    await browser.close();
-
+    throwIfAborted(abortSignal);
     return uniqueUrls.map((url) => {
       const title = collectedTitles.get(url) ?? null;
       const pricing = parseAirbnbSearchSnippetPricing(title ?? "", targetStayNights);
@@ -1062,10 +1202,19 @@ export async function searchAirbnbCompetitorCandidates(
       };
     });
   } catch (error) {
-    await browser.close();
+    if (isAbortError(error) || abortSignal?.aborted) {
+      throw createAbortError();
+    }
 
-    console.error("Airbnb competitor search failed:", error);
+    console.error(
+      "Airbnb competitor search failed:",
+      JSON.stringify(safeAirbnbDiscoveryError(error))
+    );
 
     return [];
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
   }
 }
