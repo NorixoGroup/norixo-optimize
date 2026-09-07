@@ -4812,12 +4812,14 @@ async function fetchAirbnbCompetitorPriceWithCdp(url: string) {
 
 export async function enrichAirbnbCompetitorPrices(
   competitors: ExtractedListing[],
-  phase: "before_evaluate" | "final_fallback" = "final_fallback"
+  phase: "before_evaluate" | "final_fallback" = "final_fallback",
+  abortSignal?: AbortSignal
 ) {
   let attempted = 0;
   let successful = 0;
 
   for (const competitor of competitors) {
+    if (abortSignal?.aborted) break;
     if (successful >= AIRBNB_COMPETITOR_PRICE_ATTEMPT_LIMIT) break;
     if (attempted >= AIRBNB_COMPETITOR_PRICE_ATTEMPT_LIMIT) break;
     if (competitor.platform !== "airbnb") continue;
@@ -4894,6 +4896,42 @@ export async function enrichAirbnbCompetitorPrices(
     });
     successful += 1;
   }
+}
+
+function selectPreEvaluationAirbnbPriceEnrichmentCandidates(
+  evaluationTarget: ExtractedListing,
+  competitors: ExtractedListing[]
+) {
+  const airbnbCandidates = competitors.filter((listing) => listing.platform === "airbnb");
+  const decisionsByCandidate = new Map(
+    evaluateComparableCandidates(evaluationTarget, airbnbCandidates).map((decision) => [
+      decision.candidate,
+      decision,
+    ])
+  );
+  const eligible: ExtractedListing[] = [];
+  let skippedDeterministicTypeMismatch = 0;
+
+  for (const candidate of airbnbCandidates) {
+    const decision = decisionsByCandidate.get(candidate);
+    const deterministicTypeMismatch =
+      decision?.targetNormalizedType !== "unknown" &&
+      decision?.candidateNormalizedType !== "unknown" &&
+      decision?.reasons.includes("property_type_mismatch") === true;
+
+    if (deterministicTypeMismatch) {
+      skippedDeterministicTypeMismatch += 1;
+      continue;
+    }
+
+    eligible.push(candidate);
+  }
+
+  return {
+    totalAirbnbCandidates: airbnbCandidates.length,
+    eligible,
+    skippedDeterministicTypeMismatch,
+  };
 }
 
 export async function searchCompetitorsAroundTarget(
@@ -8738,18 +8776,32 @@ export async function searchCompetitorsAroundTarget(
       })
     : evaluationCompetitors;
 
-  if (evaluationCompetitorsPrepared.some((listing) => listing.platform === "airbnb")) {
+  const preEvaluationAirbnbPriceGate = selectPreEvaluationAirbnbPriceEnrichmentCandidates(
+    evaluationTarget,
+    evaluationCompetitorsPrepared
+  );
+
+  if (preEvaluationAirbnbPriceGate.totalAirbnbCandidates > 0) {
     if (DEBUG_MARKET_PIPELINE) {
       console.log(
         "[market][airbnb-price-enrich-before-evaluate]",
         JSON.stringify({
           totalCandidates: evaluationCompetitorsPrepared.length,
-          airbnbCandidates: evaluationCompetitorsPrepared.filter((listing) => listing.platform === "airbnb")
-            .length,
+          airbnbCandidates: preEvaluationAirbnbPriceGate.totalAirbnbCandidates,
+          eligibleForPreEvaluateEnrichment: preEvaluationAirbnbPriceGate.eligible.length,
+          skippedDeterministicTypeMismatch:
+            preEvaluationAirbnbPriceGate.skippedDeterministicTypeMismatch,
+          aborted: input.abortSignal?.aborted === true,
         })
       );
     }
-    await enrichAirbnbCompetitorPrices(evaluationCompetitorsPrepared, "before_evaluate");
+    if (!input.abortSignal?.aborted && preEvaluationAirbnbPriceGate.eligible.length > 0) {
+      await enrichAirbnbCompetitorPrices(
+        preEvaluationAirbnbPriceGate.eligible,
+        "before_evaluate",
+        input.abortSignal
+      );
+    }
   }
 
   if (traceAirbnbPrimaryFlow) {
@@ -10486,7 +10538,7 @@ export async function searchCompetitorsAroundTarget(
     });
   }
   if (competitors.some((listing) => listing.platform === "airbnb")) {
-    await enrichAirbnbCompetitorPrices(competitors, "final_fallback");
+    await enrichAirbnbCompetitorPrices(competitors, "final_fallback", input.abortSignal);
   }
 
   /**
