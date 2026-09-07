@@ -1,4 +1,4 @@
-import { chromium, type Browser } from "playwright";
+import { chromium, type Browser, type Page } from "playwright";
 import type { CompetitorCandidate } from "./types";
 import type { ExtractedListing } from "@/lib/extractors/types";
 import { getNormalizedComparableType } from "./filterComparableListings";
@@ -38,6 +38,7 @@ function getBrightDataCdpEndpoint() {
 
 const AIRBNB_NAVIGATION_TIMEOUT_MS = 12000;
 const AIRBNB_PAGE_SETTLE_DELAY_MS = 2000;
+const AIRBNB_RESULT_READINESS_TIMEOUT_MS = 4000;
 
 function createAbortError() {
   const error = new Error("The operation was aborted.");
@@ -130,6 +131,44 @@ function logAirbnbDiscoveryFailure(payload: {
 }): void {
   if (process.env.DEBUG_MARKET_PIPELINE !== "true") return;
   console.warn("[market][airbnb-discovery-query-failed]", JSON.stringify(payload));
+}
+
+async function waitForAirbnbSearchResultReadiness(
+  page: Page,
+  queryIndex: number,
+  signal?: AbortSignal
+): Promise<"ready" | "timeout"> {
+  const startedAt = Date.now();
+  let readiness: "ready" | "timeout" = "timeout";
+
+  try {
+    throwIfAborted(signal);
+    await runWithAbort(
+      page.waitForSelector('a[href*="/rooms/"]', {
+        state: "attached",
+        timeout: AIRBNB_RESULT_READINESS_TIMEOUT_MS,
+      }),
+      signal
+    );
+    throwIfAborted(signal);
+    readiness = "ready";
+  } catch (error) {
+    if (isAbortError(error) || signal?.aborted) throw error;
+    readiness = "timeout";
+  }
+
+  if (process.env.DEBUG_MARKET_PIPELINE === "true") {
+    console.log(
+      "[market][airbnb-search-result-readiness]",
+      JSON.stringify({
+        queryIndex,
+        readiness,
+        readinessMs: Date.now() - startedAt,
+      })
+    );
+  }
+
+  return readiness;
 }
 
 function normalizeSearchToken(value: string) {
@@ -1020,6 +1059,8 @@ export async function searchAirbnbCompetitorCandidates(
           );
           throwIfAborted(abortSignal);
           await waitForAirbnbPageSettle(abortSignal);
+          throwIfAborted(abortSignal);
+          await waitForAirbnbSearchResultReadiness(page, queryIndex, abortSignal);
           throwIfAborted(abortSignal);
 
           return await runWithAbort(
