@@ -1726,6 +1726,17 @@ type CandidateUrl = {
   priceBasis?: ExtractedListing["priceBasis"] | null;
   sourceKind?: "market_memory_seed" | null;
 };
+type NormalAirbnbDiscoveryOutcome =
+  | "not_attempted"
+  | "returned_candidates"
+  | "returned_zero"
+  | "aborted"
+  | "failed";
+type NormalAirbnbDiscoveryState = {
+  attempted: boolean;
+  outcome: NormalAirbnbDiscoveryOutcome;
+  candidateCount: number;
+};
 
 function isAllowedMarketMemorySeedSource(
   targetPlatform: string,
@@ -4318,7 +4329,8 @@ async function getCandidateUrls(
     normalizedTargetCountry: string | null;
     skipEmbeddedAndNetwork: boolean;
   },
-  abortSignal?: AbortSignal
+  abortSignal?: AbortSignal,
+  onNormalAirbnbDiscovery?: (state: NormalAirbnbDiscoveryState) => void
 ): Promise<CandidateUrl[]> {
   const normalize = (urls: string[], source: CandidateSource) =>
     urls
@@ -4349,7 +4361,7 @@ async function getCandidateUrls(
       const airbnbUrls = await (async () => {
         try {
           const candidates = await searchAirbnbCompetitorCandidates(target, maxResults, abortSignal);
-          return candidates
+          const rows = candidates
             .map((c) => ({
               url: (c.url ?? "").trim(),
               source: "airbnb" as const,
@@ -4368,7 +4380,18 @@ async function getCandidateUrls(
               priceBasis: c.priceBasis ?? null,
             }))
             .filter((row) => row.url.length > 0);
+          onNormalAirbnbDiscovery?.({
+            attempted: true,
+            outcome: rows.length > 0 ? "returned_candidates" : "returned_zero",
+            candidateCount: rows.length,
+          });
+          return rows;
         } catch (error) {
+          onNormalAirbnbDiscovery?.({
+            attempted: true,
+            outcome: abortSignal?.aborted ? "aborted" : "failed",
+            candidateCount: 0,
+          });
           console.error("Error searching Airbnb competitors", error);
           return [] as CandidateUrl[];
         }
@@ -5421,6 +5444,11 @@ export async function searchCompetitorsAroundTarget(
   logBookingTiming({ stage: "discovery_start" });
   const discoveryT0 = Date.now();
   let airbnbPrimaryCandidateUrls: CandidateUrl[] = [];
+  let normalAirbnbDiscoveryState: NormalAirbnbDiscoveryState = {
+    attempted: false,
+    outcome: "not_attempted",
+    candidateCount: 0,
+  };
 
   const rawEnvEnableAirbnbPrimaryComparables =
     process.env.ENABLE_AIRBNB_PRIMARY_COMPARABLES_FOR_BOOKING;
@@ -5746,7 +5774,10 @@ export async function searchCompetitorsAroundTarget(
         competitorDiscoveryFetchLimitEffective,
         overrideSourcePriority,
         comparableDiscoveryGeo,
-        input.abortSignal
+        input.abortSignal,
+        (state) => {
+          normalAirbnbDiscoveryState = state;
+        }
       );
 
       const shouldUseAgodaAirbnbTopUp =
@@ -8212,9 +8243,30 @@ export async function searchCompetitorsAroundTarget(
       const seenUrls = new Set<string>();
       const villaFallbackDiscovery =
         getNormalizedComparableType(comparableTarget) === "villa_like";
+      const completedNormalAirbnbDiscovery =
+        normalAirbnbDiscoveryState.outcome === "returned_candidates" ||
+        normalAirbnbDiscoveryState.outcome === "returned_zero";
+      const skipRedundantAirbnbFallbackDiscovery =
+        !villaFallbackDiscovery &&
+        normalAirbnbDiscoveryState.attempted &&
+        completedNormalAirbnbDiscovery;
+      if (DEBUG_MARKET_PIPELINE) {
+        console.log(
+          "[market][airbnb-fallback-discovery-gate]",
+          JSON.stringify({
+            normalAirbnbDiscoveryAttempted: normalAirbnbDiscoveryState.attempted,
+            normalAirbnbDiscoveryOutcome: normalAirbnbDiscoveryState.outcome,
+            normalAirbnbDiscoveryCandidateCount: normalAirbnbDiscoveryState.candidateCount,
+            skippedRedundantAirbnbFallback: skipRedundantAirbnbFallbackDiscovery,
+            villaShadowFallbackPreserved: villaFallbackDiscovery,
+          })
+        );
+      }
       const discoveryTargets = villaFallbackDiscovery
         ? villaAirbnbStrongFallbackShadowTargets(comparableTarget, targetCity)
-        : [comparableTarget];
+        : skipRedundantAirbnbFallbackDiscovery
+          ? []
+          : [comparableTarget];
 
       for (const discoveryTarget of discoveryTargets) {
         if (airbnbFallbackUrlBag.length >= discoverCap) break;
