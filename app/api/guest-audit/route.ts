@@ -1597,6 +1597,7 @@ export async function POST(request: NextRequest) {
           radiusKm: 1,
           abortSignal: competitorAbortController.signal,
           comparables: comparablesOverride,
+          propertyTypeOverride: comparablesOverride?.propertyType ?? null,
         });
         if (shadowReuseCandidate) {
           const shadowComparison = buildShadowReuseComparison(routeLookupResult.shadowComparables, liveBundle.competitors);
