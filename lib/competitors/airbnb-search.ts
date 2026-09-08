@@ -39,6 +39,9 @@ function getBrightDataCdpEndpoint() {
 const AIRBNB_NAVIGATION_TIMEOUT_MS = 12000;
 const AIRBNB_PAGE_SETTLE_DELAY_MS = 2000;
 const AIRBNB_RESULT_READINESS_TIMEOUT_MS = 4000;
+const AIRBNB_RESULT_STABILITY_TIMEOUT_MS = 2500;
+const AIRBNB_RESULT_STABILITY_POLL_MS = 250;
+const AIRBNB_RESULT_STABILITY_OBSERVATIONS = 2;
 
 function createAbortError() {
   const error = new Error("The operation was aborted.");
@@ -140,6 +143,54 @@ async function waitForAirbnbSearchResultReadiness(
 ): Promise<"ready" | "timeout"> {
   const startedAt = Date.now();
   let readiness: "ready" | "timeout" = "timeout";
+  let uniqueRoomLinkCount = 0;
+  let stabilityObservations = 0;
+
+  const waitForPoll = (ms: number) =>
+    new Promise<void>((resolve, reject) => {
+      throwIfAborted(signal);
+      const timeout = setTimeout(() => {
+        signal?.removeEventListener("abort", onAbort);
+        resolve();
+      }, ms);
+
+      const onAbort = () => {
+        signal?.removeEventListener("abort", onAbort);
+        clearTimeout(timeout);
+        reject(createAbortError());
+      };
+
+      signal?.addEventListener("abort", onAbort, { once: true });
+      if (signal?.aborted) {
+        onAbort();
+      }
+    });
+
+  const countUniqueRoomLinks = async () => {
+    throwIfAborted(signal);
+    const count = await runWithAbort(
+      page.$$eval('a[href*="/rooms/"]', (elements) => {
+        const roomUrls = new Set<string>();
+        for (const element of elements) {
+          const href = element.getAttribute("href");
+          if (!href) continue;
+
+          try {
+            const parsed = new URL(href, "https://www.airbnb.com");
+            const roomId = parsed.pathname.match(/\/rooms\/(\d+)/)?.[1];
+            if (!roomId) continue;
+            roomUrls.add(`https://www.airbnb.com/rooms/${roomId}`);
+          } catch {
+            continue;
+          }
+        }
+        return roomUrls.size;
+      }),
+      signal
+    );
+    throwIfAborted(signal);
+    return count;
+  };
 
   try {
     throwIfAborted(signal);
@@ -151,7 +202,32 @@ async function waitForAirbnbSearchResultReadiness(
       signal
     );
     throwIfAborted(signal);
-    readiness = "ready";
+
+    let lastObservedCount = await countUniqueRoomLinks();
+    uniqueRoomLinkCount = lastObservedCount;
+    const stabilityStartedAt = Date.now();
+
+    while (Date.now() - stabilityStartedAt < AIRBNB_RESULT_STABILITY_TIMEOUT_MS) {
+      const remainingMs =
+        AIRBNB_RESULT_STABILITY_TIMEOUT_MS - (Date.now() - stabilityStartedAt);
+      await waitForPoll(Math.min(AIRBNB_RESULT_STABILITY_POLL_MS, Math.max(1, remainingMs)));
+      throwIfAborted(signal);
+
+      const currentCount = await countUniqueRoomLinks();
+      uniqueRoomLinkCount = currentCount;
+
+      if (currentCount === lastObservedCount && currentCount > 0) {
+        stabilityObservations += 1;
+        if (stabilityObservations >= AIRBNB_RESULT_STABILITY_OBSERVATIONS) {
+          readiness = "ready";
+          break;
+        }
+        continue;
+      }
+
+      lastObservedCount = currentCount;
+      stabilityObservations = 0;
+    }
   } catch (error) {
     if (isAbortError(error) || signal?.aborted) throw error;
     readiness = "timeout";
@@ -164,6 +240,8 @@ async function waitForAirbnbSearchResultReadiness(
         queryIndex,
         readiness,
         readinessMs: Date.now() - startedAt,
+        uniqueRoomLinkCount,
+        stabilityObservations,
       })
     );
   }
