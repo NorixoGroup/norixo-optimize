@@ -9907,11 +9907,16 @@ export async function searchCompetitorsAroundTarget(
     })
   );
 
-  let fallbackCompetitors = filterCompetitorsByPropertyAndStructure(
-    evaluationTarget,
-    competitorsOrdered,
-    pipelineComparableMax
-  );
+  const preserveEvaluatedAirbnbCompetitors =
+    String(searchInput.target.platform ?? "").toLowerCase() === "airbnb";
+
+  let fallbackCompetitors = preserveEvaluatedAirbnbCompetitors
+    ? competitorsOrdered.slice(0, pipelineComparableMax)
+    : filterCompetitorsByPropertyAndStructure(
+        evaluationTarget,
+        competitorsOrdered,
+        pipelineComparableMax
+      );
 
   fallbackCompetitors = applyAirbnbStudioStructureSoftfill({
     evaluationTarget,
