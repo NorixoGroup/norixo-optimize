@@ -41,11 +41,9 @@ export const metadata: Metadata = {
 
 const homeJsonLd = {
   "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
+  "@type": "Service",
   "@id": `${siteUrl}/#software`,
   name: "Norixo",
-  applicationCategory: "BusinessApplication",
-  operatingSystem: "Web",
   url: siteUrl,
   description: pageDescription,
   provider: {
