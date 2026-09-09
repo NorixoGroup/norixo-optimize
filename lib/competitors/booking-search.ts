@@ -885,6 +885,40 @@ function collectBookingHotelUrlsFromText(text: string) {
     .filter(Boolean);
 }
 
+function buildStudioStrongQueries(args: {
+  effectiveGeoCity: string | null;
+  countryQueryToken: string | null;
+}): string[] {
+  if (!args.effectiveGeoCity) return [];
+
+  const c = args.effectiveGeoCity;
+  const rawStudio: string[] = [];
+
+  if (args.countryQueryToken) {
+    rawStudio.push(
+      `studio ${c} ${args.countryQueryToken}`,
+      `${c} ${args.countryQueryToken} studio`
+    );
+  }
+
+  rawStudio.push(
+    `studio ${c}`,
+    `${c} studio`
+  );
+
+  const seen = new Set<string>();
+  const queries: string[] = [];
+
+  for (const q of rawStudio) {
+    const k = normalizeSearchToken(q);
+    if (!k || seen.has(k)) continue;
+    seen.add(k);
+    queries.push(k);
+  }
+
+  return queries;
+}
+
 function buildApartmentStrongQueries(args: {
   effectiveGeoCity: string | null;
   countryQueryToken: string | null;
@@ -1015,6 +1049,12 @@ function buildBookingSearchQueryPlan(target: ExtractedListing): {
   }
 
   const strongTypeQueries: string[] = [
+    ...(refinedTargetType === "studio_like"
+      ? buildStudioStrongQueries({
+          effectiveGeoCity,
+          countryQueryToken,
+        })
+      : []),
     ...buildApartmentStrongQueries({
       effectiveGeoCity,
       countryQueryToken,
@@ -1219,7 +1259,7 @@ function buildBookingSearchQueryPlan(target: ExtractedListing): {
   };
 }
 
-function extractBookingSearchQueries(target: ExtractedListing): string[] {
+export function extractBookingSearchQueries(target: ExtractedListing): string[] {
   return buildBookingSearchQueryPlan(target).queries;
 }
 
