@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: "Privacy Policy | Norixo",
   description:
     "Privacy policy for Norixo, including how we handle personal data and related rights.",
-  alternates: buildHreflangAlternates("/privacy"),
+  alternates: buildHreflangAlternates("/privacy", { locales: ["en"] }),
   openGraph: {
     title: "Privacy Policy | Norixo",
     description:
