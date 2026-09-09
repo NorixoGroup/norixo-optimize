@@ -28,6 +28,27 @@ export type BookingPriceDiagnosticEvent =
       selectedCurrency: string | null;
     };
 
+export type BookingUnitTypeDiagnosticSignal = {
+  source: "structured_script" | "network_payload";
+  field: string;
+  evidenceKind: "explicit_type" | "name" | "context_only";
+  classification:
+    | "studio"
+    | "apartment"
+    | "suite"
+    | "room"
+    | "villa"
+    | "house"
+    | "other"
+    | "unknown";
+};
+
+export type BookingUnitTypeDiagnosticEvent = {
+  structuredScriptCount: number;
+  networkPayloadCount: number;
+  signals: BookingUnitTypeDiagnosticSignal[];
+};
+
 export type ExtractListingOptions = {
   /** Mode complet pour l’annonce auditée, mode léger pour les concurrents/pricing. */
   extractionMode?: "full" | "pricing_only";
@@ -41,6 +62,15 @@ export type ExtractListingOptions = {
    * payloads CDP, tokens ou texte brut de la page.
    */
   onBookingPriceDiagnostic?: (event: BookingPriceDiagnosticEvent) => void;
+
+  /**
+   * Diagnostic Booking optionnel pour les signaux de type d'unité.
+   * Métadonnées sanitizées uniquement : aucun texte brut, HTML, payload,
+   * cookie, token ou donnée CDP n'est exposé au callback.
+   */
+  onBookingUnitTypeDiagnostic?: (
+    event: BookingUnitTypeDiagnosticEvent
+  ) => void;
 };
 
 export type ListingFieldQuality = "missing" | "low" | "medium" | "high";

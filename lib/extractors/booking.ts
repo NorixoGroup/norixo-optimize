@@ -5,7 +5,11 @@ import {
   cleanBookingCanonicalUrl,
   parseBookingStayNightsFromUrl,
 } from "./booking-url";
-import type { ExtractListingOptions, ExtractorResult } from "./types";
+import type {
+  BookingUnitTypeDiagnosticSignal,
+  ExtractListingOptions,
+  ExtractorResult,
+} from "./types";
 import { fetchUnlockedPageData } from "@/lib/brightdata";
 import {
   buildFieldMeta,
@@ -1148,6 +1152,144 @@ function inferBookingOccupancyAssessmentFromRecord(record: Record<string, unknow
   }
 
   return { state: "unknown", reason: "date_cell_without_clear_state" };
+}
+
+const BOOKING_UNIT_TYPE_DIAGNOSTIC_KEYS = new Set([
+  "roomtype",
+  "room_type",
+  "roomname",
+  "room_name",
+  "unittype",
+  "unit_type",
+  "unitname",
+  "unit_name",
+  "accommodationtype",
+  "accommodation_type",
+  "bedroomtype",
+  "bedroom_type",
+  "roomdescription",
+  "room_description",
+]);
+
+function getBookingUnitTypeDiagnosticEvidenceKind(
+  field: string
+): BookingUnitTypeDiagnosticSignal["evidenceKind"] {
+  switch (field) {
+    case "roomtype":
+    case "room_type":
+    case "unittype":
+    case "unit_type":
+    case "bedroomtype":
+    case "bedroom_type":
+      return "explicit_type";
+
+    case "roomname":
+    case "room_name":
+    case "unitname":
+    case "unit_name":
+      return "name";
+
+    case "accommodationtype":
+    case "accommodation_type":
+    case "roomdescription":
+    case "room_description":
+      return "context_only";
+
+    default:
+      return "context_only";
+  }
+}
+
+function classifyBookingUnitTypeDiagnosticValue(
+  value: string
+): BookingUnitTypeDiagnosticSignal["classification"] {
+  const normalized = normalizeWhitespace(value)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  if (/\bstudio\b/.test(normalized)) return "studio";
+
+  if (
+    /\b(apartment|appartement|appart|flat|condo|aparthotel)\b/.test(
+      normalized
+    )
+  ) {
+    return "apartment";
+  }
+
+  if (/\bsuite\b/.test(normalized)) return "suite";
+  if (/\broom\b|\bchambre\b/.test(normalized)) return "room";
+  if (/\bvilla\b/.test(normalized)) return "villa";
+  if (/\bhouse\b|\bmaison\b|\bhome\b/.test(normalized)) return "house";
+
+  return normalized ? "other" : "unknown";
+}
+
+function collectBookingUnitTypeDiagnosticSignalsFromUnknown(
+  value: unknown,
+  source: BookingUnitTypeDiagnosticSignal["source"],
+  depth = 0
+): BookingUnitTypeDiagnosticSignal[] {
+  if (value == null || depth > 24) return [];
+
+  if (Array.isArray(value)) {
+    return value.flatMap((entry) =>
+      collectBookingUnitTypeDiagnosticSignalsFromUnknown(
+        entry,
+        source,
+        depth + 1
+      )
+    );
+  }
+
+  if (!isRecord(value)) return [];
+
+  const signals: BookingUnitTypeDiagnosticSignal[] = [];
+
+  for (const [key, entry] of Object.entries(value)) {
+    const normalizedKey = key.toLowerCase();
+
+    if (
+      BOOKING_UNIT_TYPE_DIAGNOSTIC_KEYS.has(normalizedKey) &&
+      typeof entry === "string"
+    ) {
+      signals.push({
+        source,
+        field: normalizedKey,
+        evidenceKind: getBookingUnitTypeDiagnosticEvidenceKind(normalizedKey),
+        classification: classifyBookingUnitTypeDiagnosticValue(entry),
+      });
+    }
+
+    if (entry && (Array.isArray(entry) || typeof entry === "object")) {
+      signals.push(
+        ...collectBookingUnitTypeDiagnosticSignalsFromUnknown(
+          entry,
+          source,
+          depth + 1
+        )
+      );
+    }
+  }
+
+  return signals;
+}
+
+function dedupeBookingUnitTypeDiagnosticSignals(
+  signals: BookingUnitTypeDiagnosticSignal[]
+): BookingUnitTypeDiagnosticSignal[] {
+  const seen = new Set<string>();
+  const out: BookingUnitTypeDiagnosticSignal[] = [];
+
+  for (const signal of signals) {
+    const key = `${signal.source}|${signal.field}|${signal.evidenceKind}|${signal.classification}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(signal);
+  }
+
+  return out.slice(0, 40);
 }
 
 function extractBookingOccupancySignalsFromUnknown(
@@ -3151,6 +3293,36 @@ export async function extractBooking(
   }
   const jsonLdBlocks = extractJsonLd(html);
   const structuredScriptData = extractStructuredScriptData(html);
+  const bookingUnitTypeStructuredSignals =
+    structuredScriptData.flatMap((entry) =>
+      collectBookingUnitTypeDiagnosticSignalsFromUnknown(
+        entry,
+        "structured_script"
+      )
+    );
+
+  const bookingUnitTypeNetworkSignals = pageData.payloads.flatMap(
+    (payload) => {
+      try {
+        return collectBookingUnitTypeDiagnosticSignalsFromUnknown(
+          JSON.parse(payload.bodyText),
+          "network_payload"
+        );
+      } catch {
+        return [];
+      }
+    }
+  );
+
+  options?.onBookingUnitTypeDiagnostic?.({
+    structuredScriptCount: structuredScriptData.length,
+    networkPayloadCount: pageData.payloads.length,
+    signals: dedupeBookingUnitTypeDiagnosticSignals([
+      ...bookingUnitTypeStructuredSignals,
+      ...bookingUnitTypeNetworkSignals,
+    ]),
+  });
+
   const structuredPropertyContext =
     getBookingStructuredPropertyContext(structuredScriptData);
   const bookingCalendarOpenDebug =
