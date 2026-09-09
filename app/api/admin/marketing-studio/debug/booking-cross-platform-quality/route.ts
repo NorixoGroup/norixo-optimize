@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminPrivateEmail } from "@/lib/auth/isAdminEmail";
 import { searchCompetitorsAroundTarget } from "@/lib/competitors/searchCompetitors";
+import {
+  bookingUrlHasStayDates,
+  buildBookingUrlWithDates,
+  extractListing,
+} from "@/lib/extractors";
 import type { ExtractedListing } from "@/lib/extractors/types";
 import { createRequestSupabaseClient } from "@/lib/server/routeAuth";
 
@@ -20,6 +25,85 @@ const FIXED_BOOKING_CANDIDATE_URLS = [
   "https://www.booking.com/hotel/ma/ibis-moussafir-marrakech-centre-gare.fr.html",
   "https://www.booking.com/hotel/ma/zahia-marrakech.fr.html",
 ] as const;
+
+
+const WAZO_BOOKING_URL =
+  FIXED_BOOKING_CANDIDATE_URLS[0];
+
+function sanitizeWazoExtraction(
+  listing: ExtractedListing | null,
+  datedUrl: string,
+  elapsedMs: number,
+  error: unknown = null
+) {
+  return {
+    success: Boolean(listing),
+    urlHasStayDates: bookingUrlHasStayDates(datedUrl),
+    elapsedMs,
+    propertyType: listing?.propertyType ?? null,
+    price:
+      typeof listing?.price === "number" && Number.isFinite(listing.price)
+        ? listing.price
+        : null,
+    currency: listing?.currency ?? null,
+    error:
+      error == null
+        ? null
+        : error instanceof Error
+          ? error.name
+          : "ExtractionError",
+  };
+}
+
+async function runWazoPriceRecoveryDiagnostic() {
+  const datedUrl = buildBookingUrlWithDates(
+    WAZO_BOOKING_URL,
+    AIRBNB_STUDIO_TARGET.url ?? null
+  );
+
+  const run = async (skipBookingPriceRecovery: boolean) => {
+    const startedAt = Date.now();
+
+    try {
+      const listing = await extractListing(datedUrl, {
+        extractionMode: "pricing_only",
+        skipBookingPriceRecovery,
+      });
+
+      return sanitizeWazoExtraction(
+        listing,
+        datedUrl,
+        Date.now() - startedAt
+      );
+    } catch (error) {
+      return sanitizeWazoExtraction(
+        null,
+        datedUrl,
+        Date.now() - startedAt,
+        error
+      );
+    }
+  };
+
+  const recoveryOff = await run(true);
+  const recoveryOn = await run(false);
+
+  return {
+    candidate: "wazo-appart",
+    sameDatedInput: true,
+    recoveryOff,
+    recoveryOn,
+    delta: {
+      priceRecovered:
+        recoveryOff.price == null && recoveryOn.price != null,
+      propertyTypeChanged:
+        recoveryOff.propertyType !== recoveryOn.propertyType,
+      priceChanged:
+        recoveryOff.price !== recoveryOn.price ||
+        recoveryOff.currency !== recoveryOn.currency,
+    },
+  };
+}
 
 const AIRBNB_STUDIO_TARGET: ExtractedListing = {
   url: "https://www.airbnb.com/rooms/1349159372150853675",
@@ -97,6 +181,8 @@ export async function GET(request: NextRequest) {
       return jsonNoStore({ ok: false, error: "Forbidden." }, 403);
     }
 
+    const wazoPriceRecovery = await runWazoPriceRecoveryDiagnostic();
+
     const result = await searchCompetitorsAroundTarget({
       target: AIRBNB_STUDIO_TARGET,
       maxResults: 5,
@@ -129,6 +215,7 @@ export async function GET(request: NextRequest) {
         },
         competitorsReturned: result.competitors.length,
         diagnostic: result.diagnostic?.bookingFixedCandidateQuality ?? null,
+        wazoPriceRecovery,
       },
       200
     );
