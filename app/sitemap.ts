@@ -51,7 +51,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     lastModified: builtAt,
   }));
 
-  const localizedPublicPaths = ["/", "/pricing", "/demo", "/how-it-works", "/free-audit"] as const;
+  const localizedPublicPaths = ["/", "/pricing", "/demo", "/how-it-works", "/free-audit", "/contact"] as const;
 
   for (const locale of locales) {
     if (locale.code === defaultLocale) continue;
