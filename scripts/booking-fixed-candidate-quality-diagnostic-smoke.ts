@@ -7,6 +7,14 @@ const routeSource = readFileSync(
   "app/api/admin/marketing-studio/debug/booking-cross-platform-quality/route.ts",
   "utf8"
 );
+const bridgePageSource = readFileSync(
+  "app/(default)/dashboard/admin/diagnostics/booking-cross-platform-quality/page.tsx",
+  "utf8"
+);
+const bridgeClientSource = readFileSync(
+  "app/(default)/dashboard/admin/diagnostics/booking-cross-platform-quality/BookingCrossPlatformQualityDiagnosticClient.tsx",
+  "utf8"
+);
 
 const bookingUrlCount = (
   routeSource.match(/https:\/\/www\.booking\.com\/hotel\/ma\/[^"]+\.fr\.html/g) ?? []
@@ -21,6 +29,42 @@ assert.match(routeSource, /process\.env\.VERCEL_ENV\s*===\s*"production"/);
 assert.match(routeSource, /Booking cross-platform quality diagnostic is unavailable in production/);
 assert.match(routeSource, /url\.searchParams\.get\("confirm"\)\s*!==\s*CONFIRM_VALUE/);
 assert.match(routeSource, /brightDataConfigured:\s*isBrightDataConfigured\(\)/);
+assert.match(routeSource, /createRequestSupabaseClient\(request\)/);
+assert.match(routeSource, /requestClient\.auth\.getUser\(\)/);
+assert.match(routeSource, /isAdminPrivateEmail\(user\.email\)/);
+
+assert.match(bridgePageSource, /process\.env\.VERCEL_ENV\s*===\s*"production"/);
+assert.match(bridgePageSource, /This temporary diagnostic page is disabled in production/);
+assert.match(
+  bridgePageSource,
+  /return <BookingCrossPlatformQualityDiagnosticClient \/>/,
+  "preview page must render only the authenticated bridge client outside production"
+);
+
+assert.match(bridgeClientSource, /"use client"/);
+assert.match(bridgeClientSource, /getSharedSession\(\)/);
+assert.match(bridgeClientSource, /session\?\.access_token/);
+assert.match(
+  bridgeClientSource,
+  /Authorization:\s*`Bearer \$\{accessToken\}`/,
+  "bridge must send the Supabase browser session token as a bearer header"
+);
+assert.match(bridgeClientSource, /method:\s*"GET"/);
+assert.match(bridgeClientSource, /cache:\s*"no-store"/);
+assert.match(
+  bridgeClientSource,
+  /\/api\/admin\/marketing-studio\/debug\/booking-cross-platform-quality\?confirm=fixed-y3-booking-quality/,
+  "bridge must call only the existing diagnostic route"
+);
+assert.equal(bridgeClientSource.includes("console."), false, "bridge must not log tokens or payloads");
+assert.equal(
+  bridgeClientSource.includes("?access_token"),
+  false,
+  "bridge must not put tokens in query strings"
+);
+const clientRenderSource = bridgeClientSource.slice(bridgeClientSource.indexOf("return ("));
+assert.equal(clientRenderSource.includes("accessToken"), false, "bridge must not render accessToken");
+assert.equal(clientRenderSource.includes("access_token"), false, "bridge must not render access_token");
 
 assert.match(
   typesSource,
@@ -68,6 +112,11 @@ for (const snippet of forbiddenRouteSnippets) {
     routeSource.includes(snippet),
     false,
     `diagnostic route must not include forbidden snippet: ${snippet}`
+  );
+  assert.equal(
+    bridgeClientSource.includes(snippet),
+    false,
+    `diagnostic bridge must not include forbidden snippet: ${snippet}`
   );
 }
 
