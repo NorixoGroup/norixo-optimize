@@ -31,6 +31,37 @@ export type SearchCompetitorsInput = {
     /** Comparables déjà connus depuis Market Memory/Supabase, utilisés comme seed pricing avant live discovery. */
     seedComparables?: ExtractedListing[];
   };
+  diagnostic?: {
+    mode: "preview_fixed_booking_candidates";
+    fixedBookingCandidateUrls: string[];
+  };
+};
+
+export type BookingFixedCandidateQualityDiagnosticCandidate = {
+  url: string;
+  realExtraction: boolean | null;
+  fallbackExtraction: boolean | null;
+  geoEvidence: string | null;
+  normalizedType: string | null;
+  structureEvidence: string | null;
+  priceEvidence: string | null;
+  preEvaluationAccepted: boolean | null;
+  preEvaluationRejectionReason: string | null;
+  evaluationAccepted: boolean | null;
+  evaluationReasons: string[];
+  finalAccepted: boolean;
+};
+
+export type BookingFixedCandidateQualityDiagnostic = {
+  inputCandidates: number;
+  realExtractionSucceeded: number;
+  fallbackExtraction: number;
+  rejectedBeforeEvaluation: number;
+  evaluationInput: number;
+  evaluationAccepted: number;
+  finalCredibleComparables: number;
+  discoveryBypassed: boolean;
+  candidates: BookingFixedCandidateQualityDiagnosticCandidate[];
 };
 
 export type SearchCompetitorsResult = {
@@ -41,4 +72,7 @@ export type SearchCompetitorsResult = {
   radiusKm: number;
   maxResults: number;
   observedFallbackComparables?: ExtractedListing[];
+  diagnostic?: {
+    bookingFixedCandidateQuality?: BookingFixedCandidateQualityDiagnostic;
+  };
 };

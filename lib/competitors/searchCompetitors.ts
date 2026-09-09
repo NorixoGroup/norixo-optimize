@@ -4,7 +4,13 @@ import type { ExtractedListing } from "@/lib/extractors/types";
 import { fetchAirbnbRuntimeGraphql } from "@/lib/airbnb/runtime/fetchAirbnbRuntimeGraphql";
 import { chromium, type Browser, type Page } from "playwright-core";
 import { searchAgodaCompetitorCandidates } from "./agoda-search";
-import type { CompetitorCandidate, SearchCompetitorsInput, SearchCompetitorsResult } from "./types";
+import type {
+  BookingFixedCandidateQualityDiagnostic,
+  BookingFixedCandidateQualityDiagnosticCandidate,
+  CompetitorCandidate,
+  SearchCompetitorsInput,
+  SearchCompetitorsResult,
+} from "./types";
 import { searchAirbnbCompetitorCandidates } from "./airbnb-search";
 import {
   describeBookingApartmentPreselectCandidate,
@@ -1737,6 +1743,146 @@ type NormalAirbnbDiscoveryState = {
   outcome: NormalAirbnbDiscoveryOutcome;
   candidateCount: number;
 };
+
+const PREVIEW_FIXED_BOOKING_CANDIDATES_MODE = "preview_fixed_booking_candidates";
+
+type BookingFixedCandidateQualityDiagnosticTrace = {
+  rows: BookingFixedCandidateQualityDiagnosticCandidate[];
+  byUrlKey: Map<string, BookingFixedCandidateQualityDiagnosticCandidate>;
+};
+
+function getPreviewFixedBookingCandidateUrls(input: SearchCompetitorsInput): string[] {
+  if (input.diagnostic?.mode !== PREVIEW_FIXED_BOOKING_CANDIDATES_MODE) return [];
+  return input.diagnostic.fixedBookingCandidateUrls
+    .map((url) => url.trim())
+    .filter((url) => {
+      if (!url) return false;
+      try {
+        return /(^|\.)booking\.com$/i.test(new URL(url).hostname);
+      } catch {
+        return false;
+      }
+    });
+}
+
+function createBookingFixedCandidateQualityDiagnosticTrace(
+  urls: string[]
+): BookingFixedCandidateQualityDiagnosticTrace {
+  const trace: BookingFixedCandidateQualityDiagnosticTrace = {
+    rows: urls.map((url) => ({
+      url,
+      realExtraction: null,
+      fallbackExtraction: null,
+      geoEvidence: null,
+      normalizedType: null,
+      structureEvidence: null,
+      priceEvidence: null,
+      preEvaluationAccepted: null,
+      preEvaluationRejectionReason: null,
+      evaluationAccepted: null,
+      evaluationReasons: [],
+      finalAccepted: false,
+    })),
+    byUrlKey: new Map(),
+  };
+
+  for (const row of trace.rows) {
+    registerBookingFixedCandidateDiagnosticAlias(trace, row.url, row);
+  }
+
+  return trace;
+}
+
+function registerBookingFixedCandidateDiagnosticAlias(
+  trace: BookingFixedCandidateQualityDiagnosticTrace | null,
+  url: string | null | undefined,
+  row: BookingFixedCandidateQualityDiagnosticCandidate
+) {
+  if (!trace) return;
+  const key = normalizeComparableUrlKey(url ?? null);
+  if (!key) return;
+  trace.byUrlKey.set(key, row);
+}
+
+function recordBookingFixedCandidateDiagnosticForUrl(
+  trace: BookingFixedCandidateQualityDiagnosticTrace | null,
+  url: string | null | undefined,
+  patch: Partial<BookingFixedCandidateQualityDiagnosticCandidate>
+) {
+  if (!trace) return;
+  const key = normalizeComparableUrlKey(url ?? null);
+  if (!key) return;
+  const row = trace.byUrlKey.get(key);
+  if (!row) return;
+  Object.assign(row, patch);
+}
+
+function recordBookingFixedCandidateDiagnosticForListing(
+  trace: BookingFixedCandidateQualityDiagnosticTrace | null,
+  listing: ExtractedListing | null,
+  fallbackUrl: string | null | undefined,
+  patch: Partial<BookingFixedCandidateQualityDiagnosticCandidate>
+) {
+  if (!trace) return;
+  recordBookingFixedCandidateDiagnosticForUrl(trace, listing?.url ?? null, patch);
+  recordBookingFixedCandidateDiagnosticForUrl(trace, fallbackUrl, patch);
+}
+
+function isBookingFallbackExtraction(listing: ExtractedListing): boolean {
+  const warnings = listing.extractionMeta?.warnings ?? [];
+  return (
+    warnings.includes("booking_challenge_detected") ||
+    warnings.includes("booking_generic_page_detected")
+  );
+}
+
+function bookingPriceEvidence(listing: ExtractedListing): string {
+  if (hasPlausibleComparablePrice(listing)) return "usable_price";
+  const hasRecoverableStayPrice =
+    typeof listing.rawStayPrice === "number" &&
+    Number.isFinite(listing.rawStayPrice) &&
+    listing.rawStayPrice > 0 &&
+    typeof listing.stayNights === "number" &&
+    Number.isFinite(listing.stayNights) &&
+    listing.stayNights > 0;
+  return hasRecoverableStayPrice ? "recoverable_stay_price" : "missing_price";
+}
+
+function bookingStructureEvidence(
+  target: ExtractedListing,
+  listing: ExtractedListing,
+  structureMismatch: boolean
+): string {
+  if (structureMismatch) return "structure_too_far";
+  const hasCandidateStructure =
+    safeListingNumber(listing.bedrooms ?? listing.bedroomCount) !== null ||
+    safeListingNumber(listing.capacity ?? listing.guestCapacity) !== null ||
+    safeListingNumber(listing.bathrooms ?? listing.bathroomCount) !== null;
+  const hasTargetStructure =
+    safeListingNumber(target.bedrooms ?? target.bedroomCount) !== null ||
+    safeListingNumber(target.capacity ?? target.guestCapacity) !== null ||
+    safeListingNumber(target.bathrooms ?? target.bathroomCount) !== null;
+  if (!hasCandidateStructure || !hasTargetStructure) return "structure_unknown_allowed";
+  return "structure_within_one";
+}
+
+function buildBookingFixedCandidateQualityDiagnostic(args: {
+  trace: BookingFixedCandidateQualityDiagnosticTrace;
+  discoveryBypassed: boolean;
+}): BookingFixedCandidateQualityDiagnostic {
+  const rows = args.trace.rows;
+  return {
+    inputCandidates: rows.length,
+    realExtractionSucceeded: rows.filter((row) => row.realExtraction === true).length,
+    fallbackExtraction: rows.filter((row) => row.fallbackExtraction === true).length,
+    rejectedBeforeEvaluation: rows.filter((row) => row.preEvaluationAccepted === false).length,
+    evaluationInput: rows.filter((row) => row.evaluationAccepted !== null).length,
+    evaluationAccepted: rows.filter((row) => row.evaluationAccepted === true).length,
+    finalCredibleComparables: rows.filter((row) => row.finalAccepted).length,
+    discoveryBypassed: args.discoveryBypassed,
+    candidates: rows,
+  };
+}
 
 function isAllowedMarketMemorySeedSource(
   targetPlatform: string,
@@ -5401,6 +5547,24 @@ export async function searchCompetitorsAroundTarget(
       ? Math.min(baseCompetitorDiscoveryFetchLimitEffective, 4)
       : baseCompetitorDiscoveryFetchLimitEffective;
 
+  const fixedBookingCandidateUrls = getPreviewFixedBookingCandidateUrls(input);
+  const diagnosticFixedBookingEnabled = fixedBookingCandidateUrls.length > 0;
+  const bookingFixedCandidateDiagnosticTrace = diagnosticFixedBookingEnabled
+    ? createBookingFixedCandidateQualityDiagnosticTrace(fixedBookingCandidateUrls)
+    : null;
+
+  if (diagnosticFixedBookingEnabled && DEBUG_MARKET_PIPELINE) {
+    console.log(
+      "[market][preview-fixed-booking-candidates]",
+      JSON.stringify({
+        mode: PREVIEW_FIXED_BOOKING_CANDIDATES_MODE,
+        inputCandidates: fixedBookingCandidateUrls.length,
+        discoveryBypassed: true,
+        targetPlatform: searchInput.target.platform ?? null,
+      })
+    );
+  }
+
   console.log(
     "[market][diagnostic-start]",
     JSON.stringify({
@@ -5769,7 +5933,25 @@ export async function searchCompetitorsAroundTarget(
       });
     }
   } else {
-      const bookingUrls = await getCandidateUrls(
+      const bookingUrls = diagnosticFixedBookingEnabled
+        ? (() => {
+            const bookingDiscoveryTarget = buildBookingDiscoveryTarget(comparableTarget);
+            return fixedBookingCandidateUrls.map((url) => {
+              const datedUrl = buildBookingUrlWithDates(url, bookingDiscoveryTarget.url ?? null);
+              const row = bookingFixedCandidateDiagnosticTrace?.byUrlKey.get(
+                normalizeComparableUrlKey(url)
+              );
+              if (row) {
+                registerBookingFixedCandidateDiagnosticAlias(
+                  bookingFixedCandidateDiagnosticTrace,
+                  datedUrl,
+                  row
+                );
+              }
+              return { url: datedUrl, source: "booking" as const };
+            });
+          })()
+        : await getCandidateUrls(
         comparableTarget,
         competitorDiscoveryFetchLimitEffective,
         overrideSourcePriority,
@@ -5781,9 +5963,12 @@ export async function searchCompetitorsAroundTarget(
       );
 
       const shouldUseAgodaAirbnbTopUp =
-        agodaAirbnbTopUpEligible && agodaAirbnbTopUpCandidateUrls.length > 0;
+        !diagnosticFixedBookingEnabled &&
+        agodaAirbnbTopUpEligible &&
+        agodaAirbnbTopUpCandidateUrls.length > 0;
 
       const shouldUseBookingAirbnbTopUp =
+        !diagnosticFixedBookingEnabled &&
         airbnbPrimaryBookingEligible &&
         airbnbPrimaryCount > 0 &&
         airbnbPrimaryCount < AIRBNB_PRIMARY_COMPARABLES_MIN_VALID;
@@ -6445,6 +6630,16 @@ export async function searchCompetitorsAroundTarget(
       })
     );
 
+    recordBookingFixedCandidateDiagnosticForUrl(bookingFixedCandidateDiagnosticTrace, candidate.url, {
+      geoEvidence: reason,
+      ...(accepted
+        ? {}
+        : {
+            preEvaluationAccepted: false,
+            preEvaluationRejectionReason: "geo_prefilter_rejected",
+          }),
+    });
+
     return accepted;
   });
 
@@ -6537,6 +6732,16 @@ export async function searchCompetitorsAroundTarget(
       if (!ok && sampleRejected.length < 5) {
         const u = candidate.url?.trim() ?? "";
         sampleRejected.push(u.length > 160 ? `${u.slice(0, 157)}...` : u);
+      }
+      if (!ok) {
+        recordBookingFixedCandidateDiagnosticForUrl(
+          bookingFixedCandidateDiagnosticTrace,
+          candidate.url,
+          {
+            preEvaluationAccepted: false,
+            preEvaluationRejectionReason: "type_prefilter_rejected",
+          }
+        );
       }
       return ok;
     });
@@ -7365,8 +7570,40 @@ export async function searchCompetitorsAroundTarget(
             reason: "extract_returned_null",
           });
           logMarketBookingExtractionRejected("extract_returned_null", batchCandidateUrl, null);
+          recordBookingFixedCandidateDiagnosticForUrl(
+            bookingFixedCandidateDiagnosticTrace,
+            batchCandidateUrl,
+            {
+              realExtraction: false,
+              fallbackExtraction: null,
+              preEvaluationAccepted: false,
+              preEvaluationRejectionReason: "extract_returned_null",
+            }
+          );
           continue;
         }
+        const bookingFixedCandidateRow = bookingFixedCandidateDiagnosticTrace?.byUrlKey.get(
+          normalizeComparableUrlKey(batchCandidateUrl)
+        );
+        if (bookingFixedCandidateRow) {
+          registerBookingFixedCandidateDiagnosticAlias(
+            bookingFixedCandidateDiagnosticTrace,
+            listing.url,
+            bookingFixedCandidateRow
+          );
+        }
+        const bookingFallbackExtraction = isBookingFallbackExtraction(listing);
+        recordBookingFixedCandidateDiagnosticForListing(
+          bookingFixedCandidateDiagnosticTrace,
+          listing,
+          batchCandidateUrl,
+          {
+            realExtraction: !bookingFallbackExtraction,
+            fallbackExtraction: bookingFallbackExtraction,
+            normalizedType: getNormalizedComparableType(listing),
+            priceEvidence: bookingPriceEvidence(listing),
+          }
+        );
         if (DEBUG_MARKET_PIPELINE) {
           console.log(
             "[market][booking-extracted-coordinates-debug]",
@@ -7422,6 +7659,18 @@ export async function searchCompetitorsAroundTarget(
         const geoCheck =
           isGeoCompatible(listing, targetCity) ||
           (distanceKmGuard !== null && distanceKmGuard <= 50);
+        recordBookingFixedCandidateDiagnosticForListing(
+          bookingFixedCandidateDiagnosticTrace,
+          listing,
+          batchCandidateUrl,
+          {
+            geoEvidence: geoCheck
+              ? distanceKmGuard !== null && distanceKmGuard <= 50
+                ? "accepted_distance_within_50km"
+                : "accepted_geo_compatible"
+              : "geo_mismatch",
+          }
+        );
         const candidateCityForGuard = guessListingCity(listing);
         const guardUrlRaw = listing.url ?? batchCandidateUrl;
         const guardUrlOut =
@@ -7648,6 +7897,19 @@ export async function searchCompetitorsAroundTarget(
               : !geoCheckFinal
                 ? "geo_mismatch"
                 : "property_type_mismatch";
+          recordBookingFixedCandidateDiagnosticForListing(
+            bookingFixedCandidateDiagnosticTrace,
+            listing,
+            batchCandidateUrl,
+            {
+              geoEvidence: geoCheckFinal
+                ? "accepted_geo_compatible"
+                : "geo_mismatch",
+              normalizedType: getNormalizedComparableType(listing),
+              preEvaluationAccepted: false,
+              preEvaluationRejectionReason: rejectReason,
+            }
+          );
           if (geoCheckFinal && !typeCheck && rejectReason === "property_type_mismatch") {
             tryBufferBookingWeakMarketFallback(
               listing,
@@ -7680,6 +7942,14 @@ export async function searchCompetitorsAroundTarget(
         consecutiveBookingGeoRejects = 0;
 
         const structureMismatch = !isBedroomOrCapacityWithinOne(comparableTarget, listing);
+        recordBookingFixedCandidateDiagnosticForListing(
+          bookingFixedCandidateDiagnosticTrace,
+          listing,
+          batchCandidateUrl,
+          {
+            structureEvidence: bookingStructureEvidence(comparableTarget, listing, structureMismatch),
+          }
+        );
         if (DEBUG_MARKET_PIPELINE) {
           const rawU = listing.url?.trim() ?? batchCandidateUrl;
           const urlOut = rawU.length > 220 ? `${rawU.slice(0, 217)}...` : rawU;
@@ -7708,6 +7978,15 @@ export async function searchCompetitorsAroundTarget(
           isBookingVillaStructureSoftKeep(comparableTarget, listing, targetCity);
         if (structureMismatch && !villaStructureSoftKeep) {
           tryBufferBookingWeakMarketFallback(listing, "structure_too_far", batchCandidateUrl);
+          recordBookingFixedCandidateDiagnosticForListing(
+            bookingFixedCandidateDiagnosticTrace,
+            listing,
+            batchCandidateUrl,
+            {
+              preEvaluationAccepted: false,
+              preEvaluationRejectionReason: "structure_too_far",
+            }
+          );
           rejectBookingComparableBeforeRawPool(listing, "structure_too_far");
           continue;
         }
@@ -7753,6 +8032,15 @@ export async function searchCompetitorsAroundTarget(
             /\buntitled\b/i.test(cityGuessLowerPre));
         if (weakQualityPrePush) {
           bookingExtractionLossReasonsCount.weak_booking_comparable += 1;
+          recordBookingFixedCandidateDiagnosticForListing(
+            bookingFixedCandidateDiagnosticTrace,
+            listing,
+            batchCandidateUrl,
+            {
+              preEvaluationAccepted: false,
+              preEvaluationRejectionReason: "weak_booking_comparable",
+            }
+          );
           rejectBookingComparableBeforeRawPool(listing, "weak_booking_comparable");
           continue;
         }
@@ -7773,6 +8061,16 @@ export async function searchCompetitorsAroundTarget(
           !hasPlausibleComparablePrice(listing) &&
           !bookingComparableHasRecoverableStayPrice
         ) {
+          recordBookingFixedCandidateDiagnosticForListing(
+            bookingFixedCandidateDiagnosticTrace,
+            listing,
+            batchCandidateUrl,
+            {
+              priceEvidence: "missing_price",
+              preEvaluationAccepted: false,
+              preEvaluationRejectionReason: "missing_price",
+            }
+          );
           rejectBookingComparableBeforeRawPool(listing, "missing_price");
           continue;
         }
@@ -7786,6 +8084,16 @@ export async function searchCompetitorsAroundTarget(
           !bookingComparableHasUsablePrice;
 
         if (bookingMoroccoComparableMissingPrice) {
+          recordBookingFixedCandidateDiagnosticForListing(
+            bookingFixedCandidateDiagnosticTrace,
+            listing,
+            batchCandidateUrl,
+            {
+              priceEvidence: "missing_price",
+              preEvaluationAccepted: false,
+              preEvaluationRejectionReason: "missing_price",
+            }
+          );
           rejectBookingComparableBeforeRawPool(listing, "missing_price");
           continue;
         }
@@ -7801,6 +8109,16 @@ export async function searchCompetitorsAroundTarget(
           candidateUrl: batchCandidateUrl,
         });
         studioExtractionTrace(listing, "keep", "raw_pool");
+        recordBookingFixedCandidateDiagnosticForListing(
+          bookingFixedCandidateDiagnosticTrace,
+          listing,
+          batchCandidateUrl,
+          {
+            preEvaluationAccepted: true,
+            preEvaluationRejectionReason: null,
+            priceEvidence: bookingPriceEvidence(listing),
+          }
+        );
         bookingRawCompetitors.push(listing);
         if (bookingVillaUrlTypeOverrideApplied && DEBUG_MARKET_PIPELINE) {
           console.log(
@@ -8225,6 +8543,7 @@ export async function searchCompetitorsAroundTarget(
   const airbnbFallbackUrlBag: CandidateUrl[] = [];
   if (
     needsFallback &&
+    !diagnosticFixedBookingEnabled &&
     String(searchInput.target.platform ?? "").toLowerCase() === "airbnb" &&
     !isCompetitorSearchAborted(input)
   ) {
@@ -9702,6 +10021,37 @@ export async function searchCompetitorsAroundTarget(
     }
   }
 
+  if (bookingFixedCandidateDiagnosticTrace) {
+    const evaluatedKeys = new Set<string>();
+    for (const decision of candidateDecisions) {
+      const decisionUrl = decision.candidate.url?.trim() || null;
+      const key = normalizeComparableUrlKey(decisionUrl);
+      if (!key) continue;
+      evaluatedKeys.add(key);
+      recordBookingFixedCandidateDiagnosticForListing(
+        bookingFixedCandidateDiagnosticTrace,
+        decision.candidate,
+        decisionUrl,
+        {
+          evaluationAccepted: decision.accepted,
+          evaluationReasons: decision.reasons,
+          normalizedType: decision.candidateNormalizedType,
+        }
+      );
+    }
+    for (const row of bookingFixedCandidateDiagnosticTrace.rows) {
+      const key = normalizeComparableUrlKey(row.url);
+      if (
+        row.preEvaluationAccepted === true &&
+        key &&
+        !evaluatedKeys.has(key)
+      ) {
+        row.preEvaluationAccepted = false;
+        row.preEvaluationRejectionReason = row.preEvaluationRejectionReason ?? "not_in_evaluation_input";
+      }
+    }
+  }
+
   const {
     acceptedDecisionListings,
     rejectedDecisionListings,
@@ -10263,6 +10613,7 @@ export async function searchCompetitorsAroundTarget(
 
   if (
     shouldFallbackToAirbnb &&
+    !diagnosticFixedBookingEnabled &&
     ENABLE_AIRBNB_TOPUP_FOR_BOOKING &&
     proposedMaxAirbnbComparables > 0
   ) {
@@ -10415,7 +10766,10 @@ export async function searchCompetitorsAroundTarget(
   }
 
   if (DEBUG_MARKET_PIPELINE) {
-    const debugShouldFallbackToAirbnb = shouldFallbackToAirbnb && competitors.length < MIN_BOOKING_COMPARABLES_BEFORE_AIRBNB_FALLBACK;
+    const debugShouldFallbackToAirbnb =
+      !diagnosticFixedBookingEnabled &&
+      shouldFallbackToAirbnb &&
+      competitors.length < MIN_BOOKING_COMPARABLES_BEFORE_AIRBNB_FALLBACK;
     const debugSlotsRemainingInPipeline = Math.max(0, pipelineComparableMax - competitors.length);
     const debugProposedMaxAirbnbComparables = debugShouldFallbackToAirbnb
       ? Math.min(debugSlotsRemainingInPipeline, MAX_AIRBNB_FALLBACK_COMPARABLES)
@@ -10970,6 +11324,23 @@ export async function searchCompetitorsAroundTarget(
     };
   });
 
+  const bookingFixedCandidateQualityDiagnostic = bookingFixedCandidateDiagnosticTrace
+    ? (() => {
+        const finalUrlKeys = new Set(
+          competitors
+            .map((listing) => normalizeComparableUrlKey(listing.url ?? null))
+            .filter(Boolean)
+        );
+        for (const row of bookingFixedCandidateDiagnosticTrace.rows) {
+          row.finalAccepted = finalUrlKeys.has(normalizeComparableUrlKey(row.url));
+        }
+        return buildBookingFixedCandidateQualityDiagnostic({
+          trace: bookingFixedCandidateDiagnosticTrace,
+          discoveryBypassed: true,
+        });
+      })()
+    : undefined;
+
   if (DEBUG_MARKET_PIPELINE) {
     const pricingGradeCount = competitors.filter(
       (listing) => listing.comparableQuality === "pricing_grade"
@@ -11153,5 +11524,12 @@ export async function searchCompetitorsAroundTarget(
     radiusKm,
     maxResults: pipelineComparableMax,
     observedFallbackComparables,
+    ...(bookingFixedCandidateQualityDiagnostic
+      ? {
+          diagnostic: {
+            bookingFixedCandidateQuality: bookingFixedCandidateQualityDiagnostic,
+          },
+        }
+      : {}),
   };
 }
