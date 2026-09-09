@@ -6,7 +6,10 @@ import {
   buildBookingUrlWithDates,
   extractListing,
 } from "@/lib/extractors";
-import type { ExtractedListing } from "@/lib/extractors/types";
+import type {
+  BookingPriceDiagnosticEvent,
+  ExtractedListing,
+} from "@/lib/extractors/types";
 import { createRequestSupabaseClient } from "@/lib/server/routeAuth";
 
 export const runtime = "nodejs";
@@ -63,25 +66,35 @@ async function runWazoPriceRecoveryDiagnostic() {
 
   const run = async (skipBookingPriceRecovery: boolean) => {
     const startedAt = Date.now();
+    const priceDiagnostics: BookingPriceDiagnosticEvent[] = [];
 
     try {
       const listing = await extractListing(datedUrl, {
         extractionMode: "pricing_only",
         skipBookingPriceRecovery,
+        onBookingPriceDiagnostic: (event) => {
+          priceDiagnostics.push(event);
+        },
       });
 
-      return sanitizeWazoExtraction(
-        listing,
-        datedUrl,
-        Date.now() - startedAt
-      );
+      return {
+        ...sanitizeWazoExtraction(
+          listing,
+          datedUrl,
+          Date.now() - startedAt
+        ),
+        priceDiagnostics,
+      };
     } catch (error) {
-      return sanitizeWazoExtraction(
-        null,
-        datedUrl,
-        Date.now() - startedAt,
-        error
-      );
+      return {
+        ...sanitizeWazoExtraction(
+          null,
+          datedUrl,
+          Date.now() - startedAt,
+          error
+        ),
+        priceDiagnostics,
+      };
     }
   };
 

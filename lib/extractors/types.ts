@@ -1,12 +1,46 @@
 export type SupportedPlatform = "airbnb" | "booking" | "vrbo" | "agoda" | "expedia" | "other";
 
 /** Options transmises à l’extracteur résolu (support variable selon la plateforme). */
+export type BookingPriceDiagnosticCandidate = {
+  source: string;
+  hasText: boolean;
+  parsedPrice: number | null;
+  currency: string | null;
+  rejectReason: string | null;
+};
+
+export type BookingPriceDiagnosticEvent =
+  | {
+      stage: "initial";
+      challenge: boolean;
+      candidateCount: number;
+      failureReason: "challenge_page" | "no_candidate_rows" | "all_candidates_rejected" | null;
+      selectedPrice: number | null;
+      selectedCurrency: string | null;
+    }
+  | {
+      stage: "recovery";
+      triggered: boolean;
+      challenge: boolean | null;
+      candidateCount: number;
+      candidates: BookingPriceDiagnosticCandidate[];
+      selectedPrice: number | null;
+      selectedCurrency: string | null;
+    };
+
 export type ExtractListingOptions = {
   /** Mode complet pour l’annonce auditée, mode léger pour les concurrents/pricing. */
   extractionMode?: "full" | "pricing_only";
 
   /** Booking uniquement : évite le 2e fetch BrightData dédié au prix (comparables / charge réduite). */
   skipBookingPriceRecovery?: boolean;
+
+  /**
+   * Diagnostic Booking optionnel.
+   * Reçoit uniquement des métadonnées prix sanitizées ; jamais HTML, cookies,
+   * payloads CDP, tokens ou texte brut de la page.
+   */
+  onBookingPriceDiagnostic?: (event: BookingPriceDiagnosticEvent) => void;
 };
 
 export type ListingFieldQuality = "missing" | "low" | "medium" | "high";

@@ -3426,6 +3426,25 @@ export async function extractBooking(
     reason: initialPriceSelectionReason,
   });
 
+  options?.onBookingPriceDiagnostic?.({
+    stage: "initial",
+    challenge: bookingChallengeDetected,
+    candidateCount: initialPriceRows.length,
+    failureReason: initialPriceText
+      ? null
+      : bookingChallengeDetected
+        ? "challenge_page"
+        : initialPriceRows.length === 0
+          ? "no_candidate_rows"
+          : "all_candidates_rejected",
+    selectedPrice: initialPriceText
+      ? parseBookingPriceFromText(initialPriceText)
+      : null,
+    selectedCurrency: initialPriceText
+      ? parseBookingCurrencyFromText(initialPriceText)
+      : null,
+  });
+
   bookingPipelineLog("[booking][price-candidates]", {
     url: listingFetchUrl,
     challenge: bookingChallengeDetected,
@@ -3490,6 +3509,16 @@ export async function extractBooking(
     });
 
     if (recoveryStillChallenged) {
+      options?.onBookingPriceDiagnostic?.({
+        stage: "recovery",
+        triggered: true,
+        challenge: true,
+        candidateCount: 0,
+        candidates: [],
+        selectedPrice: null,
+        selectedCurrency: null,
+      });
+
       console.warn("[booking][challenge-detected]", {
         url,
         htmlLength: recoveryPageData.html.length,
@@ -3528,6 +3557,37 @@ export async function extractBooking(
         });
       });
       priceText = findReliableBookingPriceText(recoveryPriceCandidateTexts);
+
+      options?.onBookingPriceDiagnostic?.({
+        stage: "recovery",
+        triggered: true,
+        challenge: false,
+        candidateCount: recoveryPriceCandidateTexts.filter((text) => text.length > 0).length,
+        candidates: recoveryPriceCandidateTexts.map((text, index) => {
+          const candidate =
+            index < priceRecoveryCandidates.length
+              ? priceRecoveryCandidates[index]
+              : null;
+
+          return {
+            source:
+              candidate?.selector != null
+                ? `recovery_${String(candidate.selector)}`
+                : index === recoveryPriceCandidateTexts.length - 2
+                  ? "recovery_dom_price_and_discounted"
+                  : index === recoveryPriceCandidateTexts.length - 1
+                    ? "recovery_dom_price_for_x_nights"
+                    : `recovery_idx_${index}`,
+            hasText: text.length > 0,
+            parsedPrice: text ? parseBookingPriceFromText(text) : null,
+            currency: text ? parseBookingCurrencyFromText(text) : null,
+            rejectReason: text ? getBookingPriceRejectReason(text) : "empty",
+          };
+        }),
+        selectedPrice: priceText ? parseBookingPriceFromText(priceText) : null,
+        selectedCurrency: priceText ? parseBookingCurrencyFromText(priceText) : null,
+      });
+
       if (priceText) {
         console.warn("[booking][price-recovery-candidate-selected]", {
           url,
@@ -3538,6 +3598,16 @@ export async function extractBooking(
       }
     }
   } else if (!initialPriceText) {
+    options?.onBookingPriceDiagnostic?.({
+      stage: "recovery",
+      triggered: false,
+      challenge: bookingChallengeDetected,
+      candidateCount: 0,
+      candidates: [],
+      selectedPrice: null,
+      selectedCurrency: null,
+    });
+
     const skipReason = bookingChallengeDetected
       ? "challenge_page_no_recovery"
       : options?.skipBookingPriceRecovery
