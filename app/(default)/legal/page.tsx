@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: "Legal Notice | Norixo",
   description:
     "Legal notice for Norixo, including publisher, hosting, and site use information.",
-  alternates: buildHreflangAlternates("/legal"),
+  alternates: buildHreflangAlternates("/legal", { locales: ["en"] }),
   openGraph: {
     title: "Legal Notice | Norixo",
     description:
