@@ -1,0 +1,46 @@
+# Norixo
+
+> Norixo is a listing analysis and optimization platform for short-term rental listings.
+
+Norixo helps hosts and property managers analyze listing presentation, positioning, pricing context, visibility factors, conversion factors, and revenue optimization opportunities.
+
+## Main pages
+
+- https://norixo.io/ — Norixo homepage and product overview
+- https://norixo.io/how-it-works — How Norixo analyzes and structures listing optimization
+- https://norixo.io/pricing — Norixo plans and pricing
+- https://norixo.io/demo — Product demonstration
+- https://norixo.io/solutions — Listing optimization solutions
+- https://norixo.io/guides — Educational guides
+- https://norixo.io/articles — Articles about listing optimization and short-term rental performance
+- https://norixo.io/research — Research and market-oriented content
+- https://norixo.io/rankings — Ranking and comparative content
+
+## Listing optimization solutions
+
+- https://norixo.io/solutions/airbnb-listing-audit — Airbnb listing audit
+- https://norixo.io/solutions/airbnb-listing-optimization — Airbnb listing optimization
+- https://norixo.io/solutions/airbnb-seo — Airbnb visibility and SEO analysis
+- https://norixo.io/solutions/airbnb-pricing-optimization — Airbnb pricing optimization
+- https://norixo.io/solutions/airbnb-conversion-optimization — Airbnb conversion optimization
+- https://norixo.io/solutions/airbnb-revenue-optimization — Airbnb revenue optimization
+
+## Product scope
+
+Norixo evaluates multiple parts of a listing rather than treating optimization as a single ranking factor.
+
+Areas covered by Norixo content and analysis include:
+
+- listing titles and descriptions
+- photos and presentation
+- amenities and guest trust signals
+- pricing and competitive context
+- listing positioning
+- visibility and conversion factors
+- revenue optimization opportunities
+
+Recommendations depend on the listing and available analysis context. Norixo does not guarantee ranking, occupancy, revenue, or booking outcomes.
+
+## Contact
+
+- https://norixo.io/contact — Contact Norixo
