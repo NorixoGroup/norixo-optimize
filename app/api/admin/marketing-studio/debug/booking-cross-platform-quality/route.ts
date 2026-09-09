@@ -9,8 +9,8 @@ export const runtime = "nodejs";
 const CONFIRM_VALUE = "fixed-y3-booking-quality";
 
 const FIXED_BOOKING_CANDIDATE_URLS = [
+  "https://www.booking.com/hotel/ma/wazo-appart.fr.html",
   "https://www.booking.com/hotel/ma/swiss-continental-marrakech.fr.html",
-  "https://www.booking.com/hotel/ma/amp-ryad-art-place-marrakech.fr.html",
   "https://www.booking.com/hotel/ma/citronneraie-de-marrakech.fr.html",
   "https://www.booking.com/hotel/ma/yves-marrakech.fr.html",
   "https://www.booking.com/hotel/ma/relax-marrakech.fr.html",

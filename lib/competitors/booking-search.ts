@@ -739,6 +739,15 @@ export function rankBookingComparableUrl(target: ExtractedListing, url: string) 
     if (apartmentPreselectSignals.hotelStrong) score -= 42;
   }
 
+  if (normalizedTargetType === "studio_like") {
+    if (candidateType === "studio_like") score += 40;
+    if (candidateType === "apartment_like") score += 24;
+    if (apartmentPreselectSignals.apartmentExplicit) score += 24;
+    if (candidateType === "hotel_like") score -= 36;
+    if (candidateType === "house_like") score -= 24;
+    if (apartmentPreselectSignals.hotelStrong) score -= 48;
+  }
+
   if (normalizedTargetType === "villa_like") {
     const h = slug.toLowerCase();
     if (/\bvilla\b/i.test(h)) score += 20;
