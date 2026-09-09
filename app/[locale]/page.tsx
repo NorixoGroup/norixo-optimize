@@ -25,27 +25,27 @@ const localizedMetadata: Partial<Record<Locale, { title: string; description: st
       "Analysez vos annonces Airbnb et Booking avec Norixo : audit de conversion, priorités d'optimisation et recommandations concrètes pour augmenter les réservations.",
   },
   es: {
-    title: "Norixo – Auditoría de anuncios Airbnb y Booking para mejorar la conversión",
+    title: "Norixo – Auditoría Airbnb y Booking para mejorar la conversión",
     description:
       "Analiza tus anuncios de Airbnb y Booking con Norixo: auditoría de conversión, prioridades de optimización y recomendaciones prácticas para aumentar las reservas.",
   },
   de: {
-    title: "Norixo – Airbnb- und Booking-Anzeigenanalyse zur Verbesserung der Conversion",
+    title: "Norixo – Airbnb- & Booking-Analyse für mehr Conversion",
     description:
       "Analysieren Sie Ihre Airbnb- und Booking-Anzeigen mit Norixo: Conversion-Audit, Optimierungsprioritäten und konkrete Empfehlungen zur Steigerung der Buchungen.",
   },
   it: {
-    title: "Norixo – Audit degli annunci Airbnb e Booking per migliorare la conversione",
+    title: "Norixo – Audit Airbnb e Booking per migliorare la conversione",
     description:
       "Analizza i tuoi annunci Airbnb e Booking con Norixo: audit della conversione, priorità di ottimizzazione e raccomandazioni pratiche per aumentare le prenotazioni.",
   },
   pt: {
-    title: "Norixo – Auditoria de anúncios Airbnb e Booking para melhorar a conversão",
+    title: "Norixo – Auditoria Airbnb e Booking para melhorar a conversão",
     description:
       "Analise os seus anúncios Airbnb e Booking com Norixo: auditoria de conversão, prioridades de otimização e recomendações práticas para aumentar as reservas.",
   },
   nl: {
-    title: "Norixo – Audit van Airbnb- en Booking-vermeldingen om conversie te verbeteren",
+    title: "Norixo – Airbnb- en Booking-audit voor betere conversie",
     description:
       "Analyseer je Airbnb- en Booking-vermeldingen met Norixo: conversie-audit, optimalisatieprioriteiten en praktische aanbevelingen om meer boekingen te genereren.",
   },
