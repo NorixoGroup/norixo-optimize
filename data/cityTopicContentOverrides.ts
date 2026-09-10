@@ -39,6 +39,36 @@ const cityTopicContentOverrides: Record<
     },
   },
   marrakech: {
+    "occupancy-guide": {
+      heading: "Diagnose Marrakech occupancy through guest fit, value, and conversion",
+      introduction:
+        "Occupancy in Marrakech should be treated as a diagnostic outcome rather than a target to maximize by itself. Medina riads, resort-style stays, and excursion-led trips create different guest journeys, so first determine whether the listing is attracting the right demand, communicating the stay clearly, and converting interest at a credible price.",
+      sections: [
+        {
+          heading: "Clarify which Marrakech stay the listing actually offers",
+          body:
+            "Guests may be comparing old-town atmosphere, modern comfort, pools, resort-style amenities, or a base for planned excursions. Make that positioning visible early through the gallery, location context, amenities, and description. When the type of stay is unclear, a listing can struggle to capture suitable bookings even when the nightly rate looks competitive.",
+        },
+        {
+          heading: "Check whether comfort and access expectations are reducing confidence",
+          body:
+            "International guests may care about climate comfort, transfer clarity, and how easy the property is to reach from or within the medina. Review whether those practical expectations are explained accurately. Uncertainty around access or comfort can create booking friction that a discount will not necessarily solve.",
+        },
+        {
+          heading: "Read price alongside the experience guests can verify",
+          body:
+            "The current Norixo reference price for Marrakech is around €105 per night. Use it as context rather than a target. The market spans budget riads through higher-end stays with pools, so compare the chosen rate with the visible amenities, photos, arrival information, and stay experience before concluding that price is limiting occupancy.",
+        },
+        {
+          heading: "Protect revenue while testing an occupancy hypothesis",
+          body:
+            "If the listing already communicates its stay type, practical expectations, and value clearly, test one pricing or availability change at a time. More occupied nights are not automatically better when they require unnecessary discounting. The aim is to identify whether demand fit, conversion, or price is the real constraint.",
+        },
+      ],
+      auditBridge:
+        "A Norixo audit can help separate a Marrakech occupancy question into guest fit, practical expectations, visible value, and pricing so the next change addresses one likely constraint instead of simply reducing the rate.",
+    },
+
     "revenue-optimization": {
       heading: "Diagnose a Marrakech revenue gap before changing the nightly rate",
       introduction:
@@ -132,6 +162,36 @@ const cityTopicContentOverrides: Record<
     },
   },
   bali: {
+    "occupancy-guide": {
+      heading: "Diagnose Bali occupancy by matching the listing to the trip guests are choosing",
+      introduction:
+        "Occupancy in Bali depends on more than filling available nights. Villa weeks, surf and wellness trips, and multi-stop itineraries can create different booking patterns, so begin by checking whether the listing makes its setting, length-of-stay fit, practical expectations, and value clear enough for the guests it is trying to attract.",
+      sections: [
+        {
+          heading: "Make the stay context obvious before comparing occupancy",
+          body:
+            "Guests may be deciding between rice-field quiet, beach-town access, and design-led villa stays. The first images and listing framing should make that context easy to recognize. If the page does not clearly signal what kind of Bali stay it offers, weak booking capture may reflect guest-fit confusion rather than a pure pricing problem.",
+        },
+        {
+          heading: "Remove practical uncertainty that can block a booking",
+          body:
+            "Private-pool accuracy, insect and climate expectations, scooter or driver context, and honest distance to a beach or local hub can materially affect how a guest evaluates the stay. Make these points clear enough that a suitable guest can decide confidently instead of discovering an important trade-off after opening the listing.",
+        },
+        {
+          heading: "Use rate and gallery quality together",
+          body:
+            "The current Norixo reference price for Bali is around €85 per night, with about 26 photos and an average rating near 4.8/5. These are context, not targets. Check whether the gallery and amenity evidence make the chosen rate credible for the exact version of the Bali stay the listing promises.",
+        },
+        {
+          heading: "Do not use discounts to compensate for a mismatched promise",
+          body:
+            "If the listing attracts the wrong guest intent or does not prove its amenities clearly, lowering price may create more attention without resolving the booking hesitation. Strengthen the visible promise first; if guest fit and presentation are already strong, test a focused pricing or availability change and observe the response.",
+        },
+      ],
+      auditBridge:
+        "Use a Norixo audit to determine whether a Bali occupancy gap is more likely tied to trip fit, practical expectations, visible proof, or price before changing several parts of the listing together.",
+    },
+
     "photo-tips": {
       heading: "Diagnose which Bali listing photos need to prove the stay first",
       introduction:
@@ -384,6 +444,138 @@ const cityTopicContentOverrides: Record<
       ],
       auditBridge:
         "Use the Boston occupancy diagnosis to identify the most likely constraint before changing several variables; a Norixo audit can help prioritize whether the next action belongs to pricing, presentation, trust, or guest fit.",
+    },
+  },
+
+
+  istanbul: {
+    "occupancy-guide": {
+      heading: "Diagnose Istanbul occupancy through district fit, access, and perceived value",
+      introduction:
+        "Occupancy in Istanbul can be influenced by how well a listing fits the district experience a guest expects. Old-city charm, newer districts, Bosphorus views, walkability, and transfer convenience can lead guests to compare very different stays, so identify whether the listing's positioning, access information, and value are clear before treating rate as the default explanation.",
+      sections: [
+        {
+          heading: "Define the district experience the guest is comparing",
+          body:
+            "A listing in Istanbul should make its location context useful rather than relying on the city name alone. Guests may compare historic-area character with newer districts and different levels of walkability or transfer convenience. Explain the stay accurately enough that the right guest can understand where it fits among those alternatives.",
+        },
+        {
+          heading: "Make building and arrival expectations visible",
+          body:
+            "Lift or stair access, older-building context, and smooth arrival instructions can affect booking confidence. If those details matter to the stay, surface them clearly rather than leaving the guest to infer them. Reducing practical uncertainty can improve the quality of booking interest without changing the nightly rate.",
+        },
+        {
+          heading: "Compare price with district and view positioning",
+          body:
+            "The current Norixo reference price for Istanbul is around €88 per night. Treat it as context rather than a target. Value tiers can differ by district and view, so judge the chosen rate alongside location context, presentation, amenities, and what the gallery actually proves.",
+        },
+        {
+          heading: "Separate occupancy pressure from a positioning mismatch",
+          body:
+            "If the listing is credible but framed for the wrong comparison set, discounting may not fix the problem. First check district fit, access expectations, visible quality, and guest reassurance. Once those signals are coherent, test one pricing or availability adjustment at a time.",
+        },
+      ],
+      auditBridge:
+        "A Norixo audit can help distinguish whether Istanbul occupancy is constrained by district fit, access expectations, visible value, or pricing and turn that diagnosis into one focused next action.",
+    },
+  },
+
+
+  paris: {
+    "occupancy-guide": {
+      heading: "Diagnose Paris occupancy without treating price as the only lever",
+      introduction:
+        "Occupancy in Paris should be read alongside neighborhood fit, presentation, guest confidence, and price positioning. Guests compare many similar apartments across arrondissements, so a listing can lose bookings because its value is harder to understand even when the nightly rate itself is not the main problem.",
+      sections: [
+        {
+          heading: "Make the arrondissement and stay context useful to the guest",
+          body:
+            "Paris guests often compare several apartments quickly. Explain the neighborhood context honestly and make the practical fit of the stay easy to understand rather than relying on broad claims such as central or convenient. Clear positioning helps the right guest decide whether the listing belongs in their shortlist.",
+        },
+        {
+          heading: "Use arrival clarity and photos to remove uncertainty",
+          body:
+            "International guests benefit from precise check-in information and photos that accurately match the space. Review whether the first images, access expectations, amenities, and written description reinforce the same version of the stay. In a dense comparison market, small inconsistencies can weaken booking confidence.",
+        },
+        {
+          heading: "Read the nightly rate together with visible differentiation",
+          body:
+            "The current Norixo reference price for Paris is around €165 per night. This is context rather than a target. Compare the chosen rate with genuinely similar alternatives and ask whether the listing's photos, amenities, neighborhood explanation, and review reassurance make its value clear enough.",
+        },
+        {
+          heading: "Test occupancy only after the value proposition is coherent",
+          body:
+            "If the listing already presents a clear neighborhood fit and credible stay experience, a focused pricing or availability test may be useful. If not, discounting can mask a presentation or trust problem. Change one variable at a time so the booking response gives interpretable evidence.",
+        },
+      ],
+      auditBridge:
+        "A Norixo audit can help determine whether a Paris occupancy gap is primarily a neighborhood-fit, presentation, trust, or pricing issue before several listing elements are changed together.",
+    },
+  },
+
+
+  barcelona: {
+    "occupancy-guide": {
+      heading: "Diagnose Barcelona occupancy through seasonality, location fit, and guest expectations",
+      introduction:
+        "Barcelona occupancy can reflect a mix of seasonal demand, neighborhood choice, and how clearly the listing explains the stay. Coastal leisure and city culture lead guests to compare different location trade-offs, so first identify whether the listing makes its positioning, comfort, and value easy to understand before changing price.",
+      sections: [
+        {
+          heading: "Clarify the location trade-off guests are actually choosing",
+          body:
+            "Beach proximity and calmer inner-city options can belong to different competitive sets. Make the listing's location context explicit enough that guests understand the trade-off they are accepting. A vague position can reduce booking capture even when the property itself is attractive.",
+        },
+        {
+          heading: "Surface comfort and noise expectations early",
+          body:
+            "Outdoor space, cooling, and noise context can matter when guests shortlist Barcelona stays. If these factors are relevant, make them easy to assess through photos and written details. Clear expectations help suitable guests move forward and reduce hesitation caused by missing practical information.",
+        },
+        {
+          heading: "Interpret price in the context of seasonality and presentation",
+          body:
+            "The current Norixo reference price for Barcelona is around €150 per night. Use it as context rather than a target. Weekends and peak periods can move the market, but the chosen rate still needs to be supported by the gallery, amenities, location fit, and visible quality of the stay.",
+        },
+        {
+          heading: "Avoid solving a conversion issue with rate alone",
+          body:
+            "If the listing does not clearly communicate location trade-offs or practical comfort, a discount may increase attention without improving the underlying fit. Strengthen those signals first; once they are credible, test a focused pricing or availability change to see whether occupancy responds.",
+        },
+      ],
+      auditBridge:
+        "A Norixo audit can help separate Barcelona occupancy into location fit, seasonal pricing context, practical guest expectations, and conversion so the next test addresses the strongest likely constraint.",
+    },
+  },
+
+
+  london: {
+    "occupancy-guide": {
+      heading: "Diagnose London occupancy through transport fit, stay clarity, and value",
+      introduction:
+        "Occupancy in London can depend on whether a listing clearly fits the trip a guest is planning. Corporate midweeks, weekend visitors, and longer bleisure stays may compare different Tube zones, boroughs, room types, and price bands, so review guest fit and visible value before assuming that the rate is the main constraint.",
+      sections: [
+        {
+          heading: "Use transport and borough context to define the comparison set",
+          body:
+            "London listings can compete along the same transport corridors while offering very different neighborhood experiences. Give guests precise location context rather than leaning on vague central claims. The clearer the transport and borough fit, the easier it is for the right guest to compare the stay fairly.",
+        },
+        {
+          heading: "Make practical stay expectations credible",
+          body:
+            "Reliable Wi-Fi, clear house rules, and honest room sizing can be especially important for work trips, longer stays, and shared-home bookings. Check whether these expectations are supported by the photos and description so guests do not need to resolve basic uncertainty before booking.",
+        },
+        {
+          heading: "Compare price with the exact offer, not London as a whole",
+          body:
+            "The current Norixo reference price for London is around €190 per night. Treat it as context rather than a target. Premium and budget-friendly pockets can sit close together, so compare the listing with alternatives that are genuinely similar in transport access, room type, amenities, presentation, and guest reassurance.",
+        },
+        {
+          heading: "Test occupancy after the guest fit is clear",
+          body:
+            "If the listing already communicates transport access, room expectations, amenities, and value accurately, test one pricing or availability change at a time. If those signals remain vague, discounting may attract attention without resolving why suitable guests hesitate.",
+        },
+      ],
+      auditBridge:
+        "A Norixo audit can help identify whether London occupancy is constrained by transport fit, stay expectations, visible value, or price and prioritize one defensible change rather than adjusting the whole listing at once.",
     },
   },
 
