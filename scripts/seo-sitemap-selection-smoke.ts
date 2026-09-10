@@ -2,6 +2,7 @@ import { cities } from "../data/cities";
 import { localSeoTopics } from "../data/localSeo";
 import {
   getGscProtectedCityTopicPaths,
+  getSitemapExperimentCityTopicPaths,
   isCityTopicSitemapEligible,
 } from "../lib/seo/sitemapEligibility";
 import { getSearchEligibility } from "../lib/seo/searchEligibility";
@@ -29,6 +30,9 @@ const priorityTopics = allTopics.filter((pathname) => {
 const protectedTopics =
   getGscProtectedCityTopicPaths();
 
+const experimentTopics =
+  getSitemapExperimentCityTopicPaths();
+
 const keptTopics = allTopics.filter(
   isCityTopicSitemapEligible
 );
@@ -51,6 +55,10 @@ console.log(
 );
 console.log(
   `GSC_PROTECTED_HOLD_TOPICS=${protectedTopics.length}`
+);
+
+console.log(
+  `SITEMAP_EXPERIMENT_TOPICS=${experimentTopics.length}`
 );
 console.log(
   `PRIORITY_PROTECTED_OVERLAP=${overlap.length}`
@@ -87,21 +95,27 @@ if (protectedTopics.length !== 29) {
   );
 }
 
+if (experimentTopics.length !== 3) {
+  throw new Error(
+    `Expected 3 sitemap experiment topics, got ${experimentTopics.length}`
+  );
+}
+
 if (overlap.length !== 0) {
   throw new Error(
     `Expected no overlap between WINNER and HOLD protection, got ${overlap.length}`
   );
 }
 
-if (keptTopics.length !== 36) {
+if (keptTopics.length !== 39) {
   throw new Error(
-    `Expected 36 kept topics, got ${keptTopics.length}`
+    `Expected 39 kept topics, got ${keptTopics.length}`
   );
 }
 
-if (omittedTopics.length !== 5464) {
+if (omittedTopics.length !== 5461) {
   throw new Error(
-    `Expected 5464 omitted topics, got ${omittedTopics.length}`
+    `Expected 5461 omitted topics, got ${omittedTopics.length}`
   );
 }
 
@@ -127,6 +141,26 @@ for (const pathname of protectedTopics) {
   }
 }
 
+for (const pathname of experimentTopics) {
+  if (!allTopics.includes(pathname)) {
+    throw new Error(
+      `Experiment path is not a real city-topic route: ${pathname}`
+    );
+  }
+
+  if (!keptTopics.includes(pathname)) {
+    throw new Error(
+      `Experiment topic omitted: ${pathname}`
+    );
+  }
+
+  if (getSearchEligibility(pathname).tier !== "hold") {
+    throw new Error(
+      `Experiment topic unexpectedly changed tier: ${pathname}`
+    );
+  }
+}
+
 const representativeHold =
   "/airbnb-optimizer/paris/pricing-guide";
 
@@ -147,5 +181,6 @@ if (isCityTopicSitemapEligible(representativeHold)) {
 console.log("CITY_HUB_PRESERVATION=PASS");
 console.log("PRIORITY_TOPIC_PRESERVATION=PASS");
 console.log("GSC_PROTECTED_TOPIC_PRESERVATION=PASS");
+console.log("SITEMAP_EXPERIMENT_TOPIC_PRESERVATION=PASS");
 console.log("UNPROTECTED_HOLD_OMISSION=PASS");
 console.log("SITEMAP_SELECTION_SMOKE=PASS");

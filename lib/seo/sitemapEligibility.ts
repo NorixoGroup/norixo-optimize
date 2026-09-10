@@ -11,6 +11,23 @@ import { getSearchEligibility } from "./searchEligibility";
  * it does not change indexability, generation, canonicals,
  * robots directives, redirects, or search eligibility.
  */
+/**
+ * Small sitemap-only experiment cohort.
+ *
+ * These HOLD URLs have bespoke content and remain unchanged in search
+ * eligibility. Inclusion here changes sitemap discovery only.
+ *
+ * Control cohort intentionally remains omitted:
+ * - /airbnb-optimizer/bali/occupancy-guide
+ * - /airbnb-optimizer/paris/occupancy-guide
+ * - /airbnb-optimizer/london/occupancy-guide
+ */
+const SITEMAP_EXPERIMENT_CITY_TOPIC_PATHS = new Set<string>([
+  "/airbnb-optimizer/marrakech/occupancy-guide",
+  "/airbnb-optimizer/istanbul/occupancy-guide",
+  "/airbnb-optimizer/barcelona/occupancy-guide",
+]);
+
 const GSC_PROTECTED_CITY_TOPIC_PATHS = new Set<string>([
   "/airbnb-optimizer/aix-en-provence/long-stay-guide",
   "/airbnb-optimizer/athens/business-travel-guide",
@@ -59,9 +76,16 @@ export function isCityTopicSitemapEligible(
     return true;
   }
 
-  return GSC_PROTECTED_CITY_TOPIC_PATHS.has(pathname);
+  return (
+    GSC_PROTECTED_CITY_TOPIC_PATHS.has(pathname) ||
+    SITEMAP_EXPERIMENT_CITY_TOPIC_PATHS.has(pathname)
+  );
 }
 
 export function getGscProtectedCityTopicPaths(): readonly string[] {
   return [...GSC_PROTECTED_CITY_TOPIC_PATHS];
+}
+
+export function getSitemapExperimentCityTopicPaths(): readonly string[] {
+  return [...SITEMAP_EXPERIMENT_CITY_TOPIC_PATHS];
 }
