@@ -286,6 +286,8 @@ const auditDetailCopy = {
     avgCompetitorPriceSupportObserved: "Observed competitive benchmark on the listings retained for this segment.",
     avgCompetitorPriceSupportPending: "The price benchmark will become more useful once a reliable competitor price can be consolidated.",
     averageCompetitorPrice: "Average competitor price",
+    singleComparablePrice: "Available comparable price",
+    limitedAverageCompetitorPrice: "Indicative average competitor price",
     priceGapVsMarket: "Price gap vs market",
     priceDeltaInsufficientSample: "Insufficient sample",
     priceDeltaUnavailable: "Price gap cannot be calculated here: listed price or market benchmark is insufficient for a reliable percentage.",
@@ -838,6 +840,8 @@ const auditDetailCopy = {
     avgCompetitorPriceSupportObserved: "Repère concurrentiel observé sur les annonces retenues pour ce segment.",
     avgCompetitorPriceSupportPending: "Le repère prix sera plus utile dès qu’un tarif concurrent fiable pourra être consolidé.",
     averageCompetitorPrice: "Prix moyen des concurrents",
+    singleComparablePrice: "Prix du comparable disponible",
+    limitedAverageCompetitorPrice: "Repère prix moyen indicatif",
     priceGapVsMarket: "Écart de prix vs marché",
     priceDeltaInsufficientSample: "Échantillon insuffisant",
     priceDeltaUnavailable: "Écart prix non calculable ici : tarif annoncé ou repère marché insuffisant pour un pourcentage fiable.",
@@ -1401,6 +1405,8 @@ const auditDetailCopy = {
     avgCompetitorPriceSupportObserved: "Referencia competitiva observada en los anuncios retenidos para este segmento.",
     avgCompetitorPriceSupportPending: "La referencia de precio será más útil en cuanto pueda consolidarse un precio competidor fiable.",
     averageCompetitorPrice: "Precio medio competidor",
+    singleComparablePrice: "Precio del comparable disponible",
+    limitedAverageCompetitorPrice: "Precio medio indicativo",
     priceGapVsMarket: "Diferencia de precio vs mercado",
     priceDeltaInsufficientSample: "Muestra insuficiente",
     priceDeltaUnavailable: "La diferencia de precio no puede calcularse aquí: el precio anunciado o la referencia de mercado son insuficientes para un porcentaje fiable.",
@@ -1963,6 +1969,8 @@ const auditDetailCopy = {
     avgCompetitorPriceSupportObserved: "Beobachteter Wettbewerbsreferenzwert auf den für dieses Segment berücksichtigten Inseraten.",
     avgCompetitorPriceSupportPending: "Der Preisreferenzwert wird nützlicher, sobald ein verlässlicher Konkurrenzpreis konsolidiert werden kann.",
     averageCompetitorPrice: "Durchschnittlicher Wettbewerbspreis",
+    singleComparablePrice: "Preis des verfügbaren Vergleichsobjekts",
+    limitedAverageCompetitorPrice: "Indikativer Durchschnittspreis",
     priceGapVsMarket: "Preisabstand zum Markt",
     priceDeltaInsufficientSample: "Unzureichende Stichprobe",
     priceDeltaUnavailable: "Preisabstand kann hier nicht berechnet werden: Ausgeschriebener Preis oder Marktreferenz reichen nicht für einen verlässlichen Prozentsatz aus.",
@@ -2525,6 +2533,8 @@ const auditDetailCopy = {
     avgCompetitorPriceSupportObserved: "Riferimento competitivo osservato sugli annunci selezionati per questo segmento.",
     avgCompetitorPriceSupportPending: "Il riferimento di prezzo sarà più utile non appena potrà essere consolidato un prezzo concorrente affidabile.",
     averageCompetitorPrice: "Prezzo medio dei concorrenti",
+    singleComparablePrice: "Prezzo del comparabile disponibile",
+    limitedAverageCompetitorPrice: "Prezzo medio indicativo",
     priceGapVsMarket: "Gap di prezzo vs mercato",
     priceDeltaInsufficientSample: "Campione insufficiente",
     priceDeltaUnavailable: "Lo scarto di prezzo non può essere calcolato qui: prezzo annunciato o riferimento di mercato insufficienti per una percentuale affidabile.",
@@ -3048,6 +3058,8 @@ const auditDetailCopy = {
     avgCompetitorPriceSupportObserved: "Referência concorrencial observada nos anúncios retidos para este segmento.",
     avgCompetitorPriceSupportPending: "A referência de preço será mais útil assim que puder ser consolidado um preço concorrente fiável.",
     averageCompetitorPrice: "Preço médio dos concorrentes",
+    singleComparablePrice: "Preço do comparável disponível",
+    limitedAverageCompetitorPrice: "Preço médio indicativo",
     priceGapVsMarket: "Diferença de preço vs mercado",
     priceDeltaInsufficientSample: "Amostra insuficiente",
     marketCompetitorPricesDispersed: "Preços dos concorrentes dispersos",
@@ -3611,6 +3623,8 @@ const auditDetailCopy = {
     avgCompetitorPriceSupportObserved: "Geobserveerde concurrentiereferentie op de voor dit segment geselecteerde advertenties.",
     avgCompetitorPriceSupportPending: "De prijsreferentie wordt nuttiger zodra een betrouwbare concurrentieprijs kan worden geconsolideerd.",
     averageCompetitorPrice: "Gemiddelde prijs van concurrenten",
+    singleComparablePrice: "Prijs van de beschikbare vergelijkbare advertentie",
+    limitedAverageCompetitorPrice: "Indicatieve gemiddelde prijs",
     priceGapVsMarket: "Prijsverschil vs markt",
     priceDeltaInsufficientSample: "Onvoldoende steekproef",
     marketCompetitorPricesDispersed: "Concurrerende prijzen zijn verspreid",
@@ -4174,6 +4188,8 @@ const auditDetailCopy = {
     avgCompetitorPriceSupportObserved: "このセグメントで保持された掲載に基づく観測競合ベンチマークです。",
     avgCompetitorPriceSupportPending: "信頼できる競合価格が固まると、この価格ベンチマークはより有用になります。",
     averageCompetitorPrice: "競合の平均価格",
+    singleComparablePrice: "利用可能な比較対象の価格",
+    limitedAverageCompetitorPrice: "参考平均価格",
     priceGapVsMarket: "市場との差",
     priceDeltaInsufficientSample: "サンプル不足",
     marketCompetitorPricesDispersed: "競合価格が分散しています",
@@ -4724,6 +4740,8 @@ const auditDetailCopy = {
     avgCompetitorPriceSupportObserved: "基于该细分中保留房源的观察竞品基准。",
     avgCompetitorPriceSupportPending: "一旦可靠的竞品价格建立起来，这个价格基准会更有用。",
     averageCompetitorPrice: "竞品平均价格",
+    singleComparablePrice: "可用竞品价格",
+    limitedAverageCompetitorPrice: "参考平均价格",
     priceGapVsMarket: "与市场价格差",
     priceDeltaInsufficientSample: "样本不足",
     marketCompetitorPricesDispersed: "竞争房源价格分散",
@@ -5274,6 +5292,8 @@ const auditDetailCopy = {
     avgCompetitorPriceSupportObserved: "이 세그먼트에서 유지된 숙소를 기반으로 한 관측 경쟁 벤치마크입니다.",
     avgCompetitorPriceSupportPending: "신뢰 가능한 경쟁 가격이 정리되면 이 가격 기준이 더 유용해집니다.",
     averageCompetitorPrice: "경쟁 숙소 평균 가격",
+    singleComparablePrice: "사용 가능한 비교 숙소 가격",
+    limitedAverageCompetitorPrice: "참고용 평균 가격",
     priceGapVsMarket: "시장 대비 가격 차이",
     priceDeltaInsufficientSample: "샘플 부족",
     marketCompetitorPricesDispersed: "경쟁 숙소 가격이 분산되어 있습니다",
@@ -5824,6 +5844,8 @@ const auditDetailCopy = {
     avgCompetitorPriceSupportObserved: "مرجع تنافسي مرصود على الإعلانات المحتفَظ بها لهذه الشريحة.",
     avgCompetitorPriceSupportPending: "سيصبح مرجع السعر أكثر فائدة عندما يتم تثبيت سعر تنافسي موثوق.",
     averageCompetitorPrice: "متوسط سعر المنافسين",
+    singleComparablePrice: "سعر الإعلان المقارن المتاح",
+    limitedAverageCompetitorPrice: "متوسط سعر إرشادي",
     priceGapVsMarket: "فجوة السعر مقابل السوق",
     priceDeltaInsufficientSample: "عينة غير كافية",
     marketCompetitorPricesDispersed: "أسعار المنافسين متفرقة",
@@ -10399,6 +10421,13 @@ export default function AuditDetailPage() {
       ? revenueFormatter.format(avgCompetitorPriceResolved)
       : marketIndicativeLabel;
 
+  const avgCompetitorPriceLabel =
+    pricedComparableCount === 1
+      ? copy.singleComparablePrice
+      : pricedComparableCount === 2
+        ? copy.limitedAverageCompetitorPrice
+        : copy.averageCompetitorPrice;
+
   const avgCompetitorPriceSupport = !hasMarketData
     ? copy.avgCompetitorPriceSupportInsufficient
     : avgCompetitorPriceResolved !== null
@@ -13446,7 +13475,7 @@ export default function AuditDetailPage() {
             <div className="mt-5 grid items-stretch gap-5 md:grid-cols-2">
               <div className={`${kpiCard} border border-l-4 border-amber-200/75 border-l-amber-500/75 !bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,251,235,0.92)_100%)] shadow-[0_14px_34px_rgba(180,83,9,0.09),0_1px_0_rgba(255,255,255,0.68)_inset]`}>
                 <p className={kpiLabel}>
-                  {copy.averageCompetitorPrice}
+                  {avgCompetitorPriceLabel}
                 </p>
                 <p className={`${kpiValue} ${!hasMarketData ? "text-slate-600" : "text-amber-700"}`}>
                   {avgCompetitorPriceDisplay}
