@@ -2858,6 +2858,14 @@ async function collectPreviewBookingSerpMetadataFromPage(
 ): Promise<{
   cardsSeen: number;
   cardsWithTitle: number;
+  snapshotStages: Array<{
+    stage:
+      | "scoped_field_depth"
+      | "minimal_card"
+      | "dom_fingerprint"
+      | "candidates";
+    ok: boolean;
+  }>;
   studioExplicit: number;
   apartmentExplicit: number;
   aparthotelExplicit: number;
@@ -2896,7 +2904,28 @@ async function collectPreviewBookingSerpMetadataFromPage(
     hasTitleTestIdDescendant: boolean;
   }>;
 }> {
-  const scopedFieldDepthFingerprint = await page.$$eval(
+  const snapshotStages: Array<{
+    stage:
+      | "scoped_field_depth"
+      | "minimal_card"
+      | "dom_fingerprint"
+      | "candidates";
+    ok: boolean;
+  }> = [];
+
+  let scopedFieldDepthFingerprint: Array<{
+    anchorIndex: number;
+    titleAtAnchor: boolean;
+    depths: Array<{
+      depth: number;
+      hasUnitConfiguration: boolean;
+      hasPropertyCardRoomName: boolean;
+      hasRoomName: boolean;
+    }>;
+  }> = [];
+
+  try {
+    scopedFieldDepthFingerprint = await page.$$eval(
     'a[href*="/hotel/"]',
     (elements) =>
       elements.slice(0, 20).map((element, anchorIndex) => {
@@ -2950,9 +2979,25 @@ async function collectPreviewBookingSerpMetadataFromPage(
           depths,
         };
       })
-  );
+    );
+    snapshotStages.push({ stage: "scoped_field_depth", ok: true });
+  } catch {
+    scopedFieldDepthFingerprint = [];
+    snapshotStages.push({ stage: "scoped_field_depth", ok: false });
+  }
 
-  const minimalCardFingerprint = await page.$$eval(
+  let minimalCardFingerprint: Array<{
+    anchorIndex: number;
+    titleContainerDepth: number | null;
+    titleContainerTag: string | null;
+    hasTitle: boolean;
+    hasUnitConfiguration: boolean;
+    hasPropertyCardRoomName: boolean;
+    hasRoomName: boolean;
+  }> = [];
+
+  try {
+    minimalCardFingerprint = await page.$$eval(
     'a[href*="/hotel/"]',
     (elements) => {
       type Row = {
@@ -3013,9 +3058,28 @@ async function collectPreviewBookingSerpMetadataFromPage(
         };
       });
     }
-  );
+    );
+    snapshotStages.push({ stage: "minimal_card", ok: true });
+  } catch {
+    minimalCardFingerprint = [];
+    snapshotStages.push({ stage: "minimal_card", ok: false });
+  }
 
-  const domFingerprint = await page.$$eval(
+  let domFingerprint: Array<{
+    anchorIndex: number;
+    ancestorDepth: number;
+    ancestorTag: string;
+    testIdKind:
+      | "property_card"
+      | "title"
+      | "other_testid"
+      | "no_testid";
+    hasHotelLinkDescendant: boolean;
+    hasTitleTestIdDescendant: boolean;
+  }> = [];
+
+  try {
+    domFingerprint = await page.$$eval(
     'a[href*="/hotel/"]',
     (elements) => {
       type FingerprintRow = {
@@ -3069,9 +3133,17 @@ async function collectPreviewBookingSerpMetadataFromPage(
 
       return rows.slice(0, 84);
     }
-  );
+    );
+    snapshotStages.push({ stage: "dom_fingerprint", ok: true });
+  } catch {
+    domFingerprint = [];
+    snapshotStages.push({ stage: "dom_fingerprint", ok: false });
+  }
 
-  const candidates = await page.$$eval(
+  let candidates: BookingSerpMetadataCandidate[] = [];
+
+  try {
+    candidates = await page.$$eval(
     'a[href*="/hotel/"]',
     (elements) => {
       type Classification =
@@ -3218,11 +3290,17 @@ async function collectPreviewBookingSerpMetadataFromPage(
           signals,
         }));
     }
-  );
+    );
+    snapshotStages.push({ stage: "candidates", ok: true });
+  } catch {
+    candidates = [];
+    snapshotStages.push({ stage: "candidates", ok: false });
+  }
 
   return {
     cardsSeen: candidates.length,
     cardsWithTitle: candidates.filter((row) => Boolean(row.title)).length,
+    snapshotStages,
     studioExplicit: candidates.filter((row) =>
       row.signals.some((signal) => signal.classification === "studio")
     ).length,
@@ -3304,6 +3382,7 @@ export async function runPreviewBookingSerpMetadataDiagnostic(
       return {
         cardsSeen: snapshot.cardsSeen,
         cardsWithTitle: snapshot.cardsWithTitle,
+        snapshotStages: snapshot.snapshotStages,
         studioExplicit: snapshot.studioExplicit,
         apartmentExplicit: snapshot.apartmentExplicit,
         aparthotelExplicit: snapshot.aparthotelExplicit,
@@ -3323,6 +3402,11 @@ export async function runPreviewBookingSerpMetadataDiagnostic(
     const value = data[key];
     return typeof value === "number" && Number.isFinite(value) ? value : 0;
   };
+
+  const snapshotStagesValue = data.snapshotStages;
+  const snapshotStages = Array.isArray(snapshotStagesValue)
+    ? snapshotStagesValue.slice(0, 4)
+    : [];
 
   const candidateValue = data.candidates;
   const candidates = Array.isArray(candidateValue)
@@ -3350,12 +3434,14 @@ export async function runPreviewBookingSerpMetadataDiagnostic(
     domFingerprint: unknown[];
     minimalCardFingerprint: unknown[];
     scopedFieldDepthFingerprint: unknown[];
+    snapshotStages: unknown[];
   } = {
     phase: "primary",
     query,
     resolvedSearchUrl: sanitizeBookingSerpDiagnosticUrl(searchUrl),
     cardsSeen: numberValue("cardsSeen"),
     cardsWithTitle: numberValue("cardsWithTitle"),
+    snapshotStages,
     studioExplicit: numberValue("studioExplicit"),
     apartmentExplicit: numberValue("apartmentExplicit"),
     aparthotelExplicit: numberValue("aparthotelExplicit"),
