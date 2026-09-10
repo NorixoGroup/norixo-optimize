@@ -158,6 +158,41 @@ function jsonNoStore(body: Record<string, unknown>, status: number) {
   });
 }
 
+function classifyPreviewDiagnosticError(error: unknown): string {
+  if (!(error instanceof Error)) return "unknown_error";
+
+  const name = error.name.toLowerCase();
+  const message = error.message.toLowerCase();
+
+  if (
+    message.includes("executable doesn't exist") ||
+    message.includes("executable does not exist") ||
+    message.includes("browser executable") ||
+    message.includes("chromium") ||
+    message.includes("playwright")
+  ) {
+    return "browser_launch_failed";
+  }
+
+  if (
+    name.includes("timeout") ||
+    message.includes("timeout") ||
+    message.includes("timed out")
+  ) {
+    return "timeout";
+  }
+
+  if (
+    message.includes("navigation") ||
+    message.includes("page.goto") ||
+    message.includes("net::")
+  ) {
+    return "navigation_failed";
+  }
+
+  return "diagnostic_runtime_error";
+}
+
 function isBrightDataConfigured(): boolean {
   const hasBrowserCdpConfig = Boolean(
     process.env.BRIGHTDATA_BROWSER_HOST?.trim() &&
@@ -287,7 +322,11 @@ export async function GET(request: NextRequest) {
     });
 
     return jsonNoStore(
-      { ok: false, error: "Booking cross-platform quality diagnostic failed." },
+      {
+        ok: false,
+        error: "Booking cross-platform quality diagnostic failed.",
+        failureClass: classifyPreviewDiagnosticError(error),
+      },
       500
     );
   }
