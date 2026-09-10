@@ -2864,7 +2864,75 @@ async function collectPreviewBookingSerpMetadataFromPage(
   hotelExplicit: number;
   unknown: number;
   candidates: BookingSerpMetadataCandidate[];
+  domFingerprint: Array<{
+    anchorIndex: number;
+    ancestorDepth: number;
+    ancestorTag: string;
+    testIdKind:
+      | "property_card"
+      | "title"
+      | "other_testid"
+      | "no_testid";
+    hasHotelLinkDescendant: boolean;
+    hasTitleTestIdDescendant: boolean;
+  }>;
 }> {
+  const domFingerprint = await page.$$eval(
+    'a[href*="/hotel/"]',
+    (elements) => {
+      type FingerprintRow = {
+        anchorIndex: number;
+        ancestorDepth: number;
+        ancestorTag: string;
+        testIdKind:
+          | "property_card"
+          | "title"
+          | "other_testid"
+          | "no_testid";
+        hasHotelLinkDescendant: boolean;
+        hasTitleTestIdDescendant: boolean;
+      };
+
+      const rows: FingerprintRow[] = [];
+
+      elements.slice(0, 12).forEach((element, anchorIndex) => {
+        let current: Element | null = element;
+
+        for (let depth = 0; depth <= 6 && current; depth += 1) {
+          const rawTestId = current.getAttribute("data-testid");
+
+          const testIdKind: FingerprintRow["testIdKind"] =
+            rawTestId === "property-card"
+              ? "property_card"
+              : rawTestId === "title" || rawTestId === "property-card-title"
+                ? "title"
+                : rawTestId
+                  ? "other_testid"
+                  : "no_testid";
+
+          rows.push({
+            anchorIndex,
+            ancestorDepth: depth,
+            ancestorTag: current.tagName.toLowerCase(),
+            testIdKind,
+            hasHotelLinkDescendant: Boolean(
+              current.querySelector('a[href*="/hotel/"]')
+            ),
+            hasTitleTestIdDescendant: Boolean(
+              current.querySelector(
+                '[data-testid="title"], [data-testid="property-card-title"]'
+              )
+            ),
+          });
+
+          current = current.parentElement;
+        }
+      });
+
+      return rows.slice(0, 84);
+    }
+  );
+
   const candidates = await page.$$eval(
     'a[href*="/hotel/"]',
     (elements) => {
@@ -3031,6 +3099,7 @@ async function collectPreviewBookingSerpMetadataFromPage(
     ).length,
     unknown: candidates.filter((row) => row.signals.length === 0).length,
     candidates,
+    domFingerprint,
   };
 }
 
@@ -3101,6 +3170,7 @@ export async function runPreviewBookingSerpMetadataDiagnostic(
         hotelExplicit: snapshot.hotelExplicit,
         unknown: snapshot.unknown,
         candidates: snapshot.candidates,
+        domFingerprint: snapshot.domFingerprint,
       };
     },
   });
@@ -3117,7 +3187,14 @@ export async function runPreviewBookingSerpMetadataDiagnostic(
     ? (candidateValue as BookingSerpMetadataCandidate[]).slice(0, 80)
     : [];
 
-  const event: BookingSerpMetadataDiagnosticEvent = {
+  const domFingerprintValue = data.domFingerprint;
+  const domFingerprint = Array.isArray(domFingerprintValue)
+    ? domFingerprintValue.slice(0, 84)
+    : [];
+
+  const event: BookingSerpMetadataDiagnosticEvent & {
+    domFingerprint: unknown[];
+  } = {
     phase: "primary",
     query,
     resolvedSearchUrl: sanitizeBookingSerpDiagnosticUrl(searchUrl),
@@ -3129,6 +3206,7 @@ export async function runPreviewBookingSerpMetadataDiagnostic(
     hotelExplicit: numberValue("hotelExplicit"),
     unknown: numberValue("unknown"),
     candidates,
+    domFingerprint,
   };
 
   return {
