@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminPrivateEmail } from "@/lib/auth/isAdminEmail";
+import { runPreviewBookingSerpMetadataDiagnostic } from "@/lib/competitors/booking-search";
 import { searchCompetitorsAroundTarget } from "@/lib/competitors/searchCompetitors";
 import {
   bookingUrlHasStayDates,
@@ -16,6 +17,8 @@ import { createRequestSupabaseClient } from "@/lib/server/routeAuth";
 export const runtime = "nodejs";
 
 const CONFIRM_VALUE = "fixed-y3-booking-quality";
+const FIXED_MODE = "fixed";
+const SERP_MODE = "serp";
 
 const FIXED_BOOKING_CANDIDATE_URLS = [
   "https://www.booking.com/hotel/ma/wazo-appart.fr.html",
@@ -199,6 +202,45 @@ export async function GET(request: NextRequest) {
 
     if (!isAdminPrivateEmail(user.email)) {
       return jsonNoStore({ ok: false, error: "Forbidden." }, 403);
+    }
+
+    const mode = url.searchParams.get("mode") ?? FIXED_MODE;
+
+    if (mode === SERP_MODE) {
+      const serpMetadata = await runPreviewBookingSerpMetadataDiagnostic(
+        AIRBNB_STUDIO_TARGET,
+        {
+          maxResults: 10,
+          normalizedTargetCountry: "morocco",
+        }
+      );
+
+      return jsonNoStore(
+        {
+          ok: true,
+          mode: "preview_booking_serp_metadata",
+          brightDataConfigured: isBrightDataConfigured(),
+          target: {
+            platform: AIRBNB_STUDIO_TARGET.platform,
+            url: AIRBNB_STUDIO_TARGET.url,
+            city: "marrakech",
+            country: "morocco",
+            propertyType: "studio",
+            normalizedType: "studio_like",
+            latitude: AIRBNB_STUDIO_TARGET.latitude,
+            longitude: AIRBNB_STUDIO_TARGET.longitude,
+          },
+          serpMetadata,
+        },
+        200
+      );
+    }
+
+    if (mode !== FIXED_MODE) {
+      return jsonNoStore(
+        { ok: false, error: "Unknown diagnostic mode." },
+        400
+      );
     }
 
     const wazoPriceRecovery = await runWazoPriceRecoveryDiagnostic();

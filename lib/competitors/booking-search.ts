@@ -1709,12 +1709,83 @@ function getBookingDirectSearchStayParamsFromTargetUrl(targetUrl: string | null 
   }
 }
 
+export type BookingSerpMetadataClassification =
+  | "studio"
+  | "apartment"
+  | "aparthotel"
+  | "hotel"
+  | "other";
+
+export type BookingSerpMetadataSignal = {
+  field: string;
+  classification: BookingSerpMetadataClassification;
+  evidenceKind: "title" | "scoped_card_field";
+};
+
+export type BookingSerpMetadataCandidate = {
+  url: string;
+  title: string | null;
+  signals: BookingSerpMetadataSignal[];
+};
+
+export type BookingSerpMetadataDiagnosticEvent = {
+  phase: "primary" | "country_fallback";
+  query: string;
+  resolvedSearchUrl: string;
+  cardsSeen: number;
+  cardsWithTitle: number;
+  studioExplicit: number;
+  apartmentExplicit: number;
+  aparthotelExplicit: number;
+  hotelExplicit: number;
+  unknown: number;
+  candidates: BookingSerpMetadataCandidate[];
+};
+
+export type BookingSerpMetadataDiagnostic = {
+  mode: "preview_booking_serp_metadata";
+  discoveryExecuted: true;
+  individualListingExtractionExecuted: false;
+  comparableEvaluationExecuted: false;
+  events: BookingSerpMetadataDiagnosticEvent[];
+};
+
+export type BookingSerpMetadataDiagnosticCallback = (
+  event: BookingSerpMetadataDiagnosticEvent
+) => void;
+
+function sanitizeBookingSerpDiagnosticUrl(rawUrl: string): string {
+  try {
+    const raw = new URL(rawUrl);
+    const safe = new URL(`${raw.origin}${raw.pathname}`);
+
+    for (const key of [
+      "ss",
+      "ssne",
+      "checkin",
+      "checkout",
+      "group_adults",
+      "no_rooms",
+      "selected_currency",
+    ]) {
+      const value = raw.searchParams.get(key);
+      if (value) safe.searchParams.set(key, value.slice(0, 100));
+    }
+
+    return safe.toString().slice(0, 600);
+  } catch {
+    return rawUrl.split("?")[0].slice(0, 300);
+  }
+}
+
 async function collectInteractiveSearchCandidates(input: {
   page: import("playwright").Page;
   target: ExtractedListing;
   queries: string[];
   maxResults: number;
   abortSignal?: AbortSignal | null;
+  diagnosticPhase?: "primary" | "country_fallback";
+  onSerpMetadataDiagnostic?: BookingSerpMetadataDiagnosticCallback;
 }) {
   const collectedUrls: string[] = [];
   const sourceQueries: Array<{ query: string; url: string; candidates: number }> = [];
@@ -1876,18 +1947,186 @@ async function collectInteractiveSearchCandidates(input: {
         }
       }
 
-      const pageUrls = await input.page.$$eval(
+      const serpCardSnapshot = await input.page.$$eval(
         'a[href*="/hotel/"]',
-        (elements) =>
-          elements
-            .map((el) => el.getAttribute("href"))
-            .filter(Boolean)
-            .map((href) => {
-              if (!href) return null;
-              if (href.startsWith("http")) return href.split("?")[0];
-              return `https://www.booking.com${href.split("?")[0]}`;
-            })
+        (elements) => {
+          const normalizeUrl = (href: string | null) => {
+            if (!href) return null;
+            if (href.startsWith("http")) return href.split("?")[0];
+            return `https://www.booking.com${href.split("?")[0]}`;
+          };
+
+          const classifyScopedText = (
+            value: string
+          ): "studio" | "apartment" | "aparthotel" | "hotel" | "other" | null => {
+            const text = value.toLowerCase();
+
+            if (/\\b(studio|studios)\\b/i.test(text)) return "studio";
+
+            if (
+              /\\b(aparthotel|apart[- ]?hotel|apartment hotel|serviced apartment|residence hotel)\\b/i.test(
+                text
+              )
+            ) {
+              return "aparthotel";
+            }
+
+            if (/\\b(apartment|apartments|appartement|appartements|flat|condo)\\b/i.test(text)) {
+              return "apartment";
+            }
+
+            if (/\\b(hotel|hôtel|resort)\\b/i.test(text)) return "hotel";
+
+            return value.trim() ? "other" : null;
+          };
+
+          type SerpCardRow = {
+            url: string;
+            title: string | null;
+            signals: Array<{
+              field: string;
+              classification: "studio" | "apartment" | "aparthotel" | "hotel" | "other";
+              evidenceKind: "title" | "scoped_card_field";
+            }>;
+            hasPropertyCard: boolean;
+            sourceIndex: number;
+          };
+
+          const rowsByUrl = new Map<string, SerpCardRow>();
+
+          const isRicherRow = (candidate: SerpCardRow, current: SerpCardRow) => {
+            if (candidate.hasPropertyCard !== current.hasPropertyCard) {
+              return candidate.hasPropertyCard;
+            }
+
+            const candidateHasTitle = Boolean(candidate.title);
+            const currentHasTitle = Boolean(current.title);
+
+            if (candidateHasTitle !== currentHasTitle) {
+              return candidateHasTitle;
+            }
+
+            if (candidate.signals.length !== current.signals.length) {
+              return candidate.signals.length > current.signals.length;
+            }
+
+            return candidate.sourceIndex < current.sourceIndex;
+          };
+
+          elements.forEach((element, sourceIndex) => {
+            const href = normalizeUrl(element.getAttribute("href"));
+            if (!href) return;
+
+            const card = element.closest('[data-testid="property-card"]');
+
+            const titleElement =
+              card?.querySelector('[data-testid="title"]') ??
+              card?.querySelector('[data-testid="property-card-title"]');
+
+            const title = titleElement?.textContent?.trim() || null;
+
+            const signals: SerpCardRow["signals"] = [];
+
+            if (title) {
+              const classification = classifyScopedText(title);
+              if (classification) {
+                signals.push({
+                  field: "title",
+                  classification,
+                  evidenceKind: "title",
+                });
+              }
+            }
+
+            if (card) {
+              const scopedSelectors = [
+                '[data-testid="property-card-unit-configuration"]',
+                '[data-testid="property-card-room-name"]',
+                '[data-testid="room-name"]',
+              ];
+
+              for (const selector of scopedSelectors) {
+                const scoped = card.querySelector(selector);
+                const text = scoped?.textContent?.trim() || "";
+                if (!text) continue;
+
+                const classification = classifyScopedText(text);
+                if (!classification) continue;
+
+                signals.push({
+                  field: selector,
+                  classification,
+                  evidenceKind: "scoped_card_field",
+                });
+              }
+            }
+
+            const candidate: SerpCardRow = {
+              url: href,
+              title,
+              signals: signals.slice(0, 4),
+              hasPropertyCard: Boolean(card),
+              sourceIndex,
+            };
+
+            const current = rowsByUrl.get(href);
+
+            if (!current || isRicherRow(candidate, current)) {
+              rowsByUrl.set(href, candidate);
+            }
+          });
+
+          return Array.from(rowsByUrl.values())
+            .sort((a, b) => a.sourceIndex - b.sourceIndex)
+            .map(({ url, title, signals }) => ({
+              url,
+              title,
+              signals,
+            }));
+        }
       );
+
+      const pageUrls = serpCardSnapshot.map((row) => row.url);
+
+      const serpMetadataCounts = {
+        cardsSeen: serpCardSnapshot.length,
+        cardsWithTitle: serpCardSnapshot.filter((row) => Boolean(row.title)).length,
+        studioExplicit: serpCardSnapshot.filter((row) =>
+          row.signals.some((signal) => signal.classification === "studio")
+        ).length,
+        apartmentExplicit: serpCardSnapshot.filter((row) =>
+          row.signals.some((signal) => signal.classification === "apartment")
+        ).length,
+        aparthotelExplicit: serpCardSnapshot.filter((row) =>
+          row.signals.some((signal) => signal.classification === "aparthotel")
+        ).length,
+        hotelExplicit: serpCardSnapshot.filter((row) =>
+          row.signals.some((signal) => signal.classification === "hotel")
+        ).length,
+        unknown: serpCardSnapshot.filter((row) => row.signals.length === 0).length,
+      };
+
+      if (input.onSerpMetadataDiagnostic) {
+        input.onSerpMetadataDiagnostic({
+          phase: input.diagnosticPhase ?? "primary",
+          query,
+          resolvedSearchUrl: sanitizeBookingSerpDiagnosticUrl(input.page.url()),
+          ...serpMetadataCounts,
+          candidates: serpCardSnapshot.slice(0, 80),
+        });
+      }
+
+      if (DEBUG_MARKET_PIPELINE) {
+        console.log(
+          "[market][booking-serp-card-metadata-diagnostic]",
+          JSON.stringify({
+            phase: input.diagnosticPhase ?? "primary",
+            query,
+            ...serpMetadataCounts,
+            candidates: serpCardSnapshot.slice(0, 80),
+          })
+        );
+      }
 
       step = "merge_results";
       const newForQuery: string[] = [];
@@ -2046,7 +2285,8 @@ export async function searchBookingCompetitorCandidates(
   target: ExtractedListing,
   maxResults = 5,
   discoveryGeo?: { normalizedTargetCountry: string | null; skipEmbeddedAndNetwork: boolean } | null,
-  abortSignal?: AbortSignal | null
+  abortSignal?: AbortSignal | null,
+  onSerpMetadataDiagnostic?: BookingSerpMetadataDiagnosticCallback
 ): Promise<CompetitorCandidate[]> {
   const queryPlan = buildBookingSearchQueryPlan(target);
   const queries = queryPlan.queries;
@@ -2194,6 +2434,8 @@ export async function searchBookingCompetitorCandidates(
         queries,
         maxResults: interactiveCap,
         abortSignal,
+        diagnosticPhase: "primary",
+        onSerpMetadataDiagnostic,
       });
       sourceCSearchCandidatesRaw = sourceCAttempt.urls.filter(
         (url) => isLikelyBookingHotelUrl(url) && !isTargetVariant(url, target)
@@ -2230,6 +2472,8 @@ export async function searchBookingCompetitorCandidates(
               queries: fallbackQueriesDistinct,
               maxResults: interactiveCap,
               abortSignal,
+              diagnosticPhase: "country_fallback",
+              onSerpMetadataDiagnostic,
             });
             const fallbackRaw = sourceCFallbackAttempt.urls.filter(
               (url) => isLikelyBookingHotelUrl(url) && !isTargetVariant(url, target)
@@ -2602,4 +2846,39 @@ export async function searchBookingPremiumUrlsEarlyStop(
   } finally {
     await browser.close().catch(() => {});
   }
+}
+
+export async function runPreviewBookingSerpMetadataDiagnostic(
+  target: ExtractedListing,
+  options?: {
+    maxResults?: number;
+    normalizedTargetCountry?: string | null;
+    abortSignal?: AbortSignal | null;
+  }
+): Promise<BookingSerpMetadataDiagnostic> {
+  const events: BookingSerpMetadataDiagnosticEvent[] = [];
+
+  await searchBookingCompetitorCandidates(
+    target,
+    Math.max(1, options?.maxResults ?? 10),
+    {
+      normalizedTargetCountry: options?.normalizedTargetCountry ?? null,
+      skipEmbeddedAndNetwork: true,
+    },
+    options?.abortSignal ?? null,
+    (event) => {
+      events.push({
+        ...event,
+        candidates: event.candidates.slice(0, 80),
+      });
+    }
+  );
+
+  return {
+    mode: "preview_booking_serp_metadata",
+    discoveryExecuted: true,
+    individualListingExtractionExecuted: false,
+    comparableEvaluationExecuted: false,
+    events,
+  };
 }

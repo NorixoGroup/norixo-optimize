@@ -53,8 +53,18 @@ assert.match(bridgeClientSource, /method:\s*"GET"/);
 assert.match(bridgeClientSource, /cache:\s*"no-store"/);
 assert.match(
   bridgeClientSource,
-  /\/api\/admin\/marketing-studio\/debug\/booking-cross-platform-quality\?confirm=fixed-y3-booking-quality/,
+  /\/api\/admin\/marketing-studio\/debug\/booking-cross-platform-quality/,
   "bridge must call only the existing diagnostic route"
+);
+assert.match(
+  bridgeClientSource,
+  /confirm:\s*CONFIRM_VALUE/,
+  "bridge must preserve explicit diagnostic confirmation"
+);
+assert.match(
+  bridgeClientSource,
+  /runDiagnostic\("fixed"\)/,
+  "bridge must preserve the fixed-candidate diagnostic action"
 );
 assert.equal(bridgeClientSource.includes("console."), false, "bridge must not log tokens or payloads");
 assert.equal(
