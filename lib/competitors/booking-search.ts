@@ -3226,25 +3226,34 @@ async function collectPreviewBookingSerpMetadataFromPage(
         let title: string | null = null;
         const signals: Signal[] = [];
 
-        if (card) {
-          const titleNode =
-            card.querySelector('[data-testid="title"]') ??
-            card.querySelector('[data-testid="property-card-title"]');
+        // Live Booking SERP proof:
+        // the property title is commonly scoped directly inside the /hotel/ anchor,
+        // while [data-testid="property-card"] is absent.
+        const titleNode =
+          element.querySelector('[data-testid="title"]') ??
+          element.querySelector('[data-testid="property-card-title"]') ??
+          card?.querySelector('[data-testid="title"]') ??
+          card?.querySelector('[data-testid="property-card-title"]') ??
+          null;
 
-          const titleText = titleNode?.textContent?.trim() || "";
-          if (titleText) {
-            title = titleText.slice(0, 240);
+        const titleText = titleNode?.textContent?.trim() || "";
 
-            const classification = classify(titleText);
-            if (classification) {
-              signals.push({
-                field: "title",
-                classification,
-                evidenceKind: "title",
-              });
-            }
+        if (titleText) {
+          title = titleText.slice(0, 240);
+
+          const classification = classify(titleText);
+          if (classification) {
+            signals.push({
+              field: "title",
+              classification,
+              evidenceKind: "title",
+            });
           }
+        }
 
+        // Existing scoped fields remain diagnostic only.
+        // Do not broaden to global/body text.
+        if (card) {
           const scopedSelectors = [
             '[data-testid="property-card-unit-configuration"]',
             '[data-testid="property-card-room-name"]',
