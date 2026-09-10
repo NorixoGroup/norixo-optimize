@@ -2864,6 +2864,15 @@ async function collectPreviewBookingSerpMetadataFromPage(
   hotelExplicit: number;
   unknown: number;
   candidates: BookingSerpMetadataCandidate[];
+  minimalCardFingerprint: Array<{
+    anchorIndex: number;
+    titleContainerDepth: number | null;
+    titleContainerTag: string | null;
+    hasTitle: boolean;
+    hasUnitConfiguration: boolean;
+    hasPropertyCardRoomName: boolean;
+    hasRoomName: boolean;
+  }>;
   domFingerprint: Array<{
     anchorIndex: number;
     ancestorDepth: number;
@@ -2877,6 +2886,69 @@ async function collectPreviewBookingSerpMetadataFromPage(
     hasTitleTestIdDescendant: boolean;
   }>;
 }> {
+  const minimalCardFingerprint = await page.$$eval(
+    'a[href*="/hotel/"]',
+    (elements) => {
+      type Row = {
+        anchorIndex: number;
+        titleContainerDepth: number | null;
+        titleContainerTag: string | null;
+        hasTitle: boolean;
+        hasUnitConfiguration: boolean;
+        hasPropertyCardRoomName: boolean;
+        hasRoomName: boolean;
+      };
+
+      return elements.slice(0, 20).map((element, anchorIndex): Row => {
+        let current: Element | null = element;
+        let depth = 0;
+
+        while (current && depth <= 8) {
+          const hasTitle = Boolean(
+            current.querySelector(
+              '[data-testid="title"], [data-testid="property-card-title"]'
+            )
+          );
+
+          if (hasTitle) {
+            return {
+              anchorIndex,
+              titleContainerDepth: depth,
+              titleContainerTag: current.tagName.toLowerCase(),
+              hasTitle: true,
+              hasUnitConfiguration: Boolean(
+                current.querySelector(
+                  '[data-testid="property-card-unit-configuration"]'
+                )
+              ),
+              hasPropertyCardRoomName: Boolean(
+                current.querySelector(
+                  '[data-testid="property-card-room-name"]'
+                )
+              ),
+              hasRoomName: Boolean(
+                current.querySelector('[data-testid="room-name"]')
+              ),
+            };
+          }
+
+          current = current.parentElement;
+          depth += 1;
+        }
+
+        return {
+          anchorIndex,
+          titleContainerDepth: null,
+          titleContainerTag: null,
+          hasTitle: false,
+          hasUnitConfiguration: false,
+          hasPropertyCardRoomName: false,
+          hasRoomName: false,
+        };
+      });
+    }
+  );
+
   const domFingerprint = await page.$$eval(
     'a[href*="/hotel/"]',
     (elements) => {
@@ -3100,6 +3172,7 @@ async function collectPreviewBookingSerpMetadataFromPage(
     unknown: candidates.filter((row) => row.signals.length === 0).length,
     candidates,
     domFingerprint,
+    minimalCardFingerprint,
   };
 }
 
@@ -3171,6 +3244,7 @@ export async function runPreviewBookingSerpMetadataDiagnostic(
         unknown: snapshot.unknown,
         candidates: snapshot.candidates,
         domFingerprint: snapshot.domFingerprint,
+        minimalCardFingerprint: snapshot.minimalCardFingerprint,
       };
     },
   });
@@ -3187,6 +3261,11 @@ export async function runPreviewBookingSerpMetadataDiagnostic(
     ? (candidateValue as BookingSerpMetadataCandidate[]).slice(0, 80)
     : [];
 
+  const minimalCardFingerprintValue = data.minimalCardFingerprint;
+  const minimalCardFingerprint = Array.isArray(minimalCardFingerprintValue)
+    ? minimalCardFingerprintValue.slice(0, 20)
+    : [];
+
   const domFingerprintValue = data.domFingerprint;
   const domFingerprint = Array.isArray(domFingerprintValue)
     ? domFingerprintValue.slice(0, 84)
@@ -3194,6 +3273,7 @@ export async function runPreviewBookingSerpMetadataDiagnostic(
 
   const event: BookingSerpMetadataDiagnosticEvent & {
     domFingerprint: unknown[];
+    minimalCardFingerprint: unknown[];
   } = {
     phase: "primary",
     query,
@@ -3207,6 +3287,7 @@ export async function runPreviewBookingSerpMetadataDiagnostic(
     unknown: numberValue("unknown"),
     candidates,
     domFingerprint,
+    minimalCardFingerprint,
   };
 
   return {
