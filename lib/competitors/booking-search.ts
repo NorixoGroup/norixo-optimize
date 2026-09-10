@@ -1,4 +1,5 @@
 import { chromium } from "playwright";
+import { fetchUnlockedPageData } from "@/lib/brightdata";
 import { discoverBookingCandidatesWithRenderedSerp } from "./booking-rendered-discovery";
 import type { CompetitorCandidate } from "./types";
 import type { ExtractedListing } from "@/lib/extractors/types";
@@ -1747,6 +1748,9 @@ export type BookingSerpMetadataDiagnostic = {
   discoveryExecuted: true;
   individualListingExtractionExecuted: false;
   comparableEvaluationExecuted: false;
+  transportUsed: string;
+  afterLoadExecuted: boolean;
+  cdpFallbackProxyNoAfterload: boolean;
   events: BookingSerpMetadataDiagnosticEvent[];
 };
 
@@ -2848,6 +2852,188 @@ export async function searchBookingPremiumUrlsEarlyStop(
   }
 }
 
+
+async function collectPreviewBookingSerpMetadataFromPage(
+  page: import("playwright-core").Page
+): Promise<{
+  cardsSeen: number;
+  cardsWithTitle: number;
+  studioExplicit: number;
+  apartmentExplicit: number;
+  aparthotelExplicit: number;
+  hotelExplicit: number;
+  unknown: number;
+  candidates: BookingSerpMetadataCandidate[];
+}> {
+  const candidates = await page.$$eval(
+    'a[href*="/hotel/"]',
+    (elements) => {
+      type Classification =
+        | "studio"
+        | "apartment"
+        | "aparthotel"
+        | "hotel"
+        | "other";
+
+      type Signal = {
+        field: string;
+        classification: Classification;
+        evidenceKind: "title" | "scoped_card_field";
+      };
+
+      type Row = {
+        url: string;
+        title: string | null;
+        signals: Signal[];
+        hasPropertyCard: boolean;
+        sourceIndex: number;
+      };
+
+      const normalizeUrl = (href: string | null): string | null => {
+        if (!href) return null;
+        if (href.startsWith("http")) return href.split("?")[0];
+        return `https://www.booking.com${href.split("?")[0]}`;
+      };
+
+      const classify = (value: string): Classification | null => {
+        const text = value.toLowerCase();
+
+        if (/\b(studio|studios)\b/i.test(text)) return "studio";
+
+        if (
+          /\b(aparthotel|apart[- ]?hotel|apartment hotel|serviced apartment|residence hotel)\b/i.test(
+            text
+          )
+        ) {
+          return "aparthotel";
+        }
+
+        if (
+          /\b(apartment|apartments|appartement|appartements|flat|condo)\b/i.test(
+            text
+          )
+        ) {
+          return "apartment";
+        }
+
+        if (/\b(hotel|hôtel|resort)\b/i.test(text)) return "hotel";
+
+        return value.trim() ? "other" : null;
+      };
+
+      const rowsByUrl = new Map<string, Row>();
+
+      const isRicher = (candidate: Row, current: Row): boolean => {
+        if (candidate.hasPropertyCard !== current.hasPropertyCard) {
+          return candidate.hasPropertyCard;
+        }
+
+        if (Boolean(candidate.title) !== Boolean(current.title)) {
+          return Boolean(candidate.title);
+        }
+
+        if (candidate.signals.length !== current.signals.length) {
+          return candidate.signals.length > current.signals.length;
+        }
+
+        return candidate.sourceIndex < current.sourceIndex;
+      };
+
+      elements.forEach((element, sourceIndex) => {
+        const href = normalizeUrl(element.getAttribute("href"));
+        if (!href) return;
+
+        const card = element.closest('[data-testid="property-card"]');
+
+        let title: string | null = null;
+        const signals: Signal[] = [];
+
+        if (card) {
+          const titleNode =
+            card.querySelector('[data-testid="title"]') ??
+            card.querySelector('[data-testid="property-card-title"]');
+
+          const titleText = titleNode?.textContent?.trim() || "";
+          if (titleText) {
+            title = titleText.slice(0, 240);
+
+            const classification = classify(titleText);
+            if (classification) {
+              signals.push({
+                field: "title",
+                classification,
+                evidenceKind: "title",
+              });
+            }
+          }
+
+          const scopedSelectors = [
+            '[data-testid="property-card-unit-configuration"]',
+            '[data-testid="property-card-room-name"]',
+            '[data-testid="room-name"]',
+          ];
+
+          for (const selector of scopedSelectors) {
+            const node = card.querySelector(selector);
+            const text = node?.textContent?.trim() || "";
+            if (!text) continue;
+
+            const classification = classify(text);
+            if (!classification) continue;
+
+            signals.push({
+              field: selector,
+              classification,
+              evidenceKind: "scoped_card_field",
+            });
+          }
+        }
+
+        const row: Row = {
+          url: href,
+          title,
+          signals: signals.slice(0, 4),
+          hasPropertyCard: Boolean(card),
+          sourceIndex,
+        };
+
+        const current = rowsByUrl.get(href);
+        if (!current || isRicher(row, current)) {
+          rowsByUrl.set(href, row);
+        }
+      });
+
+      return Array.from(rowsByUrl.values())
+        .sort((a, b) => a.sourceIndex - b.sourceIndex)
+        .slice(0, 80)
+        .map(({ url, title, signals }) => ({
+          url,
+          title,
+          signals,
+        }));
+    }
+  );
+
+  return {
+    cardsSeen: candidates.length,
+    cardsWithTitle: candidates.filter((row) => Boolean(row.title)).length,
+    studioExplicit: candidates.filter((row) =>
+      row.signals.some((signal) => signal.classification === "studio")
+    ).length,
+    apartmentExplicit: candidates.filter((row) =>
+      row.signals.some((signal) => signal.classification === "apartment")
+    ).length,
+    aparthotelExplicit: candidates.filter((row) =>
+      row.signals.some((signal) => signal.classification === "aparthotel")
+    ).length,
+    hotelExplicit: candidates.filter((row) =>
+      row.signals.some((signal) => signal.classification === "hotel")
+    ).length,
+    unknown: candidates.filter((row) => row.signals.length === 0).length,
+    candidates,
+  };
+}
+
 export async function runPreviewBookingSerpMetadataDiagnostic(
   target: ExtractedListing,
   options?: {
@@ -2856,29 +3042,104 @@ export async function runPreviewBookingSerpMetadataDiagnostic(
     abortSignal?: AbortSignal | null;
   }
 ): Promise<BookingSerpMetadataDiagnostic> {
-  const events: BookingSerpMetadataDiagnosticEvent[] = [];
+  const queryPlan = buildBookingSearchQueryPlan(target);
+  const query = queryPlan.queries[0] ?? "booking-serp-preview";
 
-  await searchBookingCompetitorCandidates(
-    target,
-    Math.max(1, options?.maxResults ?? 10),
-    {
-      normalizedTargetCountry: options?.normalizedTargetCountry ?? null,
-      skipEmbeddedAndNetwork: true,
+  const requestedCity =
+    getEffectiveRequestedCityForSerpGuard(target, query) ??
+    getBookingDiscoveryRequestedCityLabel(target);
+
+  if (!requestedCity) {
+    return {
+      mode: "preview_booking_serp_metadata",
+      discoveryExecuted: true,
+      individualListingExtractionExecuted: false,
+      comparableEvaluationExecuted: false,
+      transportUsed: "not_executed",
+      afterLoadExecuted: false,
+      cdpFallbackProxyNoAfterload: false,
+      events: [],
+    };
+  }
+
+  const stay = getBookingDirectSearchStayParamsFromTargetUrl(target.url);
+  const params = new URLSearchParams();
+
+  params.set("ss", requestedCity);
+  params.set("ssne", requestedCity);
+
+  if (stay.checkin) params.set("checkin", stay.checkin);
+  if (stay.checkout) params.set("checkout", stay.checkout);
+  if (stay.group_adults) params.set("group_adults", stay.group_adults);
+  if (stay.no_rooms) params.set("no_rooms", stay.no_rooms);
+
+  params.set("group_children", "0");
+  params.set("selected_currency", stay.selected_currency || "EUR");
+
+  const cityBaseUrl = buildBookingCityFallbackUrl(target, requestedCity);
+
+  const searchUrl = cityBaseUrl
+    ? `${cityBaseUrl}?${params.toString()}`
+    : `https://www.booking.com/searchresults.html?${params.toString()}`;
+
+  const pageData = await fetchUnlockedPageData(searchUrl, {
+    platform: "booking",
+    preferredTransport: "cdp",
+    maxPayloads: 0,
+    afterLoad: async (page) => {
+      await page.waitForLoadState?.("domcontentloaded").catch(() => {});
+      await page.waitForTimeout(1500).catch(() => {});
+
+      const snapshot = await collectPreviewBookingSerpMetadataFromPage(page);
+
+      return {
+        cardsSeen: snapshot.cardsSeen,
+        cardsWithTitle: snapshot.cardsWithTitle,
+        studioExplicit: snapshot.studioExplicit,
+        apartmentExplicit: snapshot.apartmentExplicit,
+        aparthotelExplicit: snapshot.aparthotelExplicit,
+        hotelExplicit: snapshot.hotelExplicit,
+        unknown: snapshot.unknown,
+        candidates: snapshot.candidates,
+      };
     },
-    options?.abortSignal ?? null,
-    (event) => {
-      events.push({
-        ...event,
-        candidates: event.candidates.slice(0, 80),
-      });
-    }
-  );
+  });
+
+  const data = pageData.data ?? {};
+
+  const numberValue = (key: string): number => {
+    const value = data[key];
+    return typeof value === "number" && Number.isFinite(value) ? value : 0;
+  };
+
+  const candidateValue = data.candidates;
+  const candidates = Array.isArray(candidateValue)
+    ? (candidateValue as BookingSerpMetadataCandidate[]).slice(0, 80)
+    : [];
+
+  const event: BookingSerpMetadataDiagnosticEvent = {
+    phase: "primary",
+    query,
+    resolvedSearchUrl: sanitizeBookingSerpDiagnosticUrl(searchUrl),
+    cardsSeen: numberValue("cardsSeen"),
+    cardsWithTitle: numberValue("cardsWithTitle"),
+    studioExplicit: numberValue("studioExplicit"),
+    apartmentExplicit: numberValue("apartmentExplicit"),
+    aparthotelExplicit: numberValue("aparthotelExplicit"),
+    hotelExplicit: numberValue("hotelExplicit"),
+    unknown: numberValue("unknown"),
+    candidates,
+  };
 
   return {
     mode: "preview_booking_serp_metadata",
     discoveryExecuted: true,
     individualListingExtractionExecuted: false,
     comparableEvaluationExecuted: false,
-    events,
+    transportUsed: pageData.scrapeMeta?.transportUsed ?? "unknown",
+    afterLoadExecuted: pageData.scrapeMeta?.afterLoadExecuted === true,
+    cdpFallbackProxyNoAfterload:
+      pageData.scrapeMeta?.cdpFallbackProxyNoAfterload === true,
+    events: [event],
   };
 }
