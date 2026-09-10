@@ -2864,6 +2864,16 @@ async function collectPreviewBookingSerpMetadataFromPage(
   hotelExplicit: number;
   unknown: number;
   candidates: BookingSerpMetadataCandidate[];
+  scopedFieldDepthFingerprint: Array<{
+    anchorIndex: number;
+    titleAtAnchor: boolean;
+    depths: Array<{
+      depth: number;
+      hasUnitConfiguration: boolean;
+      hasPropertyCardRoomName: boolean;
+      hasRoomName: boolean;
+    }>;
+  }>;
   minimalCardFingerprint: Array<{
     anchorIndex: number;
     titleContainerDepth: number | null;
@@ -2886,6 +2896,62 @@ async function collectPreviewBookingSerpMetadataFromPage(
     hasTitleTestIdDescendant: boolean;
   }>;
 }> {
+  const scopedFieldDepthFingerprint = await page.$$eval(
+    'a[href*="/hotel/"]',
+    (elements) =>
+      elements.slice(0, 20).map((element, anchorIndex) => {
+        const titleAtAnchor = Boolean(
+          element.querySelector(
+            '[data-testid="title"], [data-testid="property-card-title"]'
+          )
+        );
+
+        if (!titleAtAnchor) {
+          return {
+            anchorIndex,
+            titleAtAnchor: false,
+            depths: [],
+          };
+        }
+
+        const depths: Array<{
+          depth: number;
+          hasUnitConfiguration: boolean;
+          hasPropertyCardRoomName: boolean;
+          hasRoomName: boolean;
+        }> = [];
+
+        let current: Element | null = element;
+
+        for (let depth = 0; current && depth <= 8; depth += 1) {
+          depths.push({
+            depth,
+            hasUnitConfiguration: Boolean(
+              current.querySelector(
+                '[data-testid="property-card-unit-configuration"]'
+              )
+            ),
+            hasPropertyCardRoomName: Boolean(
+              current.querySelector(
+                '[data-testid="property-card-room-name"]'
+              )
+            ),
+            hasRoomName: Boolean(
+              current.querySelector('[data-testid="room-name"]')
+            ),
+          });
+
+          current = current.parentElement;
+        }
+
+        return {
+          anchorIndex,
+          titleAtAnchor: true,
+          depths,
+        };
+      })
+  );
+
   const minimalCardFingerprint = await page.$$eval(
     'a[href*="/hotel/"]',
     (elements) => {
@@ -3173,6 +3239,7 @@ async function collectPreviewBookingSerpMetadataFromPage(
     candidates,
     domFingerprint,
     minimalCardFingerprint,
+    scopedFieldDepthFingerprint,
   };
 }
 
@@ -3245,6 +3312,7 @@ export async function runPreviewBookingSerpMetadataDiagnostic(
         candidates: snapshot.candidates,
         domFingerprint: snapshot.domFingerprint,
         minimalCardFingerprint: snapshot.minimalCardFingerprint,
+        scopedFieldDepthFingerprint: snapshot.scopedFieldDepthFingerprint,
       };
     },
   });
@@ -3261,6 +3329,13 @@ export async function runPreviewBookingSerpMetadataDiagnostic(
     ? (candidateValue as BookingSerpMetadataCandidate[]).slice(0, 80)
     : [];
 
+  const scopedFieldDepthFingerprintValue =
+    data.scopedFieldDepthFingerprint;
+  const scopedFieldDepthFingerprint =
+    Array.isArray(scopedFieldDepthFingerprintValue)
+      ? scopedFieldDepthFingerprintValue.slice(0, 20)
+      : [];
+
   const minimalCardFingerprintValue = data.minimalCardFingerprint;
   const minimalCardFingerprint = Array.isArray(minimalCardFingerprintValue)
     ? minimalCardFingerprintValue.slice(0, 20)
@@ -3274,6 +3349,7 @@ export async function runPreviewBookingSerpMetadataDiagnostic(
   const event: BookingSerpMetadataDiagnosticEvent & {
     domFingerprint: unknown[];
     minimalCardFingerprint: unknown[];
+    scopedFieldDepthFingerprint: unknown[];
   } = {
     phase: "primary",
     query,
@@ -3288,6 +3364,7 @@ export async function runPreviewBookingSerpMetadataDiagnostic(
     candidates,
     domFingerprint,
     minimalCardFingerprint,
+    scopedFieldDepthFingerprint,
   };
 
   return {
