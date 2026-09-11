@@ -13,6 +13,10 @@ import { solutions } from "@/data/solutions";
 import { rankings } from "@/data/rankings";
 import { marketReports } from "@/data/marketReports";
 import { getCityTopicContentOverride } from "@/data/cityTopicContentOverrides";
+import {
+  getTargetedCityTopicRepairContent,
+  isTargetedCityTopicRepairPath,
+} from "@/lib/seo/targetedCityTopicRepair";
 import { buildLocalSeoMetadata } from "@/lib/seo/buildLocalSeoMetadata";
 import { getSearchEligibility } from "@/lib/seo/searchEligibility";
 
@@ -405,6 +409,9 @@ export default async function LocalSeoPage({ params }: Props) {
   const executiveSummary = buildExecutiveSummary(city, topic);
   const topicAnalysis = buildTopicSpecificAnalysis(city, topic);
   const contentOverride = getCityTopicContentOverride(city.slug, topic.slug);
+  const cityTopicPath = `/airbnb-optimizer/${city.slug}/${topic.slug}`;
+  const targetedRepair = isTargetedCityTopicRepairPath(cityTopicPath);
+  const targetedRepairContent = getTargetedCityTopicRepairContent(city, topic);
   const relatedTopics = buildRelatedTopics(topic).filter(
     (relatedTopic) =>
       isCityTopicSitemapEligible(
@@ -543,6 +550,38 @@ export default async function LocalSeoPage({ params }: Props) {
         </div>
       </section>
 
+      {targetedRepair ? (
+        <section className="mx-auto max-w-5xl px-6 pb-12">
+          <div className="rounded-3xl bg-white p-8 shadow-sm">
+            <h2 className="text-3xl font-semibold">
+              {targetedRepairContent?.heading}
+            </h2>
+
+            <p className="mt-4 leading-8 text-[#4C5C55]">
+              {targetedRepairContent?.introduction}
+            </p>
+
+            <div className="mt-8 grid gap-6 md:grid-cols-3">
+              {targetedRepairContent?.sections.map((section) => (
+                <article
+                  key={section.heading}
+                  className="rounded-2xl border border-[#10231F]/10 p-5"
+                >
+                  <h3 className="font-semibold">{section.heading}</h3>
+                  <p className="mt-3 leading-7 text-[#4C5C55]">
+                    {section.body}
+                  </p>
+                </article>
+              ))}
+            </div>
+
+            <p className="mt-8 leading-8 text-[#4C5C55]">
+              {targetedRepairContent?.actionBridge}
+            </p>
+          </div>
+        </section>
+      ) : (
+        <>
       <section className="mx-auto grid max-w-6xl gap-6 px-6 pb-12 md:grid-cols-3">
         <article className="rounded-3xl bg-white p-6 shadow-sm">
           <h2 className="text-xl font-semibold">Market context</h2>
@@ -609,6 +648,10 @@ export default async function LocalSeoPage({ params }: Props) {
         </div>
       </section>
 
+        </>
+      )}
+
+      {!targetedRepair ? (
       <section className="mx-auto max-w-5xl px-6 py-12">
         <div className="rounded-3xl bg-white p-8 shadow-sm">
           <h2 className="text-3xl font-semibold">
@@ -621,6 +664,7 @@ export default async function LocalSeoPage({ params }: Props) {
           ))}
         </div>
       </section>
+      ) : null}
 
       {contentOverride ? (
         <section className="mx-auto max-w-5xl px-6 py-12">
