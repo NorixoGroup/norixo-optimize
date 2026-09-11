@@ -17,6 +17,10 @@ import {
   getTargetedCityTopicRepairContent,
   isTargetedCityTopicRepairPath,
 } from "@/lib/seo/targetedCityTopicRepair";
+import {
+  getCohort25CityTopicRepairContent,
+  isCohort25CityTopicRepairPath,
+} from "@/lib/seo/cohort25CityTopicRepair";
 import { buildLocalSeoMetadata } from "@/lib/seo/buildLocalSeoMetadata";
 import { getSearchEligibility } from "@/lib/seo/searchEligibility";
 
@@ -412,6 +416,10 @@ export default async function LocalSeoPage({ params }: Props) {
   const cityTopicPath = `/airbnb-optimizer/${city.slug}/${topic.slug}`;
   const targetedRepair = isTargetedCityTopicRepairPath(cityTopicPath);
   const targetedRepairContent = getTargetedCityTopicRepairContent(city, topic);
+  const cohort25Repair = isCohort25CityTopicRepairPath(cityTopicPath);
+  const cohort25RepairContent = getCohort25CityTopicRepairContent(city, topic);
+  const safeRepair = targetedRepair || cohort25Repair;
+  const safeRepairContent = targetedRepairContent ?? cohort25RepairContent;
   const relatedTopics = buildRelatedTopics(topic).filter(
     (relatedTopic) =>
       isCityTopicSitemapEligible(
@@ -550,19 +558,19 @@ export default async function LocalSeoPage({ params }: Props) {
         </div>
       </section>
 
-      {targetedRepair ? (
+      {safeRepair ? (
         <section className="mx-auto max-w-5xl px-6 pb-12">
           <div className="rounded-3xl bg-white p-8 shadow-sm">
             <h2 className="text-3xl font-semibold">
-              {targetedRepairContent?.heading}
+              {safeRepairContent?.heading}
             </h2>
 
             <p className="mt-4 leading-8 text-[#4C5C55]">
-              {targetedRepairContent?.introduction}
+              {safeRepairContent?.introduction}
             </p>
 
             <div className="mt-8 grid gap-6 md:grid-cols-3">
-              {targetedRepairContent?.sections.map((section) => (
+              {safeRepairContent?.sections.map((section) => (
                 <article
                   key={section.heading}
                   className="rounded-2xl border border-[#10231F]/10 p-5"
@@ -576,7 +584,7 @@ export default async function LocalSeoPage({ params }: Props) {
             </div>
 
             <p className="mt-8 leading-8 text-[#4C5C55]">
-              {targetedRepairContent?.actionBridge}
+              {safeRepairContent?.actionBridge}
             </p>
           </div>
         </section>
@@ -651,7 +659,7 @@ export default async function LocalSeoPage({ params }: Props) {
         </>
       )}
 
-      {!targetedRepair ? (
+      {!safeRepair ? (
       <section className="mx-auto max-w-5xl px-6 py-12">
         <div className="rounded-3xl bg-white p-8 shadow-sm">
           <h2 className="text-3xl font-semibold">
