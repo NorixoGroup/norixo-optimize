@@ -195,25 +195,23 @@ function getScoreStatus(score: number | null, locale: Locale) {
   };
 }
 
-function getRevenueImpactCopy(score: number | null, currency: string, locale: Locale) {
-  const normalizedCurrency =
-    !currency || currency === "Non renseigné" || currency === "Not provided" ? "EUR" : currency;
+function getRevenueImpactCopy(score: number | null, _currency: string, locale: Locale) {
 
   if (score === null) {
     return {
       value: locale === "es" ? "Alto potencial" : locale === "en" ? "High potential" : "Potentiel de gain eleve",
       range:
         locale === "es"
-          ? `Aprox. +${normalizedCurrency === "EUR" ? "€" : `${normalizedCurrency} `}200 a +${normalizedCurrency === "EUR" ? "€" : `${normalizedCurrency} `}500 / mes`
+          ? "Estimación cuantificada disponible cuando el informe proporciona datos suficientes."
           : locale === "en"
-            ? `Approx. +${normalizedCurrency === "EUR" ? "EUR" : normalizedCurrency}200 to +${normalizedCurrency === "EUR" ? "EUR" : normalizedCurrency}500 / month`
-            : `≈ +${normalizedCurrency === "EUR" ? "€" : `${normalizedCurrency} `}200 a +${normalizedCurrency === "EUR" ? "€" : `${normalizedCurrency} `}500 / mois`,
+            ? "Quantified estimate available when the report provides sufficient data."
+            : "Estimation chiffree disponible lorsque le rapport fournit des donnees suffisantes.",
       detail:
         locale === "es"
-          ? "El potencial de reservas será más visible después del próximo ciclo de optimización."
+          ? "El potencial se interpreta a partir de las señales observadas y del análisis del informe."
           : locale === "en"
-            ? "Estimated booking upside visible after the next optimization cycle."
-            : "Le potentiel de reservation devient plus visible apres les prochaines optimisations.",
+            ? "Potential is interpreted from the observed signals and the report analysis."
+            : "Le potentiel s'interprete a partir des signaux observes et de l'analyse du rapport.",
     };
   }
 
@@ -221,15 +219,17 @@ function getRevenueImpactCopy(score: number | null, currency: string, locale: Lo
     return {
       value: locale === "es" ? "Potencial de conversión" : locale === "en" ? "Conversion potential" : "Potentiel de conversion",
       range:
-        locale === "en"
-          ? `Approx. +${normalizedCurrency === "EUR" ? "EUR" : normalizedCurrency}200 to +${normalizedCurrency === "EUR" ? "EUR" : normalizedCurrency}500 / month`
-          : `≈ +${normalizedCurrency === "EUR" ? "€" : `${normalizedCurrency} `}200 a +${normalizedCurrency === "EUR" ? "€" : `${normalizedCurrency} `}500 / mois`,
+        locale === "es"
+          ? "Potencial estimado por el análisis"
+          : locale === "en"
+            ? "Potential estimated by the analysis"
+            : "Potentiel estime par l'analyse",
       detail:
         locale === "es"
-          ? `Potencial de mejora todavía importante en ${normalizedCurrency}.`
+          ? "Las señales actuales muestran un margen importante de optimización."
           : locale === "en"
-            ? `Potential upside still substantial in ${normalizedCurrency}.`
-            : `Potentiel de gain encore important en ${normalizedCurrency}.`,
+            ? "Current signals show substantial room for optimization."
+            : "Les signaux actuels montrent une marge d'optimisation importante.",
     };
   }
 
@@ -237,30 +237,34 @@ function getRevenueImpactCopy(score: number | null, currency: string, locale: Lo
     return {
       value: locale === "es" ? "Potencial moderado" : locale === "en" ? "Moderate upside" : "Potentiel modere",
       range:
-        locale === "en"
-          ? `Approx. +${normalizedCurrency === "EUR" ? "EUR" : normalizedCurrency}200 to +${normalizedCurrency === "EUR" ? "EUR" : normalizedCurrency}500 / month`
-          : `≈ +${normalizedCurrency === "EUR" ? "€" : `${normalizedCurrency} `}200 a +${normalizedCurrency === "EUR" ? "€" : `${normalizedCurrency} `}500 / mois`,
+        locale === "es"
+          ? "Potencial estimado por el análisis"
+          : locale === "en"
+            ? "Potential estimated by the analysis"
+            : "Potentiel estime par l'analyse",
       detail:
         locale === "es"
-          ? "Varias mejoras todavía pueden desbloquear reservas adicionales."
+          ? "Varias mejoras todavía pueden reforzar el potencial de conversión."
           : locale === "en"
-            ? "Several improvements can still unlock additional bookings."
-            : "Plusieurs optimisations peuvent encore debloquer des reservations supplementaires.",
+            ? "Several improvements can still strengthen conversion potential."
+            : "Plusieurs optimisations peuvent encore renforcer le potentiel de conversion.",
     };
   }
 
   return {
     value: locale === "es" ? "Potencial bajo" : locale === "en" ? "Low upside" : "Potentiel faible",
-      range:
-        locale === "en"
-        ? `Approx. +${normalizedCurrency === "EUR" ? "EUR" : normalizedCurrency}200 to +${normalizedCurrency === "EUR" ? "EUR" : normalizedCurrency}500 / month`
-        : `≈ +${normalizedCurrency === "EUR" ? "€" : `${normalizedCurrency} `}200 a +${normalizedCurrency === "EUR" ? "€" : `${normalizedCurrency} `}500 / mois`,
+    range:
+      locale === "es"
+        ? "Potencial estimado por el análisis"
+        : locale === "en"
+          ? "Potential estimated by the analysis"
+          : "Potentiel estime par l'analyse",
     detail:
       locale === "es"
         ? "El anuncio ya funciona bien; prioriza mejoras incrementales."
         : locale === "en"
-          ? "Listing already performs well, focus on incremental gains."
-          : "L annonce performe deja bien, priorisez les gains incrementaux.",
+          ? "Listing already performs well; focus on incremental improvements."
+          : "L'annonce performe deja bien ; priorisez les ameliorations incrementales.",
   };
 }
 
