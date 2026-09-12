@@ -219,7 +219,7 @@ function getRevenueImpactCopy(score: number | null, currency: string, locale: Lo
 
   if (score < 4) {
     return {
-      value: locale === "es" ? "+12% de reservas estimadas" : locale === "en" ? "+12% estimated bookings" : "+12% de reservations estimees",
+      value: locale === "es" ? "Potencial de conversión" : locale === "en" ? "Conversion potential" : "Potentiel de conversion",
       range:
         locale === "en"
           ? `Approx. +${normalizedCurrency === "EUR" ? "EUR" : normalizedCurrency}200 to +${normalizedCurrency === "EUR" ? "EUR" : normalizedCurrency}500 / month`
