@@ -1,4 +1,5 @@
 import { getSearchEligibility } from "./searchEligibility";
+import { isCohort25CityTopicRepairPath } from "./cohort25CityTopicRepair";
 
 /**
  * City-topic URLs that already produced impressions in the
@@ -78,7 +79,8 @@ export function isCityTopicSitemapEligible(
 
   return (
     GSC_PROTECTED_CITY_TOPIC_PATHS.has(pathname) ||
-    SITEMAP_EXPERIMENT_CITY_TOPIC_PATHS.has(pathname)
+    SITEMAP_EXPERIMENT_CITY_TOPIC_PATHS.has(pathname) ||
+    isCohort25CityTopicRepairPath(pathname)
   );
 }
 
