@@ -431,10 +431,10 @@ function buildQuickWins(recommendations: string[], locale: Locale) {
         ? "Clarify the main promise in the first lines of the listing."
         : "Clarifiez la promesse principale dans les premieres lignes de l'annonce.",
     locale === "es"
-      ? "Actualiza las fotos principales para mejorar la tasa de clics."
+      ? "Actualiza las fotos principales para reforzar la presentación de la galería."
       : locale === "en"
-        ? "Refresh the lead photos to improve click-through rate."
-        : "Rafraichissez les photos de tete pour ameliorer le taux de clic.",
+        ? "Refresh the lead photos to strengthen the gallery presentation."
+        : "Rafraichissez les photos de tête pour renforcer la présentation de la galerie.",
     locale === "es"
       ? "Haz más visibles los servicios que diferencian tu alojamiento."
       : locale === "en"
