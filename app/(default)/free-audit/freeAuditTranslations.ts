@@ -137,7 +137,7 @@ export const freeAuditTranslations = {
       eyebrow: "Free market snapshot",
       title: "Discover a market-only pricing snapshot",
       subtitle:
-        "Norixo's free market snapshot for Airbnb and Booking listings shows the observed market range and median for your listing category before a full listing audit.",
+        "Norixo's free market snapshot supports Airbnb, Booking, Expedia, Agoda and Vrbo market sources and shows the observed range and median for your listing category before a full listing audit.",
       reassurance:
         "No credit card. No data extraction. No listing content or personal price is reviewed at this stage.",
     },
@@ -390,7 +390,7 @@ export const freeAuditTranslations = {
             "Yes. The market preview does not require a card and does not consume a paid audit credit.",
         },
         {
-          question: "Does Norixo connect to my Airbnb or Booking account?",
+          question: "Does Norixo connect to my platform account?",
           answer:
             "No. The free preview uses structured market inputs only and does not require any account connection.",
         },
@@ -434,7 +434,7 @@ export const freeAuditTranslations = {
       eyebrow: "Apercu gratuit du marche",
       title: "Decouvrez un apercu tarifaire du marche",
       subtitle:
-        "L'apercu gratuit du marche de Norixo pour les annonces Airbnb et Booking montre la fourchette observee et la mediane de votre categorie avant un audit complet de l'annonce.",
+        "L'apercu gratuit du marche de Norixo prend en charge les sources de marche Airbnb, Booking, Expedia, Agoda et Vrbo et montre la fourchette observee et la mediane de votre categorie avant un audit complet de l'annonce.",
       reassurance:
         "Aucune carte bancaire. Aucune extraction de donnees. Aucun contenu ni prix personnel de votre annonce n'est consulte.",
     },
@@ -689,7 +689,7 @@ export const freeAuditTranslations = {
             "Oui. L'apercu marche ne demande aucune carte bancaire et ne consomme aucun credit d'audit payant.",
         },
         {
-          question: "Norixo se connecte-t-il a mon compte Airbnb ou Booking ?",
+          question: "Norixo se connecte-t-il a mon compte de plateforme ?",
           answer:
             "Non. L'apercu gratuit utilise uniquement des informations structurees de marche et ne necessite aucune connexion a votre compte.",
         },
@@ -733,7 +733,7 @@ export const freeAuditTranslations = {
       eyebrow: "Vista previa gratuita del mercado",
       title: "Descubre una vision general de los precios del mercado",
       subtitle:
-        "La vista previa gratuita del mercado de Norixo para anuncios de Airbnb y Booking muestra el rango observado y la mediana de tu categoria antes de una auditoria completa del anuncio.",
+        "La vista previa gratuita del mercado de Norixo admite fuentes de mercado de Airbnb, Booking, Expedia, Agoda y Vrbo y muestra el rango observado y la mediana de tu categoria antes de una auditoria completa del anuncio.",
       reassurance:
         "Sin tarjeta bancaria. Sin extraccion de datos. No se analiza el contenido del anuncio ni tu precio personal en esta etapa.",
     },
@@ -987,7 +987,7 @@ export const freeAuditTranslations = {
             "Si. La vista previa del mercado no requiere tarjeta y no consume ningun credito de auditoria de pago.",
         },
         {
-          question: "Norixo se conecta a mi cuenta de Airbnb o Booking?",
+          question: "Norixo se conecta a mi cuenta de la plataforma?",
           answer:
             "No. La vista previa gratuita usa solo entradas estructuradas del mercado y no requiere ninguna conexion de cuenta.",
         },
@@ -1031,7 +1031,7 @@ export const freeAuditTranslations = {
       eyebrow: "Anteprima gratuita del mercato",
       title: "Scopri una panoramica dei prezzi di mercato",
       subtitle:
-        "L'anteprima gratuita del mercato di Norixo per gli annunci Airbnb e Booking mostra l'intervallo osservato e la mediana della tua categoria prima di un audit completo dell'annuncio.",
+        "L'anteprima gratuita del mercato di Norixo supporta fonti di mercato Airbnb, Booking, Expedia, Agoda e Vrbo e mostra l'intervallo osservato e la mediana della tua categoria prima di un audit completo dell'annuncio.",
       reassurance:
         "Nessuna carta di credito. Nessuna estrazione di dati. In questa fase non vengono analizzati ne il contenuto dell'annuncio ne il tuo prezzo personale.",
     },
@@ -1285,7 +1285,7 @@ export const freeAuditTranslations = {
             "Si. L'anteprima di mercato non richiede alcuna carta bancaria e non consuma alcun credito di audit a pagamento.",
         },
         {
-          question: "Norixo si collega al mio account Airbnb o Booking?",
+          question: "Norixo si collega al mio account della piattaforma?",
           answer:
             "No. L'anteprima gratuita usa solo informazioni strutturate di mercato e non richiede alcun accesso al tuo account.",
         },
@@ -1329,7 +1329,7 @@ export const freeAuditTranslations = {
       eyebrow: "Pre-visualizacao gratuita do mercado",
       title: "Descubra uma visao de precos baseada apenas no mercado",
       subtitle:
-        "A pre-visualizacao gratuita do mercado da Norixo para anuncios Airbnb e Booking mostra a faixa observada e a mediana da sua categoria antes de uma auditoria completa do anuncio.",
+        "A pre-visualizacao gratuita do mercado da Norixo suporta fontes de mercado Airbnb, Booking, Expedia, Agoda e Vrbo e mostra a faixa observada e a mediana da sua categoria antes de uma auditoria completa do anuncio.",
       reassurance:
         "Sem cartao de credito. Sem extracao de dados. Nesta fase nao analisamos o conteudo do anuncio nem o seu preco individual.",
     },
@@ -1583,7 +1583,7 @@ export const freeAuditTranslations = {
             "Sim. A pre-visualizacao do mercado nao exige cartao bancario e nao consome qualquer credito de auditoria paga.",
         },
         {
-          question: "A Norixo liga-se a minha conta Airbnb ou Booking?",
+          question: "A Norixo liga-se a minha conta da plataforma?",
           answer:
             "Nao. A pre-visualizacao gratuita usa apenas informacao estruturada de mercado e nao requer qualquer ligacao a sua conta.",
         },
@@ -1627,7 +1627,7 @@ export const freeAuditTranslations = {
       eyebrow: "Gratis marktpreview",
       title: "Ontdek een prijsbeeld dat alleen op de markt is gebaseerd",
       subtitle:
-        "De gratis marktpreview van Norixo voor Airbnb- en Booking-accommodaties toont de waargenomen prijsvork en mediaan voor jouw categorie voordat je een volledige advertentie-audit start.",
+        "De gratis marktpreview van Norixo ondersteunt marktbronnen van Airbnb, Booking, Expedia, Agoda en Vrbo en toont de waargenomen prijsvork en mediaan voor jouw categorie voordat je een volledige advertentie-audit start.",
       reassurance:
         "Geen creditcard. Geen gegevensverzameling. In deze stap wordt geen advertentie-inhoud of persoonlijke prijs geanalyseerd.",
     },
@@ -1881,7 +1881,7 @@ export const freeAuditTranslations = {
             "Ja. De marktpreview vraagt geen creditcard en verbruikt geen betaalde auditcredits.",
         },
         {
-          question: "Verbindt Norixo met mijn Airbnb- of Booking-account?",
+          question: "Verbindt Norixo met mijn platformaccount?",
           answer:
             "Nee. De gratis preview gebruikt alleen gestructureerde marktinformatie en vereist geen verbinding met je account.",
         },
@@ -1925,7 +1925,7 @@ export const freeAuditTranslations = {
       eyebrow: "Kostenlose Marktübersicht",
       title: "Entdecken Sie einen Marktuberblick auf Basis aggregierter Preise",
       subtitle:
-        "Die kostenlose Marktübersicht von Norixo für Airbnb- und Booking-Inserate zeigt die beobachtete Preisspanne und den Median Ihrer Kategorie vor einem vollständigen Inserats-Audit.",
+        "Die kostenlose Marktübersicht von Norixo unterstützt Marktquellen von Airbnb, Booking, Expedia, Agoda und Vrbo und zeigt die beobachtete Preisspanne und den Median Ihrer Kategorie vor einem vollständigen Inserats-Audit.",
       reassurance:
         "Keine Kreditkarte. Kein Datenabruf. In dieser Phase werden weder der Inhalt Ihrer Anzeige noch Ihr individueller Preis analysiert.",
     },
@@ -2179,7 +2179,7 @@ export const freeAuditTranslations = {
             "Ja. Die Marktvorschau erfordert keine Kreditkarte und verbraucht keine kostenpflichtigen Audit-Credits.",
         },
         {
-          question: "Verbindet sich Norixo mit meinem Airbnb- oder Booking-Konto?",
+          question: "Verbindet sich Norixo mit meinem Plattformkonto?",
           answer:
             "Nein. Die kostenlose Vorschau nutzt nur strukturierte Marktinformationen und benotigt keine Verbindung zu Ihrem Konto.",
         },
@@ -2223,7 +2223,7 @@ export const freeAuditTranslations = {
       eyebrow: "無料の市場スナップショット",
       title: "市場データだけで価格感をすばやく把握",
       subtitle:
-        "NorixoのAirbnbおよびBooking掲載向け無料市場スナップショットでは、完全なリスティング監査の前に、カテゴリーの観測価格帯と中央値を確認できます。",
+        "Norixoの無料市場スナップショットはAirbnb、Booking、Expedia、Agoda、Vrboの市場ソースに対応し、完全なリスティング監査の前にカテゴリーの観測価格帯と中央値を確認できます。",
       reassurance:
         "クレジットカード不要。データ抽出なし。この段階では掲載内容やあなた自身の価格は分析しません。",
     },
@@ -2477,7 +2477,7 @@ export const freeAuditTranslations = {
             "はい。市場プレビューにクレジットカードは不要で、有料監査クレジットも消費しません。",
         },
         {
-          question: "Norixo は Airbnb や Booking のアカウントに接続しますか？",
+          question: "Norixo はプラットフォームのアカウントに接続しますか？",
           answer:
             "いいえ。無料プレビューで使うのは構造化された市場情報だけで、アカウント接続は必要ありません。",
         },
@@ -2521,7 +2521,7 @@ export const freeAuditTranslations = {
       eyebrow: "免费市场快照",
       title: "快速查看仅基于市场数据的价格概览",
       subtitle:
-        "Norixo 面向 Airbnb 和 Booking 房源的免费市场快照，可在进行完整房源审核前展示你所在类别的观察价格范围和中位数。",
+        "Norixo 的免费市场快照支持 Airbnb、Booking、Expedia、Agoda 和 Vrbo 市场数据源，可在进行完整房源审核前展示你所在类别的观察价格范围和中位数。",
       reassurance:
         "无需信用卡。无需数据抓取。这个阶段不会分析你的房源内容或个人定价。",
     },
@@ -2774,7 +2774,7 @@ export const freeAuditTranslations = {
             "是的。市场预览不需要信用卡，也不会消耗任何付费审计额度。",
         },
         {
-          question: "Norixo 会连接我的 Airbnb 或 Booking 账户吗？",
+          question: "Norixo 会连接我的平台账户吗？",
           answer:
             "不会。免费预览只使用结构化市场信息，不需要连接你的账户。",
         },
@@ -2818,7 +2818,7 @@ export const freeAuditTranslations = {
       eyebrow: "무료 시장 스냅샷",
       title: "시장 데이터만으로 가격 포지션을 빠르게 확인하세요",
       subtitle:
-        "Norixo의 Airbnb 및 Booking 숙소용 무료 시장 스냅샷은 전체 숙소 감사 전에 해당 카테고리의 관측 가격 범위와 중앙값을 보여 줍니다.",
+        "Norixo의 무료 시장 스냅샷은 Airbnb, Booking, Expedia, Agoda 및 Vrbo 시장 소스를 지원하며 전체 숙소 감사 전에 해당 카테고리의 관측 가격 범위와 중앙값을 보여 줍니다.",
       reassurance:
         "신용카드가 필요 없습니다. 데이터 추출도 하지 않습니다. 이 단계에서는 숙소 콘텐츠나 개인 가격을 분석하지 않습니다.",
     },
@@ -3072,7 +3072,7 @@ export const freeAuditTranslations = {
             "네. 시장 미리보기에는 신용카드가 필요 없고, 유료 감사 크레딧도 소모되지 않습니다.",
         },
         {
-          question: "Norixo가 제 Airbnb 또는 Booking 계정에 연결되나요?",
+          question: "Norixo가 제 플랫폼 계정에 연결되나요?",
           answer:
             "아니요. 무료 미리보기는 구조화된 시장 정보만 사용하며 계정 연결이 필요하지 않습니다.",
         },
@@ -3116,7 +3116,7 @@ export const freeAuditTranslations = {
       eyebrow: "لقطة مجانية للسوق",
       title: "اكتشف لمحة سعرية مبنية على بيانات السوق فقط",
       subtitle:
-        "تعرض اللقطة المجانية للسوق من Norixo لإعلانات Airbnb وBooking النطاق السعري المرصود والقيمة الوسيطة لفئتك قبل التدقيق الكامل للإعلان.",
+        "تدعم اللقطة المجانية للسوق من Norixo مصادر السوق من Airbnb وBooking وExpedia وAgoda وVrbo، وتعرض النطاق السعري المرصود والقيمة الوسيطة لفئتك قبل التدقيق الكامل للإعلان.",
       reassurance:
         "من دون بطاقة مصرفية. من دون استخراج البيانات. لا يتم تحليل محتوى إعلانك ولا سعرك الفردي في هذه المرحلة.",
     },
@@ -3369,7 +3369,7 @@ export const freeAuditTranslations = {
             "نعم. معاينة السوق لا تتطلب بطاقة مصرفية ولا تستهلك اي رصيد لتدقيق مدفوع.",
         },
         {
-          question: "هل تتصل Norixo بحسابي على Airbnb او Booking؟",
+          question: "هل تتصل Norixo بحسابي على المنصة؟",
           answer:
             "لا. تستخدم المعاينة المجانية معلومات سوق منظمة فقط ولا تتطلب اي اتصال بحسابك.",
         },

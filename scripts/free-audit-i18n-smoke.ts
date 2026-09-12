@@ -158,7 +158,7 @@ async function main() {
   );
   assert.equal(
     freeAuditTranslations.en.form.submitIdle,
-    "See my free analysis",
+    "View my market snapshot",
   );
   assert.equal(
     freeAuditTranslations.en.hero.reassurance,
@@ -358,7 +358,7 @@ async function main() {
     );
     assert.equal(
       localizedMetadata.alternates?.languages?.["x-default"],
-      "https://norixo.io",
+      "https://norixo.io/free-audit",
     );
   }
 

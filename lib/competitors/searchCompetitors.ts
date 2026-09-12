@@ -1,6 +1,10 @@
 import { extractListing } from "@/lib/extractors";
 import { bookingUrlHasStayDates, buildBookingUrlWithDates, cleanBookingCanonicalUrl } from "@/lib/extractors/booking-url";
 import type { ExtractedListing } from "@/lib/extractors/types";
+import {
+  evaluatePricingOnlyExtractionReliability,
+  isUnreliablePricingOnlyExtraction,
+} from "@/lib/extractors/pricingOnlyExtractionReliability";
 import { fetchAirbnbRuntimeGraphql } from "@/lib/airbnb/runtime/fetchAirbnbRuntimeGraphql";
 import { chromium, type Browser, type Page } from "playwright-core";
 import { searchAgodaCompetitorCandidates } from "./agoda-search";
@@ -6088,6 +6092,29 @@ export async function searchCompetitorsAroundTarget(
         extractedListing && candidate.source === "airbnb" && candidate.sourceKind !== "market_memory_seed"
           ? mergeAirbnbSearchCandidatePricing(extractedListing, candidate)
           : extractedListing;
+      if (
+        listing &&
+        candidate.sourceKind !== "market_memory_seed" &&
+        isUnreliablePricingOnlyExtraction(listing)
+      ) {
+        const reliability =
+          evaluatePricingOnlyExtractionReliability(listing);
+
+        console.warn("[market][competitor-pricing-only-unreliable]", {
+          url: candidate.url,
+          source: candidate.source,
+          platform: reliability.platform,
+          reasons: reliability.reasons,
+          challengeDetected: reliability.challengeDetected,
+          hasPositivePrice: reliability.hasPositivePrice,
+          price: reliability.price,
+          rawStayPrice: reliability.rawStayPrice,
+          stayNights: reliability.stayNights,
+        });
+
+        return null;
+      }
+
       if (candidate.source === "booking") {
         logBookingMarrakechPriceRecoveryDiagnostic({
           stage: listing ? "after_extract" : "after_extract_null",

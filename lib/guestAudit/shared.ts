@@ -326,12 +326,10 @@ export function validateGuestListingUrl(input: string): {
       return { valid: false, platform, reason: URL_INCOMPLETE_MESSAGE };
     }
   } else if (platform === "expedia") {
-    if (!hostname.endsWith("expedia.com") && !hostname.endsWith("expedia.fr")) {
-      return { valid: false, platform, reason: PLATFORM_UNSUPPORTED_MESSAGE };
-    }
-    if (pathname === "/" || pathname.length < 2) {
-      return { valid: false, platform, reason: URL_INCOMPLETE_MESSAGE };
-    }
+    // Expedia listing extraction remains available internally for controlled
+    // testing, but it is not reliable enough to expose as a customer audit
+    // target. Fail closed before any audit can be launched.
+    return { valid: false, platform, reason: PLATFORM_UNSUPPORTED_MESSAGE };
   } else {
     return { valid: false, platform, reason: PLATFORM_UNSUPPORTED_MESSAGE };
   }

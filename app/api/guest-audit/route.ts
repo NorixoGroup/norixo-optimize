@@ -9,12 +9,32 @@ import {
 import { guessListingCity } from "@/lib/competitors/filterComparableListings";
 import { extractListing, resolveExtractor } from "@/lib/extractors";
 import {
+  AIRBNB_EXTRACTION_UNAVAILABLE_BODY,
+  evaluateAirbnbExtractionReliability,
+  isUnreliableAirbnbExtraction,
+} from "@/lib/extractors/airbnbExtractionReliability";
+import {
   BOOKING_EXTRACTION_UNAVAILABLE_BODY,
   isUnreliableBookingExtraction,
   logBookingTargetExtractionUnreliableNoCredit,
   logBookingTargetExtractionUnreliable,
 } from "@/lib/extractors/bookingExtractionReliability";
+import {
+  EXPEDIA_EXTRACTION_UNAVAILABLE_BODY,
+  evaluateExpediaExtractionReliability,
+  isUnreliableExpediaExtraction,
+} from "@/lib/extractors/expediaExtractionReliability";
+import {
+  AGODA_EXTRACTION_UNAVAILABLE_BODY,
+  evaluateAgodaExtractionReliability,
+  isUnreliableAgodaExtraction,
+} from "@/lib/extractors/agodaExtractionReliability";
 import type { ExtractedListing } from "@/lib/extractors/types";
+import {
+  evaluateVrboExtractionReliability,
+  isUnreliableVrboExtraction,
+  VRBO_EXTRACTION_UNAVAILABLE_BODY,
+} from "@/lib/extractors/vrboExtractionReliability";
 import { buildGuestAuditPreview } from "@/lib/guestAudit/buildGuestAuditPreview";
 import { buildTrustInsight } from "@/lib/guestAudit/buildTrustInsight";
 import {
@@ -1338,6 +1358,27 @@ export async function POST(request: NextRequest) {
       console.error("[guest-audit] primary extraction failed", error);
     }
 
+    if (extracted && isUnreliableAirbnbExtraction(extracted)) {
+      const reliability =
+        evaluateAirbnbExtractionReliability(extracted);
+
+      console.warn("[guest-audit][airbnb][target-extraction-unreliable]", {
+        url: normalizedUrl,
+        reasons: reliability.reasons,
+        titleLength: reliability.titleLength,
+        descriptionLength: reliability.descriptionLength,
+        photoCount: reliability.photoCount,
+        amenityCount: reliability.amenityCount,
+        challengeDetected: reliability.challengeDetected,
+        errorPageDetected: reliability.errorPageDetected,
+      });
+
+      return NextResponse.json(
+        { ...AIRBNB_EXTRACTION_UNAVAILABLE_BODY },
+        { status: 503 },
+      );
+    }
+
     if (extracted && isUnreliableBookingExtraction(extracted)) {
       logBookingTargetExtractionUnreliable("guest_audit", normalizedUrl, extracted);
       logBookingTargetExtractionUnreliableNoCredit({
@@ -1346,6 +1387,52 @@ export async function POST(request: NextRequest) {
         reason: "target-extraction-unreliable",
       });
       return NextResponse.json({ ...BOOKING_EXTRACTION_UNAVAILABLE_BODY }, { status: 503 });
+    }
+
+    if (extracted && isUnreliableAgodaExtraction(extracted)) {
+      const reliability =
+        evaluateAgodaExtractionReliability(extracted);
+
+      console.warn("[guest-audit][agoda][target-extraction-unreliable]", {
+        url: normalizedUrl,
+        reasons: reliability.reasons,
+        titleLength: reliability.titleLength,
+        descriptionLength: reliability.descriptionLength,
+        photoCount: reliability.photoCount,
+        amenityCount: reliability.amenityCount,
+      });
+
+      return NextResponse.json(
+        { ...AGODA_EXTRACTION_UNAVAILABLE_BODY },
+        { status: 503 },
+      );
+    }
+
+    if (extracted && isUnreliableExpediaExtraction(extracted)) {
+      const reliability = evaluateExpediaExtractionReliability(extracted);
+      console.warn("[guest-audit][expedia][target-extraction-unreliable]", {
+        url: normalizedUrl,
+        reasons: reliability.reasons,
+        titleLength: reliability.titleLength,
+        descriptionLength: reliability.descriptionLength,
+        photoCount: reliability.photoCount,
+        amenityCount: reliability.amenityCount,
+      });
+      return NextResponse.json({ ...EXPEDIA_EXTRACTION_UNAVAILABLE_BODY }, { status: 503 });
+    }
+
+    if (extracted && isUnreliableVrboExtraction(extracted)) {
+      const reliability = evaluateVrboExtractionReliability(extracted);
+      console.warn("[guest-audit][vrbo][target-extraction-unreliable]", {
+        url: normalizedUrl,
+        reasons: reliability.reasons,
+        challengeDetected: reliability.challengeDetected,
+        titleLength: reliability.titleLength,
+        descriptionLength: reliability.descriptionLength,
+        photoCount: reliability.photoCount,
+        amenityCount: reliability.amenityCount,
+      });
+      return NextResponse.json({ ...VRBO_EXTRACTION_UNAVAILABLE_BODY }, { status: 503 });
     }
 
     if (extracted && extractionValidation?.valid) {
