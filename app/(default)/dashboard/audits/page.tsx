@@ -1848,14 +1848,8 @@ export default function AuditsPage() {
     null;
   const comparableCount = latestAuditPayload?.marketPositioning?.comparableCount ?? 0;
   const latestScore = latestAudit?.overall_score ?? null;
-  const estimatedTopPercent =
-    latestScore !== null ? Math.max(10, Math.min(90, Math.round((10 - latestScore) * 10))) : null;
-  const quickWinCards = quickWins.slice(0, 3).map((item, index) => ({
+  const quickWinCards = quickWins.slice(0, 3).map((item) => ({
     title: item,
-    impact:
-      latestScore !== null
-        ? `+${Math.max(2, Math.round((10 - latestScore) + 2 + index))}%`
-        : `+${4 + index}%`,
   }));
   const heroIntro =
     latestScore !== null && latestScore >= 7
