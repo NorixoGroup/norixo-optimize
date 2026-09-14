@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: "Terms of Service | Norixo",
   description:
     "Terms of service for Norixo, including accounts, audits, billing, AI-assisted outputs, backlinks, and service limitations.",
-  alternates: buildHreflangAlternates("/terms"),
+  alternates: buildHreflangAlternates("/terms", { locales: ["en"] }),
   openGraph: {
     title: "Terms of Service | Norixo",
     description:

@@ -68,16 +68,6 @@ export function buildCitySchema(input: CitySchemaInput): Record<string, unknown>
     ],
   };
 
-  const softwareApplication: Record<string, unknown> = {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    name: "Norixo",
-    applicationCategory: "MarketingApplication",
-    operatingSystem: "Web",
-    url: `${baseUrl.replace(/\/$/, "")}/analyze`,
-    description:
-      "Norixo is a web-based SaaS tool that audits Airbnb listings, benchmarks them against competitors and recommends changes to improve bookings.",
-  };
 
   const breadcrumbList: Record<string, unknown> = {
     "@context": "https://schema.org",
@@ -104,5 +94,5 @@ export function buildCitySchema(input: CitySchemaInput): Record<string, unknown>
     ],
   };
 
-  return [webPage, faqPage, softwareApplication, breadcrumbList];
+  return [webPage, faqPage, breadcrumbList];
 }

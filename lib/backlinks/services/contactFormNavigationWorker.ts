@@ -28,6 +28,7 @@ import {
   revalidateContactFormExecutionContext,
   type ContactFormConfirmationObservation,
   type ContactFormFieldLocator,
+  type ContactFormSelectOptionExpectation,
   type ContactFormSubmitControl,
   type ContactFormSubmitRequestAllowance,
 } from "@/lib/backlinks/services/contactFormSubmission";
@@ -56,6 +57,11 @@ export type ContactFormBrowserPage = {
   inspectForms: () => Promise<ContactFormDiscoveredPage>;
   readFieldValue: (locator: ContactFormFieldLocator) => Promise<string | null>;
   fillField: (locator: ContactFormFieldLocator, value: string, options: { timeoutMs: number }) => Promise<void>;
+  selectFieldOption: (
+    locator: ContactFormFieldLocator,
+    option: ContactFormSelectOptionExpectation,
+    options: { timeoutMs: number },
+  ) => Promise<void>;
   listSubmitControls: (formOrdinal: number) => Promise<readonly ContactFormSubmitControl[]>;
   clickSubmitControl: (control: ContactFormSubmitControl, options: { timeoutMs: number }) => Promise<void>;
   observeSubmissionConfirmation: (input: { expectedOrigin: string; selectedFormOrdinal: number; selectedFormFingerprint: string; timeoutMs: number }) => Promise<ContactFormConfirmationObservation>;
@@ -163,6 +169,94 @@ async function createPlaywrightBrowserSession(browser: Browser): Promise<Contact
   };
 }
 
+// This is deliberately a browser expression, rather than a TypeScript callback passed to
+// page.evaluate. tsx/esbuild may inject module helpers (for example __name) into serialized
+// callbacks; those helpers do not exist in the page execution context.
+const INSPECT_FORMS_EXPRESSION = String.raw`(() => {
+  const maxForms = 5;
+  const maxControlsPerForm = 30;
+  const maxOptionsPerSelect = 50;
+  const maxTextLength = 80;
+  const clamp = (value, limit = maxTextLength) => {
+    const text = (value || "").trim().replace(/\s+/g, " ");
+    return text.length > limit ? text.slice(0, limit - 1) + "…" : text;
+  };
+  const nullable = (value, limit = maxTextLength) => {
+    const text = clamp(value, limit);
+    return text ? text : null;
+  };
+  const normalizeText = (value) => clamp(value).normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+  const visible = (element) => {
+    const style = window.getComputedStyle(element);
+    return style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0" && element.getClientRects().length > 0;
+  };
+  const textOf = (element) => nullable(element ? element.textContent : null);
+  const textByIds = (ids) => {
+    if (!ids) return null;
+    return nullable(ids.split(/\s+/).map((id) => { const item = document.getElementById(id); return item ? item.textContent || "" : ""; }).join(" "));
+  };
+  const labelsFor = (control) => {
+    const direct = Array.from(control.labels || []).map((label) => label.textContent || "");
+    const id = control.id ? Array.from(document.querySelectorAll("label[for=\"" + CSS.escape(control.id) + "\"]")).map((label) => label.textContent || "") : [];
+    return nullable(direct.concat(id).join(" "));
+  };
+  const formHeading = (form) => {
+    const labelled = textByIds(form.getAttribute("aria-labelledby"));
+    if (labelled) return labelled;
+    const aria = nullable(form.getAttribute("aria-label"));
+    if (aria) return aria;
+    const previous = form.previousElementSibling;
+    if (previous && /^(H1|H2|H3|H4|H5|H6)$/.test(previous.tagName)) return textOf(previous);
+    return null;
+  };
+  const controlsFor = (form) => Array.from(form.querySelectorAll("input, textarea, select, button")).slice(0, maxControlsPerForm).map((element, ordinal) => {
+    const tag = element.tagName.toLowerCase();
+    const rawType = tag === "input" || tag === "button" ? element.type : tag;
+    const value = "value" in element ? element.value : "";
+    const options = tag === "select" ? Array.from(element.options).slice(0, maxOptionsPerSelect).map((option, optionOrdinal) => ({
+      ordinal: optionOrdinal,
+      labelText: clamp(option.label || option.textContent || ""),
+      normalizedLabel: normalizeText(option.label || option.textContent || ""),
+      valuePresent: Boolean(option.value && option.value.trim().length > 0),
+      disabled: option.disabled === true,
+      selected: option.selected === true,
+    })) : undefined;
+    return {
+      ordinal,
+      tag,
+      type: clamp(rawType || tag, 32),
+      name: nullable(element.getAttribute("name")),
+      id: nullable(element.id),
+      autocomplete: nullable(element.getAttribute("autocomplete")),
+      labelText: labelsFor(element),
+      ariaLabel: nullable(element.getAttribute("aria-label")),
+      ariaLabelledbyText: textByIds(element.getAttribute("aria-labelledby")),
+      placeholder: nullable(element.getAttribute("placeholder")),
+      required: element.hasAttribute("required"),
+      disabled: element.disabled === true,
+      readOnly: "readOnly" in element ? element.readOnly === true : false,
+      hidden: tag === "input" && rawType.toLowerCase() === "hidden",
+      visible: visible(element),
+      valuePresent: value.trim().length > 0,
+      optionsCount: tag === "select" ? element.options.length : undefined,
+      options,
+    };
+  });
+  return {
+    pageUrl: window.location.href,
+    pageTitle: clamp(document.title),
+    forms: Array.from(document.forms).slice(0, maxForms).map((form, ordinal) => ({
+      ordinal,
+      action: nullable(form.getAttribute("action"), 300),
+      method: nullable(form.getAttribute("method"), 12),
+      labelText: formHeading(form),
+      legendText: textOf(form.querySelector("fieldset legend")),
+      buttonText: nullable(Array.from(form.querySelectorAll("button, input[type='submit'], input[type='button']")).map((button) => button.textContent || button.getAttribute("value") || "").join(" ")),
+      controls: controlsFor(form),
+    })),
+  };
+})()`;
+
 function adaptPlaywrightPage(page: Page): ContactFormBrowserPage {
   const controlLocator = (locator: ContactFormFieldLocator) => page.locator("form").nth(locator.formOrdinal).locator("input, textarea, select, button").nth(locator.controlOrdinal);
   return {
@@ -195,95 +289,67 @@ function adaptPlaywrightPage(page: Page): ContactFormBrowserPage {
         const hasLoginWall = hasPasswordField || /\b(sign in|log in|login required|create an account|members only)\b/i.test(bodyText);
         return { hasCaptcha, hasLoginWall, hasPasswordField };
       }),
-    inspectForms: () =>
-      page.evaluate(() => {
-        const maxForms = 5;
-        const maxControlsPerForm = 30;
-        const maxTextLength = 80;
-        const clamp = (value: string | null | undefined, limit = maxTextLength) => {
-          const text = (value ?? "").trim().replace(/\s+/g, " ");
-          return text.length > limit ? `${text.slice(0, limit - 1)}…` : text;
-        };
-        const nullable = (value: string | null | undefined, limit = maxTextLength) => {
-          const text = clamp(value, limit);
-          return text ? text : null;
-        };
-        const visible = (element: Element) => {
-          const htmlElement = element as HTMLElement;
-          const style = window.getComputedStyle(htmlElement);
-          return style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0" && htmlElement.getClientRects().length > 0;
-        };
-        const textOf = (element: Element | null) => nullable(element?.textContent ?? null);
-        const textByIds = (ids: string | null) => {
-          if (!ids) return null;
-          return nullable(
-            ids
-              .split(/\s+/)
-              .map((id) => document.getElementById(id)?.textContent ?? "")
-              .join(" "),
-          );
-        };
-        const labelsFor = (control: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | HTMLButtonElement) => {
-          const direct = Array.from(control.labels ?? []).map((label) => label.textContent ?? "");
-          const id = control.id ? Array.from(document.querySelectorAll(`label[for="${CSS.escape(control.id)}"]`)).map((label) => label.textContent ?? "") : [];
-          return nullable([...direct, ...id].join(" "));
-        };
-        const formHeading = (form: HTMLFormElement) => {
-          const labelled = textByIds(form.getAttribute("aria-labelledby"));
-          if (labelled) return labelled;
-          const aria = nullable(form.getAttribute("aria-label"));
-          if (aria) return aria;
-          const previous = form.previousElementSibling;
-          if (previous && /^(H1|H2|H3|H4|H5|H6)$/.test(previous.tagName)) return textOf(previous);
-          return null;
-        };
-        const controlsFor = (form: HTMLFormElement) =>
-          Array.from(form.querySelectorAll("input, textarea, select, button"))
-            .slice(0, maxControlsPerForm)
-            .map((element, ordinal) => {
-              const tag = element.tagName.toLowerCase() as "input" | "textarea" | "select" | "button";
-              const input = element as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | HTMLButtonElement;
-              const rawType = tag === "input" || tag === "button" ? (input as HTMLInputElement | HTMLButtonElement).type : tag;
-              const value = "value" in input ? input.value : "";
-              return {
-                ordinal,
-                tag,
-                type: clamp(rawType || tag, 32),
-                name: nullable(input.getAttribute("name")),
-                id: nullable(input.id),
-                autocomplete: nullable(input.getAttribute("autocomplete")),
-                labelText: labelsFor(input),
-                ariaLabel: nullable(input.getAttribute("aria-label")),
-                ariaLabelledbyText: textByIds(input.getAttribute("aria-labelledby")),
-                placeholder: nullable(input.getAttribute("placeholder")),
-                required: input.hasAttribute("required"),
-                disabled: (input as HTMLInputElement).disabled === true,
-                readOnly: "readOnly" in input ? input.readOnly === true : false,
-                hidden: tag === "input" && rawType.toLowerCase() === "hidden",
-                visible: visible(input),
-                valuePresent: value.trim().length > 0,
-                optionsCount: tag === "select" ? (input as HTMLSelectElement).options.length : undefined,
-              };
-            });
-        return {
-          pageUrl: window.location.href,
-          pageTitle: clamp(document.title),
-          forms: Array.from(document.forms)
-            .slice(0, maxForms)
-            .map((form, ordinal) => ({
-              ordinal,
-              action: nullable(form.getAttribute("action"), 300),
-              method: nullable(form.getAttribute("method"), 12),
-              labelText: formHeading(form),
-              legendText: textOf(form.querySelector("fieldset legend")),
-              buttonText: nullable(Array.from(form.querySelectorAll("button, input[type='submit'], input[type='button']")).map((button) => button.textContent || button.getAttribute("value") || "").join(" ")),
-              controls: controlsFor(form),
-            })),
-        };
-      }),
+    inspectForms: () => page.evaluate(INSPECT_FORMS_EXPRESSION) as Promise<ContactFormDiscoveredPage>,
     readFieldValue: (locator) => controlLocator(locator).inputValue({ timeout: 5_000 }).catch(() => null),
     fillField: async (locator, value, options) => {
       await controlLocator(locator).fill(value, { timeout: options.timeoutMs });
+    },
+    selectFieldOption: async (locator, expectedOption, options) => {
+      if (
+        !Number.isInteger(expectedOption.ordinal) ||
+        expectedOption.ordinal < 0 ||
+        !expectedOption.valuePresent ||
+        expectedOption.disabled
+      ) {
+        throw new Error("CONTACT_FORM_SELECT_OPTION_EXPECTATION_INVALID");
+      }
+
+      const select = controlLocator(locator);
+      const optionsLocator = select.locator("option");
+      const optionCount = await optionsLocator.count();
+
+      if (expectedOption.ordinal >= optionCount) {
+        throw new Error("CONTACT_FORM_SELECT_OPTION_DRIFT");
+      }
+
+      const option = optionsLocator.nth(expectedOption.ordinal);
+      const rawLabel =
+        (await option.getAttribute("label")) ??
+        (await option.textContent()) ??
+        "";
+
+      const compactLabel = rawLabel.trim().replace(/\s+/g, " ");
+      const boundedLabel =
+        compactLabel.length > 80
+          ? `${compactLabel.slice(0, 79)}…`
+          : compactLabel;
+
+      const rawValue = (await option.getAttribute("value")) ?? "";
+      const disabled = await option.isDisabled();
+
+      if (
+        boundedLabel !== expectedOption.labelText ||
+        rawValue.trim().length === 0 ||
+        disabled
+      ) {
+        throw new Error("CONTACT_FORM_SELECT_OPTION_DRIFT");
+      }
+
+      await select.selectOption(
+        { index: expectedOption.ordinal },
+        { timeout: options.timeoutMs },
+      );
+
+      const selectedValue = await select.inputValue({
+        timeout: options.timeoutMs,
+      });
+
+      if (
+        selectedValue.trim().length === 0 ||
+        selectedValue !== rawValue
+      ) {
+        throw new Error("CONTACT_FORM_SELECT_OPTION_READBACK_MISMATCH");
+      }
     },
     listSubmitControls: async (formOrdinal) => {
       type SubmitControlRaw = Omit<ContactFormSubmitControl, "fingerprint">;
@@ -666,6 +732,8 @@ async function executeClaimedContactFormNavigationWorkerOnce(
       page: await session.page.inspectForms(),
       approvedContent: {
         senderName: context.approval.sender_name,
+        senderFirstName: context.approval.sender_first_name,
+        senderLastName: context.approval.sender_last_name,
         senderEmail: context.approval.sender_email,
         senderCompany: context.approval.sender_company,
         senderWebsite: context.approval.sender_website,

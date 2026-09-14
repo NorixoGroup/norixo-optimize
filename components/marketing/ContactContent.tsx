@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+
 import { useTranslation } from "@/components/i18n/useTranslation";
 import { contactI18n } from "@/data/marketing/contactI18n";
 
@@ -12,23 +13,64 @@ export function ContactContent() {
       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
         {copy.eyebrow}
       </p>
+
       <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
         {copy.title}
       </h1>
+
       <div className="mt-8 space-y-4 text-sm leading-7 text-slate-300">
         <p>
-          {copy.paragraphOneBeforeEmail} (
-          {copy.paragraphOneAfterEmail}{" "}
+          {copy.introBeforeEmail}{" "}
           <a
             className="font-medium text-orange-300 underline-offset-4 hover:underline"
             href="mailto:support@norixo.io"
           >
             support@norixo.io
           </a>
-          ).
+          .
         </p>
+
         <p>{copy.paragraphTwo}</p>
       </div>
+
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold text-white">
+          {copy.topicsTitle}
+        </h2>
+
+        <ul className="mt-4 space-y-3 text-sm leading-7 text-slate-300">
+          {copy.topics.map((topic) => (
+            <li key={topic} className="flex gap-3">
+              <span aria-hidden="true" className="text-orange-300">
+                •
+              </span>
+              <span>{topic}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold text-white">
+          {copy.detailsTitle}
+        </h2>
+
+        <p className="mt-4 text-sm leading-7 text-slate-300">
+          {copy.detailsIntro}
+        </p>
+
+        <ul className="mt-4 space-y-3 text-sm leading-7 text-slate-300">
+          {copy.details.map((detail) => (
+            <li key={detail} className="flex gap-3">
+              <span aria-hidden="true" className="text-orange-300">
+                •
+              </span>
+              <span>{detail}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
       <p className="mt-10">
         <Link
           href="/"

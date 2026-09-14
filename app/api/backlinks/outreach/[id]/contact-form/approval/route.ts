@@ -4,15 +4,31 @@ import { approveContactFormInitial } from "@/lib/backlinks/repositories/contactF
 import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
-type ApprovalBody = { senderName: string; senderEmail: string; senderCompany: string; senderWebsite: string };
+type ApprovalBody = { senderName: string; senderEmail: string; senderCompany: string; senderWebsite: string; senderFirstName?: string | null; senderLastName?: string | null };
+
+const REQUIRED_FIELDS = ["senderName", "senderEmail", "senderCompany", "senderWebsite"] as const;
+const OPTIONAL_SPLIT_IDENTITY_FIELDS = ["senderFirstName", "senderLastName"] as const;
+const APPROVAL_FIELDS = [...REQUIRED_FIELDS, ...OPTIONAL_SPLIT_IDENTITY_FIELDS] as const;
+
+function optionalSenderIdentityPart(value: unknown): string | null | undefined {
+  if (value == null) return null;
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim();
+  if (!normalized) return null;
+  if (normalized.length > 120) return undefined;
+  return normalized;
+}
+
 function parseBody(value: unknown): ApprovalBody | null {
   if (typeof value !== "object" || value == null || Array.isArray(value)) return null;
   const body = value as Record<string, unknown>;
   const keys = Object.keys(body);
-  if (keys.length !== 4 || !keys.every((key) => ["senderName", "senderEmail", "senderCompany", "senderWebsite"].includes(key))) return null;
-  const fields = ["senderName", "senderEmail", "senderCompany", "senderWebsite"] as const;
-  if (!fields.every((field) => typeof body[field] === "string" && body[field].trim())) return null;
-  return { senderName: body.senderName as string, senderEmail: body.senderEmail as string, senderCompany: body.senderCompany as string, senderWebsite: body.senderWebsite as string };
+  if (keys.length < REQUIRED_FIELDS.length || keys.length > APPROVAL_FIELDS.length || !keys.every((key) => (APPROVAL_FIELDS as readonly string[]).includes(key))) return null;
+  if (!REQUIRED_FIELDS.every((field) => typeof body[field] === "string" && body[field].trim())) return null;
+  const senderFirstName = optionalSenderIdentityPart(body.senderFirstName);
+  const senderLastName = optionalSenderIdentityPart(body.senderLastName);
+  if (senderFirstName === undefined || senderLastName === undefined) return null;
+  return { senderName: body.senderName as string, senderEmail: body.senderEmail as string, senderCompany: body.senderCompany as string, senderWebsite: body.senderWebsite as string, senderFirstName, senderLastName };
 }
 
 export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {

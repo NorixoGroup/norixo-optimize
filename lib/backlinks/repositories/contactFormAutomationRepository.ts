@@ -21,6 +21,12 @@ export type ContactFormRunExecutionContext = {
 };
 
 function required(value: string, field: string) { const normalized = value.trim(); if (!normalized) throw new BacklinkRepositoryError({ code: "VALIDATION", operation: "contactFormAutomation", message: `${field} is required.` }); return normalized; }
+function optionalSenderIdentityPart(value: string | null | undefined, field: string) {
+  const normalized = value?.trim() ?? "";
+  if (!normalized) return null;
+  if (normalized.length > 120) throw new BacklinkRepositoryError({ code: "VALIDATION", operation: "contactFormAutomation", message: `${field} must be 120 characters or fewer.` });
+  return normalized;
+}
 function rpcError(operation: string, error: unknown) { return normalizeBacklinkRepositoryError(operation, error); }
 function contactFormVerificationKey(contactId: string, formUrl: string) { return `${contactId}\n${formUrl}`; }
 
@@ -139,8 +145,8 @@ export async function getContactFormRunExecutionContext(client: BacklinkReposito
   return { run, approval: approvalResult.data, outreach: outreachResult.data, contact: contactResult.data, opportunity: opportunityResult.data, outreachAttemptCount: attemptsResult.count ?? 0 };
 }
 
-export async function approveContactFormInitial(client: BacklinkRepositoryClient, input: { workspaceId: string; outreachId: string; approvedByUserId: string; senderName: string; senderEmail: string; senderCompany: string; senderWebsite: string }) {
-  const args: Database["public"]["Functions"]["approve_backlink_contact_form_initial_v1"]["Args"] = { p_workspace_id: required(input.workspaceId, "workspaceId"), p_outreach_id: required(input.outreachId, "outreachId"), p_approved_by_user_id: required(input.approvedByUserId, "approvedByUserId"), p_sender_name: required(input.senderName, "senderName"), p_sender_email: required(input.senderEmail, "senderEmail"), p_sender_company: required(input.senderCompany, "senderCompany"), p_sender_website: required(input.senderWebsite, "senderWebsite") };
+export async function approveContactFormInitial(client: BacklinkRepositoryClient, input: { workspaceId: string; outreachId: string; approvedByUserId: string; senderName: string; senderEmail: string; senderCompany: string; senderWebsite: string; senderFirstName?: string | null; senderLastName?: string | null }) {
+  const args: Database["public"]["Functions"]["approve_backlink_contact_form_initial_v1"]["Args"] = { p_workspace_id: required(input.workspaceId, "workspaceId"), p_outreach_id: required(input.outreachId, "outreachId"), p_approved_by_user_id: required(input.approvedByUserId, "approvedByUserId"), p_sender_name: required(input.senderName, "senderName"), p_sender_email: required(input.senderEmail, "senderEmail"), p_sender_company: required(input.senderCompany, "senderCompany"), p_sender_website: required(input.senderWebsite, "senderWebsite"), p_sender_first_name: optionalSenderIdentityPart(input.senderFirstName, "senderFirstName"), p_sender_last_name: optionalSenderIdentityPart(input.senderLastName, "senderLastName") };
   const { data, error } = await client.rpc("approve_backlink_contact_form_initial_v1", args);
   if (error != null || !Array.isArray(data) || data.length !== 1) throw rpcError("approveContactFormInitial", error ?? new Error("Invalid approval result."));
   return data[0];

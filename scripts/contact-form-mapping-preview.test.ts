@@ -10,6 +10,7 @@ import {
   type ContactFormApprovedContent,
   type ContactFormDiscoveredControl,
   type ContactFormDiscoveredForm,
+  type ContactFormDiscoveredSelectOption,
   type ContactFormMappingPreview,
   type ContactFormSupportedSemanticField,
 } from "../lib/backlinks/services/contactFormMappingPreview";
@@ -28,6 +29,12 @@ const approvedContent: ContactFormApprovedContent = {
   senderWebsite: "https://norixo.example",
   subject: "Approved backlink outreach subject",
   body: "Approved backlink outreach body",
+};
+const splitApprovedContent: ContactFormApprovedContent = {
+  ...approvedContent,
+  senderName: "Test Sender",
+  senderFirstName: "Test",
+  senderLastName: "Sender",
 };
 
 function control(overrides: Partial<ContactFormDiscoveredControl> = {}): ContactFormDiscoveredControl {
@@ -71,6 +78,15 @@ function textarea(ordinal = 3, overrides: Partial<ContactFormDiscoveredControl> 
 
 function button(ordinal = 99, overrides: Partial<ContactFormDiscoveredControl> = {}): ContactFormDiscoveredControl {
   return control({ ordinal, tag: "button", type: "submit", name: null, id: null, labelText: null, required: false, ...overrides });
+}
+
+function selectOption(ordinal: number, labelText: string, overrides: Partial<ContactFormDiscoveredSelectOption> = {}): ContactFormDiscoveredSelectOption {
+  return { ordinal, labelText, valuePresent: ordinal > 0, disabled: false, selected: ordinal === 0, ...overrides };
+}
+
+function selectControl(ordinal: number, labelText: string, options: readonly ContactFormDiscoveredSelectOption[], overrides: Partial<ContactFormDiscoveredControl> = {}): ContactFormDiscoveredControl {
+  const normalized = labelText.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || `select_${ordinal}`;
+  return control({ ordinal, tag: "select", type: "select", name: normalized, id: normalized, labelText, required: true, optionsCount: options.length, options, ...overrides });
 }
 
 function contactForm(overrides: Partial<ContactFormDiscoveredForm> = {}): ContactFormDiscoveredForm {
@@ -130,6 +146,7 @@ async function expectNavigationUrlRejected(rawUrl: string) {
 test("T01 simple name/email/subject/message form maps correctly", () => {
   const fields = expectMapped(preview([contactForm()]));
   assert.deepEqual([...fields.keys()], ["sender_name", "sender_email", "subject", "message"]);
+  assert.equal(fields.get("sender_name")?.assignmentType, "field_value");
 });
 
 test("T02 company + website optional fields map correctly", () => {
@@ -251,10 +268,287 @@ test("T18 required radio -> blocked/manual review", () => {
   expectReason(result, "required_choice_control");
 });
 
-test("T19 required select -> manual review V1", () => {
-  const result = preview([contactForm({ controls: [textInput(0, "Your name", { required: true }), emailInput(1), textarea(2), control({ ordinal: 3, tag: "select", type: "select", labelText: "Department", required: true, optionsCount: 3 })] })]);
+test("T19 required subject select with exactly one Other maps deterministic select intent", () => {
+  const result = preview([contactForm({ controls: [textInput(0, "Your name", { required: true }), emailInput(1), selectControl(2, "Subject *", [selectOption(0, "Select a topic...", { valuePresent: false, selected: true }), selectOption(1, "Other", { valuePresent: true, selected: false })]), textarea(3)] })]);
+  const fields = expectMapped(result);
+  const subject = fields.get("subject");
+  assert.equal(subject?.controlType, "select");
+  assert.equal(subject?.assignmentType, "select_option");
+  assert.equal(subject?.selectOption?.normalizedLabel, "other");
+  assert.equal(subject?.selectOption?.valuePresent, true);
+  assert.equal(result.blockingReasons.includes("required_select_control"), false);
+});
+
+test("T19a required subject select with exactly one General Inquiry maps deterministic select intent", () => {
+  const result = preview([contactForm({ controls: [textInput(0, "Your name", { required: true }), emailInput(1), selectControl(2, "Topic", [selectOption(0, "Choose one", { valuePresent: false, selected: true }), selectOption(1, "General Inquiry", { valuePresent: true, selected: false })]), textarea(3)] })]);
+  const fields = expectMapped(result);
+  assert.equal(fields.get("subject")?.selectOption?.normalizedLabel, "general inquiry");
+});
+
+test("T19b required select placeholder only remains manual review", () => {
+  const result = preview([contactForm({ controls: [textInput(0, "Your name", { required: true }), emailInput(1), selectControl(2, "Subject", [selectOption(0, "Select a topic...", { valuePresent: false, selected: true })]), textarea(3)] })]);
   assert.equal(result.result, "manual_review");
-  expectReason(result, "required_select_control");
+  expectReason(result, "required_select_no_safe_option");
+});
+
+test("T19c required select without safe generic option remains manual review", () => {
+  const result = preview([contactForm({ controls: [textInput(0, "Your name", { required: true }), emailInput(1), selectControl(2, "Subject", [selectOption(0, "Select a topic...", { valuePresent: false, selected: true }), selectOption(1, "Membership question", { valuePresent: true, selected: false }), selectOption(2, "Compliance / regulatory question", { valuePresent: true, selected: false })]), textarea(3)] })]);
+  assert.equal(result.result, "manual_review");
+  expectReason(result, "required_select_no_safe_option");
+});
+
+test("T19d disabled Other remains manual review", () => {
+  const result = preview([contactForm({ controls: [textInput(0, "Your name", { required: true }), emailInput(1), selectControl(2, "Subject", [selectOption(0, "Select a topic...", { valuePresent: false, selected: true }), selectOption(1, "Other", { valuePresent: true, disabled: true, selected: false })]), textarea(3)] })]);
+  assert.equal(result.result, "manual_review");
+  expectReason(result, "required_select_no_safe_option");
+});
+
+test("T19e multiple safe generic select options remain manual review", () => {
+  const result = preview([contactForm({ controls: [textInput(0, "Your name", { required: true }), emailInput(1), selectControl(2, "Subject", [selectOption(0, "Select a topic...", { valuePresent: false, selected: true }), selectOption(1, "Other", { valuePresent: true, selected: false }), selectOption(2, "General Inquiry", { valuePresent: true, selected: false })]), textarea(3)] })]);
+  assert.equal(result.result, "manual_review");
+  expectReason(result, "required_select_ambiguous_safe_option");
+});
+
+test("T19f partnership and sponsorship are not automatically selected", () => {
+  const result = preview([contactForm({ controls: [textInput(0, "Your name", { required: true }), emailInput(1), selectControl(2, "Subject", [selectOption(0, "Select a topic...", { valuePresent: false, selected: true }), selectOption(1, "Partnership or sponsorship", { valuePresent: true, selected: false })]), textarea(3)] })]);
+  assert.equal(result.result, "manual_review");
+  expectReason(result, "required_select_no_safe_option");
+});
+
+test("T19g media is not automatically selected", () => {
+  const result = preview([contactForm({ controls: [textInput(0, "Your name", { required: true }), emailInput(1), selectControl(2, "Subject", [selectOption(0, "Select a topic...", { valuePresent: false, selected: true }), selectOption(1, "Media inquiry", { valuePresent: true, selected: false })]), textarea(3)] })]);
+  assert.equal(result.result, "manual_review");
+  expectReason(result, "required_select_no_safe_option");
+});
+
+test("T19h select metadata is bounded and contains safe option fingerprints only", () => {
+  const longLabel = `General Inquiry ${"very ".repeat(40)}`;
+  const options = Array.from({ length: 60 }, (_, index) => selectOption(index, index === 1 ? longLabel : `Topic ${index}`, { valuePresent: index > 0, selected: index === 0 }));
+  const result = preview([contactForm({ controls: [textInput(0, "Your name", { required: true }), emailInput(1), selectControl(2, "Subject", options), textarea(3)] })]);
+  const selectField = result.discoveredFields.find((field) => field.controlOrdinal === 2);
+  const metadata = JSON.stringify(contactFormMappingPreviewToSafeMetadata(result));
+  assert.equal(selectField?.selectOptions?.length, 50);
+  assert.equal(selectField?.selectOptions?.[1]?.labelText.length, 80);
+  assert.ok(selectField?.selectOptions?.every((option) => option.optionFingerprint.startsWith("sha256:")));
+  assert.doesNotMatch(metadata, /<option|<\/option>|value="/i);
+});
+
+test("T19i Host Alaska shape loses select blocker but remains manual review for split sender name", () => {
+  const result = preview([
+    contactForm({
+      controls: [
+        textInput(0, "First Name", { required: true, autocomplete: "given-name" }),
+        textInput(1, "Last Name", { required: true, autocomplete: "family-name" }),
+        emailInput(2),
+        selectControl(3, "Subject *", [
+          selectOption(0, "Select a topic...", { valuePresent: false, selected: true }),
+          selectOption(1, "Membership question", { valuePresent: true, selected: false }),
+          selectOption(2, "I want to join", { valuePresent: true, selected: false }),
+          selectOption(3, "Compliance / regulatory question", { valuePresent: true, selected: false }),
+          selectOption(4, "Interested in Steering Committee", { valuePresent: true, selected: false }),
+          selectOption(5, "Media inquiry", { valuePresent: true, selected: false }),
+          selectOption(6, "Report a regulatory change", { valuePresent: true, selected: false }),
+          selectOption(7, "Partnership or sponsorship", { valuePresent: true, selected: false }),
+          selectOption(8, "Other", { valuePresent: true, selected: false }),
+        ]),
+        textarea(4),
+      ],
+    }),
+  ]);
+  assert.equal(result.result, "manual_review");
+  assert.equal(result.blockingReasons.includes("required_select_control"), false);
+  expectReason(result, "required_split_sender_name");
+});
+
+test("T19j required First Name plus Last Name with only unsplit sender_name remains manual review", () => {
+  const result = preview([contactForm({ controls: [textInput(0, "First Name", { required: true, autocomplete: "given-name" }), textInput(1, "Last Name", { required: true, autocomplete: "family-name" }), emailInput(2), textarea(3)] })]);
+  const metadata = JSON.stringify(contactFormMappingPreviewToSafeMetadata(result));
+  assert.equal(result.result, "manual_review");
+  expectReason(result, "required_split_sender_name");
+  assert.equal(result.mappedFields.some((field) => field.semanticField === "sender_name"), false);
+  assert.doesNotMatch(metadata, /Norixo Operator/);
+});
+
+test("T19k Host Alaska shape maps with explicit approved split identity", () => {
+  const result = preview(
+    [
+      contactForm({
+        controls: [
+          textInput(0, "First Name", { required: true, autocomplete: "given-name" }),
+          textInput(1, "Last Name", { required: true, autocomplete: "family-name" }),
+          emailInput(2),
+          selectControl(3, "Subject *", [
+            selectOption(0, "Select a topic...", { valuePresent: false, selected: true }),
+            selectOption(1, "Membership question", { valuePresent: true, selected: false }),
+            selectOption(2, "I want to join", { valuePresent: true, selected: false }),
+            selectOption(3, "Compliance / regulatory question", { valuePresent: true, selected: false }),
+            selectOption(4, "Interested in Steering Committee", { valuePresent: true, selected: false }),
+            selectOption(5, "Media inquiry", { valuePresent: true, selected: false }),
+            selectOption(6, "Report a regulatory change", { valuePresent: true, selected: false }),
+            selectOption(7, "Partnership or sponsorship", { valuePresent: true, selected: false }),
+            selectOption(8, "Other", { valuePresent: true, selected: false }),
+          ]),
+          textarea(4),
+        ],
+      }),
+    ],
+    { content: splitApprovedContent },
+  );
+  const fields = expectMapped(result);
+  assert.equal(fields.get("sender_first_name")?.locator.controlOrdinal, 0);
+  assert.equal(fields.get("sender_last_name")?.locator.controlOrdinal, 1);
+  assert.equal(fields.get("subject")?.assignmentType, "select_option");
+  assert.equal(fields.get("subject")?.selectOption?.normalizedLabel, "other");
+  assert.equal(fields.get("message")?.locator.controlOrdinal, 4);
+  assert.equal(fields.has("sender_name"), false);
+  assert.equal(result.blockingReasons.includes("required_split_sender_name"), false);
+});
+
+test("T19l full-name field still uses sender_name even when split identity exists", () => {
+  const fields = expectMapped(preview([contactForm()], { content: splitApprovedContent }));
+  assert.equal(fields.get("sender_name")?.locator.controlOrdinal, 0);
+  assert.equal(fields.has("sender_first_name"), false);
+  assert.equal(fields.has("sender_last_name"), false);
+});
+
+test("T19m required first-only field needs explicit sender_first_name", () => {
+  const result = preview([contactForm({ controls: [textInput(0, "First Name", { required: true, autocomplete: "given-name" }), emailInput(1), textarea(2)] })]);
+  assert.equal(result.result, "manual_review");
+  expectReason(result, "missing_sender_first_name");
+});
+
+test("T19n required first-only field maps only sender_first_name when present", () => {
+  const fields = expectMapped(preview([contactForm({ controls: [textInput(0, "First Name", { required: true, autocomplete: "given-name" }), emailInput(1), textarea(2)] })], { content: { ...approvedContent, senderFirstName: "Test" } }));
+  assert.equal(fields.get("sender_first_name")?.locator.controlOrdinal, 0);
+  assert.equal(fields.has("sender_name"), false);
+});
+
+test("T19o required last-only field needs explicit sender_last_name", () => {
+  const result = preview([contactForm({ controls: [textInput(0, "Last Name", { required: true, autocomplete: "family-name" }), emailInput(1), textarea(2)] })]);
+  assert.equal(result.result, "manual_review");
+  expectReason(result, "missing_sender_last_name");
+});
+
+test("T19p required last-only field maps only sender_last_name when present", () => {
+  const fields = expectMapped(preview([contactForm({ controls: [textInput(0, "Last Name", { required: true, autocomplete: "family-name" }), emailInput(1), textarea(2)] })], { content: { ...approvedContent, senderLastName: "Sender" } }));
+  assert.equal(fields.get("sender_last_name")?.locator.controlOrdinal, 0);
+  assert.equal(fields.has("sender_name"), false);
+});
+
+test("T19q split-name mapping does not parse or derive from sender_name", () => {
+  const result = preview([contactForm({ controls: [textInput(0, "First Name", { required: true, autocomplete: "given-name" }), textInput(1, "Last Name", { required: true, autocomplete: "family-name" }), emailInput(2), textarea(3)] })], { content: { ...approvedContent, senderName: "Test Sender" } });
+  assert.equal(result.result, "manual_review");
+  expectReason(result, "required_split_sender_name");
+});
+
+test("T19r required Full Name plus First Name maps both approved identity sources", () => {
+  const fields = expectMapped(preview([contactForm({ controls: [textInput(0, "Full Name", { required: true, autocomplete: "name" }), textInput(1, "First Name", { required: true, autocomplete: "given-name" }), emailInput(2), textarea(3)] })], { content: { ...approvedContent, senderFirstName: "Test" } }));
+  assert.equal(fields.get("sender_name")?.locator.controlOrdinal, 0);
+  assert.equal(fields.get("sender_first_name")?.locator.controlOrdinal, 1);
+});
+
+test("T19s required Full Name plus Last Name maps both approved identity sources", () => {
+  const fields = expectMapped(preview([contactForm({ controls: [textInput(0, "Full Name", { required: true, autocomplete: "name" }), textInput(1, "Last Name", { required: true, autocomplete: "family-name" }), emailInput(2), textarea(3)] })], { content: { ...approvedContent, senderLastName: "Sender" } }));
+  assert.equal(fields.get("sender_name")?.locator.controlOrdinal, 0);
+  assert.equal(fields.get("sender_last_name")?.locator.controlOrdinal, 1);
+});
+
+test("T19t required Full Name plus First Name plus Last Name maps all approved identity sources", () => {
+  const fields = expectMapped(preview([contactForm({ controls: [textInput(0, "Full Name", { required: true, autocomplete: "name" }), textInput(1, "First Name", { required: true, autocomplete: "given-name" }), textInput(2, "Last Name", { required: true, autocomplete: "family-name" }), emailInput(3), textarea(4)] })], { content: splitApprovedContent }));
+  assert.equal(fields.get("sender_name")?.locator.controlOrdinal, 0);
+  assert.equal(fields.get("sender_first_name")?.locator.controlOrdinal, 1);
+  assert.equal(fields.get("sender_last_name")?.locator.controlOrdinal, 2);
+});
+
+test("T19u required Full Name plus First Name blocks when explicit first name is missing", () => {
+  const result = preview([contactForm({ controls: [textInput(0, "Full Name", { required: true, autocomplete: "name" }), textInput(1, "First Name", { required: true, autocomplete: "given-name" }), emailInput(2), textarea(3)] })]);
+  assert.equal(result.result, "manual_review");
+  expectReason(result, "missing_sender_first_name");
+});
+
+test("T19v required Full Name plus Last Name blocks when explicit last name is missing", () => {
+  const result = preview([contactForm({ controls: [textInput(0, "Full Name", { required: true, autocomplete: "name" }), textInput(1, "Last Name", { required: true, autocomplete: "family-name" }), emailInput(2), textarea(3)] })]);
+  assert.equal(result.result, "manual_review");
+  expectReason(result, "missing_sender_last_name");
+});
+
+test("T19w duplicate required Full Name controls fail closed", () => {
+  const result = preview([contactForm({ controls: [textInput(0, "Full Name", { required: true, autocomplete: "name" }), textInput(1, "Your Name", { required: true, autocomplete: "name" }), emailInput(2), textarea(3)] })]);
+  assert.equal(result.result, "manual_review");
+  expectReason(result, "ambiguous_sender_name");
+});
+
+test("T19x duplicate required First Name controls fail closed", () => {
+  const result = preview([contactForm({ controls: [textInput(0, "First Name", { required: true, autocomplete: "given-name" }), textInput(1, "Given Name", { required: true, autocomplete: "given-name" }), emailInput(2), textarea(3)] })], { content: { ...approvedContent, senderFirstName: "Test" } });
+  assert.equal(result.result, "manual_review");
+  expectReason(result, "ambiguous_sender_first_name");
+});
+
+test("T19y duplicate required Last Name controls fail closed", () => {
+  const result = preview([contactForm({ controls: [textInput(0, "Last Name", { required: true, autocomplete: "family-name" }), textInput(1, "Surname", { required: true, autocomplete: "family-name" }), emailInput(2), textarea(3)] })], { content: { ...approvedContent, senderLastName: "Sender" } });
+  assert.equal(result.result, "manual_review");
+  expectReason(result, "ambiguous_sender_last_name");
+});
+
+test("T19z required Full Name only keeps legacy sender_name behavior", () => {
+  const fields = expectMapped(preview([contactForm({ controls: [textInput(0, "Full Name", { required: true, autocomplete: "name" }), emailInput(1), textarea(2)] })]));
+  assert.equal(fields.get("sender_name")?.locator.controlOrdinal, 0);
+  assert.equal(fields.has("sender_first_name"), false);
+  assert.equal(fields.has("sender_last_name"), false);
+});
+
+for (const [caseName, nameControl] of [
+  ["First Name label", textInput(0, "First Name", { required: true })],
+  ["first_name name/id", control({ ordinal: 0, tag: "input", type: "text", name: "first_name", id: "first_name", labelText: "Contact field", required: true })],
+  ["firstname name/id", control({ ordinal: 0, tag: "input", type: "text", name: "firstname", id: "firstname", labelText: "Contact field", required: true })],
+  ["Given Name label", textInput(0, "Given Name", { required: true })],
+  ["autocomplete given-name", textInput(0, "Contact field", { required: true, autocomplete: "given-name" })],
+] as const) {
+  test(`T19aa positive first-name classification: ${caseName}`, () => {
+    const fields = expectMapped(preview([contactForm({ controls: [nameControl, emailInput(1), textarea(2)] })], { content: { ...approvedContent, senderFirstName: "Test" } }));
+    assert.equal(fields.get("sender_first_name")?.locator.controlOrdinal, 0);
+    assert.equal(fields.has("sender_name"), false);
+  });
+}
+
+for (const [caseName, nameControl] of [
+  ["Last Name label", textInput(0, "Last Name", { required: true })],
+  ["last_name name/id", control({ ordinal: 0, tag: "input", type: "text", name: "last_name", id: "last_name", labelText: "Contact field", required: true })],
+  ["lastname name/id", control({ ordinal: 0, tag: "input", type: "text", name: "lastname", id: "lastname", labelText: "Contact field", required: true })],
+  ["Family Name label", textInput(0, "Family Name", { required: true })],
+  ["Surname label", textInput(0, "Surname", { required: true })],
+  ["autocomplete family-name", textInput(0, "Contact field", { required: true, autocomplete: "family-name" })],
+] as const) {
+  test(`T19ab positive last-name classification: ${caseName}`, () => {
+    const fields = expectMapped(preview([contactForm({ controls: [nameControl, emailInput(1), textarea(2)] })], { content: { ...approvedContent, senderLastName: "Sender" } }));
+    assert.equal(fields.get("sender_last_name")?.locator.controlOrdinal, 0);
+    assert.equal(fields.has("sender_name"), false);
+  });
+}
+
+for (const label of ["First", "First choice", "First option", "First preference", "First visit", "First available", "First response", "First contact", "First booking"]) {
+  test(`T19ac negative first-name false positive rejected: ${label}`, () => {
+    const result = preview([contactForm({ controls: [textInput(0, label, { required: true }), emailInput(1), textarea(2)] })], { content: { ...approvedContent, senderFirstName: "Test" } });
+    assert.equal(result.result, "manual_review");
+    assert.equal(result.mappedFields.some((field) => field.semanticField === "sender_first_name"), false);
+    assert.ok(result.blockingReasons.length > 0);
+  });
+}
+
+for (const label of ["Last", "Last updated", "Last booking", "Last visit", "Last response", "Last contact", "Last available", "Last option"]) {
+  test(`T19ad negative last-name false positive rejected: ${label}`, () => {
+    const result = preview([contactForm({ controls: [textInput(0, label, { required: true }), emailInput(1), textarea(2)] })], { content: { ...approvedContent, senderLastName: "Sender" } });
+    assert.equal(result.result, "manual_review");
+    assert.equal(result.mappedFields.some((field) => field.semanticField === "sender_last_name"), false);
+    assert.ok(result.blockingReasons.length > 0);
+  });
+}
+
+test("T19ae name inside another word does not classify as full name", () => {
+  const result = preview([contactForm({ controls: [textInput(0, "Username", { required: true, autocomplete: null }), emailInput(1), textarea(2)] })]);
+  assert.equal(result.result, "manual_review");
+  assert.equal(result.mappedFields.some((field) => field.semanticField === "sender_name"), false);
+  expectReason(result, "required_unsupported_field");
 });
 
 test("T20 file upload -> manual review", () => {
@@ -519,8 +813,8 @@ test("T65 no external network target in test suite", () => {
   );
 });
 
-test("supported semantic field allowlist is V1 only", () => {
-  assert.deepEqual([...CONTACT_FORM_SUPPORTED_SEMANTIC_FIELDS], ["sender_name", "sender_email", "sender_company", "sender_website", "subject", "message"]);
+test("supported semantic field allowlist includes explicit split identity only", () => {
+  assert.deepEqual([...CONTACT_FORM_SUPPORTED_SEMANTIC_FIELDS], ["sender_name", "sender_first_name", "sender_last_name", "sender_email", "sender_company", "sender_website", "subject", "message"]);
 });
 
 test("supported writable control type allowlist is text/email/url/textarea only", () => {

@@ -2,21 +2,33 @@ import { createHash } from "node:crypto";
 
 import type { Json } from "@/types/database.types";
 
-export const CONTACT_FORM_SUPPORTED_SEMANTIC_FIELDS = ["sender_name", "sender_email", "sender_company", "sender_website", "subject", "message"] as const;
+export const CONTACT_FORM_SUPPORTED_SEMANTIC_FIELDS = ["sender_name", "sender_first_name", "sender_last_name", "sender_email", "sender_company", "sender_website", "subject", "message"] as const;
 export const CONTACT_FORM_SUPPORTED_CONTROL_TYPES = ["text", "email", "url", "textarea"] as const;
 
 export type ContactFormSupportedSemanticField = (typeof CONTACT_FORM_SUPPORTED_SEMANTIC_FIELDS)[number];
 export type ContactFormSupportedControlType = (typeof CONTACT_FORM_SUPPORTED_CONTROL_TYPES)[number];
+export type ContactFormPreviewControlType = ContactFormSupportedControlType | "select";
 export type ContactFormFieldClassification = "SUPPORTED_EXACT" | "SUPPORTED_OPTIONAL" | "UNSUPPORTED" | "AMBIGUOUS" | "IGNORED_SAFE" | "BLOCKING";
 export type ContactFormMappingStatus = "mapped" | "manual_review" | "blocked_policy" | "blocked_captcha";
 
 export type ContactFormApprovedContent = Readonly<{
   senderName: string;
+  senderFirstName?: string | null;
+  senderLastName?: string | null;
   senderEmail: string;
   senderCompany: string;
   senderWebsite: string;
   subject: string;
   body: string;
+}>;
+
+export type ContactFormDiscoveredSelectOption = Readonly<{
+  ordinal: number;
+  labelText: string;
+  normalizedLabel?: string;
+  valuePresent: boolean;
+  disabled: boolean;
+  selected: boolean;
 }>;
 
 export type ContactFormDiscoveredControl = Readonly<{
@@ -37,6 +49,7 @@ export type ContactFormDiscoveredControl = Readonly<{
   visible: boolean;
   valuePresent: boolean;
   optionsCount?: number;
+  options?: readonly ContactFormDiscoveredSelectOption[];
 }>;
 
 export type ContactFormDiscoveredForm = Readonly<{
@@ -67,6 +80,18 @@ export type ContactFormFieldPreview = Readonly<{
   classification: ContactFormFieldClassification;
   semanticCandidates: readonly ContactFormSupportedSemanticField[];
   blockingReason: string | null;
+  selectOptions?: readonly ContactFormSelectOptionPreview[];
+  selectOption?: ContactFormSelectOptionPreview | null;
+}>;
+
+export type ContactFormSelectOptionPreview = Readonly<{
+  ordinal: number;
+  labelText: string;
+  normalizedLabel: string;
+  valuePresent: boolean;
+  disabled: boolean;
+  selected: boolean;
+  optionFingerprint: string;
 }>;
 
 export type ContactFormMappedFieldPreview = Readonly<{
@@ -79,9 +104,11 @@ export type ContactFormMappedFieldPreview = Readonly<{
     name: string | null;
     id: string | null;
   }>;
-  controlType: ContactFormSupportedControlType;
+  controlType: ContactFormPreviewControlType;
   required: boolean;
   classification: "SUPPORTED_EXACT" | "SUPPORTED_OPTIONAL";
+  assignmentType: "field_value" | "select_option";
+  selectOption: ContactFormSelectOptionPreview | null;
   sourceValueFingerprint: string;
   sourceValueLength: number;
   sourceValueRedaction: string;
@@ -116,11 +143,14 @@ type FormAnalysis = Readonly<{
 }>;
 
 const REQUIRED_SEMANTIC_FIELDS = new Set<ContactFormSupportedSemanticField>(["sender_name", "sender_email", "message"]);
-const OPTIONAL_SEMANTIC_FIELDS = new Set<ContactFormSupportedSemanticField>(["sender_company", "sender_website", "subject"]);
+const OPTIONAL_SEMANTIC_FIELDS = new Set<ContactFormSupportedSemanticField>(["sender_first_name", "sender_last_name", "sender_company", "sender_website", "subject"]);
 const MAX_FORMS = 5;
 const MAX_CONTROLS_PER_FORM = 30;
+const MAX_SELECT_OPTIONS = 50;
 const MAX_TEXT_LENGTH = 80;
 const MAPPING_SCORE_THRESHOLD = 4;
+const SAFE_GENERIC_SELECT_LABELS = new Set(["other", "general inquiry", "general enquiry"]);
+const UNSAFE_SELECT_LABEL_PATTERN = /\b(partnership|sponsorship|media|membership|regulatory|committee|join|sales|demo|support)\b/;
 
 export function buildContactFormMappingPreview(input: {
   page: ContactFormDiscoveredPage;
@@ -177,6 +207,19 @@ export function contactFormMappingPreviewToSafeMetadata(preview: ContactFormMapp
       control_type: field.controlType,
       required: field.required,
       classification: field.classification,
+      assignment_type: field.assignmentType,
+      select_option:
+        field.selectOption == null
+          ? null
+          : {
+              option_ordinal: field.selectOption.ordinal,
+              label_text: field.selectOption.labelText,
+              normalized_label: field.selectOption.normalizedLabel,
+              value_present: field.selectOption.valuePresent,
+              disabled: field.selectOption.disabled,
+              selected: field.selectOption.selected,
+              option_fingerprint: field.selectOption.optionFingerprint,
+            },
       source_value_fingerprint: field.sourceValueFingerprint,
       source_value_length: field.sourceValueLength,
       source_value_redaction: field.sourceValueRedaction,
@@ -193,6 +236,27 @@ export function contactFormMappingPreviewToSafeMetadata(preview: ContactFormMapp
       classification: field.classification,
       semantic_candidates: [...field.semanticCandidates],
       blocking_reason: field.blockingReason,
+      select_options: (field.selectOptions ?? []).map((option) => ({
+        option_ordinal: option.ordinal,
+        label_text: option.labelText,
+        normalized_label: option.normalizedLabel,
+        value_present: option.valuePresent,
+        disabled: option.disabled,
+        selected: option.selected,
+        option_fingerprint: option.optionFingerprint,
+      })),
+      select_option:
+        field.selectOption == null
+          ? null
+          : {
+              option_ordinal: field.selectOption.ordinal,
+              label_text: field.selectOption.labelText,
+              normalized_label: field.selectOption.normalizedLabel,
+              value_present: field.selectOption.valuePresent,
+              disabled: field.selectOption.disabled,
+              selected: field.selectOption.selected,
+              option_fingerprint: field.selectOption.optionFingerprint,
+            },
     })),
     unsupported_required_fields: preview.unsupportedRequiredFields.map((field) => ({
       control_ordinal: field.controlOrdinal,
@@ -205,6 +269,15 @@ export function contactFormMappingPreviewToSafeMetadata(preview: ContactFormMapp
       required: field.required,
       classification: field.classification,
       blocking_reason: field.blockingReason,
+      select_options: (field.selectOptions ?? []).map((option) => ({
+        option_ordinal: option.ordinal,
+        label_text: option.labelText,
+        normalized_label: option.normalizedLabel,
+        value_present: option.valuePresent,
+        disabled: option.disabled,
+        selected: option.selected,
+        option_fingerprint: option.optionFingerprint,
+      })),
     })),
     blocking_reasons: [...preview.blockingReasons],
     mapping_fingerprint: preview.mappingFingerprint,
@@ -271,6 +344,8 @@ function analyzeForm(form: ContactFormDiscoveredForm, pageUrl: string, approvedC
       field_fingerprint: field.fieldFingerprint,
       control_type: field.controlType,
       required: field.required,
+      assignment_type: field.assignmentType,
+      select_option_fingerprint: field.selectOption?.optionFingerprint ?? null,
     })),
   });
 
@@ -314,6 +389,14 @@ function classifyControl(form: ContactFormDiscoveredForm, control: ContactFormDi
     required: control.required,
     visible: control.visible,
   });
+  const selectOptions = control.tag === "select" ? buildSelectOptionPreviews(fieldFingerprint, control) : undefined;
+  const generalBlockingReason = blockingReasonForNonSelectControl(form, control);
+  if (generalBlockingReason) {
+    return { controlOrdinal: control.ordinal, fieldFingerprint, tag: control.tag, type: normalizeControlType(control), name: control.name, id: control.id, labelText: control.labelText, required: control.required, classification: control.hidden ? "IGNORED_SAFE" : "BLOCKING", semanticCandidates: [], blockingReason: generalBlockingReason, selectOptions };
+  }
+  if (control.tag === "select") {
+    return classifySelectControl(form, control, fieldFingerprint, selectOptions ?? []);
+  }
   const blockingReason = blockingReasonForControl(form, control);
   if (blockingReason) {
     return { controlOrdinal: control.ordinal, fieldFingerprint, tag: control.tag, type: normalizeControlType(control), name: control.name, id: control.id, labelText: control.labelText, required: control.required, classification: control.hidden ? "IGNORED_SAFE" : "BLOCKING", semanticCandidates: [], blockingReason };
@@ -354,6 +437,11 @@ function mapFields(
   const reasons: string[] = [];
   const mapped: ContactFormMappedFieldPreview[] = [];
   const usedControls = new Set<number>();
+  const requiredNameParts = requiredSenderNameParts(form);
+  const hasRequiredSplitControls = requiredNameParts.has("first") && requiredNameParts.has("last");
+  const requiresSplitSenderName = hasRequiredSplitControls && !hasApprovedSplitSenderName(approvedContent);
+  if (requiresSplitSenderName) reasons.push("required_split_sender_name");
+  const requiredSemanticFields = requiredSemanticFieldsForForm(fields);
   for (const semantic of CONTACT_FORM_SUPPORTED_SEMANTIC_FIELDS) {
     const candidates = fields.filter((field) => field.semanticCandidates.includes(semantic));
     if (candidates.length > 1) {
@@ -362,20 +450,46 @@ function mapFields(
     }
     const candidate = candidates[0];
     if (!candidate) {
-      if (REQUIRED_SEMANTIC_FIELDS.has(semantic)) reasons.push(`missing_${semantic}`);
+      if (requiredSemanticFields.has(semantic)) reasons.push(`missing_${semantic}`);
       continue;
     }
     if (usedControls.has(candidate.controlOrdinal)) {
-      if (REQUIRED_SEMANTIC_FIELDS.has(semantic)) reasons.push(`duplicate_control_${semantic}`);
+      if (requiredSemanticFields.has(semantic)) reasons.push(`duplicate_control_${semantic}`);
       continue;
     }
     const control = form.controls.find((current) => current.ordinal === candidate.controlOrdinal);
+    if (candidate.selectOption != null) {
+      if (!control || normalizeControlType(control) !== "select" || control.valuePresent || candidate.selectOption.disabled || !candidate.selectOption.valuePresent) {
+        reasons.push(control?.valuePresent ? `prefilled_${semantic}` : `unsupported_${semantic}`);
+        continue;
+      }
+      usedControls.add(candidate.controlOrdinal);
+      const sourceValue = candidate.selectOption.normalizedLabel;
+      mapped.push({
+        semanticField: semantic,
+        fieldFingerprint: candidate.fieldFingerprint,
+        locator: { strategy: "field_fingerprint", formOrdinal: form.ordinal, controlOrdinal: candidate.controlOrdinal, name: candidate.name, id: candidate.id },
+        controlType: "select",
+        required: candidate.required,
+        classification: candidate.classification === "SUPPORTED_OPTIONAL" ? "SUPPORTED_OPTIONAL" : "SUPPORTED_EXACT",
+        assignmentType: "select_option",
+        selectOption: candidate.selectOption,
+        sourceValueFingerprint: candidate.selectOption.optionFingerprint,
+        sourceValueLength: sourceValue.length,
+        sourceValueRedaction: `<select-option:${sourceValue}>`,
+      });
+      continue;
+    }
     if (!control || !isSupportedControlType(normalizeControlType(control)) || control.valuePresent) {
       reasons.push(control?.valuePresent ? `prefilled_${semantic}` : `unsupported_${semantic}`);
       continue;
     }
-    usedControls.add(candidate.controlOrdinal);
     const sourceValue = sourceValueForSemantic(approvedContent, semantic);
+    if (!sourceValue) {
+      if (candidate.required || requiredSemanticFields.has(semantic)) reasons.push(`missing_${semantic}`);
+      continue;
+    }
+    usedControls.add(candidate.controlOrdinal);
     mapped.push({
       semanticField: semantic,
       fieldFingerprint: candidate.fieldFingerprint,
@@ -383,6 +497,8 @@ function mapFields(
       controlType: normalizeControlType(control) as ContactFormSupportedControlType,
       required: candidate.required,
       classification: candidate.classification === "SUPPORTED_OPTIONAL" ? "SUPPORTED_OPTIONAL" : "SUPPORTED_EXACT",
+      assignmentType: "field_value",
+      selectOption: null,
       sourceValueFingerprint: fingerprint({ semantic, value: sourceValue }),
       sourceValueLength: sourceValue.length,
       sourceValueRedaction: `<redacted:${sourceValue.length}>`,
@@ -391,7 +507,55 @@ function mapFields(
   return reasons.length ? { ok: false, reasons: uniqueStrings(reasons) } : { ok: true, fields: mapped };
 }
 
-function blockingReasonForControl(form: ContactFormDiscoveredForm, control: ContactFormDiscoveredControl): string | null {
+function classifySelectControl(form: ContactFormDiscoveredForm, control: ContactFormDiscoveredControl, fieldFingerprint: string, selectOptions: readonly ContactFormSelectOptionPreview[]): ContactFormFieldPreview {
+  if (!control.required) {
+    return { controlOrdinal: control.ordinal, fieldFingerprint, tag: control.tag, type: "select", name: control.name, id: control.id, labelText: control.labelText, required: control.required, classification: "IGNORED_SAFE", semanticCandidates: [], blockingReason: null, selectOptions };
+  }
+  if (control.valuePresent) {
+    return { controlOrdinal: control.ordinal, fieldFingerprint, tag: control.tag, type: "select", name: control.name, id: control.id, labelText: control.labelText, required: control.required, classification: "BLOCKING", semanticCandidates: [], blockingReason: "required_select_prefilled", selectOptions };
+  }
+  const scores = scoreSemantics(control).filter((score) => score.semantic === "subject" && score.score >= MAPPING_SCORE_THRESHOLD);
+  if (!scores.length) {
+    return { controlOrdinal: control.ordinal, fieldFingerprint, tag: control.tag, type: "select", name: control.name, id: control.id, labelText: control.labelText, required: control.required, classification: "BLOCKING", semanticCandidates: [], blockingReason: "required_select_control", selectOptions };
+  }
+  const safeChoice = deterministicSafeSelectOption(selectOptions);
+  if (!safeChoice.ok) {
+    return { controlOrdinal: control.ordinal, fieldFingerprint, tag: control.tag, type: "select", name: control.name, id: control.id, labelText: control.labelText, required: control.required, classification: "BLOCKING", semanticCandidates: [], blockingReason: safeChoice.reason, selectOptions };
+  }
+  return { controlOrdinal: control.ordinal, fieldFingerprint, tag: control.tag, type: "select", name: control.name, id: control.id, labelText: control.labelText, required: control.required, classification: "SUPPORTED_EXACT", semanticCandidates: ["subject"], blockingReason: null, selectOptions, selectOption: safeChoice.option };
+}
+
+function buildSelectOptionPreviews(fieldFingerprint: string, control: ContactFormDiscoveredControl): readonly ContactFormSelectOptionPreview[] {
+  return (control.options ?? []).slice(0, MAX_SELECT_OPTIONS).map((option, optionIndex) => {
+    const labelText = clamp(option.labelText, MAX_TEXT_LENGTH);
+    const normalizedLabel = normalizeText(option.normalizedLabel ?? labelText);
+    return {
+      ordinal: Number.isInteger(option.ordinal) ? option.ordinal : optionIndex,
+      labelText,
+      normalizedLabel,
+      valuePresent: Boolean(option.valuePresent),
+      disabled: Boolean(option.disabled),
+      selected: Boolean(option.selected),
+      optionFingerprint: fingerprint({
+        select_fingerprint: fieldFingerprint,
+        option_ordinal: Number.isInteger(option.ordinal) ? option.ordinal : optionIndex,
+        normalized_label: normalizedLabel,
+        value_present: Boolean(option.valuePresent),
+        disabled: Boolean(option.disabled),
+        selected: Boolean(option.selected),
+      }),
+    };
+  });
+}
+
+function deterministicSafeSelectOption(options: readonly ContactFormSelectOptionPreview[]): { ok: true; option: ContactFormSelectOptionPreview } | { ok: false; reason: string } {
+  const safeOptions = options.filter((option) => option.valuePresent && !option.disabled && SAFE_GENERIC_SELECT_LABELS.has(option.normalizedLabel) && !UNSAFE_SELECT_LABEL_PATTERN.test(option.normalizedLabel));
+  if (safeOptions.length === 1) return { ok: true, option: safeOptions[0] };
+  if (safeOptions.length > 1) return { ok: false, reason: "required_select_ambiguous_safe_option" };
+  return { ok: false, reason: "required_select_no_safe_option" };
+}
+
+function blockingReasonForNonSelectControl(form: ContactFormDiscoveredForm, control: ContactFormDiscoveredControl): string | null {
   const type = normalizeControlType(control);
   const text = controlText(form, control);
   if (/(captcha|recaptcha|hcaptcha|turnstile)/.test(text) || control.name === "cf-turnstile-response" || control.name === "g-recaptcha-response" || control.name === "h-captcha-response") return "captcha_control";
@@ -399,7 +563,12 @@ function blockingReasonForControl(form: ContactFormDiscoveredForm, control: Cont
   if (type === "password") return "password_control";
   if (type === "file") return "file_upload_control";
   if (control.disabled || control.readOnly) return control.required ? "required_non_writable_control" : null;
-  if (control.tag === "select") return control.required ? "required_select_control" : null;
+  return null;
+}
+
+function blockingReasonForControl(form: ContactFormDiscoveredForm, control: ContactFormDiscoveredControl): string | null {
+  const type = normalizeControlType(control);
+  const text = controlText(form, control);
   if (type === "checkbox" || type === "radio") {
     if (control.required && /(terms|privacy|policy|consent|agree|gdpr|subscribe|newsletter|marketing|legal)/.test(text)) return "required_consent_control";
     return control.required ? "required_choice_control" : null;
@@ -421,7 +590,15 @@ function scoreSemantics(control: ContactFormDiscoveredControl): readonly Semanti
   add("message", (control.tag === "textarea" ? 4 : 0) + keywordScore(strong, ["message", "comment", "comments", "inquiry", "enquiry", "details", "body"]) + weakKeywordScore(weak, ["message", "comment", "inquiry", "enquiry"]), control.tag === "textarea" || keywordScore(strong, ["message", "comment", "inquiry", "enquiry"]) > 0 ? "strong" : "weak");
   add("subject", keywordScore(strong, ["subject", "topic", "title", "objet"]) + weakKeywordScore(weak, ["subject", "topic"]), keywordScore(strong, ["subject", "topic", "title", "objet"]) > 0 ? "strong" : "weak");
   const companyPenalty = /\b(company|organisation|organization|business|agency|hotel)\b/.test(strong) ? -5 : 0;
-  add("sender_name", keywordScore(strong, ["full name", "your name", "name", "nom"]) + autocompleteNameScore(control.autocomplete) + weakKeywordScore(weak, ["name"]) + companyPenalty, keywordScore(strong, ["full name", "your name", "name", "nom"]) > 0 || autocompleteNameScore(control.autocomplete) > 0 ? "strong" : "weak");
+  const namePart = senderNamePartFromText(strong, control.autocomplete);
+  if (namePart === "first") {
+    add("sender_first_name", 6, "strong");
+  } else if (namePart === "last") {
+    add("sender_last_name", 6, "strong");
+  } else {
+    const senderNameScore = senderFullNameScore(strong, control.autocomplete, weak);
+    add("sender_name", senderNameScore + companyPenalty, senderNameScore > 0 ? "strong" : "weak");
+  }
   add("sender_company", keywordScore(strong, ["company", "organisation", "organization", "business", "agency", "hotel"]) + weakKeywordScore(weak, ["company", "organization"]), keywordScore(strong, ["company", "organisation", "organization", "business", "agency", "hotel"]) > 0 ? "strong" : "weak");
   return scores.filter((score) => score.source === "strong" || score.score >= MAPPING_SCORE_THRESHOLD);
 }
@@ -455,7 +632,7 @@ function scoreForm(form: ContactFormDiscoveredForm, fields: readonly ContactForm
   let score = 0;
   if (/\b(contact|message|inquiry|enquiry|feedback|get in touch|reach us)\b/.test(text)) score += 4;
   if (fields.some((field) => field.semanticCandidates.includes("sender_email"))) score += 3;
-  if (fields.some((field) => field.semanticCandidates.includes("sender_name"))) score += 2;
+  if (fields.some((field) => field.semanticCandidates.includes("sender_name") || field.semanticCandidates.includes("sender_first_name") || field.semanticCandidates.includes("sender_last_name"))) score += 2;
   if (fields.some((field) => field.semanticCandidates.includes("message"))) score += 4;
   if (fields.some((field) => field.semanticCandidates.includes("subject"))) score += 1;
   return score;
@@ -487,6 +664,58 @@ function isWritablePreviewCandidate(control: ContactFormDiscoveredControl): bool
   return control.visible && !control.disabled && !control.readOnly && !control.hidden && isSupportedControlType(normalizeControlType(control)) && !control.valuePresent;
 }
 
+function requiredSenderNameParts(form: ContactFormDiscoveredForm): ReadonlySet<"first" | "last"> {
+  return new Set(
+    form.controls
+      .filter((control) => control.required && control.visible && !control.disabled && !control.readOnly && !control.hidden && isSupportedControlType(normalizeControlType(control)))
+      .map((control) => ({ ordinal: control.ordinal, part: senderNamePart(form, control) }))
+      .filter((item): item is { ordinal: number; part: "first" | "last" } => item.part != null)
+      .map((item) => item.part),
+  );
+}
+
+function requiredSemanticFieldsForForm(fields: readonly ContactFormFieldPreview[]): ReadonlySet<ContactFormSupportedSemanticField> {
+  const required = new Set(REQUIRED_SEMANTIC_FIELDS);
+  const requiredIdentityFields = new Set<ContactFormSupportedSemanticField>();
+  for (const field of fields) {
+    if (!field.required) continue;
+    for (const semantic of field.semanticCandidates) {
+      if (semantic === "sender_name" || semantic === "sender_first_name" || semantic === "sender_last_name") requiredIdentityFields.add(semantic);
+    }
+  }
+  if (requiredIdentityFields.size > 0) {
+    required.delete("sender_name");
+    for (const semantic of requiredIdentityFields) required.add(semantic);
+  }
+  return required;
+}
+
+function hasApprovedSplitSenderName(content: ContactFormApprovedContent): boolean {
+  return trimToNull(content.senderFirstName) != null && trimToNull(content.senderLastName) != null;
+}
+
+function senderNamePart(form: ContactFormDiscoveredForm, control: ContactFormDiscoveredControl): "first" | "last" | null {
+  return senderNamePartFromText(controlText(form, control), control.autocomplete);
+}
+
+function senderNamePartFromText(text: string, autocompleteValue: string | null): "first" | "last" | null {
+  const autocomplete = (autocompleteValue ?? "").trim().toLowerCase();
+  const first = autocomplete === "given-name" || /\b(first name|firstname|given name|givenname|forename|prenom)\b/.test(text);
+  const last = autocomplete === "family-name" || /\b(last name|lastname|family name|familyname|surname|sur name|nom de famille)\b/.test(text);
+  if (first && !last) return "first";
+  if (last && !first) return "last";
+  return null;
+}
+
+function senderFullNameScore(text: string, autocompleteValue: string | null, weakText: string): number {
+  const autocomplete = normalizeText(autocompleteValue ?? "");
+  let score = 0;
+  if (/\b(full name|your name|name|nom)\b/.test(text)) score += 4;
+  if (["name", "additional-name"].includes(autocomplete)) score += 4;
+  if (/\bname\b/.test(weakText)) score += 1;
+  return score;
+}
+
 function isSupportedControlType(type: string): type is ContactFormSupportedControlType {
   return CONTACT_FORM_SUPPORTED_CONTROL_TYPES.includes(type as ContactFormSupportedControlType);
 }
@@ -514,6 +743,8 @@ function normalizeFormAction(action: string | null, pageUrl: string): { origin: 
 
 function sourceValueForSemantic(content: ContactFormApprovedContent, semantic: ContactFormSupportedSemanticField): string {
   if (semantic === "sender_name") return content.senderName;
+  if (semantic === "sender_first_name") return trimToNull(content.senderFirstName) ?? "";
+  if (semantic === "sender_last_name") return trimToNull(content.senderLastName) ?? "";
   if (semantic === "sender_email") return content.senderEmail;
   if (semantic === "sender_company") return content.senderCompany;
   if (semantic === "sender_website") return content.senderWebsite;
@@ -531,11 +762,6 @@ function keywordScore(value: string, keywords: readonly string[]): number {
 
 function weakKeywordScore(value: string, keywords: readonly string[]): number {
   return keywords.some((keyword) => value.includes(keyword)) ? 1 : 0;
-}
-
-function autocompleteNameScore(value: string | null): number {
-  const normalized = normalizeText(value ?? "");
-  return ["name", "given-name", "family-name", "additional-name"].includes(normalized) ? 4 : 0;
 }
 
 function sanitizePage(page: ContactFormDiscoveredPage): ContactFormDiscoveredPage {
@@ -567,6 +793,17 @@ function sanitizePage(page: ContactFormDiscoveredPage): ContactFormDiscoveredPag
         visible: Boolean(control.visible),
         valuePresent: Boolean(control.valuePresent),
         optionsCount: typeof control.optionsCount === "number" ? Math.max(0, Math.min(100, Math.floor(control.optionsCount))) : undefined,
+        options:
+          control.tag === "select"
+            ? (control.options ?? []).slice(0, MAX_SELECT_OPTIONS).map((option, optionIndex) => ({
+                ordinal: Number.isInteger(option.ordinal) ? option.ordinal : optionIndex,
+                labelText: clamp(option.labelText, MAX_TEXT_LENGTH),
+                normalizedLabel: normalizeText(option.normalizedLabel ?? option.labelText),
+                valuePresent: Boolean(option.valuePresent),
+                disabled: Boolean(option.disabled),
+                selected: Boolean(option.selected),
+              }))
+            : undefined,
       })),
     })),
   };
@@ -590,6 +827,11 @@ function normalizeText(value: string): string {
     .replace(/[_-]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function trimToNull(value: string | null | undefined): string | null {
+  const normalized = value?.trim() ?? "";
+  return normalized.length > 0 ? normalized : null;
 }
 
 function fingerprint(value: Json): string {
