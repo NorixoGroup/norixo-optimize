@@ -6,6 +6,7 @@ import {
   type BacklinkDomainRow,
 } from "../repositories/domainsRepository";
 import type { RepositoryPage } from "../repositories/pagination";
+import type { RepositoryPageRequest } from "../repositories/pagination";
 import type { BacklinkRepositoryClient } from "../repositories/repositoryClient";
 import type { WorkspaceId } from "../repositories/types";
 
@@ -24,8 +25,12 @@ export type DomainInput = {
 
 export type DomainUpdateInput = Omit<Partial<DomainInput>, "domain_key">;
 
-export async function listDomains(client: BacklinkRepositoryClient, workspaceId: WorkspaceId): Promise<RepositoryPage<BacklinkDomainRow>> {
-  return listBacklinkDomains(client, { workspaceId });
+export async function listDomains(
+  client: BacklinkRepositoryClient,
+  workspaceId: WorkspaceId,
+  pagination?: RepositoryPageRequest,
+): Promise<RepositoryPage<BacklinkDomainRow>> {
+  return listBacklinkDomains(client, { workspaceId, pagination });
 }
 
 export async function getDomain(client: BacklinkRepositoryClient, workspaceId: WorkspaceId, domainId: string): Promise<BacklinkDomainRow> {
