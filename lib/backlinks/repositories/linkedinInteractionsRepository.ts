@@ -11,10 +11,98 @@ type MessageSentRpc = Database["public"]["Functions"]["record_backlink_manual_li
 type MessageSentRpcArgs = MessageSentRpc["Args"];
 type MessageSentRpcReturn = MessageSentRpc["Returns"][number];
 
+export type LinkedInReplyClassification = "positive" | "negative";
+
+type ReplyConfirmedRpcArgs = {
+  p_workspace_id: string;
+  p_outreach_id: string;
+  p_actor_user_id: string;
+  p_classification: LinkedInReplyClassification;
+  p_idempotency_key: string;
+};
+
+type ReplyConfirmedRpcReturn = {
+  disposition: "created" | "existing";
+  interaction_id: string;
+  occurred_at: string;
+  outreach_status: string;
+  classification: string;
+};
+
 function required(value: string, field: string) { const result = value.trim(); if (!result) throw new BacklinkRepositoryError({ code: "VALIDATION", operation: "linkedinInteractions", message: `${field} is required.` }); return result; }
 function mapResult(value: GenericInteractionRpcReturn | MessageSentRpcReturn): { disposition: "created" | "existing"; interactionId: string; occurredAt: string; attemptId: string | null };
 function mapResult(value: unknown) { if (typeof value !== "object" || value == null || Array.isArray(value)) throw new BacklinkRepositoryError({ code: "DATABASE", operation: "linkedinInteractions", message: "Invalid LinkedIn interaction result." }); const row = value as Record<string, unknown>; if ((row.disposition !== "created" && row.disposition !== "existing") || typeof row.interaction_id !== "string" || typeof row.occurred_at !== "string") throw new BacklinkRepositoryError({ code: "DATABASE", operation: "linkedinInteractions", message: "Invalid LinkedIn interaction result." }); return { disposition: row.disposition, interactionId: row.interaction_id, occurredAt: row.occurred_at, attemptId: typeof row.attempt_id === "string" ? row.attempt_id : null }; }
 function rpcError(operation: string, error: unknown) { if (typeof error === "object" && error != null && "message" in error && typeof error.message === "string" && error.message.startsWith("LINKEDIN_INTERACTION_")) return new BacklinkRepositoryError({ code: error.message.includes("CONFLICT") || error.message.includes("INCONSISTENT") ? "CONFLICT" : "VALIDATION", operation, message: error.message }); return normalizeBacklinkRepositoryError(operation, error); }
 export async function recordLinkedInInteraction(client: BacklinkRepositoryClient, input: { workspaceId: string; outreachId: string; actorUserId: string; interactionType: Exclude<LinkedInInteractionType, "message_sent" | "reply_confirmed">; idempotencyKey: string }) { const args: GenericInteractionRpcArgs = { p_workspace_id: required(input.workspaceId, "workspaceId"), p_outreach_id: required(input.outreachId, "outreachId"), p_actor_user_id: required(input.actorUserId, "actorUserId"), p_interaction_type: input.interactionType, p_idempotency_key: required(input.idempotencyKey, "idempotencyKey") }; const { data, error } = await client.rpc("record_backlink_manual_linkedin_interaction", args); if (error != null) throw rpcError("recordLinkedInInteraction", error); if (!Array.isArray(data) || data.length !== 1) throw new BacklinkRepositoryError({ code: "DATABASE", operation: "recordLinkedInInteraction", message: "Invalid LinkedIn interaction result." }); return mapResult(data[0]); }
 export async function recordLinkedInMessageSent(client: BacklinkRepositoryClient, input: { workspaceId: string; outreachId: string; actorUserId: string; idempotencyKey: string }) { const args: MessageSentRpcArgs = { p_workspace_id: required(input.workspaceId, "workspaceId"), p_outreach_id: required(input.outreachId, "outreachId"), p_actor_user_id: required(input.actorUserId, "actorUserId"), p_idempotency_key: required(input.idempotencyKey, "idempotencyKey") }; const { data, error } = await client.rpc("record_backlink_manual_linkedin_message_sent", args); if (error != null) throw rpcError("recordLinkedInMessageSent", error); if (!Array.isArray(data) || data.length !== 1) throw new BacklinkRepositoryError({ code: "DATABASE", operation: "recordLinkedInMessageSent", message: "Invalid LinkedIn interaction result." }); return mapResult(data[0]); }
+
+export async function recordLinkedInReplyConfirmed(
+  client: BacklinkRepositoryClient,
+  input: {
+    workspaceId: string;
+    outreachId: string;
+    actorUserId: string;
+    classification: LinkedInReplyClassification;
+    idempotencyKey: string;
+  },
+) {
+  const args: ReplyConfirmedRpcArgs = {
+    p_workspace_id: required(input.workspaceId, "workspaceId"),
+    p_outreach_id: required(input.outreachId, "outreachId"),
+    p_actor_user_id: required(input.actorUserId, "actorUserId"),
+    p_classification: input.classification,
+    p_idempotency_key: required(input.idempotencyKey, "idempotencyKey"),
+  };
+
+  const rpcClient = client as unknown as {
+    rpc(
+      fn: "record_backlink_manual_linkedin_reply_confirmed",
+      args: ReplyConfirmedRpcArgs,
+    ): PromiseLike<{ data: ReplyConfirmedRpcReturn[] | null; error: unknown }>;
+  };
+
+  const { data, error } = await rpcClient.rpc(
+    "record_backlink_manual_linkedin_reply_confirmed",
+    args,
+  );
+
+  if (error != null) {
+    throw rpcError("recordLinkedInReplyConfirmed", error);
+  }
+
+  if (!Array.isArray(data) || data.length !== 1) {
+    throw new BacklinkRepositoryError({
+      code: "DATABASE",
+      operation: "recordLinkedInReplyConfirmed",
+      message: "Invalid LinkedIn reply confirmation result.",
+    });
+  }
+
+  const row = data[0];
+
+  if (
+    (row.disposition !== "created" && row.disposition !== "existing") ||
+    typeof row.interaction_id !== "string" ||
+    typeof row.occurred_at !== "string" ||
+    (row.outreach_status !== "replied" &&
+      row.outreach_status !== "declined") ||
+    (row.classification !== "positive" &&
+      row.classification !== "negative") ||
+    row.classification !== input.classification
+  ) {
+    throw new BacklinkRepositoryError({
+      code: "DATABASE",
+      operation: "recordLinkedInReplyConfirmed",
+      message: "Invalid LinkedIn reply confirmation result.",
+    });
+  }
+
+  return {
+    disposition: row.disposition,
+    interactionId: row.interaction_id,
+    occurredAt: row.occurred_at,
+    outreachStatus: row.outreach_status as "replied" | "declined",
+    classification: row.classification as LinkedInReplyClassification,
+  };
+}
 export async function listLinkedInInteractions(client: BacklinkRepositoryClient, workspaceId: string, outreachId: string): Promise<LinkedInInteraction[]> { const queryClient = client as unknown as { from(table: string): { select(columns: string): { eq(column: string, value: string): { eq(column: string, value: string): { order(column: string, options: { ascending: boolean }): { order(column: string, options: { ascending: boolean }): { order(column: string, options: { ascending: boolean }): PromiseLike<{ data: unknown[] | null; error: unknown }> } } } } } } }; const { data, error } = await queryClient.from("backlink_linkedin_interactions").select("*").eq("workspace_id", workspaceId).eq("outreach_id", outreachId).order("occurred_at", { ascending: true }).order("created_at", { ascending: true }).order("id", { ascending: true }); if (error != null) throw normalizeBacklinkRepositoryError("listLinkedInInteractions", error); return (data ?? []) as LinkedInInteraction[]; }
