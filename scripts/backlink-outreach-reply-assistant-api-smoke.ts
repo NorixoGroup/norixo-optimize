@@ -18,6 +18,16 @@ assert.match(
 
 assert.match(
   source,
+  /getBacklinkOutreachById\(\s*auth\.client,\s*auth\.workspace\.id,\s*id/,
+);
+
+assert.match(
+  source,
+  /outreach\.channel !== "linkedin"/,
+);
+
+assert.match(
+  source,
   /createBacklinkOutreachReplyAssistantRouteService\(auth\.client\)/,
 );
 

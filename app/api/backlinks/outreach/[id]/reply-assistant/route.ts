@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { isAdminPrivateEmail } from "@/lib/auth/isAdminEmail";
 import { BacklinkRepositoryError } from "@/lib/backlinks/repositories/errors";
+import { getBacklinkOutreachById } from "@/lib/backlinks/repositories/outreachRepository";
 import {
   createBacklinkOutreachReplyAssistantRouteService,
 } from "@/lib/backlinks/services/outreachReplyAssistantRouteService";
@@ -94,6 +95,19 @@ export async function POST(
   const { id } = await context.params;
 
   try {
+    const outreach = await getBacklinkOutreachById(
+      auth.client,
+      auth.workspace.id,
+      id,
+    );
+
+    if (outreach.channel !== "linkedin") {
+      return NextResponse.json(
+        { error: "LinkedIn reply proposal unavailable for this outreach." },
+        { status: 409 },
+      );
+    }
+
     const propose =
       createBacklinkOutreachReplyAssistantRouteService(auth.client);
 
