@@ -21,7 +21,6 @@ export type BacklinkOutreachReplyAssistantInbound = {
 export type BacklinkOutreachReplyAssistantRouteInput = {
   workspaceId: string;
   outreachId: string;
-  channel: BacklinkOutreachReplyAssistantChannel;
   inbound: BacklinkOutreachReplyAssistantInbound;
 };
 
@@ -61,6 +60,12 @@ export function createBacklinkOutreachReplyAssistantRouteService(
       input.outreachId,
     );
 
+    if (outreach.channel !== "email" && outreach.channel !== "linkedin") {
+      throw new Error("Backlink outreach reply assistant channel unsupported.");
+    }
+
+    const channel: BacklinkOutreachReplyAssistantChannel = outreach.channel;
+
     const [campaign, contact, opportunity] = await Promise.all([
       dependencies.getCampaign(
         client,
@@ -93,7 +98,7 @@ export function createBacklinkOutreachReplyAssistantRouteService(
     ]);
 
     const context: BacklinkOutreachReplyAssistantContext = {
-      channel: input.channel,
+      channel,
       campaign: {
         name: campaign.name,
         objective: campaign.objective,

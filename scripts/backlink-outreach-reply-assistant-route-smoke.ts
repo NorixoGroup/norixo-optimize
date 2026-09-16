@@ -20,6 +20,7 @@ async function main() {
       return {
         id: outreachId,
         workspace_id: workspaceId,
+        channel: "linkedin",
         campaign_id: "campaign-1",
         opportunity_id: "opportunity-1",
         contact_id: "contact-1",
@@ -125,7 +126,6 @@ async function main() {
   const result = await propose({
     workspaceId: "workspace-1",
     outreachId: "outreach-1",
-    channel: "linkedin",
     inbound: {
       sender: "Alex Example",
       subject: null,
