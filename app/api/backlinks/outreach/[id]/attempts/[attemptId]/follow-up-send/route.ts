@@ -44,6 +44,35 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     });
     return NextResponse.json({ ok: true, result: { disposition: result.disposition } });
   } catch (error) {
+    console.error("[backlinks-follow-up-send-error]", {
+      kind: error instanceof BacklinkOutreachFollowUpEmailSendError ? "send" : "unexpected",
+      name: error instanceof Error ? error.name : null,
+      message: error instanceof Error ? error.message : String(error),
+      cause:
+        error instanceof Error &&
+        typeof error.cause === "object" &&
+        error.cause != null
+          ? {
+              code:
+                "code" in error.cause && typeof error.cause.code === "string"
+                  ? error.cause.code
+                  : null,
+              message:
+                "message" in error.cause && typeof error.cause.message === "string"
+                  ? error.cause.message
+                  : null,
+              details:
+                "details" in error.cause && typeof error.cause.details === "string"
+                  ? error.cause.details
+                  : null,
+              hint:
+                "hint" in error.cause && typeof error.cause.hint === "string"
+                  ? error.cause.hint
+                  : null,
+            }
+          : null,
+    });
+
     if (error instanceof BacklinkOutreachFollowUpEmailSendError) return NextResponse.json({ error: "Follow-up send unavailable." }, { status: 409 });
     return NextResponse.json({ error: "Follow-up send unavailable." }, { status: 409 });
   }
