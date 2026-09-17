@@ -96,7 +96,27 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     });
 
     return NextResponse.json({ ok: true, result });
-  } catch {
-    return NextResponse.json({ error: "Cette relance ne peut plus être préparée dans l’état actuel." }, { status: 409 });
+  } catch (error) {
+    const cause =
+      error instanceof Error && error.cause instanceof Error
+        ? {
+            name: error.cause.name,
+            message: error.cause.message,
+          }
+        : null;
+
+    console.error("[backlinks-follow-up-prepare-error]", {
+      kind: "prepare",
+      name: error instanceof Error ? error.name : null,
+      message: error instanceof Error ? error.message : null,
+      cause,
+      requestMethod: request.method,
+      requestPath: request.nextUrl.pathname,
+    });
+
+    return NextResponse.json(
+      { error: "Cette relance ne peut plus être préparée dans l’état actuel." },
+      { status: 409 },
+    );
   }
 }
