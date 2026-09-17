@@ -2,6 +2,7 @@ import {
   BacklinkOutreachDraftError,
   createBacklinkOutreachDraftService,
 } from "../lib/backlinks/services/outreachDraftService";
+import { BacklinkRepositoryError } from "../lib/backlinks/repositories/errors";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -19,7 +20,10 @@ type StoredOutreach = {
   body: string | null;
 };
 
-function createFixture() {
+function createFixture(options: {
+  createError?: Error;
+  createConcurrentOnFailure?: boolean;
+} = {}) {
   const outreach: StoredOutreach[] = [];
   let nextKey = 1;
   let lastCreateInput: { workspaceId: string; actorUserId: string } | null = null;
@@ -53,6 +57,10 @@ function createFixture() {
     createOutreach: async (input) => {
       lastCreateInput = { workspaceId: input.workspaceId, actorUserId: input.actorUserId };
       const record: StoredOutreach = { id: `outreach-${outreach.length + 1}`, outreach_key: input.outreachKey, campaign_id: input.campaignId, opportunity_id: input.opportunityId, contact_id: input.contactId, channel: input.channel, status: input.status, subject: input.subject, body: input.body };
+      if (options.createError != null) {
+        if (options.createConcurrentOnFailure) outreach.push(record);
+        throw options.createError;
+      }
       outreach.push(record);
       return record;
     },
@@ -85,6 +93,30 @@ async function main() {
   await expectError(() => service({ ...base, contactId: "archived", channel: "email" }), "CHANNEL_NOT_ELIGIBLE");
   await expectError(() => service({ ...base, contactId: "wrong-domain", channel: "email" }), "CONTACT_NOT_ELIGIBLE");
   await expectError(() => service({ ...base, contactId: "form", channel: "email" }), "CHANNEL_NOT_ELIGIBLE");
+
+  const normalizedError = new BacklinkRepositoryError({
+    code: "VALIDATION",
+    operation: "createBacklinkOutreach",
+    message: "The provided data is invalid.",
+  });
+  const failed = createFixture({ createError: normalizedError });
+  try {
+    await failed.service({ ...base, contactId: "email", channel: "email" });
+    throw new Error("Expected normalized repository error.");
+  } catch (error) {
+    assert(error === normalizedError, "Normalized repository errors must not be replaced by OUTREACH_CREATE_FAILED.");
+  }
+
+  const concurrent = createFixture({
+    createError: new BacklinkRepositoryError({
+      code: "CONFLICT",
+      operation: "createBacklinkOutreach",
+      message: "The operation conflicts with existing data.",
+    }),
+    createConcurrentOnFailure: true,
+  });
+  const concurrentResult = await concurrent.service({ ...base, contactId: "email", channel: "email" });
+  assert(concurrentResult.disposition === "existing" && concurrent.outreach.length === 1, "Concurrent outreach handling must remain unchanged.");
   console.log("PASS — Backlink outreach draft service smoke");
 }
 

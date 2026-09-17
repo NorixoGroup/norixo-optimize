@@ -3,6 +3,7 @@ import {
   type OutreachDraftChannel,
   type OutreachDraftEligibilityDependencies,
 } from "./outreachDraftEligibilityService";
+import { BacklinkRepositoryError } from "../repositories/errors";
 import {
   createBacklinkOutreachDraftTemplate,
   type BacklinkOutreachDraftTemplate,
@@ -212,7 +213,7 @@ export function createBacklinkOutreachDraftService(deps: BacklinkOutreachDraftDe
         body: draft.body,
       });
       return resultFromOutreach(created, "created");
-    } catch {
+    } catch (error) {
       const concurrent = await deps.getActiveOutreach({
         workspaceId: input.workspaceId,
         opportunityId: eligibility.opportunityId,
@@ -222,6 +223,11 @@ export function createBacklinkOutreachDraftService(deps: BacklinkOutreachDraftDe
       if (concurrent != null) {
         return resultFromOutreach(concurrent, "existing");
       }
+
+      if (error instanceof BacklinkRepositoryError) {
+        throw error;
+      }
+
       throw new BacklinkOutreachDraftError("OUTREACH_CREATE_FAILED");
     }
   };
