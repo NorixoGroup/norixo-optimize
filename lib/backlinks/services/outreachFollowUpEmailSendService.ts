@@ -8,8 +8,11 @@ export type BacklinkOutreachFollowUpEmailSendErrorCode =
   | "FOLLOW_UP_SEND_PROVIDER_UNAVAILABLE";
 
 export class BacklinkOutreachFollowUpEmailSendError extends Error {
-  constructor(public readonly code: BacklinkOutreachFollowUpEmailSendErrorCode) {
-    super(code);
+  constructor(
+    public readonly code: BacklinkOutreachFollowUpEmailSendErrorCode,
+    options?: ErrorOptions,
+  ) {
+    super(code, options);
     this.name = "BacklinkOutreachFollowUpEmailSendError";
   }
 }
@@ -71,7 +74,10 @@ export function sendBacklinkOutreachFollowUpEmail(
       });
     } catch (error) {
       if (error instanceof BacklinkOutreachReplyCorrelationIdentityError) {
-        throw new BacklinkOutreachFollowUpEmailSendError("FOLLOW_UP_SEND_IDENTITY_INVALID");
+        throw new BacklinkOutreachFollowUpEmailSendError(
+          "FOLLOW_UP_SEND_IDENTITY_INVALID",
+          { cause: error },
+        );
       }
       throw error;
     }
@@ -106,7 +112,10 @@ export function sendBacklinkOutreachFollowUpEmail(
       }).replyTo;
     } catch (error) {
       if (error instanceof BacklinkOutreachReplyCorrelationIdentityError) {
-        throw new BacklinkOutreachFollowUpEmailSendError("FOLLOW_UP_SEND_IDENTITY_INVALID");
+        throw new BacklinkOutreachFollowUpEmailSendError(
+          "FOLLOW_UP_SEND_IDENTITY_INVALID",
+          { cause: error },
+        );
       }
       throw error;
     }
