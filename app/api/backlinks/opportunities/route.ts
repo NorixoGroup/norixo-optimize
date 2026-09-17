@@ -8,6 +8,21 @@ import {
 } from "@/lib/backlinks/services/opportunityService";
 import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 
+function paginationValue(searchParams: URLSearchParams, key: "page" | "pageSize"): number | undefined | null {
+  const values = searchParams.getAll(key);
+  if (values.length === 0) return undefined;
+  if (values.length !== 1 || !/^[1-9]\d*$/.test(values[0])) return null;
+  const parsed = Number(values[0]);
+  return Number.isSafeInteger(parsed) ? parsed : null;
+}
+
+export function parseOpportunityPagination(searchParams: URLSearchParams): { page?: number; pageSize?: number } | null {
+  const page = paginationValue(searchParams, "page");
+  const pageSize = paginationValue(searchParams, "pageSize");
+  if (page === null || pageSize === null) return null;
+  return { ...(page === undefined ? {} : { page }), ...(pageSize === undefined ? {} : { pageSize }) };
+}
+
 function responseForError(error: unknown) {
   const code =
     typeof error === "object" && error != null && "code" in error && typeof error.code === "string"
@@ -36,9 +51,11 @@ export async function GET(request: NextRequest) {
   const context = await getContext(request);
   if (context == null) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (context === "forbidden") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const pagination = parseOpportunityPagination(new URL(request.url).searchParams);
+  if (pagination == null) return NextResponse.json({ error: "Invalid pagination query" }, { status: 400 });
 
   try {
-    return NextResponse.json(await listOpportunities(context.client, context.workspace.id));
+    return NextResponse.json(await listOpportunities(context.client, context.workspace.id, { pagination }));
   } catch (error) {
     return responseForError(error);
   }

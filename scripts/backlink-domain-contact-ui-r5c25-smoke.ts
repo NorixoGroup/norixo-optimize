@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseDomainPagination } from "../app/api/backlinks/domains/route";
+import { parseOpportunityPagination } from "../app/api/backlinks/opportunities/route";
 import { listDomains } from "../lib/backlinks/services/domainService";
-import { BACKLINK_DOMAIN_CACHE_MAX_PAGES, BACKLINK_DOMAIN_CACHE_PAGE_SIZE, BacklinkDomainPageAggregationError, loadAllBacklinkDomainPages } from "../lib/backlinks/services/domainPageAggregation";
+import { listOpportunities } from "../lib/backlinks/services/opportunityService";
+import { BACKLINK_DOMAIN_CACHE_MAX_PAGES, BACKLINK_DOMAIN_CACHE_PAGE_SIZE, BacklinkDomainPageAggregationError, loadAllBacklinkDomainPages, loadAllBacklinkOpportunityPages } from "../lib/backlinks/services/domainPageAggregation";
 import { getBacklinkOutreachDraftEligibilityForMembership } from "../lib/backlinks/services/outreachDraftEligibilityService";
 import { BacklinkOutreachDraftError, createBacklinkOutreachDraftService } from "../lib/backlinks/services/outreachDraftService";
 
@@ -65,14 +67,19 @@ async function assertDomainMismatchRejected() {
 async function main() {
   assert.deepEqual(parseDomainPagination(new URLSearchParams()), {}, "domain API defaults must remain unset for repository defaults");
   assert.deepEqual(parseDomainPagination(new URLSearchParams("page=2&pageSize=30")), { page: 2, pageSize: 30 }, "explicit domain pagination must be forwarded");
+  assert.deepEqual(parseOpportunityPagination(new URLSearchParams()), {}, "opportunity API defaults must remain unset for repository defaults");
+  assert.deepEqual(parseOpportunityPagination(new URLSearchParams("page=2&pageSize=30")), { page: 2, pageSize: 30 }, "explicit opportunity pagination must be forwarded");
   for (const query of ["page=0", "page=1.5", "page=-1", "pageSize=abc", "page=1&page=2", "page=9007199254740992"]) {
     assert.equal(parseDomainPagination(new URLSearchParams(query)), null, `invalid pagination must be rejected: ${query}`);
+    assert.equal(parseOpportunityPagination(new URLSearchParams(query)), null, `invalid opportunity pagination must be rejected: ${query}`);
   }
 
   const calls: Array<{ from: number; to: number }> = [];
   await listDomains(repositoryClient(calls) as never, "workspace" as never);
   await listDomains(repositoryClient(calls) as never, "workspace" as never, { page: 2, pageSize: 30 });
-  assert.deepEqual(calls, [{ from: 0, to: 24 }, { from: 30, to: 59 }], "service must preserve default and forward explicit pagination to the repository");
+  await listOpportunities(repositoryClient(calls) as never, "workspace" as never);
+  await listOpportunities(repositoryClient(calls) as never, "workspace" as never, { pagination: { page: 2, pageSize: 30 } });
+  assert.deepEqual(calls, [{ from: 0, to: 24 }, { from: 30, to: 59 }, { from: 0, to: 24 }, { from: 30, to: 59 }], "services must preserve defaults and forward explicit pagination to repositories");
 
   async function aggregate(items: number, hasNextPage = false) {
     const pageCalls: number[] = [];
@@ -89,6 +96,12 @@ async function main() {
   const oneHundredOne = await aggregate(101, true);
   assert.deepEqual(oneHundredOne.pageCalls, [1, 2], "101 domains must fetch page two");
   assert.ok(oneHundredOne.result.items.some((domain) => domain.id === "domain-101"), "a domain beyond the original first 25 must be available");
+  const productionLikeOpportunities = await loadAllBacklinkOpportunityPages(async (page, pageSize) => {
+    const start = (page - 1) * pageSize + 1;
+    return { items: Array.from({ length: Math.max(0, Math.min(pageSize, 98 - start + 1)) }, (_, index) => ({ id: `opportunity-${start + index}` })), total: 98, pageSize, hasNextPage: false };
+  });
+  assert.equal(productionLikeOpportunities.items.length, 98, "all 98 production-like opportunities must be represented");
+  assert.ok(productionLikeOpportunities.items.some((opportunity) => opportunity.id === "opportunity-98"), "opportunity beyond the original first 25 must be available");
   const duplicatePageCalls: number[] = [];
   const deduplicated = await loadAllBacklinkDomainPages(async (page, pageSize) => {
     duplicatePageCalls.push(page);
@@ -129,6 +142,7 @@ async function main() {
   assert.match(contactsActionSource, /openEditor\(activeSection, row\)/, "Contacts Modifier must reuse the generic editor with its row");
   assert.match(source, /contacts: \{ label: "Contacts"[^\n]*endpoint: "\/api\/backlinks\/contacts"/, "Contacts must retain the existing API endpoint");
   assert.match(source, /const path = editor\.row == null \? sections\[editor\.section\]\.endpoint : `\$\{sections\[editor\.section\]\.endpoint\}\/\$\{editor\.row\.id\}`[\s\S]*method: editor\.row == null \? "POST" : "PATCH"/, "generic editor must retain its PATCH update path");
+  assert.match(source, /loadAllOpportunities[\s\S]*sections\.opportunities\.endpoint\}\?page=\$\{page\}&pageSize=\$\{pageSize\}/, "dashboard must aggregate every opportunity page through the production helper");
 
   const linkedInEligible = await eligibilityFor({ id: "linkedin", contact_status: "unverified", linkedin_url: "https://www.linkedin.com/in/test" });
   assert.ok(linkedInEligible.contacts[0].eligibleChannels.includes("linkedin"), "unverified same-domain LinkedIn contact must be eligible");

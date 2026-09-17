@@ -57,7 +57,7 @@ import OutreachFinalNoResponseDialog from "./_components/OutreachFinalNoResponse
 import OutreachSendDialog from "./_components/OutreachSendDialog";
 import OutreachAttemptHistoryDialog, { type OutreachAttemptHistoryItem, type OutreachDeliveryEventHistoryItem } from "./_components/OutreachAttemptHistoryDialog";
 import OutreachUnknownResolutionDialog from "./_components/OutreachUnknownResolutionDialog";
-import { loadAllBacklinkDomainPages } from "@/lib/backlinks/services/domainPageAggregation";
+import { loadAllBacklinkDomainPages, loadAllBacklinkOpportunityPages } from "@/lib/backlinks/services/domainPageAggregation";
 import OutreachResponseDialog from "./_components/OutreachResponseDialog";
 import OutreachLifecycleActionDialog from "./_components/OutreachLifecycleActionDialog";
 import OutreachInboundRepliesDialog, { type OutreachInboundReplyItem, type OutreachInboundReplyConfirmation } from "./_components/OutreachInboundRepliesDialog";
@@ -723,6 +723,10 @@ export default function BacklinksPage() {
     finally { setCampaignOpportunityMembershipsLoading(false); }
   }, [apiRequest]);
 
+  const loadAllOpportunities = useCallback(() => loadAllBacklinkOpportunityPages(
+    (page, pageSize) => apiRequest<PaginatedApiPage>(`${sections.opportunities.endpoint}?page=${page}&pageSize=${pageSize}`),
+  ), [apiRequest]);
+
   const loadDashboard = useCallback(async () => {
     if (!workspaceResolved) return;
     const workspaceRequestVersion = workspaceRequestVersionRef.current;
@@ -730,7 +734,7 @@ export default function BacklinksPage() {
     setError(null);
     try {
       const [opportunities, campaigns, outreach, links, assets, domains, contacts] = await Promise.all([
-        apiRequest<ApiPage>(sections.opportunities.endpoint),
+        loadAllOpportunities(),
         apiRequest<ApiPage>(sections.campaigns.endpoint),
         apiRequest<ApiPage>(sections.outreach.endpoint),
         apiRequest<ApiPage>(sections.links.endpoint),
@@ -747,19 +751,19 @@ export default function BacklinksPage() {
       if (workspaceRequestVersion !== workspaceRequestVersionRef.current) return;
       setLoading(false);
     }
-  }, [apiRequest, workspaceResolved]);
+  }, [apiRequest, loadAllOpportunities, workspaceResolved]);
 
   const reloadOpportunities = useCallback(async (requestVersion: number) => {
     if (!workspaceResolved) return;
     try {
-      const opportunities = await apiRequest<ApiPage>(sections.opportunities.endpoint);
+      const opportunities = await loadAllOpportunities();
       if (requestVersion !== workspaceRequestVersionRef.current) return;
       setPages((current) => ({ ...current, opportunities }));
     } catch {
       if (requestVersion !== workspaceRequestVersionRef.current) return;
       setError("Impossible de recharger les opportunités.");
     }
-  }, [apiRequest, workspaceResolved]);
+  }, [loadAllOpportunities, workspaceResolved]);
 
   useEffect(() => {
     const syncWorkspace = () => {

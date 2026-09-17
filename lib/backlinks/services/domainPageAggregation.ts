@@ -8,13 +8,13 @@ export type BacklinkDomainPage<T extends { id: string }> = {
   hasNextPage: boolean;
 };
 
-export class BacklinkDomainPageAggregationError extends Error {
+export class BacklinkPageAggregationError extends Error {
   constructor() {
-    super("Backlink domain pagination limit reached before the domain list was complete.");
+    super("Backlink pagination limit reached before the list was complete.");
   }
 }
 
-export async function loadAllBacklinkDomainPages<T extends { id: string }>(
+export async function loadAllBacklinkPages<T extends { id: string }>(
   fetchPage: (page: number, pageSize: number) => Promise<BacklinkDomainPage<T>>,
 ): Promise<{ items: T[]; total: number }> {
   const items: T[] = [];
@@ -35,11 +35,15 @@ export async function loadAllBacklinkDomainPages<T extends { id: string }>(
     const expectedPageCount = Math.max(1, Math.ceil(domainPage.total / domainPage.pageSize));
     const hasMorePages = domainPage.hasNextPage && page < expectedPageCount;
     if (page === BACKLINK_DOMAIN_CACHE_MAX_PAGES && domainPage.hasNextPage) {
-      throw new BacklinkDomainPageAggregationError();
+      throw new BacklinkPageAggregationError();
     }
     if (!hasMorePages) return { items, total };
     page += 1;
   }
 
-  throw new BacklinkDomainPageAggregationError();
+  throw new BacklinkPageAggregationError();
 }
+
+export const loadAllBacklinkDomainPages = loadAllBacklinkPages;
+export const loadAllBacklinkOpportunityPages = loadAllBacklinkPages;
+export const BacklinkDomainPageAggregationError = BacklinkPageAggregationError;
