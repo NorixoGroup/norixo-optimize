@@ -27,6 +27,9 @@ const SITEMAP_EXPERIMENT_CITY_TOPIC_PATHS = new Set<string>([
   "/airbnb-optimizer/marrakech/occupancy-guide",
   "/airbnb-optimizer/istanbul/occupancy-guide",
   "/airbnb-optimizer/barcelona/occupancy-guide",
+  "/airbnb-optimizer/paris/occupancy-guide",
+  "/airbnb-optimizer/london/occupancy-guide",
+  "/airbnb-optimizer/bali/occupancy-guide",
 ]);
 
 const GSC_PROTECTED_CITY_TOPIC_PATHS = new Set<string>([
