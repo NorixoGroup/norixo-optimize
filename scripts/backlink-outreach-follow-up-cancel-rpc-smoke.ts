@@ -6,7 +6,7 @@ function assert(value: unknown, message: string): asserts value {
 
 async function main() {
   const migration = await readFile(
-    "supabase/migrations/20260917220000_restore_follow_up_schedule_on_admin_cancel.sql",
+    "supabase/migrations/20260917230000_fix_backlink_follow_up_admin_cancel_rpc_ambiguity.sql",
     "utf8",
   );
 
@@ -31,6 +31,11 @@ async function main() {
     "attempt.prepared_at is null",
     "FOLLOW_UP_CANCEL_RECOVERY_CONFLICT",
     "set next_follow_up_at = attempt.prepared_at",
+    "from public.backlink_outreach as bo",
+    "from public.backlink_outreach_attempts as boa",
+    "boa.outreach_id = outreach.id",
+    "where boa.id = attempt.id",
+    "where bo.id = outreach.id",
     "cancelled_at = p_cancelled_at",
     "cancel_reason = normalized_reason",
     "'cancelled'",
