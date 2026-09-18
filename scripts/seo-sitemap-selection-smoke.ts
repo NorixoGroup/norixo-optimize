@@ -130,7 +130,7 @@ if (protectedTopics.length !== 29) {
   );
 }
 
-if (experimentTopics.length !== 8) {
+if (experimentTopics.length !== 9) {
   throw new Error(
     `Expected 8 sitemap experiment topics, got ${experimentTopics.length}`
   );
@@ -158,13 +158,13 @@ if (
   );
 }
 
-if (keptTopics.length !== 69) {
+if (keptTopics.length !== 70) {
   throw new Error(
     `Expected 69 kept topics, got ${keptTopics.length}`
   );
 }
 
-if (omittedTopics.length !== 5431) {
+if (omittedTopics.length !== 5430) {
   throw new Error(
     `Expected 5431 omitted topics, got ${omittedTopics.length}`
   );
