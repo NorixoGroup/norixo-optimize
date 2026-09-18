@@ -24,6 +24,7 @@ import { isCohort25CityTopicRepairPath } from "./cohort25CityTopicRepair";
  * - /airbnb-optimizer/london/occupancy-guide
  */
 const SITEMAP_EXPERIMENT_CITY_TOPIC_PATHS = new Set<string>([
+  "/airbnb-optimizer/dakhla/description-optimization",
   "/airbnb-optimizer/marrakech/occupancy-guide",
   "/airbnb-optimizer/istanbul/occupancy-guide",
   "/airbnb-optimizer/barcelona/occupancy-guide",
