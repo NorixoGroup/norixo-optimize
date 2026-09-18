@@ -8,6 +8,7 @@ const TARGETED_CITY_TOPIC_REPAIR_PATHS = new Set([
   "/airbnb-optimizer/chicago/business-travel-guide",
   "/airbnb-optimizer/chicago/market-analysis",
   "/airbnb-optimizer/dakhla/description-optimization",
+  "/airbnb-optimizer/muscat/title-optimization",
   "/airbnb-optimizer/dublin/pricing-positioning",
   "/airbnb-optimizer/istanbul/pricing-positioning",
   "/airbnb-optimizer/kuala-lumpur/local-demand-guide",
@@ -49,6 +50,30 @@ type TopicRepairBuilder = (
 ) => TargetedCityTopicRepairContent;
 
 const TARGETED_TOPIC_REPAIR_BUILDERS: Record<string, TopicRepairBuilder> = {
+  "title-optimization": (city) => ({
+    heading: `Write a clearer Airbnb title for ${city.name}`,
+    introduction:
+      `Use ${city.name}, ${city.country} as location context without inventing local demand, pricing, occupancy, or market benchmarks. Build the title from property facts the host can verify: accommodation type, location cue, defining feature, view, access advantage, or another concrete reason the stay is relevant.`,
+    sections: [
+      {
+        heading: "Lead with the strongest verifiable reason to click",
+        body:
+          "Choose the property fact that best distinguishes the stay and that is clearly supported by the listing itself. A title is stronger when it communicates one concrete advantage instead of stacking generic adjectives or unsupported claims.",
+      },
+      {
+        heading: "Use location only when the cue helps the guest",
+        body:
+          `Include ${city.name} or a more precise truthful location cue when it improves orientation or trip fit. Do not imply proximity, views, beach access, landmark access, or neighborhood advantages unless the property can substantiate them.`,
+      },
+      {
+        heading: "Keep the title aligned with the listing",
+        body:
+          "The title, cover photo, amenities, description, and property details should tell the same story. Remove wording that promises a feature or experience the rest of the listing does not clearly support.",
+      },
+    ],
+    actionBridge:
+      `Compare the published title with the property's real features, location details, amenities, access information, and lead photo. Rewrite the title around the clearest verifiable advantage, then evaluate the result through listing engagement and booking outcomes rather than assuming a ${city.name}-wide performance benchmark.`,
+  }),
   "description-optimization": (city) => ({
     heading: `Write a clearer Airbnb description for ${city.name}`,
     introduction:
