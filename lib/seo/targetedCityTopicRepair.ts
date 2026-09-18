@@ -10,6 +10,7 @@ const TARGETED_CITY_TOPIC_REPAIR_PATHS = new Set([
   "/airbnb-optimizer/dakhla/description-optimization",
   "/airbnb-optimizer/muscat/title-optimization",
   "/airbnb-optimizer/doha/amenities-guide",
+  "/airbnb-optimizer/doha/photo-order",
   "/airbnb-optimizer/dublin/pricing-positioning",
   "/airbnb-optimizer/istanbul/pricing-positioning",
   "/airbnb-optimizer/kuala-lumpur/local-demand-guide",
@@ -98,6 +99,31 @@ const TARGETED_TOPIC_REPAIR_BUILDERS: Record<string, TopicRepairBuilder> = {
     ],
     actionBridge:
       `Audit the published amenities against the property's real equipment, facilities, photos and stay conditions. Correct the highest-impact mismatch first, then measure listing-level engagement or booking outcomes without assuming a ${city.name}-wide amenity benchmark.`,
+  }),
+
+  "photo-order": (city) => ({
+    heading: `Audit the photo order for your Airbnb in ${city.name}`,
+    introduction:
+      `Use ${city.name}, ${city.country}, only as location context. Evaluate the gallery from photos and property facts the host can verify rather than an unsupported local photo-count average, guest-preference claim, market benchmark, or ranking-algorithm assumption.`,
+    sections: [
+      {
+        heading: "Lead with photos that explain the stay quickly",
+        body:
+          "Choose an opening sequence that helps a guest understand the property's strongest real features, overall condition and stay proposition without relying on repetitive images or unsupported promises.",
+      },
+      {
+        heading: "Build a sequence that covers the actual stay",
+        body:
+          "Review the gallery as a walkthrough of the property. Give useful coverage to the main spaces, sleeping setup, bathrooms, amenities, access-relevant features and other details that materially help a guest judge the accommodation.",
+      },
+      {
+        heading: "Keep the gallery consistent with the listing",
+        body:
+          "Compare every important photo with the title, description, amenities, room details and stay conditions. Remove misleading repetition, outdated images and visual claims that the current property information cannot substantiate.",
+      },
+    ],
+    actionBridge:
+      `Audit the property's real gallery for coverage, sequence, repetition and consistency. Correct the clearest information gap first, then evaluate listing-level engagement or booking outcomes without assuming a ${city.name}-wide photo-count or performance benchmark.`,
   }),
 
   "description-optimization": (city) => ({
