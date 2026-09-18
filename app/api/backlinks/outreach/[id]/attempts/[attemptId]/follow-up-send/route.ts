@@ -5,6 +5,7 @@ import { applyBacklinkOutreachFollowUpAccepted, getBacklinkOutreachAttemptById, 
 import { markBacklinkOutreachAttemptFailed, markBacklinkOutreachAttemptUnknown } from "@/lib/backlinks/services/outreachAttemptService";
 import { BacklinkOutreachFollowUpEmailSendError, sendBacklinkOutreachFollowUpEmail } from "@/lib/backlinks/services/outreachFollowUpEmailSendService";
 import { getBacklinkOutreachReplyTokenKeyring } from "@/lib/backlinks/services/outreachReplyCorrelationIdentity";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 
 function parse(value: unknown): { confirm: true } | null {
@@ -26,10 +27,12 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     updateAttempt: (workspaceId: string, value: string, patch: Parameters<typeof updateBacklinkOutreachAttemptState>[3]) => updateBacklinkOutreachAttemptState(auth.client, workspaceId, value, patch),
   };
   try {
+    const adminClient = createSupabaseAdminClient();
+
     const result = await sendBacklinkOutreachFollowUpEmail({
       getAttempt: (workspaceId, value) => getBacklinkOutreachAttemptById(auth.client, workspaceId, value),
-      markRequested: (value) => markBacklinkOutreachFollowUpAttemptRequested(auth.client, value),
-      markAccepted: (value) => applyBacklinkOutreachFollowUpAccepted(auth.client, value),
+      markRequested: (value) => markBacklinkOutreachFollowUpAttemptRequested(adminClient, value),
+      markAccepted: (value) => applyBacklinkOutreachFollowUpAccepted(adminClient, value),
       markFailed: markBacklinkOutreachAttemptFailed(transitions),
       markUnknown: markBacklinkOutreachAttemptUnknown(transitions),
       sendEmail: createEnvironmentOutreachEmailProvider(),
