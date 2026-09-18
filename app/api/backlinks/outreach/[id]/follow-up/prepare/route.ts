@@ -34,7 +34,16 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   if (!input) return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
 
   const { id } = await context.params;
-  const getTemplateData = async (workspaceId: string, outreach: { campaign_id: string; contact_id: string; opportunity_id: string }) => {
+  const getTemplateData = async (
+    workspaceId: string,
+    outreach: {
+      campaign_id: string;
+      contact_id: string;
+      opportunity_id: string;
+      subject: string | null;
+      body: string | null;
+    },
+  ) => {
     const [campaign, contact, opportunity] = await Promise.all([
       getBacklinkCampaignById(auth.client, workspaceId, outreach.campaign_id),
       getBacklinkContactById(auth.client, workspaceId, outreach.contact_id),
