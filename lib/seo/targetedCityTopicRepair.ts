@@ -11,6 +11,7 @@ const TARGETED_CITY_TOPIC_REPAIR_PATHS = new Set([
   "/airbnb-optimizer/muscat/title-optimization",
   "/airbnb-optimizer/doha/amenities-guide",
   "/airbnb-optimizer/doha/photo-order",
+  "/airbnb-optimizer/doha/seasonality-guide",
   "/airbnb-optimizer/dublin/pricing-positioning",
   "/airbnb-optimizer/istanbul/pricing-positioning",
   "/airbnb-optimizer/kuala-lumpur/local-demand-guide",
