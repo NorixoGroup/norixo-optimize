@@ -97,19 +97,57 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
 
     return NextResponse.json({ ok: true, result });
   } catch (error) {
-    const cause =
-      error instanceof Error && error.cause instanceof Error
-        ? {
-            name: error.cause.name,
-            message: error.cause.message,
-          }
+    const errorRecord =
+      typeof error === "object" && error !== null
+        ? (error as Record<string, unknown>)
+        : null;
+
+    const causeRecord =
+      errorRecord != null &&
+      typeof errorRecord.cause === "object" &&
+      errorRecord.cause !== null
+        ? (errorRecord.cause as Record<string, unknown>)
         : null;
 
     console.error("[backlinks-follow-up-prepare-error]", {
       kind: "prepare",
       name: error instanceof Error ? error.name : null,
       message: error instanceof Error ? error.message : null,
-      cause,
+      code:
+        errorRecord != null && typeof errorRecord.code === "string"
+          ? errorRecord.code
+          : null,
+      operation:
+        errorRecord != null && typeof errorRecord.operation === "string"
+          ? errorRecord.operation
+          : null,
+      details:
+        errorRecord != null &&
+        typeof errorRecord.details === "object" &&
+        errorRecord.details !== null
+          ? errorRecord.details
+          : null,
+      cause:
+        causeRecord != null
+          ? {
+              code:
+                typeof causeRecord.code === "string"
+                  ? causeRecord.code
+                  : null,
+              message:
+                typeof causeRecord.message === "string"
+                  ? causeRecord.message
+                  : null,
+              details:
+                typeof causeRecord.details === "string"
+                  ? causeRecord.details
+                  : null,
+              hint:
+                typeof causeRecord.hint === "string"
+                  ? causeRecord.hint
+                  : null,
+            }
+          : null,
       requestMethod: request.method,
       requestPath: request.nextUrl.pathname,
     });
