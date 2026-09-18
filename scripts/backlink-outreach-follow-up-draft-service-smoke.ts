@@ -618,8 +618,104 @@ async function main() {
   console.log(
     "PASS — missing accepted draft safely falls back to initial outbound",
   );
-}
 
+  {
+    const currentAttempt = {
+      id: "attempt-current-after-cancelled",
+      outreach_id: "outreach-cancelled-regression",
+      attempt_kind: "follow_up",
+      status: "prepared",
+      created_at: "2026-09-18T12:00:00.000Z",
+    };
+
+    let capturedFollowUpNumber: number | null = null;
+
+    const prepareDraft =
+      prepareBacklinkOutreachFollowUpDraft({
+        getAttempt: async () => currentAttempt,
+
+        getOutreach: async () => ({
+          id: "outreach-cancelled-regression",
+          campaign_id: "campaign-1",
+          contact_id: "contact-1",
+          opportunity_id: "opportunity-1",
+          subject: "Methodology reference for research readers",
+          body:
+            "We published a methodology reference that could be a useful supporting resource.",
+        }),
+
+        listAttempts: async () => [
+          {
+            id: "initial-accepted",
+            outreach_id: "outreach-cancelled-regression",
+            attempt_kind: "initial",
+            status: "accepted",
+            created_at: "2026-08-27T09:04:00.000Z",
+          },
+          {
+            id: "old-follow-up-cancelled",
+            outreach_id: "outreach-cancelled-regression",
+            attempt_kind: "follow_up",
+            status: "cancelled",
+            created_at: "2026-09-18T10:54:00.000Z",
+          },
+          currentAttempt,
+        ],
+
+        getTemplateData: async () => templateData,
+
+        getDraft: async () => null,
+
+        generateAiDraft: async (context) => {
+          capturedFollowUpNumber = context.followUpNumber;
+
+          return {
+            status: "success",
+            providerId: "test",
+            model: "test",
+            proposal: {
+              subject: "Methodology resource follow-up",
+              body:
+                "Just following up on the methodology resource I shared.",
+              tone: "professional",
+              language: "English",
+              approvalRequired: true,
+              warnings: [],
+            },
+          };
+        },
+
+        prepare: async (input) => ({
+          id: "draft-cancelled-regression",
+          outreachId: input.outreachId,
+          attemptId: input.attemptId,
+          followUpNumber: capturedFollowUpNumber ?? 0,
+          subject: input.subject,
+          body: input.body,
+          preparedAt: input.preparedAt,
+          updatedAt: input.preparedAt,
+          updatedBy: input.actorUserId,
+          disposition: "created" as const,
+        }),
+
+        now: () => "2026-09-18T12:01:00.000Z",
+      });
+
+    await prepareDraft({
+      workspaceId: "workspace-1",
+      outreachId: "outreach-cancelled-regression",
+      attemptId: currentAttempt.id,
+      actorUserId: "actor-1",
+    });
+
+    assert.equal(capturedFollowUpNumber, 1);
+
+    console.log(
+      "PASS — cancelled follow-up does not increment follow-up number",
+    );
+  }
+
+}
 main().catch((error) => {
   console.error(error);
   process.exit(1);

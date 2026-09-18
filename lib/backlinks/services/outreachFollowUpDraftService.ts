@@ -158,12 +158,16 @@ export function prepareBacklinkOutreachFollowUpDraft(
       outreach.id,
     );
 
-    const followUpNumber = attempts.filter(
-      (item) =>
-        item.attempt_kind === "follow_up" &&
-        (item.created_at < attempt.created_at ||
-          item.id <= attempt.id),
-    ).length;
+    // Number only follow-ups that were actually accepted/sent.
+    // Prepared, cancelled or failed attempts are not conversation turns.
+    const followUpNumber =
+      attempts.filter(
+        (item) =>
+          item.attempt_kind === "follow_up" &&
+          item.status === "accepted" &&
+          item.id !== attempt.id &&
+          item.created_at < attempt.created_at,
+      ).length + 1;
 
     // Conversation source of truth:
     // use the latest previously ACCEPTED follow-up draft.
