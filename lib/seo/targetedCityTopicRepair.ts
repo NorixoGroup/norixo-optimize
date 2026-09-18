@@ -9,6 +9,7 @@ const TARGETED_CITY_TOPIC_REPAIR_PATHS = new Set([
   "/airbnb-optimizer/chicago/market-analysis",
   "/airbnb-optimizer/dakhla/description-optimization",
   "/airbnb-optimizer/muscat/title-optimization",
+  "/airbnb-optimizer/doha/amenities-guide",
   "/airbnb-optimizer/dublin/pricing-positioning",
   "/airbnb-optimizer/istanbul/pricing-positioning",
   "/airbnb-optimizer/kuala-lumpur/local-demand-guide",
@@ -74,6 +75,31 @@ const TARGETED_TOPIC_REPAIR_BUILDERS: Record<string, TopicRepairBuilder> = {
     actionBridge:
       `Compare the published title with the property's real features, location details, amenities, access information, and lead photo. Rewrite the title around the clearest verifiable advantage, then evaluate the result through listing engagement and booking outcomes rather than assuming a ${city.name}-wide performance benchmark.`,
   }),
+  "amenities-guide": (city) => ({
+    heading: `Audit the amenities shown for your Airbnb in ${city.name}`,
+    introduction:
+      `Use ${city.name}, ${city.country}, only as location context. Evaluate amenities from facts the host can verify about the property rather than unsupported local averages, guest-preference claims, or market benchmarks.`,
+    sections: [
+      {
+        heading: "Show the amenities that materially define the stay",
+        body:
+          "Check that important facilities and practical features are selected accurately and are easy to confirm from the listing. Prioritize amenities that genuinely affect how a guest can use the property instead of adding claims that the accommodation cannot substantiate.",
+      },
+      {
+        heading: "Keep amenities, photos and description consistent",
+        body:
+          "Compare the amenities list with the photos, description, room details and house information. Remove contradictions and clarify limitations where a feature exists only in a specific room, season, shared area or under particular conditions.",
+      },
+      {
+        heading: "Reduce uncertainty before booking",
+        body:
+          "Review the questions a guest would need answered before relying on an amenity: availability, access, whether it is private or shared, operating conditions and any meaningful restrictions. State those details when they can be verified for the property.",
+      },
+    ],
+    actionBridge:
+      `Audit the published amenities against the property's real equipment, facilities, photos and stay conditions. Correct the highest-impact mismatch first, then measure listing-level engagement or booking outcomes without assuming a ${city.name}-wide amenity benchmark.`,
+  }),
+
   "description-optimization": (city) => ({
     heading: `Write a clearer Airbnb description for ${city.name}`,
     introduction:
