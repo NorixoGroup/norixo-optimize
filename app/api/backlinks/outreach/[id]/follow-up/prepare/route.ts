@@ -13,6 +13,7 @@ import { prepareBacklinkOutreachFollowUpDraft } from "@/lib/backlinks/services/o
 import { getBacklinkOutreachReplyTokenKeyring } from "@/lib/backlinks/services/outreachReplyCorrelationIdentity";
 import { prepareBacklinkOutreachFollowUp } from "@/lib/backlinks/services/outreachFollowUpPreparationService";
 import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type ParseResult = { idempotencyKey: string } | null;
 
@@ -70,6 +71,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   });
 
   try {
+    const adminClient = createSupabaseAdminClient();
+
     const prepareDraft = prepareBacklinkOutreachFollowUpDraft({
       getAttempt: (workspaceId, attemptId) => getBacklinkOutreachAttemptById(auth.client, workspaceId, attemptId),
       getOutreach: (workspaceId, outreachId) => getBacklinkOutreachById(auth.client, workspaceId, outreachId),
@@ -79,12 +82,12 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
         const draft = await getBacklinkOutreachFollowUpDraftByAttemptId(auth.client, workspaceId, attemptId);
         return draft == null ? null : mapDraftRow(draft);
       },
-      prepare: (value) => prepareBacklinkOutreachFollowUpDraftRpc(auth.client, value),
+      prepare: (value) => prepareBacklinkOutreachFollowUpDraftRpc(adminClient, value),
       now: () => new Date().toISOString(),
     });
 
     const result = await prepareBacklinkOutreachFollowUp({
-      reserveAttempt: (value) => reserveBacklinkOutreachFollowUpAttempt(auth.client, value),
+      reserveAttempt: (value) => reserveBacklinkOutreachFollowUpAttempt(adminClient, value),
       prepareDraft,
       replyTokenKeyring: getBacklinkOutreachReplyTokenKeyring(),
       now: () => new Date().toISOString(),
