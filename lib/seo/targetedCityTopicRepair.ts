@@ -7,6 +7,7 @@ const TARGETED_CITY_TOPIC_REPAIR_PATHS = new Set([
   "/airbnb-optimizer/budapest/revenue-optimization",
   "/airbnb-optimizer/chicago/business-travel-guide",
   "/airbnb-optimizer/chicago/market-analysis",
+  "/airbnb-optimizer/dakhla/description-optimization",
   "/airbnb-optimizer/dublin/pricing-positioning",
   "/airbnb-optimizer/istanbul/pricing-positioning",
   "/airbnb-optimizer/kuala-lumpur/local-demand-guide",
@@ -48,6 +49,31 @@ type TopicRepairBuilder = (
 ) => TargetedCityTopicRepairContent;
 
 const TARGETED_TOPIC_REPAIR_BUILDERS: Record<string, TopicRepairBuilder> = {
+  "description-optimization": (city) => ({
+    heading: `Write a clearer Airbnb description for ${city.name}`,
+    introduction:
+      `Use ${city.name}, ${city.country}, as location context without turning generic destination information into unsupported claims about demand or booking behaviour. Build the description from facts the host can verify about the property, access, amenities, layout and stay conditions.`,
+    sections: [
+      {
+        heading: "Explain the stay before selling it",
+        body:
+          "Lead with the property's strongest verifiable reason to book, then explain the layout, sleeping setup and practical stay proposition in plain language. Remove generic promises that could describe almost any destination or property.",
+      },
+      {
+        heading: "Make location context useful",
+        body:
+          "Describe the property's actual area, access instructions and nearby reference points only when they are accurate and relevant to this listing. Keep location context separate from unsupported assumptions about local demand, guest preferences or booking performance.",
+      },
+      {
+        heading: "Remove booking uncertainty",
+        body:
+          "State the amenities, access conditions, house constraints and practical details that can materially affect a booking decision. Keep every promise consistent with the property's real photos, facilities, rules and guest-facing information.",
+      },
+    ],
+    actionBridge:
+      "Compare the published description with the property's real amenities, photos, access information and stay conditions. Fix the clearest information gap first, then evaluate whether listing engagement or booking outcomes improve.",
+  }),
+
   "business-travel-guide": (city) => ({
     heading: `Evaluate business-travel readiness in ${city.name}`,
     introduction:
