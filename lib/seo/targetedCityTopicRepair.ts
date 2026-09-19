@@ -420,7 +420,10 @@ export function getTargetedCityTopicRepairContent(
 ): TargetedCityTopicRepairContent | null {
   const path = `/airbnb-optimizer/${city.slug}/${topic.slug}`;
 
-  if (!TARGETED_CITY_TOPIC_REPAIR_PATHS.has(path)) {
+  if (
+    topic.slug !== "occupancy-guide" &&
+    !TARGETED_CITY_TOPIC_REPAIR_PATHS.has(path)
+  ) {
     return null;
   }
 
