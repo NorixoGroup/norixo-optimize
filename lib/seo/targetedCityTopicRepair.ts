@@ -4,6 +4,7 @@ import type { LocalSeoTopic } from "@/data/localSeo";
 const TARGETED_CITY_TOPIC_REPAIR_PATHS = new Set([
   "/airbnb-optimizer/reykjavik/occupancy-guide",
   "/airbnb-optimizer/aix-en-provence/long-stay-guide",
+  "/airbnb-optimizer/auckland/pricing-positioning",
   "/airbnb-optimizer/athens/business-travel-guide",
   "/airbnb-optimizer/budapest/revenue-optimization",
   "/airbnb-optimizer/chicago/business-travel-guide",
@@ -23,12 +24,14 @@ const TARGETED_CITY_TOPIC_REPAIR_PATHS = new Set([
   "/airbnb-optimizer/melbourne/seasonality-guide",
   "/airbnb-optimizer/mexico-city/business-travel-guide",
   "/airbnb-optimizer/mexico-city/guest-trust-guide",
+  "/airbnb-optimizer/mexico-city/pricing-guide",
   "/airbnb-optimizer/nice/occupancy-guide",
   "/airbnb-optimizer/philadelphia/business-travel-guide",
   "/airbnb-optimizer/queenstown/revenue-optimization",
   "/airbnb-optimizer/queenstown/review-strategy",
   "/airbnb-optimizer/san-francisco/seasonality-guide",
   "/airbnb-optimizer/seoul/review-strategy",
+  "/airbnb-optimizer/singapore/competitor-analysis",
   "/airbnb-optimizer/vancouver/occupancy-guide",
   "/airbnb-optimizer/zaragoza/local-demand-guide",
 ]);
@@ -151,6 +154,31 @@ const TARGETED_TOPIC_REPAIR_BUILDERS: Record<string, TopicRepairBuilder> = {
     ],
     actionBridge:
       `Audit the property's real gallery for coverage, sequence, repetition and consistency. Correct the clearest information gap first, then evaluate listing-level engagement or booking outcomes without assuming a ${city.name}-wide photo-count or performance benchmark.`,
+  }),
+
+  "competitor-analysis": (city) => ({
+    heading: `Compare Airbnb alternatives in ${city.name} without inventing a market benchmark`,
+    introduction:
+      `Use ${city.name}, ${city.country}, only as location context. Build the comparison from observable listing facts and genuinely comparable stay propositions rather than an unsupported city average for price, rating, photos, occupancy, demand, or revenue.`,
+    sections: [
+      {
+        heading: "Build a genuinely comparable set",
+        body:
+          "Compare property type, guest capacity, location context, stay conditions, major amenities, presentation quality and other verifiable characteristics before treating another listing as a meaningful alternative.",
+      },
+      {
+        heading: "Separate structural differences from presentation gaps",
+        body:
+          "Identify whether an alternative is stronger because the stay itself is materially different or because its photos, title, amenities and practical information communicate the offer more clearly. Do not copy a competitor signal before understanding what creates the difference.",
+      },
+      {
+        heading: "Treat displayed price as evidence, not a market rule",
+        body:
+          "A displayed nightly rate is useful only in the context of comparable dates, restrictions and stay propositions. Avoid turning one listing or an unsupported city reference into a recommended price, benchmark or forecast.",
+      },
+    ],
+    actionBridge:
+      `Identify one observable difference between the listing and a genuinely comparable alternative in ${city.name}, test the most defensible listing-level improvement, and measure the result before changing several variables at once.`,
   }),
 
   "description-optimization": (city) => ({
@@ -301,6 +329,31 @@ const TARGETED_TOPIC_REPAIR_BUILDERS: Record<string, TopicRepairBuilder> = {
     ],
     actionBridge:
       "Identify whether availability, visibility, conversion or pricing is the best-supported occupancy hypothesis, change one major factor and measure the next comparable period.",
+  }),
+
+  "pricing-guide": (city) => ({
+    heading: `Evaluate Airbnb pricing in ${city.name} from comparable evidence`,
+    introduction:
+      `Use ${city.name}, ${city.country}, as location context without relying on an unsupported average nightly price, demand level, occupancy rate, seasonal pattern, or revenue benchmark. Evaluate pricing from the listing's own offer and genuinely comparable alternatives.`,
+    sections: [
+      {
+        heading: "Define the comparison before judging the rate",
+        body:
+          "Compare similar property type, guest capacity, location context, stay dates, booking conditions, major amenities and presentation quality. A rate from a materially different stay is weak evidence for a pricing decision.",
+      },
+      {
+        heading: "Separate price from perceived value",
+        body:
+          "Review whether the photos, title, amenities, property details, rules and booking conditions make the chosen rate understandable from the guest's point of view. A value-communication problem should not automatically be treated as a pricing problem.",
+      },
+      {
+        heading: "Change one pricing assumption at a time",
+        body:
+          "When a credible pricing mismatch is identified, test a focused adjustment and compare equivalent periods or booking conditions where possible. Avoid changing price, photos and copy simultaneously if the goal is to learn which factor affected performance.",
+      },
+    ],
+    actionBridge:
+      `Identify the strongest listing-level evidence for or against the current pricing position in ${city.name}, make one defensible adjustment if needed, and evaluate booking signals without assuming a city-wide benchmark.`,
   }),
 
   "pricing-positioning": (city) => ({
