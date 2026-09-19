@@ -5231,7 +5231,7 @@ export type Database = {
         }[]
       }
       prepare_backlink_outreach_follow_up_draft: {
-        Args: { p_actor_user_id: string; p_attempt_id: string; p_body: string; p_outreach_id: string; p_prepared_at: string; p_subject: string; p_workspace_id: string }
+        Args: { p_actor_user_id: string; p_attempt_id: string; p_body: string; p_follow_up_number: number; p_outreach_id: string; p_prepared_at: string; p_subject: string; p_workspace_id: string }
         Returns: { attempt_id: string; body: string; disposition: string; draft_id: string; follow_up_number: number; outreach_id: string; prepared_at: string; subject: string; updated_at: string; updated_by: string }[]
       }
       update_backlink_outreach_follow_up_draft: {

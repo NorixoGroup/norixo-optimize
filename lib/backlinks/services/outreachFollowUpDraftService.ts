@@ -76,6 +76,7 @@ export type BacklinkOutreachFollowUpDraftDependencies = {
     outreachId: string;
     attemptId: string;
     actorUserId: string;
+    followUpNumber: number;
     subject: string;
     body: string;
     preparedAt: string;
@@ -246,6 +247,7 @@ export function prepareBacklinkOutreachFollowUpDraft(
 
     return deps.prepare({
       ...input,
+      followUpNumber,
       subject: content(
         generated.proposal.subject,
         300,
