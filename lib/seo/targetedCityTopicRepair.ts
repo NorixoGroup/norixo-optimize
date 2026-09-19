@@ -499,7 +499,7 @@ export function getTargetedCityTopicRepairContent(
   const path = `/airbnb-optimizer/${city.slug}/${topic.slug}`;
 
   if (
-    !["occupancy-guide", "market-analysis", "photo-order", "amenities-guide", "long-stay-guide", "business-travel-guide", "revenue-optimization", "guest-trust-guide", "title-optimization", "photo-tips"].includes(topic.slug) &&
+    !["occupancy-guide", "market-analysis", "photo-order", "amenities-guide", "long-stay-guide", "business-travel-guide", "revenue-optimization", "guest-trust-guide", "title-optimization", "photo-tips", "competitor-analysis", "description-optimization", "local-demand-guide", "pricing-guide", "pricing-positioning", "review-strategy", "seasonality-guide"].includes(topic.slug) &&
     !TARGETED_CITY_TOPIC_REPAIR_PATHS.has(path)
   ) {
     return null;
