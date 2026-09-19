@@ -2,6 +2,7 @@ import type { City } from "@/data/cities";
 import type { LocalSeoTopic } from "@/data/localSeo";
 
 const TARGETED_CITY_TOPIC_REPAIR_PATHS = new Set([
+  "/airbnb-optimizer/reykjavik/occupancy-guide",
   "/airbnb-optimizer/aix-en-provence/long-stay-guide",
   "/airbnb-optimizer/athens/business-travel-guide",
   "/airbnb-optimizer/budapest/revenue-optimization",
