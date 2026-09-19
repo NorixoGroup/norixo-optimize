@@ -328,8 +328,23 @@ export async function generateBacklinkOutreachFollowUpAiDraft(
       !(error instanceof BacklinkOutreachFollowUpAiError) ||
       error.code !== "PROPOSAL_STYLE_INVALID"
     ) {
+      console.error("[backlinks-follow-up-ai-quality]", {
+        stage: "initial_parse_rejected",
+        code:
+          error instanceof BacklinkOutreachFollowUpAiError
+            ? error.code
+            : "UNKNOWN",
+        followUpNumber: input.followUpNumber,
+      });
       throw error;
     }
+
+    console.error("[backlinks-follow-up-ai-quality]", {
+      stage: "initial_style_rejected",
+      code: error.code,
+      followUpNumber: input.followUpNumber,
+      correctiveRetry: true,
+    });
 
     const correctiveResult =
       await dependencies.executeAiRequest({
@@ -366,13 +381,26 @@ export async function generateBacklinkOutreachFollowUpAiDraft(
       );
     }
 
-    return {
-      proposal: parseBacklinkOutreachFollowUpAiProposal(
-        correctiveResult.output,
-      ),
-      providerId: correctiveResult.providerId,
-      model: correctiveResult.model,
-      status: "success",
-    };
+    try {
+      return {
+        proposal: parseBacklinkOutreachFollowUpAiProposal(
+          correctiveResult.output,
+        ),
+        providerId: correctiveResult.providerId,
+        model: correctiveResult.model,
+        status: "success",
+      };
+    } catch (error) {
+      console.error("[backlinks-follow-up-ai-quality]", {
+        stage: "corrective_parse_rejected",
+        code:
+          error instanceof BacklinkOutreachFollowUpAiError
+            ? error.code
+            : "UNKNOWN",
+        followUpNumber: input.followUpNumber,
+        correctiveRetry: true,
+      });
+      throw error;
+    }
   }
 }
