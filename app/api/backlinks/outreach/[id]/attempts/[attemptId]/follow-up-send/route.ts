@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdminPrivateEmail } from "@/lib/auth/isAdminEmail";
 import { createEnvironmentOutreachEmailProvider } from "@/lib/backlinks/providers/outreachEmailProvider";
-import { applyBacklinkOutreachFollowUpAccepted, getBacklinkOutreachAttemptById, markBacklinkOutreachFollowUpAttemptRequested, updateBacklinkOutreachAttemptState } from "@/lib/backlinks/repositories/outreachAttemptsRepository";
+import { applyBacklinkOutreachFollowUpAccepted, getBacklinkOutreachAttemptById, getLatestBacklinkOutreachAttemptForOutreach, getOpenBacklinkOutreachAttemptForOutreach, markBacklinkOutreachFollowUpAttemptRequested, updateBacklinkOutreachAttemptState } from "@/lib/backlinks/repositories/outreachAttemptsRepository";
 import { markBacklinkOutreachAttemptFailed, markBacklinkOutreachAttemptUnknown } from "@/lib/backlinks/services/outreachAttemptService";
 import { BacklinkOutreachFollowUpEmailSendError, sendBacklinkOutreachFollowUpEmail } from "@/lib/backlinks/services/outreachFollowUpEmailSendService";
 import { getBacklinkOutreachReplyTokenKeyring } from "@/lib/backlinks/services/outreachReplyCorrelationIdentity";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
+import { reconcileBacklinkOutreachFollowUpSchedule as createBacklinkOutreachFollowUpScheduler } from "@/lib/backlinks/services/outreachFollowUpSchedulingService";
+import { getBacklinkOutreachById, reconcileBacklinkOutreachFollowUpSchedule as reconcileBacklinkOutreachFollowUpScheduleRepository } from "@/lib/backlinks/repositories/outreachRepository";
+import { getBacklinkContactById } from "@/lib/backlinks/repositories/contactsRepository";
+import { hasBacklinkOutreachInboundReplyStopEffect } from "@/lib/backlinks/repositories/outreachInboundEffectsRepository";
 
 function parse(value: unknown): { confirm: true } | null {
   if (typeof value !== "object" || value == null || Array.isArray(value)) return null;
@@ -29,6 +33,59 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   try {
     const adminClient = createSupabaseAdminClient();
 
+    const reconcileFollowUpSchedule =
+      createBacklinkOutreachFollowUpScheduler({
+        getOutreach: (workspaceId, outreachId) =>
+          getBacklinkOutreachById(adminClient, workspaceId, outreachId),
+
+        getLatestAttempt: async (workspaceId, outreachId) => {
+          const row = await getLatestBacklinkOutreachAttemptForOutreach(
+            adminClient,
+            workspaceId,
+            outreachId,
+          );
+          return row == null ? null : { status: row.status };
+        },
+
+        getOpenAttempt: async (workspaceId, outreachId) => {
+          const row = await getOpenBacklinkOutreachAttemptForOutreach(
+            adminClient,
+            workspaceId,
+            outreachId,
+          );
+          return row == null ? null : { status: row.status };
+        },
+
+        getContact: async (workspaceId, contactId) => {
+          const row = await getBacklinkContactById(
+            adminClient,
+            workspaceId,
+            contactId,
+          );
+          return row == null
+            ? null
+            : {
+                contact_status: row.contact_status,
+                email_normalized: row.email_normalized,
+              };
+        },
+
+        hasInboundReplyStopEffect: (workspaceId, outreachId) =>
+          hasBacklinkOutreachInboundReplyStopEffect(
+            adminClient,
+            workspaceId,
+            outreachId,
+          ),
+
+        reconcileSchedule: (workspaceId, outreachId, input) =>
+          reconcileBacklinkOutreachFollowUpScheduleRepository(
+            adminClient,
+            workspaceId,
+            outreachId,
+            input,
+          ),
+      });
+
     const result = await sendBacklinkOutreachFollowUpEmail({
       getAttempt: (workspaceId, value) => getBacklinkOutreachAttemptById(auth.client, workspaceId, value),
       markRequested: (value) => markBacklinkOutreachFollowUpAttemptRequested(adminClient, value),
@@ -37,6 +94,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       markUnknown: markBacklinkOutreachAttemptUnknown(transitions),
       sendEmail: createEnvironmentOutreachEmailProvider(),
       inboundReplyDomain: process.env.OUTREACH_INBOUND_REPLY_DOMAIN,
+      reconcileSchedule: ({ workspaceId, outreachId }) =>
+        reconcileFollowUpSchedule({ workspaceId, outreachId }),
       replyTokenKeyring: getBacklinkOutreachReplyTokenKeyring(),
     })({
       workspaceId: auth.workspace.id,

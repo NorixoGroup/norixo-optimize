@@ -54,11 +54,12 @@ function accepted(): OutreachEmailSendResult {
 }
 
 function base() {
-  const calls = { provider: 0, accepted: 0, failed: 0, unknown: 0, requested: 0 };
+  const calls = { provider: 0, accepted: 0, reconciled: 0, failed: 0, unknown: 0, requested: 0 };
   const dependencies = {
     getAttempt: async () => attempt(),
     markRequested: async () => { calls.requested += 1; return requested(); },
     markAccepted: async (): Promise<ApplyBacklinkOutreachFollowUpAcceptedResult> => { calls.accepted += 1; return { disposition: "applied", attemptStatus: "accepted", outreachStatus: "active", currentAttempt: 2, lastAttemptAt: "2026-08-12T10:02:00.000Z" }; },
+    reconcileSchedule: async () => { calls.reconciled += 1; },
     markFailed: async () => { calls.failed += 1; },
     markUnknown: async () => { calls.unknown += 1; },
     sendEmail: async (input: { to: string; subject: string; body: string; replyTo: string; idempotencyKey: string }) => {
@@ -82,7 +83,7 @@ async function main() {
     const { calls, dependencies } = base();
     const send = sendBacklinkOutreachFollowUpEmail(dependencies);
     await send({ workspaceId: "workspace", actorUserId: "actor", outreachId: "outreach", attemptId: "00000000-0000-8000-8000-000000000123", confirm: true });
-    assert(calls.requested === 1 && calls.provider === 1 && calls.accepted === 1, "Accepted flow must request, send once, and apply D4.2.");
+    assert(calls.requested === 1 && calls.provider === 1 && calls.accepted === 1 && calls.reconciled === 1, "Accepted flow must request, send once, apply D4.2, and reconcile the next schedule.");
   }
   {
     const { calls, dependencies } = base();

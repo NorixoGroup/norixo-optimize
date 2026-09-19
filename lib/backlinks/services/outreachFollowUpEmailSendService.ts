@@ -21,6 +21,7 @@ export type BacklinkOutreachFollowUpEmailSendDependencies = {
   getAttempt: (workspaceId: string, attemptId: string) => Promise<BacklinkOutreachAttemptRow>;
   markRequested: (input: { workspaceId: string; outreachId: string; attemptId: string; actorUserId: string; requestedAt: string }) => Promise<MarkBacklinkOutreachFollowUpAttemptRequestedResult>;
   markAccepted: (input: { workspaceId: string; outreachId: string; attemptId: string; providerMessageId: string | null; acceptedAt: string }) => Promise<ApplyBacklinkOutreachFollowUpAcceptedResult>;
+  reconcileSchedule: (input: { workspaceId: string; outreachId: string }) => Promise<unknown>;
   markFailed: (input: { workspaceId: string; attemptId: string; errorCode: string; errorMessage: string }) => Promise<unknown>;
   markUnknown: (input: { workspaceId: string; attemptId: string; errorCode: string | null; errorMessage: string | null }) => Promise<unknown>;
   sendEmail: (input: { to: string; subject: string; body: string; replyTo: string; idempotencyKey: string }) => Promise<OutreachEmailSendResult>;
@@ -185,6 +186,14 @@ export function sendBacklinkOutreachFollowUpEmail(
       providerMessageId: provider.providerMessageId,
       acceptedAt: (dependencies.now ?? (() => new Date().toISOString()))(),
     });
+
+    if (accepted.disposition === "applied") {
+      await dependencies.reconcileSchedule({
+        workspaceId: input.workspaceId,
+        outreachId: snapshot.outreachId,
+      });
+    }
+
     return {
       disposition: accepted.disposition === "applied" ? "accepted" : "existing",
       outreachId: snapshot.outreachId,
