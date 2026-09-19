@@ -28,6 +28,7 @@ const SITEMAP_EXPERIMENT_CITY_TOPIC_PATHS = new Set<string>([
   "/airbnb-optimizer/doha/amenities-guide",
   "/airbnb-optimizer/doha/photo-order",
   "/airbnb-optimizer/doha/seasonality-guide",
+  "/airbnb-optimizer/reykjavik/occupancy-guide",
   "/airbnb-optimizer/muscat/title-optimization",
   "/airbnb-optimizer/marrakech/occupancy-guide",
   "/airbnb-optimizer/istanbul/occupancy-guide",
