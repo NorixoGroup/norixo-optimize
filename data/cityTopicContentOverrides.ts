@@ -231,7 +231,7 @@ const cityTopicContentOverrides: Record<
         {
           heading: "Compare the rate with the visible offer first",
           body:
-            "Use the current Norixo reference price of about €95 per night only as context, not as a target or a claim about the whole Mexico City market. Compare the chosen rate with nearby listings that appear genuinely similar in location context, stay type, amenities, presentation, and guest reassurance. A price comparison is more useful when the alternatives are comparable in what a guest can actually verify.",
+            "Compare the chosen rate with nearby listings that appear genuinely similar in location context, stay type, amenities, presentation, booking conditions, and guest reassurance. A price comparison is more useful when the alternatives are comparable in what a guest can actually verify rather than treated as evidence of a city-wide benchmark.",
         },
         {
           heading: "Separate a price problem from a value problem",
@@ -296,12 +296,12 @@ const cityTopicContentOverrides: Record<
         {
           heading: "Define the comparison before judging the price",
           body:
-            "Auckland demand is shaped by tourism flows, event calendars, business travel, and neighborhood-level search behavior. Compare the listing with alternatives that appear relevant to the same type of trip rather than treating every nearby nightly rate as equivalent. Location context, amenities, presentation, and guest reassurance all affect whether two prices are meaningfully comparable.",
+            "Compare the Auckland listing with alternatives that appear relevant to the same type of stay rather than treating every nearby nightly rate as equivalent. Location context, property type, capacity, amenities, presentation, booking conditions, and guest reassurance all affect whether two prices are meaningfully comparable.",
         },
         {
           heading: "Use the reference rate as context, not a target",
           body:
-            "The current Norixo reference price for Auckland is around €150 per night. It is a diagnostic reference, not a recommended rate or forecast. Review whether the listing's photos, amenity positioning, review quality, and practical information make its chosen price credible relative to the offer a guest can verify.",
+            "Review whether the Auckland listing's photos, amenity positioning, review context, booking conditions, and practical information make its chosen price credible relative to the offer a guest can verify. Do not infer a recommended rate or forecast from an unsupported city average.",
         },
         {
           heading: "Look for a value-communication problem before discounting",
@@ -598,12 +598,12 @@ const cityTopicContentOverrides: Record<
         {
           heading: "Read price alongside the evidence of value",
           body:
-            "The current Norixo reference price for Singapore is around €185 per night, but it is context rather than a target or market rule. A lower-priced alternative may be less comparable, while a higher-priced one may make its value more legible through presentation, amenities, or trust signals. Ask whether the visible offer supports the price before reacting to a single rate.",
+            "A lower-priced Singapore alternative may be less comparable, while a higher-priced one may make its value more legible through presentation, amenities, booking conditions, or trust signals. Ask whether the visible offer supports the displayed price before reacting to a single rate or inferring a city-wide benchmark.",
         },
         {
           heading: "Act only on a pattern you can test",
           body:
-            "Use competitor observations to identify one testable listing gap, not a reason to copy every nearby choice. At the current Norixo reference of about 24 photos and 4.65/5 in Singapore, check whether the listing gives guests enough clear evidence to compare confidently. If the observed gap is presentation or reassurance, address that first; if the offers are not truly comparable, do not treat the comparison as a pricing instruction.",
+            "Use competitor observations to identify one testable listing gap, not a reason to copy every nearby choice. Check whether the Singapore listing gives guests enough clear visual and practical evidence to compare confidently. If the observed gap is presentation or reassurance, address that first; if the offers are not truly comparable, do not treat the comparison as a pricing instruction.",
         },
       ],
       auditBridge:
