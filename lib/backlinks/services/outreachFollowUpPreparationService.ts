@@ -2,7 +2,11 @@ import { randomUUID } from "node:crypto";
 
 import { deriveBacklinkOutreachReplyCorrelationIdentity, type BacklinkOutreachReplyTokenKeyring } from "./outreachReplyCorrelationIdentity";
 import type { PrepareBacklinkOutreachFollowUpDraftResult } from "../repositories/outreachFollowUpDraftsRepository";
-import type { ReserveBacklinkOutreachFollowUpAttemptInput, ReserveBacklinkOutreachFollowUpAttemptResult } from "../repositories/outreachAttemptsRepository";
+import type {
+  CancelBacklinkOutreachPreparedFollowUpAttemptInput,
+  ReserveBacklinkOutreachFollowUpAttemptInput,
+  ReserveBacklinkOutreachFollowUpAttemptResult,
+} from "../repositories/outreachAttemptsRepository";
 
 export type BacklinkOutreachFollowUpPreparationResult = {
   disposition: "prepared" | "existing";
@@ -13,6 +17,7 @@ export type BacklinkOutreachFollowUpPreparationResult = {
 
 export type BacklinkOutreachFollowUpPreparationDependencies = {
   reserveAttempt: (input: ReserveBacklinkOutreachFollowUpAttemptInput) => Promise<ReserveBacklinkOutreachFollowUpAttemptResult>;
+  cancelAttempt: (input: CancelBacklinkOutreachPreparedFollowUpAttemptInput) => Promise<unknown>;
   prepareDraft: (input: { workspaceId: string; outreachId: string; attemptId: string; actorUserId: string }) => Promise<PrepareBacklinkOutreachFollowUpDraftResult>;
   replyTokenKeyring: BacklinkOutreachReplyTokenKeyring;
   now?: () => string;
@@ -39,12 +44,32 @@ export function prepareBacklinkOutreachFollowUp(deps: BacklinkOutreachFollowUpPr
       throw new Error("FOLLOW_UP_PREPARATION_CONFLICT");
     }
 
-    const draft = await deps.prepareDraft({
-      workspaceId: input.workspaceId,
-      outreachId: input.outreachId,
-      attemptId: reserved.attemptId,
-      actorUserId: input.actorUserId,
-    });
+    let draft: PrepareBacklinkOutreachFollowUpDraftResult;
+
+    try {
+      draft = await deps.prepareDraft({
+        workspaceId: input.workspaceId,
+        outreachId: input.outreachId,
+        attemptId: reserved.attemptId,
+        actorUserId: input.actorUserId,
+      });
+    } catch (error) {
+      if (reserved.disposition === "reserved") {
+        try {
+          await deps.cancelAttempt({
+            workspaceId: input.workspaceId,
+            outreachId: reserved.outreachId,
+            attemptId: reserved.attemptId,
+            cancelReason: "admin_cancelled",
+            cancelledAt: (deps.now ?? (() => new Date().toISOString()))(),
+          });
+        } catch {
+          // Preserve the original draft preparation failure.
+        }
+      }
+
+      throw error;
+    }
 
     return {
       disposition: reserved.disposition === "reserved" ? "prepared" : "existing",

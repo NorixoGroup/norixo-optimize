@@ -12,6 +12,7 @@ async function main() {
   const calls: string[] = [];
   const prepare = prepareBacklinkOutreachFollowUp({
     replyTokenKeyring: { activeKeyVersion: "v1", secrets: { v1: "follow-up-secret" } },
+    cancelAttempt: async () => ({}),
     reserveAttempt: async (input) => {
       calls.push(`reserve:${input.idempotencyKey}`);
       assert(input.workspaceId === "workspace" && input.outreachId === "outreach" && input.actorUserId === "actor", "Reservation must receive the server-scoped identity.");
@@ -37,6 +38,7 @@ async function main() {
   let prepareCalls = 0;
   const prepareExisting = prepareBacklinkOutreachFollowUp({
     replyTokenKeyring: { activeKeyVersion: "v1", secrets: { v1: "follow-up-secret" } },
+    cancelAttempt: async () => ({}),
     reserveAttempt: async (input) => ({ disposition: "existing", attemptId: input.attemptId, outreachId: input.outreachId, attemptStatus: "prepared", attemptKind: "follow_up", preparedAt: "2026-08-12T10:00:00.000Z", requestedAt: null }),
     prepareDraft: async (input) => {
       prepareCalls += 1;
@@ -48,17 +50,65 @@ async function main() {
 
   const recovered = prepareBacklinkOutreachFollowUp({
     replyTokenKeyring: { activeKeyVersion: "v1", secrets: { v1: "follow-up-secret" } },
+    cancelAttempt: async () => ({}),
     reserveAttempt: async (input) => ({ disposition: "existing", attemptId: input.attemptId, outreachId: input.outreachId, attemptStatus: "prepared", attemptKind: "follow_up", preparedAt: "2026-08-12T10:00:00.000Z", requestedAt: null }),
     prepareDraft: async () => ({ disposition: "created", id: "draft", outreachId: "outreach", attemptId: "attempt", followUpNumber: 1, subject: "Subject", body: "Body", preparedAt: "2026-08-12T10:00:00.000Z", updatedAt: "2026-08-12T10:00:00.000Z", updatedBy: "actor" }),
   });
   assert((await recovered({ workspaceId: "workspace", actorUserId: "actor", outreachId: "outreach", idempotencyKey: "follow-up:001" })).disposition === "existing", "A recovered retry should remain idempotent.");
 
+  const cancelledAttempts: string[] = [];
   const stopRace = prepareBacklinkOutreachFollowUp({
     replyTokenKeyring: { activeKeyVersion: "v1", secrets: { v1: "follow-up-secret" } },
     reserveAttempt: async (input) => ({ disposition: "reserved", attemptId: input.attemptId, outreachId: input.outreachId, attemptStatus: "prepared", attemptKind: "follow_up", preparedAt: input.reservedAt, requestedAt: null }),
+    cancelAttempt: async (input) => {
+      cancelledAttempts.push(input.attemptId);
+      return {};
+    },
     prepareDraft: async () => { throw new Error("FOLLOW_UP_DRAFT_ATTEMPT_NOT_PREPARED"); },
   });
   await assert.rejects(stopRace({ workspaceId: "workspace", actorUserId: "actor", outreachId: "outreach", idempotencyKey: "follow-up:001" }), /FOLLOW_UP_DRAFT_ATTEMPT_NOT_PREPARED/, "A stop race must fail safely.");
+
+  assert(
+    cancelledAttempts.length === 1,
+    "A newly reserved attempt must be cancelled exactly once when draft preparation fails.",
+  );
+
+  let existingCancellationCalls = 0;
+  const existingFailure = prepareBacklinkOutreachFollowUp({
+    replyTokenKeyring: { activeKeyVersion: "v1", secrets: { v1: "follow-up-secret" } },
+    cancelAttempt: async () => {
+      existingCancellationCalls += 1;
+      return {};
+    },
+    reserveAttempt: async (input) => ({
+      disposition: "existing",
+      attemptId: input.attemptId,
+      outreachId: input.outreachId,
+      attemptStatus: "prepared",
+      attemptKind: "follow_up",
+      preparedAt: input.reservedAt,
+      requestedAt: null,
+    }),
+    prepareDraft: async () => {
+      throw new Error("PROPOSAL_INVALID");
+    },
+  });
+
+  await assert.rejects(
+    existingFailure({
+      workspaceId: "workspace",
+      actorUserId: "actor",
+      outreachId: "outreach",
+      idempotencyKey: "follow-up:existing",
+    }),
+    /PROPOSAL_INVALID/,
+    "An existing attempt must preserve the original preparation failure.",
+  );
+
+  assert(
+    existingCancellationCalls === 0,
+    "An existing attempt must never be automatically cancelled.",
+  );
 
   console.log("PASS — Backlink follow-up prepare service smoke");
 }

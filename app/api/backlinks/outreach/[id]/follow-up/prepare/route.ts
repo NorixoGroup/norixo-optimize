@@ -7,7 +7,7 @@ import { getBacklinkContactById } from "@/lib/backlinks/repositories/contactsRep
 import { getBacklinkDomainById } from "@/lib/backlinks/repositories/domainsRepository";
 import { getBacklinkOpportunityById } from "@/lib/backlinks/repositories/opportunitiesRepository";
 import { getBacklinkOutreachById } from "@/lib/backlinks/repositories/outreachRepository";
-import { getBacklinkOutreachAttemptById, listBacklinkOutreachAttemptsForOutreach, reserveBacklinkOutreachFollowUpAttempt } from "@/lib/backlinks/repositories/outreachAttemptsRepository";
+import { cancelBacklinkOutreachPreparedFollowUpAttempt, getBacklinkOutreachAttemptById, listBacklinkOutreachAttemptsForOutreach, reserveBacklinkOutreachFollowUpAttempt } from "@/lib/backlinks/repositories/outreachAttemptsRepository";
 import { getBacklinkOutreachFollowUpDraftByAttemptId, prepareBacklinkOutreachFollowUpDraft as prepareBacklinkOutreachFollowUpDraftRpc, type BacklinkOutreachFollowUpDraftProjection, type BacklinkOutreachFollowUpDraftRow } from "@/lib/backlinks/repositories/outreachFollowUpDraftsRepository";
 import { prepareBacklinkOutreachFollowUpDraft } from "@/lib/backlinks/services/outreachFollowUpDraftService";
 import { getBacklinkOutreachReplyTokenKeyring } from "@/lib/backlinks/services/outreachReplyCorrelationIdentity";
@@ -97,6 +97,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
 
     const result = await prepareBacklinkOutreachFollowUp({
       reserveAttempt: (value) => reserveBacklinkOutreachFollowUpAttempt(adminClient, value),
+      cancelAttempt: (value) => cancelBacklinkOutreachPreparedFollowUpAttempt(adminClient, value),
       prepareDraft,
       replyTokenKeyring: getBacklinkOutreachReplyTokenKeyring(),
       now: () => new Date().toISOString(),
