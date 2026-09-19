@@ -600,6 +600,79 @@ async function main() {
   console.log(
     "PASS — actual previous outbound subject/body supplied to AI",
   );
+
+  const qualityPromptSource = await import(
+    "../lib/backlinks/services/outreachFollowUpAiDraft"
+  );
+
+  const qualityPrompt =
+    qualityPromptSource.buildBacklinkOutreachFollowUpAiPrompt({
+      followUpNumber: 1,
+      campaign: {
+        name: "Research outreach",
+        objective: "Earn relevant editorial references",
+      },
+      contact: {
+        fullName: "Research team",
+        roleTitle: null,
+      },
+      domain: {
+        hostname: "research.skift.com",
+      },
+      opportunity: {
+        targetPageTitle: "Focus and methodology",
+        targetPageUrl:
+          "https://research.skift.com/focus-and-methodology/",
+        opportunityType: "resource",
+        pageType: "methodology",
+        evidenceSummary:
+          "The supplied target page is a methodology-focused research page.",
+      },
+      asset: {
+        displayName: "Norixo research methodology",
+        canonicalUrl:
+          "https://norixo.io/research/methodology",
+      },
+      previousOutbound: {
+        subject: "Methodology reference for research readers",
+        body:
+          "We published a short methodology reference that explains our own approach and the limits of the figures we publish. " +
+          "If you ever add a supporting citation or resource section, this could be a helpful companion.",
+      },
+    });
+
+  assert.match(
+    qualityPrompt,
+    /Start directly from the concrete reason for the follow-up/i,
+  );
+  assert.match(
+    qualityPrompt,
+    /Do not use stock openings or closings/i,
+  );
+  assert.match(
+    qualityPrompt,
+    /I hope this message finds you well/i,
+  );
+  assert.match(
+    qualityPrompt,
+    /specific resource or proposal/i,
+  );
+  assert.match(
+    qualityPrompt,
+    /include that URL naturally/i,
+  );
+  assert.match(
+    qualityPrompt,
+    /call to action must follow from the actual prior proposal/i,
+  );
+  assert.match(
+    qualityPrompt,
+    /add no new sales pitch/i,
+  );
+
+  console.log(
+    "PASS — follow-up AI prompt enforces direct contextual outreach quality",
+  );
   console.log(
     "PASS — existing canonical draft bypasses AI",
   );
