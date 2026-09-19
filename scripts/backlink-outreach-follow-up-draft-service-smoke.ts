@@ -673,6 +673,75 @@ async function main() {
   console.log(
     "PASS — follow-up AI prompt enforces direct contextual outreach quality",
   );
+
+  {
+    const badStockProposal = JSON.stringify({
+      subject: "Follow-up on Revenue Management Resource for Arrival",
+      body:
+        "Hi Alexa,\\n\\n" +
+        "I wanted to follow up regarding the revenue calculator I shared.\\n\\n" +
+        "Best,\\nMohamed",
+      tone: "professional",
+      language: "en",
+      approvalRequired: true,
+      warnings: [],
+    });
+
+    let rejectedCode: string | null = null;
+
+    try {
+      qualityPromptSource.parseBacklinkOutreachFollowUpAiProposal(
+        badStockProposal,
+      );
+    } catch (error) {
+      rejectedCode =
+        error &&
+        typeof error === "object" &&
+        "code" in error
+          ? String(error.code)
+          : null;
+    }
+
+    assert.equal(rejectedCode, "PROPOSAL_INVALID");
+
+    console.log(
+      "PASS — stock follow-up phrase is rejected deterministically",
+    );
+
+    const goodContextualProposal = JSON.stringify({
+      subject:
+        "Revenue calculator for your Data and Revenue Management guide",
+      body:
+        "Hi Alexa,\\n\\n" +
+        "The revenue calculator I shared could give readers of your " +
+        "Data and Revenue Management guide a practical way to connect " +
+        "revenue decisions back to the numbers.\\n\\n" +
+        "Would it be useful to include it as a companion resource?\\n\\n" +
+        "Best,\\nMohamed",
+      tone: "professional",
+      language: "en",
+      approvalRequired: true,
+      warnings: [],
+    });
+
+    const acceptedProposal =
+      qualityPromptSource.parseBacklinkOutreachFollowUpAiProposal(
+        goodContextualProposal,
+      );
+
+    assert.match(
+      acceptedProposal.body,
+      /revenue calculator/i,
+    );
+    assert.equal(
+      acceptedProposal.approvalRequired,
+      true,
+    );
+
+    console.log(
+      "PASS — contextual follow-up passes deterministic quality gate",
+    );
+  }
   console.log(
     "PASS — existing canonical draft bypasses AI",
   );

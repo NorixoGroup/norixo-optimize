@@ -240,9 +240,33 @@ export function parseBacklinkOutreachFollowUpAiProposal(
     );
   }
 
+  const subject = candidate.subject.trim();
+  const body = candidate.body.trim();
+
+  const normalizedContent = `${subject}\n${body}`.toLowerCase();
+
+  const forbiddenStockPhrases = [
+    "i hope this message finds you well",
+    "i hope you're well",
+    "i hope you’re well",
+    "i wanted to follow up",
+    "just checking in",
+    "i look forward to hearing from you",
+  ];
+
+  if (
+    forbiddenStockPhrases.some((phrase) =>
+      normalizedContent.includes(phrase),
+    )
+  ) {
+    throw new BacklinkOutreachFollowUpAiError(
+      "PROPOSAL_INVALID",
+    );
+  }
+
   return {
-    subject: candidate.subject.trim(),
-    body: candidate.body.trim(),
+    subject,
+    body,
     tone: candidate.tone.trim(),
     language: candidate.language.trim(),
     approvalRequired: true,
