@@ -418,8 +418,8 @@ export default async function LocalSeoPage({ params }: Props) {
   const targetedRepairContent = getTargetedCityTopicRepairContent(city, topic);
   const cohort25Repair = isCohort25CityTopicRepairPath(cityTopicPath);
   const cohort25RepairContent = getCohort25CityTopicRepairContent(city, topic);
-  const safeRepair = targetedRepair || cohort25Repair;
   const safeRepairContent = targetedRepairContent ?? cohort25RepairContent;
+  const safeRepair = Boolean(safeRepairContent);
   const relatedTopics = buildRelatedTopics(topic).filter(
     (relatedTopic) =>
       isCityTopicSitemapEligible(
