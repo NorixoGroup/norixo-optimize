@@ -421,7 +421,7 @@ export function getTargetedCityTopicRepairContent(
   const path = `/airbnb-optimizer/${city.slug}/${topic.slug}`;
 
   if (
-    !["occupancy-guide", "market-analysis", "photo-order", "amenities-guide", "long-stay-guide", "business-travel-guide", "revenue-optimization", "guest-trust-guide"].includes(topic.slug) &&
+    !["occupancy-guide", "market-analysis", "photo-order", "amenities-guide", "long-stay-guide", "business-travel-guide", "revenue-optimization", "guest-trust-guide", "title-optimization"].includes(topic.slug) &&
     !TARGETED_CITY_TOPIC_REPAIR_PATHS.has(path)
   ) {
     return null;
