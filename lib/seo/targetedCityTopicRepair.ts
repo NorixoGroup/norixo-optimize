@@ -57,6 +57,206 @@ type TopicRepairBuilder = (
 ) => TargetedCityTopicRepairContent;
 
 const TARGETED_TOPIC_REPAIR_BUILDERS: Record<string, TopicRepairBuilder> = {
+  "seo-guide": (city) => ({
+    heading: `Build a verifiable Airbnb SEO plan for ${city.name}`,
+    introduction:
+      `Use ${city.name}, ${city.country} as location context without inventing search volume, ranking position, demand, or market benchmarks. Improve the listing from facts the host can verify and from observable search presentation.`,
+    sections: [
+      {
+        heading: "Clarify the search intent",
+        body:
+          "Identify the property type, location cue, trip fit, and strongest truthful differentiator the listing should communicate. Keep each claim tied to an actual property or location fact.",
+      },
+      {
+        heading: "Align the visible listing elements",
+        body:
+          "Make the title, opening description, photo sequence, amenities, and property details reinforce the same proposition instead of competing for unrelated keywords.",
+      },
+      {
+        heading: "Measure listing-level outcomes",
+        body:
+          "Track impressions, views, inquiries, bookings, and listing changes over comparable periods. Treat movement as property-level evidence rather than proof of a city-wide ranking factor.",
+      },
+    ],
+    actionBridge:
+      "Choose the clearest verified mismatch between search intent and listing presentation, change one meaningful element, and compare subsequent listing-level results.",
+  }),
+
+  "booking-conversion": (city) => ({
+    heading: `Reduce booking friction for ${city.name} guests`,
+    introduction:
+      `Use ${city.name}, ${city.country} only as geographic context. Do not assume a local conversion rate, guest preference, price threshold, or booking benchmark without validated evidence.`,
+    sections: [
+      {
+        heading: "Trace the decision path",
+        body:
+          "Review what a guest sees from the first image and title through the description, amenities, rules, sleeping setup, location information, price presentation, and booking conditions.",
+      },
+      {
+        heading: "Remove avoidable uncertainty",
+        body:
+          "Correct missing, contradictory, vague, or hard-to-find information that could make a suitable guest hesitate. Prioritize facts the property can substantiate.",
+      },
+      {
+        heading: "Test one constraint at a time",
+        body:
+          "Change the strongest suspected source of friction and compare property-level views, inquiries, booking activity, or guest questions over an appropriate period.",
+      },
+    ],
+    actionBridge:
+      "Turn the most visible booking obstacle into one measurable listing improvement instead of attributing conversion performance to an unsupported local benchmark.",
+  }),
+
+  "ranking-factors": (city) => ({
+    heading: `Audit controllable ranking signals for ${city.name}`,
+    introduction:
+      `Do not claim a specific Airbnb ranking formula for ${city.name}, ${city.country}. Focus on controllable listing quality, relevance, availability, pricing decisions, guest experience, and measurable property-level performance.`,
+    sections: [
+      {
+        heading: "Separate facts from ranking assumptions",
+        body:
+          "Document what can actually be observed in the listing and account data. Treat explanations about platform ranking behavior as hypotheses unless they are supported by current authoritative documentation or direct evidence.",
+      },
+      {
+        heading: "Improve relevance and completeness",
+        body:
+          "Check whether the listing accurately communicates property type, location, capacity, amenities, rules, photos, and the strongest verified reasons a suitable guest would choose the stay.",
+      },
+      {
+        heading: "Monitor after meaningful changes",
+        body:
+          "Record the date and scope of each significant listing change and compare subsequent property-level visibility and booking signals without presenting correlation as proof of a ranking rule.",
+      },
+    ],
+    actionBridge:
+      "Prioritize the strongest controllable listing weakness, document the change, and evaluate the resulting property-level evidence before forming a ranking conclusion.",
+  }),
+
+  "search-visibility": (city) => ({
+    heading: `Diagnose Airbnb search visibility in ${city.name}`,
+    introduction:
+      `Use ${city.name}, ${city.country} as context without asserting local search volume, demand, or a guaranteed ranking position. Diagnose visibility from observable listing and account evidence.`,
+    sections: [
+      {
+        heading: "Verify discoverability inputs",
+        body:
+          "Check listing status, availability, booking settings, property details, location information, capacity, amenities, and other factual inputs that can affect whether the stay is relevant to a guest search.",
+      },
+      {
+        heading: "Strengthen search-result clarity",
+        body:
+          "Make the title, cover image, price presentation, and core property facts easy to understand without keyword stuffing or unsupported location claims.",
+      },
+      {
+        heading: "Compare property-level visibility",
+        body:
+          "Use available impressions, views, inquiries, bookings, and dated listing changes to identify patterns for this property rather than extrapolating a city-wide visibility benchmark.",
+      },
+    ],
+    actionBridge:
+      "Fix the clearest discoverability or presentation issue first and measure subsequent listing-level visibility before making a broader conclusion.",
+  }),
+
+  "listing-audit": (city) => ({
+    heading: `Run an evidence-based listing audit for ${city.name}`,
+    introduction:
+      `Audit the ${city.name}, ${city.country} listing from verifiable property facts and observable listing evidence. Do not substitute legacy city averages or unsupported market benchmarks for an actual audit.`,
+    sections: [
+      {
+        heading: "Check factual accuracy and completeness",
+        body:
+          "Verify property type, capacity, sleeping arrangements, amenities, rules, accessibility, location wording, photos, and other claims against the real guest experience.",
+      },
+      {
+        heading: "Inspect the guest decision path",
+        body:
+          "Review the title, cover image, opening copy, photo order, value communication, reassurance, and booking conditions for contradictions or unanswered questions.",
+      },
+      {
+        heading: "Prioritize evidence-backed fixes",
+        body:
+          "Rank issues by their likely effect on clarity, trust, relevance, and booking friction, then validate improvements with property-level performance and guest feedback.",
+      },
+    ],
+    actionBridge:
+      "Convert the audit into a short prioritized action list, change the strongest verified weakness first, and document the evidence used to judge the result.",
+  }),
+
+  "first-photo": (city) => ({
+    heading: `Choose a stronger first photo for ${city.name}`,
+    introduction:
+      `Use ${city.name}, ${city.country} as context without assuming a local photo-count benchmark or a universal image preference. Choose the cover image from the property's real visual strengths and the stay it actually offers.`,
+    sections: [
+      {
+        heading: "Show the defining reason to consider the stay",
+        body:
+          "Prefer a clear, truthful image of the property's strongest relevant feature or space. Avoid using an attractive image that creates a misleading expectation about the accommodation.",
+      },
+      {
+        heading: "Make the image readable at thumbnail size",
+        body:
+          "Check composition, lighting, clutter, orientation, and whether the important subject remains understandable when the image is displayed small in search results.",
+      },
+      {
+        heading: "Keep the first image consistent with the listing",
+        body:
+          "Ensure the title, description, following photos, and property details support the promise created by the cover image rather than forcing the guest to reinterpret the stay.",
+      },
+    ],
+    actionBridge:
+      "Test the strongest truthful cover candidate and compare property-level engagement before treating one image style as universally better for the city.",
+  }),
+
+  "family-travel-guide": (city) => ({
+    heading: `Evaluate family-trip fit in ${city.name}`,
+    introduction:
+      `Use ${city.name}, ${city.country} as geographic context without assuming a specific level of family demand or a universal family preference. Describe only family-relevant features the property can verify.`,
+    sections: [
+      {
+        heading: "Check practical sleeping and living fit",
+        body:
+          "Clarify capacity, bed configuration, privacy, shared spaces, kitchen or dining facilities, laundry options, and other practical details that materially affect the stay.",
+      },
+      {
+        heading: "State safety and access facts precisely",
+        body:
+          "Describe stairs, lifts, balconies, pools, parking, entrances, equipment, and accessibility accurately. Do not imply child-safety features or services that are not actually provided.",
+      },
+      {
+        heading: "Make trip planning easier",
+        body:
+          "Surface the verified rules, check-in information, transport or parking facts, and property features that help a family decide whether the accommodation fits its own needs.",
+      },
+    ],
+    actionBridge:
+      "Improve the most important missing family-relevant fact in the listing and use guest questions or booking evidence to evaluate whether clarity improves.",
+  }),
+
+  "conversion-guide": (city) => ({
+    heading: `Build a listing-level conversion plan for ${city.name}`,
+    introduction:
+      `Use ${city.name}, ${city.country} as context without inventing a local conversion rate, demand level, pricing threshold, or revenue benchmark. Diagnose conversion from the property's own listing and performance evidence.`,
+    sections: [
+      {
+        heading: "Define the intended guest decision",
+        body:
+          "Identify who the property genuinely suits and whether the title, first photos, opening copy, amenities, rules, capacity, and location wording make that fit immediately understandable.",
+      },
+      {
+        heading: "Find the strongest source of friction",
+        body:
+          "Look for contradictions, weak value communication, missing reassurance, unclear sleeping arrangements, incomplete amenities, restrictive conditions, or other observable reasons a suitable guest may hesitate.",
+      },
+      {
+        heading: "Measure changes with comparable evidence",
+        body:
+          "Document each meaningful listing change and compare subsequent property-level views, inquiries, bookings, and recurring guest questions over suitable periods.",
+      },
+    ],
+    actionBridge:
+      "Change one high-priority conversion constraint at a time and use the property's subsequent evidence to decide whether the hypothesis was useful.",
+  }),
+
   "title-optimization": (city) => ({
     heading: `Write a clearer Airbnb title for ${city.name}`,
     introduction:
@@ -499,7 +699,7 @@ export function getTargetedCityTopicRepairContent(
   const path = `/airbnb-optimizer/${city.slug}/${topic.slug}`;
 
   if (
-    !["occupancy-guide", "market-analysis", "photo-order", "amenities-guide", "long-stay-guide", "business-travel-guide", "revenue-optimization", "guest-trust-guide", "title-optimization", "photo-tips", "competitor-analysis", "description-optimization", "local-demand-guide", "pricing-guide", "pricing-positioning", "review-strategy", "seasonality-guide"].includes(topic.slug) &&
+    !["occupancy-guide", "market-analysis", "photo-order", "amenities-guide", "long-stay-guide", "business-travel-guide", "revenue-optimization", "guest-trust-guide", "title-optimization", "photo-tips", "competitor-analysis", "description-optimization", "local-demand-guide", "pricing-guide", "pricing-positioning", "review-strategy", "seasonality-guide", "booking-conversion", "conversion-guide", "family-travel-guide", "first-photo", "ranking-factors", "search-visibility", "seo-guide", "listing-audit"].includes(topic.slug) &&
     !TARGETED_CITY_TOPIC_REPAIR_PATHS.has(path)
   ) {
     return null;
