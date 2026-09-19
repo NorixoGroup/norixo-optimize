@@ -78,6 +78,31 @@ const TARGETED_TOPIC_REPAIR_BUILDERS: Record<string, TopicRepairBuilder> = {
     actionBridge:
       `Compare the published title with the property's real features, location details, amenities, access information, and lead photo. Rewrite the title around the clearest verifiable advantage, then evaluate the result through listing engagement and booking outcomes rather than assuming a ${city.name}-wide performance benchmark.`,
   }),
+  "photo-tips": (city) => ({
+    heading: `Audit the visual proof in your Airbnb listing in ${city.name}`,
+    introduction:
+      `Use ${city.name}, ${city.country} only as location context. Evaluate the gallery from what the photographs can verify about this specific property rather than assuming a local photo-count benchmark, city-wide guest preference, or market-wide visual standard.`,
+    sections: [
+      {
+        heading: "Make the opening images informative",
+        body:
+          "Check whether the first images quickly establish the accommodation type, strongest verifiable feature, important spaces, and overall stay proposition. Avoid using several early photos to repeat the same view when another image would answer a more useful guest question.",
+      },
+      {
+        heading: "Use the gallery as evidence",
+        body:
+          "Show the rooms, sleeping arrangements, bathrooms, amenities, access features, outdoor areas, and material limitations that photographs can reasonably verify. Give extra visual attention to features that materially affect the stay, but only when the property actually provides them.",
+      },
+      {
+        heading: "Keep photos and written claims consistent",
+        body:
+          "Compare the gallery with the title, description, amenities, capacity, rules, and property details. Remove ambiguity where the written listing promises something the images do not clearly support, and avoid using photographs to imply views, access, facilities, or conditions that cannot be substantiated.",
+      },
+    ],
+    actionBridge:
+      `Identify the largest visual information gap in the ${city.name} listing and correct that gap first. Then assess listing-level guest questions, engagement, or booking outcomes before changing photo quantity or assuming a city-wide gallery benchmark.`,
+  }),
+
   "amenities-guide": (city) => ({
     heading: `Audit the amenities shown for your Airbnb in ${city.name}`,
     introduction:
@@ -421,7 +446,7 @@ export function getTargetedCityTopicRepairContent(
   const path = `/airbnb-optimizer/${city.slug}/${topic.slug}`;
 
   if (
-    !["occupancy-guide", "market-analysis", "photo-order", "amenities-guide", "long-stay-guide", "business-travel-guide", "revenue-optimization", "guest-trust-guide", "title-optimization"].includes(topic.slug) &&
+    !["occupancy-guide", "market-analysis", "photo-order", "amenities-guide", "long-stay-guide", "business-travel-guide", "revenue-optimization", "guest-trust-guide", "title-optimization", "photo-tips"].includes(topic.slug) &&
     !TARGETED_CITY_TOPIC_REPAIR_PATHS.has(path)
   ) {
     return null;
