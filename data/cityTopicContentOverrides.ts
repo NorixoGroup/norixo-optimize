@@ -205,7 +205,7 @@ const cityTopicContentOverrides: Record<
         {
           heading: "Use photos as evidence, not decoration",
           body:
-            "With about 26 photos in the current Norixo reference data, the question is not simply whether the gallery is long enough. Check whether it visibly supports the amenities, layout, and value the listing presents. A private pool, for example, should be represented accurately if it is central to the promise; the same principle applies to every feature a guest needs to judge before booking.",
+            "The question is not simply whether the gallery is long enough. Check whether it visibly supports the amenities, layout, and value the listing presents. A private pool, for example, should be represented accurately if it is central to the promise; the same principle applies to every feature a guest needs to judge before booking.",
         },
         {
           heading: "Make practical expectations visible before guests have to ask",
