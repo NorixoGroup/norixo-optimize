@@ -51,6 +51,7 @@ export class BacklinkOutreachFollowUpAiError extends Error {
     public readonly code:
       | "CONTEXT_INVALID"
       | "PROPOSAL_INVALID"
+      | "PROPOSAL_STYLE_INVALID"
       | "AI_EXECUTION_FAILED",
   ) {
     super(code);
@@ -260,7 +261,7 @@ export function parseBacklinkOutreachFollowUpAiProposal(
     )
   ) {
     throw new BacklinkOutreachFollowUpAiError(
-      "PROPOSAL_INVALID",
+      "PROPOSAL_STYLE_INVALID",
     );
   }
 
@@ -313,12 +314,65 @@ export async function generateBacklinkOutreachFollowUpAiDraft(
     );
   }
 
-  return {
-    proposal: parseBacklinkOutreachFollowUpAiProposal(
-      result.output,
-    ),
-    providerId: result.providerId,
-    model: result.model,
-    status: "success",
-  };
+  try {
+    return {
+      proposal: parseBacklinkOutreachFollowUpAiProposal(
+        result.output,
+      ),
+      providerId: result.providerId,
+      model: result.model,
+      status: "success",
+    };
+  } catch (error) {
+    if (
+      !(error instanceof BacklinkOutreachFollowUpAiError) ||
+      error.code !== "PROPOSAL_STYLE_INVALID"
+    ) {
+      throw error;
+    }
+
+    const correctiveResult =
+      await dependencies.executeAiRequest({
+        agentId: "marketing-manager",
+        providerId: "openai",
+        model:
+          process.env.OPENAI_MARKETING_AI_MODEL ??
+          "gpt-4o-mini",
+        input: [
+          prompt,
+          "",
+          "CORRECTION REQUIRED:",
+          "Your previous draft violated the follow-up style rules.",
+          "Rewrite the draft once.",
+          "Keep the same factual context, recipient, resource, URL, and editorial purpose.",
+          "Do not use any forbidden stock opening or closing.",
+          "Return only the required JSON object.",
+        ].join("\n"),
+        capabilities: ["chat"],
+        metadata: {
+          feature: "backlink-outreach-follow-up-draft",
+          followUpNumber: input.followUpNumber,
+          approvalRequired: true,
+          correctiveRetry: true,
+        },
+      });
+
+    if (
+      correctiveResult.status !== "success" ||
+      !correctiveResult.output
+    ) {
+      throw new BacklinkOutreachFollowUpAiError(
+        "AI_EXECUTION_FAILED",
+      );
+    }
+
+    return {
+      proposal: parseBacklinkOutreachFollowUpAiProposal(
+        correctiveResult.output,
+      ),
+      providerId: correctiveResult.providerId,
+      model: correctiveResult.model,
+      status: "success",
+    };
+  }
 }

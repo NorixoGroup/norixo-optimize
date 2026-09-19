@@ -605,8 +605,7 @@ async function main() {
     "../lib/backlinks/services/outreachFollowUpAiDraft"
   );
 
-  const qualityPrompt =
-    qualityPromptSource.buildBacklinkOutreachFollowUpAiPrompt({
+  const qualityContext = {
       followUpNumber: 1,
       campaign: {
         name: "Research outreach",
@@ -639,7 +638,12 @@ async function main() {
           "We published a short methodology reference that explains our own approach and the limits of the figures we publish. " +
           "If you ever add a supporting citation or resource section, this could be a helpful companion.",
       },
-    });
+    };
+
+  const qualityPrompt =
+    qualityPromptSource.buildBacklinkOutreachFollowUpAiPrompt(
+      qualityContext,
+    );
 
   assert.match(
     qualityPrompt,
@@ -702,7 +706,10 @@ async function main() {
           : null;
     }
 
-    assert.equal(rejectedCode, "PROPOSAL_INVALID");
+    assert.equal(
+      rejectedCode,
+      "PROPOSAL_STYLE_INVALID",
+    );
 
     console.log(
       "PASS — stock follow-up phrase is rejected deterministically",
@@ -740,6 +747,93 @@ async function main() {
 
     console.log(
       "PASS — contextual follow-up passes deterministic quality gate",
+    );
+
+    let retryCalls = 0;
+
+    const retryResult =
+      await qualityPromptSource.generateBacklinkOutreachFollowUpAiDraft(
+        qualityContext,
+        {
+          executeAiRequest: async (request) => {
+            retryCalls += 1;
+
+            if (retryCalls === 1) {
+              return {
+                status: "success",
+                providerId: "openai",
+                model: "test-model",
+                error: null,
+                costEur: 0,
+                durationMs: 0,
+                output: badStockProposal,
+              };
+            }
+
+            assert.match(
+              String(request.input),
+              /CORRECTION REQUIRED/,
+            );
+
+            return {
+              status: "success",
+              providerId: "openai",
+              model: "test-model",
+              error: null,
+              costEur: 0,
+              durationMs: 0,
+              output: goodContextualProposal,
+            };
+          },
+        },
+      );
+
+    assert.equal(retryCalls, 2);
+    assert.match(
+      retryResult.proposal.body,
+      /revenue calculator/i,
+    );
+
+    console.log(
+      "PASS — style violation gets exactly one corrective AI retry",
+    );
+
+    let malformedCalls = 0;
+    let malformedCode: string | null = null;
+
+    try {
+      await qualityPromptSource.generateBacklinkOutreachFollowUpAiDraft(
+        qualityContext,
+        {
+          executeAiRequest: async () => {
+            malformedCalls += 1;
+
+            return {
+              status: "success",
+              providerId: "openai",
+              model: "test-model",
+              error: null,
+              costEur: 0,
+              durationMs: 0,
+              output: "{not-json",
+            };
+          },
+        },
+      );
+    } catch (error) {
+      malformedCode =
+        error &&
+        typeof error === "object" &&
+        "code" in error
+          ? String(error.code)
+          : null;
+    }
+
+    assert.equal(malformedCalls, 1);
+    assert.equal(malformedCode, "PROPOSAL_INVALID");
+
+    console.log(
+      "PASS — malformed proposal does not trigger corrective retry",
     );
   }
   console.log(
