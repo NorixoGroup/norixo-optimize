@@ -324,10 +324,12 @@ export async function generateBacklinkOutreachFollowUpAiDraft(
       status: "success",
     };
   } catch (error) {
-    if (
-      !(error instanceof BacklinkOutreachFollowUpAiError) ||
-      error.code !== "PROPOSAL_STYLE_INVALID"
-    ) {
+    const repairable =
+      error instanceof BacklinkOutreachFollowUpAiError &&
+      (error.code === "PROPOSAL_STYLE_INVALID" ||
+        error.code === "PROPOSAL_INVALID");
+
+    if (!repairable) {
       console.error("[backlinks-follow-up-ai-quality]", {
         stage: "initial_parse_rejected",
         code:
@@ -340,7 +342,10 @@ export async function generateBacklinkOutreachFollowUpAiDraft(
     }
 
     console.error("[backlinks-follow-up-ai-quality]", {
-      stage: "initial_style_rejected",
+      stage:
+        error.code === "PROPOSAL_STYLE_INVALID"
+          ? "initial_style_rejected"
+          : "initial_contract_rejected",
       code: error.code,
       followUpNumber: input.followUpNumber,
       correctiveRetry: true,
@@ -357,11 +362,14 @@ export async function generateBacklinkOutreachFollowUpAiDraft(
           prompt,
           "",
           "CORRECTION REQUIRED:",
-          "Your previous draft violated the follow-up style rules.",
+          error.code === "PROPOSAL_STYLE_INVALID"
+            ? "Your previous draft violated the follow-up style rules."
+            : "Your previous draft violated the required JSON output contract.",
           "Rewrite the draft once.",
           "Keep the same factual context, recipient, resource, URL, and editorial purpose.",
           "Do not use any forbidden stock opening or closing.",
-          "Return only the required JSON object.",
+          'Return ONLY strict JSON with exactly this shape: {"subject":"...","body":"...","tone":"...","language":"...","approvalRequired":true,"warnings":[]}.',
+          "Do not use markdown fences or any text before or after the JSON object.",
         ].join("\n"),
         capabilities: ["chat"],
         metadata: {

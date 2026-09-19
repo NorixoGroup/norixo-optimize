@@ -829,11 +829,11 @@ async function main() {
           : null;
     }
 
-    assert.equal(malformedCalls, 1);
+    assert.equal(malformedCalls, 2);
     assert.equal(malformedCode, "PROPOSAL_INVALID");
 
     console.log(
-      "PASS — malformed proposal does not trigger corrective retry",
+      "PASS — malformed proposal gets exactly one corrective retry",
     );
   }
   console.log(
