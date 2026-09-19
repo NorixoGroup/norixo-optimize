@@ -130,9 +130,9 @@ if (protectedTopics.length !== 29) {
   );
 }
 
-if (experimentTopics.length !== 12) {
+if (experimentTopics.length !== 37) {
   throw new Error(
-    `Expected 11 sitemap experiment topics, got ${experimentTopics.length}`
+    `Expected 37 sitemap experiment topics, got ${experimentTopics.length}`
   );
 }
 
@@ -158,15 +158,15 @@ if (
   );
 }
 
-if (keptTopics.length !== 73) {
+if (keptTopics.length !== 98) {
   throw new Error(
-    `Expected 72 kept topics, got ${keptTopics.length}`
+    `Expected 98 kept topics, got ${keptTopics.length}`
   );
 }
 
-if (omittedTopics.length !== 5427) {
+if (omittedTopics.length !== 5402) {
   throw new Error(
-    `Expected 5428 omitted topics, got ${omittedTopics.length}`
+    `Expected 5402 omitted topics, got ${omittedTopics.length}`
   );
 }
 
