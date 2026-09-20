@@ -56,6 +56,7 @@ const qualityGatedTopicSlugs = [
   "business-travel-guide",
   "listing-audit",
   "revenue-optimization",
+  "pricing-positioning",
 ] as const;
 
 const qualityGatedTopics = qualityGatedTopicSlugs.flatMap(
@@ -112,6 +113,10 @@ const qualityGatedListingAuditTopics = qualityGatedTopics.filter(
 
 const qualityGatedRevenueTopics = qualityGatedTopics.filter(
   ({ topicSlug }) => topicSlug === "revenue-optimization"
+);
+
+const qualityGatedPricingPositioningTopics = qualityGatedTopics.filter(
+  ({ topicSlug }) => topicSlug === "pricing-positioning"
 );
 
 const exposedQualityFailures = qualityGatedTopics.filter(
@@ -210,6 +215,9 @@ console.log(
 console.log(
   `QUALITY_GATED_REVENUE_TOPICS=${qualityGatedRevenueTopics.length}`
 );
+console.log(
+  `QUALITY_GATED_PRICING_POSITIONING_TOPICS=${qualityGatedPricingPositioningTopics.length}`
+);
 
 console.log(
   `EXPOSED_QUALITY_FAIL=${exposedQualityFailures.length}`
@@ -267,15 +275,15 @@ if (
   );
 }
 
-if (keptTopics.length !== 1851) {
+if (keptTopics.length !== 2063) {
   throw new Error(
-    `Expected 1851 kept topics, got ${keptTopics.length}`
+    `Expected 2063 kept topics, got ${keptTopics.length}`
   );
 }
 
-if (omittedTopics.length !== 3649) {
+if (omittedTopics.length !== 3437) {
   throw new Error(
-    `Expected 3649 omitted topics, got ${omittedTopics.length}`
+    `Expected 3437 omitted topics, got ${omittedTopics.length}`
   );
 }
 
@@ -319,6 +327,29 @@ if (qualityGatedRevenueTopics.length !== 220) {
   throw new Error(
     `Expected 220 quality-gated revenue topics, got ${qualityGatedRevenueTopics.length}`
   );
+}
+
+if (qualityGatedPricingPositioningTopics.length !== 220) {
+  throw new Error(
+    `Expected 220 quality-gated pricing-positioning topics, got ${qualityGatedPricingPositioningTopics.length}`
+  );
+}
+
+for (const { pathname, quality } of qualityGatedPricingPositioningTopics) {
+  if (!isCityTopicSitemapEligible(pathname)) {
+    throw new Error(
+      `Quality-gated pricing-positioning topic omitted: ${pathname}`
+    );
+  }
+
+  if (
+    quality.status !== "eligible-safe" &&
+    quality.status !== "qualified-evidence"
+  ) {
+    throw new Error(
+      `Quality-gated pricing-positioning topic failed quality gate: ${pathname} (${quality.status})`
+    );
+  }
 }
 
 for (const { pathname, quality } of qualityGatedRevenueTopics) {
