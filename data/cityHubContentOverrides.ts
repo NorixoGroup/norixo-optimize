@@ -19,19 +19,19 @@ const cityHubContentOverrides: Record<string, CityHubContentOverride> = {
         topicSlug: "pricing-guide",
         heading: "Check price against the visible offer",
         body:
-          "The current Norixo reference price for well-positioned Paris listings is €165 per night. Review price alongside nearby comparable listings, seasonality, and whether the photos, amenities, and location context make that value legible to a guest.",
+          "Review price alongside genuinely comparable Paris listings, seasonality, and whether the photos, amenities, and location context make that value legible to a guest.",
       },
       {
         topicSlug: "review-strategy",
         heading: "Make trust easy to verify",
         body:
-          "Paris listings in the current data average 4.7/5. Inspect whether review reassurance, precise check-in information, and honest neighborhood context remove the uncertainty that can keep an otherwise relevant listing from converting.",
+          "Inspect whether review reassurance, precise check-in information, and honest neighborhood context remove the uncertainty that can keep an otherwise relevant listing from converting.",
       },
       {
         topicSlug: "booking-conversion",
         heading: "Use the booking path to find the next constraint",
         body:
-          "With about 23 photos in the current Paris reference data, test whether the first images and listing framing explain the stay quickly enough for international guests comparing several apartments at once.",
+          "Test whether the first images and listing framing explain the stay quickly enough for international guests comparing several apartments at once.",
       },
     ],
     auditBridge:

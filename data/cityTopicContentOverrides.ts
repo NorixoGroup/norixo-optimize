@@ -26,12 +26,12 @@ const cityTopicContentOverrides: Record<
         {
           heading: "Read price alongside the value signal",
           body:
-            "The local reference price in the current Norixo data is around €115 per night. Use that as context for reviewing the price against nearby comparable listings, booking windows, seasonality, and the quality signals visible on the page—not as a target rate or an occupancy forecast.",
+            "Review the listing's price against genuinely comparable nearby alternatives, booking windows, seasonality, and the quality signals visible on the page rather than treating price as the only explanation for weak occupancy.",
         },
         {
           heading: "Test trust and presentation before discounting",
           body:
-            "Sapporo listings in the current data average 4.72/5 and about 23 photos. A host should check whether the first images, review reassurance, and amenity positioning make the listing feel competitive at its chosen price before using a discount to compensate for unclear value.",
+            "Check whether the first images, review reassurance, and amenity positioning make the listing feel competitive at its chosen price before using a discount to compensate for unclear value.",
         },
       ],
       auditBridge:
@@ -57,7 +57,7 @@ const cityTopicContentOverrides: Record<
         {
           heading: "Read price alongside the experience guests can verify",
           body:
-            "The current Norixo reference price for Marrakech is around €105 per night. Use it as context rather than a target. The market spans budget riads through higher-end stays with pools, so compare the chosen rate with the visible amenities, photos, arrival information, and stay experience before concluding that price is limiting occupancy.",
+            "Compare the chosen rate with genuinely similar Marrakech stays and with the visible amenities, photos, arrival information, and stay experience before concluding that price is limiting occupancy.",
         },
         {
           heading: "Protect revenue while testing an occupancy hypothesis",
@@ -77,7 +77,7 @@ const cityTopicContentOverrides: Record<
         {
           heading: "First, test whether the price matches the visible offer",
           body:
-            "The current Norixo reference price for Marrakech is around €105 per night, but that is context rather than a target. The market ranges from budget riads to higher-end stays with pools, so compare the chosen rate with the amenities, photos, access details, and stay experience a guest can actually see before treating price as the problem.",
+            "Compare the chosen rate with genuinely similar Marrakech stays and with the amenities, photos, access details, and stay experience a guest can actually see before treating price as the problem.",
         },
         {
           heading: "Separate a demand-capture problem from a pricing problem",
@@ -118,7 +118,7 @@ const cityTopicContentOverrides: Record<
         {
           heading: "Match the title promise to the visible listing",
           body:
-            "A title works only when the rest of the listing confirms it. Check that the first photos, amenities, description, rules, and price context support the same expectation. The current Helsinki reference price of about €120 per night is context rather than a target: at any rate, a title should not promise a level of value the visible listing does not make credible.",
+            "A title works only when the rest of the listing confirms it. Check that the first photos, amenities, description, rules, and price context support the same expectation. At any rate, a title should not promise a level of value that the visible listing does not make credible.",
         },
         {
           heading: "Separate a title problem from a broader listing problem",
@@ -144,17 +144,17 @@ const cityTopicContentOverrides: Record<
         {
           heading: "Check whether listed amenities are visibly convincing",
           body:
-            "Reliable amenities help only when a guest can see how they fit the stay. Review whether the photos and supporting details make the important amenities understandable rather than leaving them as a bare list. With the current Norixo reference of about 23 photos in Guadalajara, use the gallery as evidence of the promise, not as a substitute for clarity.",
+            "Reliable amenities help only when a guest can see how they fit the stay. Review whether the photos and supporting details make the important amenities understandable rather than leaving them as a bare list. Use the gallery as evidence of the promise, not as a substitute for clarity.",
         },
         {
           heading: "Look for a gap between the visible promise and the likely stay",
           body:
-            "Guests compare review quality, presentation, and the consistency of the listing details before they decide whether a stay feels dependable. The current Norixo reference rating is 4.72/5, which is context rather than a threshold. Check whether the photos, amenities, arrival information, and written description tell the same accurate story instead of creating a reason to doubt it.",
+            "Guests compare review quality, presentation, and the consistency of the listing details before they decide whether a stay feels dependable. Check whether the photos, amenities, arrival information, reviews, and written description tell the same accurate story instead of creating a reason to doubt it.",
         },
         {
           heading: "Decide whether trust is really the constraint",
           body:
-            "A trust review should not become a catch-all explanation for weak performance. If the listing is clear and credible but still feels less competitive, the constraint may instead be presentation, price/value, or fit with the guest's trip. The current Guadalajara reference price of about €80 per night can provide context for that comparison, but it is not a target rate or proof that price is the problem.",
+            "A trust review should not become a catch-all explanation for weak performance. If the listing is clear and credible but still feels less competitive, the constraint may instead be presentation, price/value, or fit with the guest's trip. Compare the chosen price with genuinely similar alternatives, but do not assume that price is the problem before checking presentation and guest fit.",
         },
       ],
       auditBridge:
@@ -180,7 +180,7 @@ const cityTopicContentOverrides: Record<
         {
           heading: "Use rate and gallery quality together",
           body:
-            "The current Norixo reference price for Bali is around €85 per night, with about 26 photos and an average rating near 4.8/5. These are context, not targets. Check whether the gallery and amenity evidence make the chosen rate credible for the exact version of the Bali stay the listing promises.",
+            "Check whether the gallery and amenity evidence make the chosen rate credible for the exact version of the Bali stay the listing promises, using genuinely comparable alternatives rather than generic market averages.",
         },
         {
           heading: "Do not use discounts to compensate for a mismatched promise",
@@ -269,12 +269,12 @@ const cityTopicContentOverrides: Record<
         {
           heading: "Use reviews and presentation as supporting evidence",
           body:
-            "The current Norixo reference rating for Madrid is about 4.7/5. Treat that as market context rather than a threshold. A rating alone does not make a listing persuasive if the gallery, amenity information, rules, or arrival instructions create uncertainty. Review whether those elements reinforce the same credible version of the stay.",
+            "A rating alone does not make a listing persuasive if the gallery, amenity information, rules, or arrival instructions create uncertainty. Review whether those elements reinforce the same credible version of the stay.",
         },
         {
           heading: "Check whether price changes the level of proof guests expect",
           body:
-            "The current Norixo reference price for Madrid is around €135 per night. This is not a target rate. Use it only as context when asking whether the visible quality, amenities, location explanation, and guest reassurance make the chosen price understandable. A pricing change should not be used to hide a trust or presentation problem.",
+            "Ask whether the visible quality, amenities, location explanation, and guest reassurance make the chosen price understandable next to genuinely comparable alternatives. A pricing change should not be used to hide a trust or presentation problem.",
         },
         {
           heading: "Separate a trust gap from a guest-fit problem",
@@ -333,12 +333,12 @@ const cityTopicContentOverrides: Record<
         {
           heading: "Read occupancy together with price and perceived value",
           body:
-            "The current Norixo reference price for Bucharest is around €70 per night. Use it as context rather than a target. Lowering the rate may increase booking interest, but it does not resolve weak presentation or unclear value. Compare price with the photos, amenities, reviews, and location information guests can actually assess.",
+            "Lowering the rate may increase booking interest, but it does not resolve weak presentation or unclear value. Compare price with genuinely similar alternatives and with the photos, amenities, reviews, and location information guests can actually assess.",
         },
         {
           heading: "Test presentation and trust before assuming demand is missing",
           body:
-            "The current Norixo data references about 23 photos and a 4.72/5 average rating for Bucharest listings. Those figures do not guarantee performance. Use them as prompts to check whether the gallery is complete enough, the listing builds confidence quickly, and the written promise matches what guests can verify.",
+            "Check whether the gallery is complete enough for the stay being offered, the listing builds confidence quickly, and the written promise matches what guests can verify.",
         },
         {
           heading: "Protect revenue while investigating occupancy",
@@ -365,7 +365,7 @@ const cityTopicContentOverrides: Record<
         {
           heading: "Compare the rate with the visible quality of the offer",
           body:
-            "The current Norixo reference price for Copenhagen is around €155 per night. Treat that as comparison context rather than a target. Ask whether the gallery, amenities, reviews, location explanation, and overall presentation make the chosen price understandable next to comparable alternatives.",
+            "Ask whether the gallery, amenities, reviews, location explanation, and overall presentation make the chosen price understandable next to genuinely comparable alternatives.",
         },
         {
           heading: "Look for conversion friction before increasing discounts",
@@ -397,12 +397,12 @@ const cityTopicContentOverrides: Record<
         {
           heading: "Use price as one signal inside the value comparison",
           body:
-            "The current Norixo reference price for Kuala Lumpur is around €85 per night. It is context rather than a recommended rate. Compare the chosen price with nearby alternatives only after checking whether the visible offer, amenities, gallery, and guest reassurance make those alternatives genuinely comparable.",
+            "Compare the chosen price with nearby alternatives only after checking whether the visible offer, amenities, gallery, and guest reassurance make those alternatives genuinely comparable.",
         },
         {
           heading: "Check whether the listing proves its value quickly enough",
           body:
-            "The current Norixo reference data shows about 23 photos and a 4.72/5 average rating. Those figures should not be treated as targets. Instead, inspect whether the first images, amenity evidence, location explanation, and review context help a guest understand the value without needing to resolve basic questions first.",
+            "Inspect whether the first images, amenity evidence, location explanation, and review context help a guest understand the value without needing to resolve basic questions first.",
         },
         {
           heading: "Avoid buying occupancy with unnecessary discounting",
@@ -429,12 +429,12 @@ const cityTopicContentOverrides: Record<
         {
           heading: "Compare price with the evidence of value",
           body:
-            "The current Norixo reference price for Boston is around €175 per night. Use that only as diagnostic context. A guest judges price alongside photos, amenities, location clarity, reviews, rules, and the overall credibility of the stay, so the rate should not be assessed separately from those signals.",
+            "A guest judges price alongside photos, amenities, location clarity, reviews, rules, and the overall credibility of the stay, so compare the rate with genuinely similar alternatives rather than assessing it separately from those signals.",
         },
         {
           heading: "Use trust and gallery quality to test conversion friction",
           body:
-            "The current Norixo reference data shows about 24 photos and an average rating near 4.7/5. These are not performance thresholds. Check whether the gallery provides enough useful evidence, whether expectations are consistent across the listing, and whether practical uncertainties could be reducing booking confidence.",
+            "Check whether the gallery provides enough useful evidence for the stay, whether expectations are consistent across the listing, and whether practical uncertainties could be reducing booking confidence.",
         },
         {
           heading: "Decide whether occupancy or revenue is actually the priority",
@@ -467,7 +467,7 @@ const cityTopicContentOverrides: Record<
         {
           heading: "Compare price with district and view positioning",
           body:
-            "The current Norixo reference price for Istanbul is around €88 per night. Treat it as context rather than a target. Value tiers can differ by district and view, so judge the chosen rate alongside location context, presentation, amenities, and what the gallery actually proves.",
+            "Value tiers can differ by district and view, so judge the chosen rate against genuinely comparable alternatives alongside location context, presentation, amenities, and what the gallery actually proves.",
         },
         {
           heading: "Separate occupancy pressure from a positioning mismatch",
@@ -500,7 +500,7 @@ const cityTopicContentOverrides: Record<
         {
           heading: "Read the nightly rate together with visible differentiation",
           body:
-            "The current Norixo reference price for Paris is around €165 per night. This is context rather than a target. Compare the chosen rate with genuinely similar alternatives and ask whether the listing's photos, amenities, neighborhood explanation, and review reassurance make its value clear enough.",
+            "Compare the chosen rate with genuinely similar alternatives and ask whether the listing's photos, amenities, neighborhood explanation, and review reassurance make its value clear enough.",
         },
         {
           heading: "Test occupancy only after the value proposition is coherent",
@@ -533,7 +533,7 @@ const cityTopicContentOverrides: Record<
         {
           heading: "Interpret price in the context of seasonality and presentation",
           body:
-            "The current Norixo reference price for Barcelona is around €150 per night. Use it as context rather than a target. Weekends and peak periods can move the market, but the chosen rate still needs to be supported by the gallery, amenities, location fit, and visible quality of the stay.",
+            "Compare the chosen rate with genuinely similar alternatives and check whether it is supported by the gallery, amenities, location fit, and visible quality of the stay.",
         },
         {
           heading: "Avoid solving a conversion issue with rate alone",
@@ -566,7 +566,7 @@ const cityTopicContentOverrides: Record<
         {
           heading: "Compare price with the exact offer, not London as a whole",
           body:
-            "The current Norixo reference price for London is around €190 per night. Treat it as context rather than a target. Premium and budget-friendly pockets can sit close together, so compare the listing with alternatives that are genuinely similar in transport access, room type, amenities, presentation, and guest reassurance.",
+            "Compare the listing with alternatives that are genuinely similar in transport access, room type, amenities, presentation, and guest reassurance rather than relying on a generic citywide reference price.",
         },
         {
           heading: "Test occupancy after the guest fit is clear",

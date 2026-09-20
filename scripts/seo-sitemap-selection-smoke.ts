@@ -7,6 +7,7 @@ import {
 } from "../lib/seo/sitemapEligibility";
 import { getSearchEligibility } from "../lib/seo/searchEligibility";
 import { getCohort25CityTopicRepairPaths } from "../lib/seo/cohort25CityTopicRepair";
+import { getCityTopicQuality } from "../lib/seo/cityTopicQuality";
 
 const allHubs = cities.map(
   (city) => `/airbnb-optimizer/${city.slug}`
@@ -44,6 +45,37 @@ const keptTopics = allTopics.filter(
 const omittedTopics = allTopics.filter(
   (pathname) =>
     !isCityTopicSitemapEligible(pathname)
+);
+
+const occupancyTopic = localSeoTopics.find(
+  (topic) => topic.slug === "occupancy-guide"
+);
+
+if (!occupancyTopic) {
+  throw new Error("occupancy-guide topic not found");
+}
+
+const qualityGatedOccupancyTopics = cities.map(
+  (city) => {
+    const pathname =
+      `/airbnb-optimizer/${city.slug}/occupancy-guide`;
+    const quality = getCityTopicQuality(
+      city,
+      occupancyTopic
+    );
+
+    return {
+      pathname,
+      quality,
+    };
+  }
+);
+
+const exposedQualityFailures = qualityGatedOccupancyTopics.filter(
+  ({ pathname, quality }) =>
+    isCityTopicSitemapEligible(pathname) &&
+    quality.status !== "eligible-safe" &&
+    quality.status !== "qualified-evidence"
 );
 
 const overlap = priorityTopics.filter(
@@ -106,6 +138,14 @@ console.log(
   `LOCAL_SITEMAP_TARGET=${allHubs.length + keptTopics.length}`
 );
 
+console.log(
+  `QUALITY_GATED_OCCUPANCY_TOPICS=${qualityGatedOccupancyTopics.length}`
+);
+
+console.log(
+  `EXPOSED_QUALITY_FAIL=${exposedQualityFailures.length}`
+);
+
 if (allHubs.length !== 220) {
   throw new Error(
     `Expected 220 hubs, got ${allHubs.length}`
@@ -158,15 +198,44 @@ if (
   );
 }
 
-if (keptTopics.length !== 218) {
+if (keptTopics.length !== 384) {
   throw new Error(
-    `Expected 218 kept topics, got ${keptTopics.length}`
+    `Expected 384 kept topics, got ${keptTopics.length}`
   );
 }
 
-if (omittedTopics.length !== 5282) {
+if (omittedTopics.length !== 5116) {
   throw new Error(
-    `Expected 5282 omitted topics, got ${omittedTopics.length}`
+    `Expected 5116 omitted topics, got ${omittedTopics.length}`
+  );
+}
+
+if (qualityGatedOccupancyTopics.length !== 220) {
+  throw new Error(
+    `Expected 220 quality-gated occupancy topics, got ${qualityGatedOccupancyTopics.length}`
+  );
+}
+
+for (const { pathname, quality } of qualityGatedOccupancyTopics) {
+  if (!isCityTopicSitemapEligible(pathname)) {
+    throw new Error(
+      `Quality-gated occupancy topic omitted: ${pathname}`
+    );
+  }
+
+  if (
+    quality.status !== "eligible-safe" &&
+    quality.status !== "qualified-evidence"
+  ) {
+    throw new Error(
+      `Occupancy topic failed quality gate: ${pathname}`
+    );
+  }
+}
+
+if (exposedQualityFailures.length !== 0) {
+  throw new Error(
+    `Exposed occupancy quality failures: ${exposedQualityFailures.length}`
   );
 }
 
@@ -261,4 +330,6 @@ console.log("SITEMAP_EXPERIMENT_TOPIC_PRESERVATION=PASS");
 console.log("COHORT_25_TOPIC_PRESERVATION=PASS");
 console.log("COHORT_25_OVERLAP_GUARD=PASS");
 console.log("UNPROTECTED_HOLD_OMISSION=PASS");
+console.log("QUALITY_GATED_OCCUPANCY_PRESERVATION=PASS");
+console.log("EXPOSED_QUALITY_GUARD=PASS");
 console.log("SITEMAP_SELECTION_SMOKE=PASS");

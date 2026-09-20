@@ -1,5 +1,8 @@
+import { cities } from "../../data/cities";
+import { localSeoTopics } from "../../data/localSeo";
 import { getSearchEligibility } from "./searchEligibility";
 import { isCohort25CityTopicRepairPath } from "./cohort25CityTopicRepair";
+import { getCityTopicQuality } from "./cityTopicQuality";
 
 /**
  * City-topic URLs that already produced impressions in the
@@ -215,6 +218,34 @@ const GSC_PROTECTED_CITY_TOPIC_PATHS = new Set<string>([
   "/airbnb-optimizer/zaragoza/local-demand-guide",
 ]);
 
+function isQualityGatedOccupancyRolloutPath(
+  pathname: string
+): boolean {
+  const match = pathname.match(
+    /^\/airbnb-optimizer\/([^/]+)\/occupancy-guide$/
+  );
+
+  if (!match) {
+    return false;
+  }
+
+  const city = cities.find((candidate) => candidate.slug === match[1]);
+  const topic = localSeoTopics.find(
+    (candidate) => candidate.slug === "occupancy-guide"
+  );
+
+  if (!city || !topic) {
+    return false;
+  }
+
+  const quality = getCityTopicQuality(city, topic);
+
+  return (
+    quality.status === "eligible-safe" ||
+    quality.status === "qualified-evidence"
+  );
+}
+
 export function isCityTopicSitemapEligible(
   pathname: string
 ): boolean {
@@ -234,7 +265,8 @@ export function isCityTopicSitemapEligible(
   return (
     GSC_PROTECTED_CITY_TOPIC_PATHS.has(pathname) ||
     SITEMAP_EXPERIMENT_CITY_TOPIC_PATHS.has(pathname) ||
-    isCohort25CityTopicRepairPath(pathname)
+    isCohort25CityTopicRepairPath(pathname) ||
+    isQualityGatedOccupancyRolloutPath(pathname)
   );
 }
 
