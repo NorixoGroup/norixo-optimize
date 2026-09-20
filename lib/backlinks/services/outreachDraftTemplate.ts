@@ -46,8 +46,6 @@ export function createBacklinkOutreachDraftTemplate(
     `I came across your article “${input.opportunity.targetPageTitle}” on ${input.domain.hostname}:`,
     input.opportunity.targetPageUrl,
     "",
-    input.opportunity.evidenceSummary,
-    "",
     `Norixo has a free ${assetReference} that could be a useful complementary resource for readers.`,
     "",
     "Would you be open to taking a look and considering it as an additional resource for the article?",
