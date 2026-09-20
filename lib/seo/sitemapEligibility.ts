@@ -221,6 +221,7 @@ const GSC_PROTECTED_CITY_TOPIC_PATHS = new Set<string>([
 const QUALITY_GATED_ROLLOUT_TOPICS = new Set([
   "occupancy-guide",
   "title-optimization",
+  "guest-trust-guide",
 ]);
 
 function isQualityGatedRolloutPath(

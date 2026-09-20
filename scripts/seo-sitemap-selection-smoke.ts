@@ -50,6 +50,7 @@ const omittedTopics = allTopics.filter(
 const qualityGatedTopicSlugs = [
   "occupancy-guide",
   "title-optimization",
+  "guest-trust-guide",
 ] as const;
 
 const qualityGatedTopics = qualityGatedTopicSlugs.flatMap(
@@ -82,6 +83,10 @@ const qualityGatedOccupancyTopics = qualityGatedTopics.filter(
 
 const qualityGatedTitleTopics = qualityGatedTopics.filter(
   ({ topicSlug }) => topicSlug === "title-optimization"
+);
+
+const qualityGatedGuestTrustTopics = qualityGatedTopics.filter(
+  ({ topicSlug }) => topicSlug === "guest-trust-guide"
 );
 
 const exposedQualityFailures = qualityGatedTopics.filter(
@@ -159,6 +164,10 @@ console.log(
 );
 
 console.log(
+  `QUALITY_GATED_GUEST_TRUST_TOPICS=${qualityGatedGuestTrustTopics.length}`
+);
+
+console.log(
   `EXPOSED_QUALITY_FAIL=${exposedQualityFailures.length}`
 );
 
@@ -214,15 +223,15 @@ if (
   );
 }
 
-if (keptTopics.length !== 592) {
+if (keptTopics.length !== 798) {
   throw new Error(
-    `Expected 592 kept topics, got ${keptTopics.length}`
+    `Expected 798 kept topics, got ${keptTopics.length}`
   );
 }
 
-if (omittedTopics.length !== 4908) {
+if (omittedTopics.length !== 4702) {
   throw new Error(
-    `Expected 4908 omitted topics, got ${omittedTopics.length}`
+    `Expected 4702 omitted topics, got ${omittedTopics.length}`
   );
 }
 
@@ -236,6 +245,29 @@ if (qualityGatedTitleTopics.length !== 220) {
   throw new Error(
     `Expected 220 quality-gated title topics, got ${qualityGatedTitleTopics.length}`
   );
+}
+
+if (qualityGatedGuestTrustTopics.length !== 220) {
+  throw new Error(
+    `Expected 220 quality-gated guest-trust topics, got ${qualityGatedGuestTrustTopics.length}`
+  );
+}
+
+for (const { pathname, quality } of qualityGatedGuestTrustTopics) {
+  if (!isCityTopicSitemapEligible(pathname)) {
+    throw new Error(
+      `Quality-gated guest-trust topic omitted: ${pathname}`
+    );
+  }
+
+  if (
+    quality.status !== "eligible-safe" &&
+    quality.status !== "qualified-evidence"
+  ) {
+    throw new Error(
+      `Guest-trust topic failed quality gate: ${pathname}`
+    );
+  }
 }
 
 for (const { pathname, quality } of qualityGatedOccupancyTopics) {
@@ -354,5 +386,6 @@ console.log("COHORT_25_OVERLAP_GUARD=PASS");
 console.log("UNPROTECTED_HOLD_OMISSION=PASS");
 console.log("QUALITY_GATED_OCCUPANCY_PRESERVATION=PASS");
 console.log("QUALITY_GATED_TITLE_PRESERVATION=PASS");
+console.log("QUALITY_GATED_GUEST_TRUST_PRESERVATION=PASS");
 console.log("EXPOSED_QUALITY_GUARD=PASS");
 console.log("SITEMAP_SELECTION_SMOKE=PASS");
