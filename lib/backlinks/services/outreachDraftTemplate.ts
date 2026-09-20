@@ -20,7 +20,7 @@ export type BacklinkOutreachDraftTemplateInput = {
 export type BacklinkOutreachDraftTemplate = { subject: string | null; body: string };
 
 function contactGreeting(contact: BacklinkOutreachDraftTemplateInput["contact"]): string {
-  return contact.fullName ?? contact.roleTitle ?? "there";
+  return contact.fullName ?? "there";
 }
 
 export function createBacklinkOutreachDraftTemplate(
@@ -31,7 +31,7 @@ export function createBacklinkOutreachDraftTemplate(
     : input.asset.displayName;
   const followUp = input.mode === "follow_up";
   const subject = input.channel === "email"
-    ? `${input.campaign.name}: ${input.asset.displayName}`
+    ? `${input.asset.displayName} for your ${input.opportunity.targetPageTitle}`
     : null;
   if (followUp) {
     const followUpNumber = input.followUpNumber ?? 1;
@@ -43,12 +43,17 @@ export function createBacklinkOutreachDraftTemplate(
   const body = [
     `Hello ${contactGreeting(input.contact)},`,
     "",
-    `I am reaching out about ${input.opportunity.targetPageTitle} on ${input.domain.hostname}.`,
-    `The opportunity is recorded as ${input.opportunity.opportunityType} for a ${input.opportunity.pageType} page: ${input.opportunity.targetPageUrl}`,
-    `Our campaign “${input.campaign.name}” is focused on ${input.campaign.objective}. The asset is ${assetReference}.`,
+    `I came across your article “${input.opportunity.targetPageTitle}” on ${input.domain.hostname}:`,
+    input.opportunity.targetPageUrl,
+    "",
     input.opportunity.evidenceSummary,
     "",
-    "Would you be open to reviewing whether it is relevant for your site?",
+    `Norixo has a free ${assetReference} that could be a useful complementary resource for readers.`,
+    "",
+    "Would you be open to taking a look and considering it as an additional resource for the article?",
+    "",
+    "Best,",
+    "Norixo",
   ].join("\n");
 
   return { subject, body };
