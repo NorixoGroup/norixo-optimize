@@ -54,6 +54,7 @@ const qualityGatedTopicSlugs = [
   "photo-tips",
   "description-optimization",
   "business-travel-guide",
+  "listing-audit",
 ] as const;
 
 const qualityGatedTopics = qualityGatedTopicSlugs.flatMap(
@@ -102,6 +103,10 @@ const qualityGatedDescriptionTopics = qualityGatedTopics.filter(
 
 const qualityGatedBusinessTravelTopics = qualityGatedTopics.filter(
   ({ topicSlug }) => topicSlug === "business-travel-guide"
+);
+
+const qualityGatedListingAuditTopics = qualityGatedTopics.filter(
+  ({ topicSlug }) => topicSlug === "listing-audit"
 );
 
 const exposedQualityFailures = qualityGatedTopics.filter(
@@ -195,6 +200,10 @@ console.log(
 );
 
 console.log(
+  `QUALITY_GATED_LISTING_AUDIT_TOPICS=${qualityGatedListingAuditTopics.length}`
+);
+
+console.log(
   `EXPOSED_QUALITY_FAIL=${exposedQualityFailures.length}`
 );
 
@@ -250,15 +259,15 @@ if (
   );
 }
 
-if (keptTopics.length !== 1428) {
+if (keptTopics.length !== 1639) {
   throw new Error(
-    `Expected 1428 kept topics, got ${keptTopics.length}`
+    `Expected 1639 kept topics, got ${keptTopics.length}`
   );
 }
 
-if (omittedTopics.length !== 4072) {
+if (omittedTopics.length !== 3861) {
   throw new Error(
-    `Expected 4072 omitted topics, got ${omittedTopics.length}`
+    `Expected 3861 omitted topics, got ${omittedTopics.length}`
   );
 }
 
@@ -296,6 +305,29 @@ if (qualityGatedBusinessTravelTopics.length !== 220) {
   throw new Error(
     `Expected 220 quality-gated business-travel topics, got ${qualityGatedBusinessTravelTopics.length}`
   );
+}
+
+if (qualityGatedListingAuditTopics.length !== 220) {
+  throw new Error(
+    `Expected 220 quality-gated listing-audit topics, got ${qualityGatedListingAuditTopics.length}`
+  );
+}
+
+for (const { pathname, quality } of qualityGatedListingAuditTopics) {
+  if (!isCityTopicSitemapEligible(pathname)) {
+    throw new Error(
+      `Quality-gated listing-audit topic omitted: ${pathname}`
+    );
+  }
+
+  if (
+    quality.status !== "eligible-safe" &&
+    quality.status !== "qualified-evidence"
+  ) {
+    throw new Error(
+      `Quality-gated listing-audit topic failed quality gate: ${pathname} (${quality.status})`
+    );
+  }
 }
 
 for (const { pathname, quality } of qualityGatedBusinessTravelTopics) {
@@ -486,5 +518,6 @@ console.log("QUALITY_GATED_GUEST_TRUST_PRESERVATION=PASS");
 console.log("QUALITY_GATED_PHOTO_TIPS_PRESERVATION=PASS");
 console.log("QUALITY_GATED_DESCRIPTION_PRESERVATION=PASS");
 console.log("QUALITY_GATED_BUSINESS_TRAVEL_PRESERVATION=PASS");
+console.log("QUALITY_GATED_LISTING_AUDIT_PRESERVATION=PASS");
 console.log("EXPOSED_QUALITY_GUARD=PASS");
 console.log("SITEMAP_SELECTION_SMOKE=PASS");
