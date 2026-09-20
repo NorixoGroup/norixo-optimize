@@ -55,6 +55,7 @@ const qualityGatedTopicSlugs = [
   "description-optimization",
   "business-travel-guide",
   "listing-audit",
+  "revenue-optimization",
 ] as const;
 
 const qualityGatedTopics = qualityGatedTopicSlugs.flatMap(
@@ -107,6 +108,10 @@ const qualityGatedBusinessTravelTopics = qualityGatedTopics.filter(
 
 const qualityGatedListingAuditTopics = qualityGatedTopics.filter(
   ({ topicSlug }) => topicSlug === "listing-audit"
+);
+
+const qualityGatedRevenueTopics = qualityGatedTopics.filter(
+  ({ topicSlug }) => topicSlug === "revenue-optimization"
 );
 
 const exposedQualityFailures = qualityGatedTopics.filter(
@@ -202,6 +207,9 @@ console.log(
 console.log(
   `QUALITY_GATED_LISTING_AUDIT_TOPICS=${qualityGatedListingAuditTopics.length}`
 );
+console.log(
+  `QUALITY_GATED_REVENUE_TOPICS=${qualityGatedRevenueTopics.length}`
+);
 
 console.log(
   `EXPOSED_QUALITY_FAIL=${exposedQualityFailures.length}`
@@ -259,15 +267,15 @@ if (
   );
 }
 
-if (keptTopics.length !== 1639) {
+if (keptTopics.length !== 1851) {
   throw new Error(
-    `Expected 1639 kept topics, got ${keptTopics.length}`
+    `Expected 1851 kept topics, got ${keptTopics.length}`
   );
 }
 
-if (omittedTopics.length !== 3861) {
+if (omittedTopics.length !== 3649) {
   throw new Error(
-    `Expected 3861 omitted topics, got ${omittedTopics.length}`
+    `Expected 3649 omitted topics, got ${omittedTopics.length}`
   );
 }
 
@@ -305,6 +313,29 @@ if (qualityGatedBusinessTravelTopics.length !== 220) {
   throw new Error(
     `Expected 220 quality-gated business-travel topics, got ${qualityGatedBusinessTravelTopics.length}`
   );
+}
+
+if (qualityGatedRevenueTopics.length !== 220) {
+  throw new Error(
+    `Expected 220 quality-gated revenue topics, got ${qualityGatedRevenueTopics.length}`
+  );
+}
+
+for (const { pathname, quality } of qualityGatedRevenueTopics) {
+  if (!isCityTopicSitemapEligible(pathname)) {
+    throw new Error(
+      `Quality-gated revenue topic omitted: ${pathname}`
+    );
+  }
+
+  if (
+    quality.status !== "eligible-safe" &&
+    quality.status !== "qualified-evidence"
+  ) {
+    throw new Error(
+      `Quality-gated revenue topic failed quality gate: ${pathname} (${quality.status})`
+    );
+  }
 }
 
 if (qualityGatedListingAuditTopics.length !== 220) {
@@ -519,5 +550,6 @@ console.log("QUALITY_GATED_PHOTO_TIPS_PRESERVATION=PASS");
 console.log("QUALITY_GATED_DESCRIPTION_PRESERVATION=PASS");
 console.log("QUALITY_GATED_BUSINESS_TRAVEL_PRESERVATION=PASS");
 console.log("QUALITY_GATED_LISTING_AUDIT_PRESERVATION=PASS");
+console.log("QUALITY_GATED_REVENUE_PRESERVATION=PASS");
 console.log("EXPOSED_QUALITY_GUARD=PASS");
 console.log("SITEMAP_SELECTION_SMOKE=PASS");

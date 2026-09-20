@@ -226,6 +226,7 @@ const QUALITY_GATED_ROLLOUT_TOPICS = new Set([
   "description-optimization",
   "business-travel-guide",
   "listing-audit",
+  "revenue-optimization",
 ]);
 
 function isQualityGatedRolloutPath(
