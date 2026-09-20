@@ -31,7 +31,7 @@ export function createBacklinkOutreachDraftTemplate(
     : input.asset.displayName;
   const followUp = input.mode === "follow_up";
   const subject = input.channel === "email"
-    ? `${input.asset.displayName} for your ${input.opportunity.targetPageTitle}`
+    ? `${input.asset.displayName} for your article`
     : null;
   if (followUp) {
     const followUpNumber = input.followUpNumber ?? 1;
