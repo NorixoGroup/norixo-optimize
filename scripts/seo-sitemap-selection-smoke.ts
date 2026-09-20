@@ -47,31 +47,44 @@ const omittedTopics = allTopics.filter(
     !isCityTopicSitemapEligible(pathname)
 );
 
-const occupancyTopic = localSeoTopics.find(
-  (topic) => topic.slug === "occupancy-guide"
-);
+const qualityGatedTopicSlugs = [
+  "occupancy-guide",
+  "title-optimization",
+] as const;
 
-if (!occupancyTopic) {
-  throw new Error("occupancy-guide topic not found");
-}
-
-const qualityGatedOccupancyTopics = cities.map(
-  (city) => {
-    const pathname =
-      `/airbnb-optimizer/${city.slug}/occupancy-guide`;
-    const quality = getCityTopicQuality(
-      city,
-      occupancyTopic
+const qualityGatedTopics = qualityGatedTopicSlugs.flatMap(
+  (topicSlug) => {
+    const topic = localSeoTopics.find(
+      (candidate) => candidate.slug === topicSlug
     );
 
-    return {
-      pathname,
-      quality,
-    };
+    if (!topic) {
+      throw new Error(`${topicSlug} topic not found`);
+    }
+
+    return cities.map((city) => {
+      const pathname =
+        `/airbnb-optimizer/${city.slug}/${topicSlug}`;
+      const quality = getCityTopicQuality(city, topic);
+
+      return {
+        pathname,
+        topicSlug,
+        quality,
+      };
+    });
   }
 );
 
-const exposedQualityFailures = qualityGatedOccupancyTopics.filter(
+const qualityGatedOccupancyTopics = qualityGatedTopics.filter(
+  ({ topicSlug }) => topicSlug === "occupancy-guide"
+);
+
+const qualityGatedTitleTopics = qualityGatedTopics.filter(
+  ({ topicSlug }) => topicSlug === "title-optimization"
+);
+
+const exposedQualityFailures = qualityGatedTopics.filter(
   ({ pathname, quality }) =>
     isCityTopicSitemapEligible(pathname) &&
     quality.status !== "eligible-safe" &&
@@ -141,6 +154,9 @@ console.log(
 console.log(
   `QUALITY_GATED_OCCUPANCY_TOPICS=${qualityGatedOccupancyTopics.length}`
 );
+console.log(
+  `QUALITY_GATED_TITLE_TOPICS=${qualityGatedTitleTopics.length}`
+);
 
 console.log(
   `EXPOSED_QUALITY_FAIL=${exposedQualityFailures.length}`
@@ -198,21 +214,27 @@ if (
   );
 }
 
-if (keptTopics.length !== 384) {
+if (keptTopics.length !== 592) {
   throw new Error(
-    `Expected 384 kept topics, got ${keptTopics.length}`
+    `Expected 592 kept topics, got ${keptTopics.length}`
   );
 }
 
-if (omittedTopics.length !== 5116) {
+if (omittedTopics.length !== 4908) {
   throw new Error(
-    `Expected 5116 omitted topics, got ${omittedTopics.length}`
+    `Expected 4908 omitted topics, got ${omittedTopics.length}`
   );
 }
 
 if (qualityGatedOccupancyTopics.length !== 220) {
   throw new Error(
     `Expected 220 quality-gated occupancy topics, got ${qualityGatedOccupancyTopics.length}`
+  );
+}
+
+if (qualityGatedTitleTopics.length !== 220) {
+  throw new Error(
+    `Expected 220 quality-gated title topics, got ${qualityGatedTitleTopics.length}`
   );
 }
 
@@ -331,5 +353,6 @@ console.log("COHORT_25_TOPIC_PRESERVATION=PASS");
 console.log("COHORT_25_OVERLAP_GUARD=PASS");
 console.log("UNPROTECTED_HOLD_OMISSION=PASS");
 console.log("QUALITY_GATED_OCCUPANCY_PRESERVATION=PASS");
+console.log("QUALITY_GATED_TITLE_PRESERVATION=PASS");
 console.log("EXPOSED_QUALITY_GUARD=PASS");
 console.log("SITEMAP_SELECTION_SMOKE=PASS");

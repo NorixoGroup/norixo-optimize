@@ -218,20 +218,25 @@ const GSC_PROTECTED_CITY_TOPIC_PATHS = new Set<string>([
   "/airbnb-optimizer/zaragoza/local-demand-guide",
 ]);
 
-function isQualityGatedOccupancyRolloutPath(
+const QUALITY_GATED_ROLLOUT_TOPICS = new Set([
+  "occupancy-guide",
+  "title-optimization",
+]);
+
+function isQualityGatedRolloutPath(
   pathname: string
 ): boolean {
   const match = pathname.match(
-    /^\/airbnb-optimizer\/([^/]+)\/occupancy-guide$/
+    /^\/airbnb-optimizer\/([^/]+)\/([^/]+)$/
   );
 
-  if (!match) {
+  if (!match || !QUALITY_GATED_ROLLOUT_TOPICS.has(match[2])) {
     return false;
   }
 
   const city = cities.find((candidate) => candidate.slug === match[1]);
   const topic = localSeoTopics.find(
-    (candidate) => candidate.slug === "occupancy-guide"
+    (candidate) => candidate.slug === match[2]
   );
 
   if (!city || !topic) {
@@ -266,7 +271,7 @@ export function isCityTopicSitemapEligible(
     GSC_PROTECTED_CITY_TOPIC_PATHS.has(pathname) ||
     SITEMAP_EXPERIMENT_CITY_TOPIC_PATHS.has(pathname) ||
     isCohort25CityTopicRepairPath(pathname) ||
-    isQualityGatedOccupancyRolloutPath(pathname)
+    isQualityGatedRolloutPath(pathname)
   );
 }
 
