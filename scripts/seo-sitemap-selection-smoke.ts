@@ -51,6 +51,7 @@ const qualityGatedTopicSlugs = [
   "occupancy-guide",
   "title-optimization",
   "guest-trust-guide",
+  "photo-tips",
 ] as const;
 
 const qualityGatedTopics = qualityGatedTopicSlugs.flatMap(
@@ -87,6 +88,10 @@ const qualityGatedTitleTopics = qualityGatedTopics.filter(
 
 const qualityGatedGuestTrustTopics = qualityGatedTopics.filter(
   ({ topicSlug }) => topicSlug === "guest-trust-guide"
+);
+
+const qualityGatedPhotoTipsTopics = qualityGatedTopics.filter(
+  ({ topicSlug }) => topicSlug === "photo-tips"
 );
 
 const exposedQualityFailures = qualityGatedTopics.filter(
@@ -168,6 +173,10 @@ console.log(
 );
 
 console.log(
+  `QUALITY_GATED_PHOTO_TIPS_TOPICS=${qualityGatedPhotoTipsTopics.length}`
+);
+
+console.log(
   `EXPOSED_QUALITY_FAIL=${exposedQualityFailures.length}`
 );
 
@@ -223,15 +232,15 @@ if (
   );
 }
 
-if (keptTopics.length !== 798) {
+if (keptTopics.length !== 1008) {
   throw new Error(
-    `Expected 798 kept topics, got ${keptTopics.length}`
+    `Expected 1008 kept topics, got ${keptTopics.length}`
   );
 }
 
-if (omittedTopics.length !== 4702) {
+if (omittedTopics.length !== 4492) {
   throw new Error(
-    `Expected 4702 omitted topics, got ${omittedTopics.length}`
+    `Expected 4492 omitted topics, got ${omittedTopics.length}`
   );
 }
 
@@ -251,6 +260,29 @@ if (qualityGatedGuestTrustTopics.length !== 220) {
   throw new Error(
     `Expected 220 quality-gated guest-trust topics, got ${qualityGatedGuestTrustTopics.length}`
   );
+}
+
+if (qualityGatedPhotoTipsTopics.length !== 220) {
+  throw new Error(
+    `Expected 220 quality-gated photo-tips topics, got ${qualityGatedPhotoTipsTopics.length}`
+  );
+}
+
+for (const { pathname, quality } of qualityGatedPhotoTipsTopics) {
+  if (!isCityTopicSitemapEligible(pathname)) {
+    throw new Error(
+      `Quality-gated photo-tips topic omitted: ${pathname}`
+    );
+  }
+
+  if (
+    quality.status !== "eligible-safe" &&
+    quality.status !== "qualified-evidence"
+  ) {
+    throw new Error(
+      `Quality-gated photo-tips topic failed quality gate: ${pathname} (${quality.status})`
+    );
+  }
 }
 
 for (const { pathname, quality } of qualityGatedGuestTrustTopics) {
@@ -387,5 +419,6 @@ console.log("UNPROTECTED_HOLD_OMISSION=PASS");
 console.log("QUALITY_GATED_OCCUPANCY_PRESERVATION=PASS");
 console.log("QUALITY_GATED_TITLE_PRESERVATION=PASS");
 console.log("QUALITY_GATED_GUEST_TRUST_PRESERVATION=PASS");
+console.log("QUALITY_GATED_PHOTO_TIPS_PRESERVATION=PASS");
 console.log("EXPOSED_QUALITY_GUARD=PASS");
 console.log("SITEMAP_SELECTION_SMOKE=PASS");
