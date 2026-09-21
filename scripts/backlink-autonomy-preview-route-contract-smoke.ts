@@ -3,7 +3,10 @@ import { readFile } from "node:fs/promises";
 async function main() {
   const route = await readFile("app/api/internal/automation/backlinks/autonomy/preview/route.ts", "utf8");
   const vercel = await readFile("vercel.json", "utf8").catch(() => "");
-  for (const value of ["getRequestUserAndWorkspace", "isAdminPrivateEmail", "runBacklinkAutonomyProductionPreview", "workspaceLimit", "promotionLimitPerWorkspace"]) assert(route.includes(value), `Missing ${value}`);
+  for (const value of ["getRequestUserAndWorkspace", "isAdminPrivateEmail", "runBacklinkAutonomyProductionPreview", "workspaceLimit", "promotionLimitPerWorkspace", "context.workspace.id"]) assert(route.includes(value), `Missing ${value}`);
+  assert(route.includes("workspaceId: context.workspace.id"), "Preview must use authenticated workspace");
+  assert(route.includes('allowed = ["workspaceLimit", "promotionLimitPerWorkspace"]'), "Request body allowlist must remain bounded");
+  assert(!route.includes('allowed = ["workspaceId"'), "workspaceId must not be accepted from request body");
   // Capability checks must inspect executable request handling, not prose comments.
   for (const forbidden of [
     "mode:",

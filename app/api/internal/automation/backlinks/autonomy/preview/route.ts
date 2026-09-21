@@ -20,6 +20,6 @@ export async function POST(request: NextRequest) {
   if (context.status === "workspace_forbidden" || !isAdminPrivateEmail(context.user.email)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const body = parseBody(await request.json().catch(() => null));
   if (body == null) return NextResponse.json({ ok: false, error: { code: "INVALID_INPUT", message: "Invalid autonomy preview input" } }, { status: 400 });
-  try { return NextResponse.json({ ok: true, result: await runBacklinkAutonomyProductionPreview(body) }); }
+  try { return NextResponse.json({ ok: true, result: await runBacklinkAutonomyProductionPreview({ ...body, workspaceId: context.workspace.id }) }); }
   catch { console.error("[automation/backlinks/autonomy/preview] request failed"); return NextResponse.json({ ok: false, error: { code: "AUTONOMY_PREVIEW_FAILED", message: "Unable to preview backlink autonomy" } }, { status: 500 }); }
 }

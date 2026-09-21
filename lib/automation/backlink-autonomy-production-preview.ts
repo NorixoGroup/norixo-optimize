@@ -2,7 +2,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getBacklinkDomainById } from "@/lib/backlinks/repositories/domainsRepository";
 import { getBacklinkOpportunityById } from "@/lib/backlinks/repositories/opportunitiesRepository";
 import { getAutomationTaskByIdInRun } from "./repositories/automationTasksRepository";
-import { listAutomationWorkspaceControlsForBacklinkAutonomy } from "./repositories/automationWorkspaceControlsRepository";
+import { getAutomationWorkspaceControl } from "./repositories/automationWorkspaceControlsRepository";
 import { readBacklinkAutonomyRuntimeConfig } from "./backlink-autonomy-runtime-config";
 import { runBacklinkAutonomyScheduler, type BacklinkAutonomySchedulerResult } from "./backlink-autonomy-scheduler";
 import type { AppliedBacklinkPromotion } from "./backlink-promotion-resolution-entry";
@@ -45,11 +45,24 @@ export function createBacklinkAutonomyProductionPreviewRunner(reads: BacklinkAut
 }
 
 /** The only production-shaped autonomy entry point in G2A. */
-export async function runBacklinkAutonomyProductionPreview(input: { workspaceLimit?: number; promotionLimitPerWorkspace?: number; now?: string } = {}): Promise<BacklinkAutonomySchedulerResult> {
+export async function runBacklinkAutonomyProductionPreview(input: { workspaceId: string; workspaceLimit?: number; promotionLimitPerWorkspace?: number; now?: string }): Promise<BacklinkAutonomySchedulerResult> {
   const client = createSupabaseAdminClient();
   return createBacklinkAutonomyProductionPreviewRunner({
     runtimeConfig: readBacklinkAutonomyRuntimeConfig,
-    listWorkspaceControls: (limit) => listAutomationWorkspaceControlsForBacklinkAutonomy(client, limit),
+    listWorkspaceControls: async () => {
+      const control = await getAutomationWorkspaceControl(client, input.workspaceId);
+
+      if (
+        control == null ||
+        control.backlinksEnabled !== true ||
+        control.backlinkAutonomyEnabled !== true ||
+        control.disabledReason != null
+      ) {
+        return [];
+      }
+
+      return [control];
+    },
     listAppliedPromotions: (workspaceId, limit) => listCanonicalAppliedPromotions(client, workspaceId, limit),
     getDomain: async (workspaceId, domainId) => { const row = await getBacklinkDomainById(client, workspaceId, domainId); return { id: row.id, workspaceId: row.workspace_id, archivedAt: row.archived_at }; },
     getOpportunity: async (workspaceId, opportunityId) => { const row = await getBacklinkOpportunityById(client, workspaceId, opportunityId); return { id: row.id, workspaceId: row.workspace_id, domainId: row.domain_id, archivedAt: row.archived_at }; },
