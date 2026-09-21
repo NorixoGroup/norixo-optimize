@@ -58,6 +58,7 @@ const qualityGatedTopicSlugs = [
   "revenue-optimization",
   "pricing-positioning",
   "competitor-analysis",
+  "seasonality-guide",
 ] as const;
 
 const qualityGatedTopics = qualityGatedTopicSlugs.flatMap(
@@ -122,6 +123,10 @@ const qualityGatedPricingPositioningTopics = qualityGatedTopics.filter(
 
 const qualityGatedCompetitorAnalysisTopics = qualityGatedTopics.filter(
   ({ topicSlug }) => topicSlug === "competitor-analysis"
+);
+
+const qualityGatedSeasonalityTopics = qualityGatedTopics.filter(
+  ({ topicSlug }) => topicSlug === "seasonality-guide"
 );
 
 const exposedQualityFailures = qualityGatedTopics.filter(
@@ -229,6 +234,10 @@ console.log(
 );
 
 console.log(
+  `QUALITY_GATED_SEASONALITY_TOPICS=${qualityGatedSeasonalityTopics.length}`
+);
+
+console.log(
   `EXPOSED_QUALITY_FAIL=${exposedQualityFailures.length}`
 );
 
@@ -284,15 +293,15 @@ if (
   );
 }
 
-if (keptTopics.length !== 2276) {
+if (keptTopics.length !== 2489) {
   throw new Error(
-    `Expected 2276 kept topics, got ${keptTopics.length}`
+    `Expected 2489 kept topics, got ${keptTopics.length}`
   );
 }
 
-if (omittedTopics.length !== 3224) {
+if (omittedTopics.length !== 3011) {
   throw new Error(
-    `Expected 3224 omitted topics, got ${omittedTopics.length}`
+    `Expected 3011 omitted topics, got ${omittedTopics.length}`
   );
 }
 
@@ -348,6 +357,29 @@ if (qualityGatedCompetitorAnalysisTopics.length !== 220) {
   throw new Error(
     `Expected 220 quality-gated competitor-analysis topics, got ${qualityGatedCompetitorAnalysisTopics.length}`
   );
+}
+
+if (qualityGatedSeasonalityTopics.length !== 220) {
+  throw new Error(
+    `Expected 220 quality-gated seasonality topics, got ${qualityGatedSeasonalityTopics.length}`
+  );
+}
+
+for (const { pathname, quality } of qualityGatedSeasonalityTopics) {
+  if (!isCityTopicSitemapEligible(pathname)) {
+    throw new Error(
+      `Quality-gated seasonality topic omitted: ${pathname}`
+    );
+  }
+
+  if (
+    quality.status !== "eligible-safe" &&
+    quality.status !== "qualified-evidence"
+  ) {
+    throw new Error(
+      `Quality-gated seasonality topic failed quality gate: ${pathname} (${quality.status})`
+    );
+  }
 }
 
 for (const { pathname, quality } of qualityGatedCompetitorAnalysisTopics) {
