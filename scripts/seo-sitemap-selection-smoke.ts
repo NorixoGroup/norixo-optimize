@@ -57,6 +57,7 @@ const qualityGatedTopicSlugs = [
   "listing-audit",
   "revenue-optimization",
   "pricing-positioning",
+  "competitor-analysis",
 ] as const;
 
 const qualityGatedTopics = qualityGatedTopicSlugs.flatMap(
@@ -117,6 +118,10 @@ const qualityGatedRevenueTopics = qualityGatedTopics.filter(
 
 const qualityGatedPricingPositioningTopics = qualityGatedTopics.filter(
   ({ topicSlug }) => topicSlug === "pricing-positioning"
+);
+
+const qualityGatedCompetitorAnalysisTopics = qualityGatedTopics.filter(
+  ({ topicSlug }) => topicSlug === "competitor-analysis"
 );
 
 const exposedQualityFailures = qualityGatedTopics.filter(
@@ -220,6 +225,10 @@ console.log(
 );
 
 console.log(
+  `QUALITY_GATED_COMPETITOR_ANALYSIS_TOPICS=${qualityGatedCompetitorAnalysisTopics.length}`
+);
+
+console.log(
   `EXPOSED_QUALITY_FAIL=${exposedQualityFailures.length}`
 );
 
@@ -275,15 +284,15 @@ if (
   );
 }
 
-if (keptTopics.length !== 2063) {
+if (keptTopics.length !== 2276) {
   throw new Error(
-    `Expected 2063 kept topics, got ${keptTopics.length}`
+    `Expected 2276 kept topics, got ${keptTopics.length}`
   );
 }
 
-if (omittedTopics.length !== 3437) {
+if (omittedTopics.length !== 3224) {
   throw new Error(
-    `Expected 3437 omitted topics, got ${omittedTopics.length}`
+    `Expected 3224 omitted topics, got ${omittedTopics.length}`
   );
 }
 
@@ -333,6 +342,29 @@ if (qualityGatedPricingPositioningTopics.length !== 220) {
   throw new Error(
     `Expected 220 quality-gated pricing-positioning topics, got ${qualityGatedPricingPositioningTopics.length}`
   );
+}
+
+if (qualityGatedCompetitorAnalysisTopics.length !== 220) {
+  throw new Error(
+    `Expected 220 quality-gated competitor-analysis topics, got ${qualityGatedCompetitorAnalysisTopics.length}`
+  );
+}
+
+for (const { pathname, quality } of qualityGatedCompetitorAnalysisTopics) {
+  if (!isCityTopicSitemapEligible(pathname)) {
+    throw new Error(
+      `Quality-gated competitor-analysis topic omitted: ${pathname}`
+    );
+  }
+
+  if (
+    quality.status !== "eligible-safe" &&
+    quality.status !== "qualified-evidence"
+  ) {
+    throw new Error(
+      `Quality-gated competitor-analysis topic failed quality gate: ${pathname} (${quality.status})`
+    );
+  }
 }
 
 for (const { pathname, quality } of qualityGatedPricingPositioningTopics) {

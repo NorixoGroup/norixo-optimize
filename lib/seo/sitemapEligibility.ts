@@ -228,6 +228,7 @@ const QUALITY_GATED_ROLLOUT_TOPICS = new Set([
   "listing-audit",
   "revenue-optimization",
   "pricing-positioning",
+  "competitor-analysis",
 ]);
 
 function isQualityGatedRolloutPath(
