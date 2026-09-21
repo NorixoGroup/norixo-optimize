@@ -11,7 +11,7 @@ import type { BacklinkAutonomyRuntimeConfig } from "./backlink-autonomy-runtime-
 
 type PreviewClient = ReturnType<typeof createSupabaseAdminClient>;
 
-async function listCanonicalAppliedPromotions(client: PreviewClient, workspaceId: string, limit: number): Promise<readonly AppliedBacklinkPromotion[]> {
+export async function listCanonicalAppliedPromotions(client: PreviewClient, workspaceId: string, limit: number): Promise<readonly AppliedBacklinkPromotion[]> {
   const { data, error } = await client.from("backlink_promotion_applications")
     .select("id, workspace_id, run_id, promotion_task_id, domain_id, opportunity_id, promoted_by")
     .eq("workspace_id", workspaceId).order("promoted_at", { ascending: true }).order("id", { ascending: true }).limit(limit);

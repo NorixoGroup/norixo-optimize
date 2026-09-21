@@ -5371,6 +5371,7 @@ export type Database = {
       fail_automation_task: { Args: { p_error_code: string; p_error_message: string; p_failed_at: string; p_task_id: string; p_worker_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
       heartbeat_automation_task: { Args: { p_heartbeat_at: string; p_lease_duration_seconds: number; p_task_id: string; p_worker_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
       reclaim_expired_automation_tasks: { Args: { p_limit: number; p_reclaimed_at: string; p_run_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
+      reclaim_expired_backlink_autonomy_tasks: { Args: { p_limit: number; p_reclaimed_at: string; p_run_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
       start_automation_run: {
         Args: { p_run_id: string; p_started_at: string; p_workspace_id: string }
         Returns: Database["public"]["Tables"]["automation_runs"]["Row"][]

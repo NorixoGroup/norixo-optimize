@@ -18,6 +18,7 @@ export type BacklinkAutonomySchedulerResult = {
   promotionsScanned: number;
   proposed: readonly CreateAutomationTaskInput[];
   autonomyRunIds: readonly string[];
+  autonomyRuns: readonly { workspaceId: string; runId: string }[];
   created: number;
   existing: number;
   skipped: readonly string[];
@@ -28,14 +29,14 @@ export async function runBacklinkAutonomyScheduler(
   deps: BacklinkAutonomySchedulerDependencies,
   input: { mode?: BacklinkAutonomySchedulerMode; scheduledAt: string; workspaceLimit?: number; promotionLimitPerWorkspace?: number },
 ): Promise<BacklinkAutonomySchedulerResult> {
-  const empty = (outcome: BacklinkAutonomySchedulerResult["outcome"]): BacklinkAutonomySchedulerResult => ({ outcome, workspacesScanned: 0, promotionsScanned: 0, proposed: [], autonomyRunIds: [], created: 0, existing: 0, skipped: [] });
+  const empty = (outcome: BacklinkAutonomySchedulerResult["outcome"]): BacklinkAutonomySchedulerResult => ({ outcome, workspacesScanned: 0, promotionsScanned: 0, proposed: [], autonomyRunIds: [], autonomyRuns: [], created: 0, existing: 0, skipped: [] });
   const mode = input.mode ?? "preview";
   if (mode === "live") return empty("live_unsupported");
   if (deps.runtimeConfig().autonomyEnabled !== true) return empty("disabled");
   const workspaceLimit = input.workspaceLimit ?? 25, promotionLimit = input.promotionLimitPerWorkspace ?? 25;
   if (!Number.isInteger(workspaceLimit) || workspaceLimit < 1 || workspaceLimit > 100 || !Number.isInteger(promotionLimit) || promotionLimit < 1 || promotionLimit > 100) throw new Error("BACKLINK_AUTONOMY_SCHEDULER_LIMIT_INVALID");
   const controls = (await deps.listWorkspaceControls(workspaceLimit)).slice().sort((a, b) => a.workspaceId.localeCompare(b.workspaceId));
-  const proposed: CreateAutomationTaskInput[] = [], autonomyRunIds: string[] = [], skipped: string[] = []; let promotionsScanned = 0, created = 0, existing = 0;
+  const proposed: CreateAutomationTaskInput[] = [], autonomyRunIds: string[] = [], autonomyRuns: { workspaceId: string; runId: string }[] = [], skipped: string[] = []; let promotionsScanned = 0, created = 0, existing = 0;
   for (const workspace of controls) {
     const control = normalizeBacklinkAutonomyRuntimeControl({ runtime: deps.runtimeConfig(), workspace });
     if (control.backlinkAutonomyEnabled !== true) { skipped.push(`WORKSPACE_DISABLED:${workspace.workspaceId}`); continue; }
@@ -54,7 +55,7 @@ export async function runBacklinkAutonomyScheduler(
         ? null
         : await deps.createOrGetRun!(buildBacklinkAutonomyRun({ promotion, scheduledAt: input.scheduledAt }));
       const autonomyRunId = run?.run.id ?? `preview:${promotion.applicationId}`;
-      if (run != null) autonomyRunIds.push(run.run.id);
+      if (run != null) { autonomyRunIds.push(run.run.id); autonomyRuns.push({ workspaceId: promotion.workspaceId, runId: run.run.id }); }
       const result = await enterPromotedOpportunityContactResolution(deps, { promotion, autonomyRunId, control, mode, scheduledAt: input.scheduledAt });
       if (result.task != null) proposed.push(result.task);
       if (result.outcome === "task_created") created += 1;
@@ -62,5 +63,6 @@ export async function runBacklinkAutonomyScheduler(
       if (result.outcome === "blocked" || result.outcome === "disabled") skipped.push(`${result.reasons.join(",")}:${promotion.applicationId}`);
     }
   }
-  return { outcome: mode === "preview" ? "preview" : "applied", workspacesScanned: controls.length, promotionsScanned, proposed, autonomyRunIds: [...new Set(autonomyRunIds)], created, existing, skipped };
+  const uniqueRuns = [...new Map(autonomyRuns.map((value) => [`${value.workspaceId}:${value.runId}`, value])).values()];
+  return { outcome: mode === "preview" ? "preview" : "applied", workspacesScanned: controls.length, promotionsScanned, proposed, autonomyRunIds: [...new Set(autonomyRunIds)], autonomyRuns: uniqueRuns, created, existing, skipped };
 }
