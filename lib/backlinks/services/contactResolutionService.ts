@@ -1,7 +1,9 @@
 import { load } from "cheerio";
+import { createHash } from "node:crypto";
 
 import { extractHtmlAnchors, parseHtmlDocument } from "../html";
 import { fetchHttp } from "../http";
+import { BacklinkRepositoryError } from "../repositories/errors";
 import type { ContactInput } from "./contactService";
 
 export type ContactResolutionEvidenceKind = "mailto" | "visible_email" | "contact_form" | "linkedin";
@@ -79,6 +81,35 @@ export type ResolvedContactPersistenceInput = Pick<
   "domain_id" | "contact_key" | "email_normalized" | "linkedin_url" | "contact_form_url" | "contact_status" | "source_type" | "source_reference"
 >;
 
+export type ResolvedContactIdentity = {
+  channel: "email" | "contact_form" | "linkedin";
+  value: string;
+  scopedIdentity: string;
+  contactKey: string;
+  candidate: ContactResolutionCandidate;
+};
+
+export type ExistingResolvedContact = {
+  id: string;
+  workspace_id?: string;
+  domain_id?: string;
+  contact_status: string;
+  email_normalized: string | null;
+  linkedin_url: string | null;
+  contact_form_url: string | null;
+};
+
+export type ResolvedContactPersistenceResult = {
+  id: string;
+  disposition: "created" | "reused";
+};
+
+export class ResolvedContactPersistenceError extends Error {
+  constructor(readonly code: "CONTACT_IDENTITY_INVALID" | "CONTACT_IDENTITY_CONFLICT") {
+    super(code);
+  }
+}
+
 const DEFAULT_MAX_PAGES = 6;
 const DEFAULT_MAX_BYTES = 750_000;
 const DEFAULT_TIMEOUT_MS = 8_000;
@@ -106,6 +137,131 @@ export function buildEvidenceBackedContactInput(input: {
     source_type: "public_website",
     source_reference: JSON.stringify(input.candidate.evidence),
   };
+}
+
+function canonicalHttpsUrl(value: string | null): string | null {
+  if (value == null) return null;
+  try {
+    const url = new URL(value.trim());
+    if (url.protocol !== "https:" || url.username || url.password) return null;
+    url.protocol = "https:";
+    url.hostname = url.hostname.toLowerCase();
+    url.hash = "";
+    if (url.pathname.length > 1) url.pathname = url.pathname.replace(/\/+$/, "");
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Establishes one canonical, scoped resolver identity. Resolver candidates
+ * normally carry one channel; accepting several would make reuse ambiguous.
+ */
+export function resolveCanonicalContactIdentity(input: {
+  workspaceId: string;
+  domainId: string;
+  candidate: ContactResolutionCandidate;
+}): ResolvedContactIdentity | null {
+  const suppliedChannels = [input.candidate.email, input.candidate.contactFormUrl, input.candidate.linkedinUrl]
+    .filter((value) => value != null).length;
+  const email = input.candidate.email == null ? null : normalizeEmail(input.candidate.email);
+  const contactFormUrl = canonicalHttpsUrl(input.candidate.contactFormUrl);
+  const linkedinUrl = canonicalHttpsUrl(input.candidate.linkedinUrl);
+  const identities = [
+    email == null ? null : { channel: "email" as const, value: email },
+    contactFormUrl == null ? null : { channel: "contact_form" as const, value: contactFormUrl },
+    linkedinUrl == null ? null : { channel: "linkedin" as const, value: linkedinUrl },
+  ].filter((value): value is { channel: "email" | "contact_form" | "linkedin"; value: string } => value != null);
+  if (!input.workspaceId || !input.domainId || suppliedChannels !== 1 || identities.length !== 1) return null;
+
+  const identity = identities[0]!;
+  if (identity.channel === "linkedin") {
+    const hostname = new URL(identity.value).hostname;
+    if (hostname !== "linkedin.com" && !hostname.endsWith(".linkedin.com")) return null;
+  }
+  const scopedIdentity = `${input.workspaceId}:${input.domainId}:${identity.channel}:${identity.value}`;
+  // BigInt retains the full digest entropy without unsafe-number conversion.
+  const numericDigest = BigInt(`0x${createHash("sha256").update(scopedIdentity).digest("hex")}`).toString(10);
+  const candidate: ContactResolutionCandidate = {
+    email: identity.channel === "email" ? identity.value : null,
+    contactFormUrl: identity.channel === "contact_form" ? identity.value : null,
+    linkedinUrl: identity.channel === "linkedin" ? identity.value : null,
+    evidence: input.candidate.evidence,
+  };
+  return { ...identity, scopedIdentity, contactKey: `CT-${numericDigest}`, candidate };
+}
+
+function exactCompatibleContacts(
+  identity: ResolvedContactIdentity,
+  contacts: readonly ExistingResolvedContact[],
+  workspaceId: string,
+  domainId: string,
+): ExistingResolvedContact[] {
+  return contacts.filter((contact) => {
+    if ((contact.workspace_id != null && contact.workspace_id !== workspaceId) || (contact.domain_id != null && contact.domain_id !== domainId)) return false;
+    if (identity.channel === "email") return normalizeEmail(contact.email_normalized ?? "") === identity.value;
+    if (identity.channel === "contact_form") return canonicalHttpsUrl(contact.contact_form_url) === identity.value;
+    return canonicalHttpsUrl(contact.linkedin_url) === identity.value;
+  });
+}
+
+function exactlyOneCompatibleContact(
+  identity: ResolvedContactIdentity,
+  contacts: readonly ExistingResolvedContact[],
+  workspaceId: string,
+  domainId: string,
+): ExistingResolvedContact | null {
+  const matches = exactCompatibleContacts(identity, contacts, workspaceId, domainId);
+  if (matches.length > 1) throw new ResolvedContactPersistenceError("CONTACT_IDENTITY_CONFLICT");
+  return matches[0] ?? null;
+}
+
+/**
+ * Creates through the canonical contact service, or reuses only one proven
+ * same-scope, same-channel identity. It never resolves a key collision by row
+ * order, mutation, or a new random key.
+ */
+export async function persistOrReuseEvidenceBackedResolvedContact(input: {
+  workspaceId: string;
+  domainId: string;
+  actorUserId: string;
+  candidate: ContactResolutionCandidate;
+  listContactsByDomain: (workspaceId: string, domainId: string) => Promise<readonly ExistingResolvedContact[]>;
+  createContact: (workspaceId: string, actorUserId: string, input: ContactInput) => Promise<{ id: string }>;
+}): Promise<ResolvedContactPersistenceResult> {
+  const identity = resolveCanonicalContactIdentity(input);
+  if (identity == null) throw new ResolvedContactPersistenceError("CONTACT_IDENTITY_INVALID");
+
+  const existing = exactlyOneCompatibleContact(
+    identity,
+    await input.listContactsByDomain(input.workspaceId, input.domainId),
+    input.workspaceId,
+    input.domainId,
+  );
+  if (existing != null) return { id: existing.id, disposition: "reused" };
+
+  const persistenceInput = buildEvidenceBackedContactInput({
+    domainId: input.domainId,
+    contactKey: identity.contactKey,
+    candidate: identity.candidate,
+  });
+  if (persistenceInput == null) throw new ResolvedContactPersistenceError("CONTACT_IDENTITY_INVALID");
+  try {
+    const created = await input.createContact(input.workspaceId, input.actorUserId, persistenceInput);
+    return { id: created.id, disposition: "created" };
+  } catch (error) {
+    if (!(error instanceof BacklinkRepositoryError) || error.code !== "CONFLICT") throw error;
+  }
+
+  const reread = exactlyOneCompatibleContact(
+    identity,
+    await input.listContactsByDomain(input.workspaceId, input.domainId),
+    input.workspaceId,
+    input.domainId,
+  );
+  if (reread == null) throw new ResolvedContactPersistenceError("CONTACT_IDENTITY_CONFLICT");
+  return { id: reread.id, disposition: "reused" };
 }
 
 /** Uses the existing contact-service abstraction; invocation remains opt-in. */

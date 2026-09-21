@@ -31,7 +31,6 @@ function candidate(kind: "mailto" | "contact_form" | "linkedin", value: string) 
 
 function dependencies(result: ContactResolutionResult) {
   const contacts: Array<{ id: string; contact_status: string; email_normalized: string | null; linkedin_url: string | null; contact_form_url: string | null }> = [];
-  let keys = 0;
   const created: Array<Record<string, unknown>> = [];
   return {
     contacts,
@@ -40,7 +39,6 @@ function dependencies(result: ContactResolutionResult) {
       getDomain: async () => ({ id: "domain", workspace_id: "workspace", hostname: "example.com", lifecycle_status: "active", archived_at: null }),
       getOpportunity: async () => ({ id: "opportunity", workspace_id: "workspace", domain_id: "domain", lifecycle_status: "active", archived_at: null }),
       listContactsByDomain: async () => contacts,
-      allocateContactKey: async () => `CT-${String(++keys).padStart(6, "0")}`,
       createContact: async (_workspaceId: string, _actorUserId: string, input: Record<string, unknown>) => {
         const id = `contact-${created.length + 1}`;
         created.push(input);

@@ -1,12 +1,11 @@
 import {
-  buildEvidenceBackedContactInput,
   createSafeContactResolutionFetcher,
-  persistEvidenceBackedResolvedContact,
+  persistOrReuseEvidenceBackedResolvedContact,
+  ResolvedContactPersistenceError,
   resolveBacklinkContacts,
-  type ContactResolutionCandidate,
   type ContactResolutionFetcher,
   type ContactResolutionResult,
-  type ResolvedContactPersistenceInput,
+  type ExistingResolvedContact,
 } from "@/lib/backlinks/services/contactResolutionService";
 import type { ContactInput } from "@/lib/backlinks/services/contactService";
 
@@ -15,14 +14,6 @@ export type BacklinkContactResolutionTaskInput = {
   domainId: string;
   opportunityId: string;
   actorUserId: string;
-};
-
-type ExistingContact = {
-  id: string;
-  contact_status: string;
-  email_normalized: string | null;
-  linkedin_url: string | null;
-  contact_form_url: string | null;
 };
 
 type ResolutionDomain = {
@@ -44,9 +35,7 @@ type ResolutionOpportunity = {
 export type BacklinkContactResolutionTaskDependencies = {
   getDomain: (workspaceId: string, domainId: string) => Promise<ResolutionDomain>;
   getOpportunity: (workspaceId: string, opportunityId: string) => Promise<ResolutionOpportunity>;
-  listContactsByDomain: (workspaceId: string, domainId: string) => Promise<readonly ExistingContact[]>;
-  /** Must be backed by a collision-safe canonical allocator before production wiring. */
-  allocateContactKey: () => Promise<string>;
+  listContactsByDomain: (workspaceId: string, domainId: string) => Promise<readonly ExistingResolvedContact[]>;
   createContact: (workspaceId: string, actorUserId: string, input: ContactInput) => Promise<{ id: string }>;
   fetchPage?: ContactResolutionFetcher;
   resolve?: (input: Parameters<typeof resolveBacklinkContacts>[0]) => Promise<ContactResolutionResult>;
@@ -71,35 +60,6 @@ export class BacklinkContactResolutionTaskError extends Error {
   constructor(readonly code: "CONTACT_RESOLUTION_FETCH_FAILED" | "CONTACT_RESOLUTION_TASK_INVALID") {
     super(code);
   }
-}
-
-function normalizedUrl(value: string | null): string | null {
-  if (value == null) return null;
-  try {
-    const url = new URL(value);
-    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
-    url.protocol = url.protocol.toLowerCase();
-    url.hostname = url.hostname.toLowerCase();
-    url.hash = "";
-    if (url.pathname.length > 1) url.pathname = url.pathname.replace(/\/+$/, "");
-    return url.toString();
-  } catch {
-    return null;
-  }
-}
-
-function existingContactForCandidate(
-  candidate: ContactResolutionCandidate,
-  contacts: readonly ExistingContact[],
-): ExistingContact | null {
-  const email = candidate.email?.toLowerCase() ?? null;
-  const linkedinUrl = normalizedUrl(candidate.linkedinUrl);
-  const contactFormUrl = normalizedUrl(candidate.contactFormUrl);
-  return contacts.find((contact) =>
-    (email != null && contact.email_normalized?.toLowerCase() === email) ||
-    (linkedinUrl != null && normalizedUrl(contact.linkedin_url) === linkedinUrl) ||
-    (contactFormUrl != null && normalizedUrl(contact.contact_form_url) === contactFormUrl),
-  ) ?? null;
 }
 
 function terminalResult(
@@ -169,22 +129,26 @@ export async function executeBacklinkContactResolutionTask(
     };
   }
 
-  const contacts = await dependencies.listContactsByDomain(input.workspaceId, input.domainId);
   const createdContactIds: string[] = [];
   const existingContactIds: string[] = [];
   for (const candidate of resolution.candidates) {
-    const existing = existingContactForCandidate(candidate, contacts);
-    if (existing != null) {
-      existingContactIds.push(existing.id);
-      continue;
+    try {
+      const persisted = await persistOrReuseEvidenceBackedResolvedContact({
+        workspaceId: input.workspaceId,
+        domainId: input.domainId,
+        actorUserId: input.actorUserId,
+        candidate,
+        listContactsByDomain: dependencies.listContactsByDomain,
+        createContact: dependencies.createContact,
+      });
+      if (persisted.disposition === "created") createdContactIds.push(persisted.id);
+      else existingContactIds.push(persisted.id);
+    } catch (error) {
+      if (error instanceof ResolvedContactPersistenceError) {
+        return terminalResult(input, "blocked", [error.code]);
+      }
+      throw error;
     }
-    const contactKey = await dependencies.allocateContactKey();
-    const persistenceInput = buildEvidenceBackedContactInput({ domainId: input.domainId, contactKey, candidate });
-    const created = await persistEvidenceBackedResolvedContact(
-      (contactInput: ResolvedContactPersistenceInput) => dependencies.createContact(input.workspaceId, input.actorUserId, contactInput),
-      persistenceInput,
-    );
-    if (created != null) createdContactIds.push(created.id);
   }
   return {
     status: resolution.status,
@@ -192,7 +156,7 @@ export async function executeBacklinkContactResolutionTask(
     opportunityId: input.opportunityId,
     inspectedUrlCount: resolution.inspectedUrls.length,
     candidateCount: resolution.candidates.length,
-    createdContactIds,
+    createdContactIds: [...new Set(createdContactIds)],
     existingContactIds: [...new Set(existingContactIds)],
     hasEmailCandidate: resolution.candidates.some((candidate) => candidate.email != null),
     hasContactFormCandidate: resolution.candidates.some((candidate) => candidate.contactFormUrl != null),
