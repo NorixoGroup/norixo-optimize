@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { runBacklinkAutonomyScheduler } from "@/lib/automation/backlink-autonomy-scheduler";
-import { runOneBacklinkAutonomyWorkerTask, BACKLINK_AUTONOMY_TASK_KINDS } from "@/lib/automation/backlink-autonomy-worker";
+import { runOneBacklinkAutonomyWorkerTask } from "@/lib/automation/backlink-autonomy-worker";
 import type { AutomationTask, CreateAutomationTaskInput } from "@/lib/automation/types";
 import type { AppliedBacklinkPromotion } from "@/lib/automation/backlink-promotion-resolution-entry";
 
@@ -24,7 +24,7 @@ async function main() {
   const seed = preview.proposed[0]!; const claimed = automationTask(seed); let claims = 0, handlers = 0, completions = 0, failures = 0, nextCreates = 0; const next = new Map<string, AutomationTask>();
   const workerDeps: any = {
     runtimeConfig: () => ({ autonomyEnabled: true }), getWorkspaceControl: async () => control,
-    claimNextAllowedTask: async (input: any) => { claims++; assert.deepEqual(input.taskKinds, BACKLINK_AUTONOMY_TASK_KINDS); return claims === 1 ? claimed : null; },
+    claimNextAllowedTask: async () => { claims++; return claims === 1 ? claimed : null; },
     getDependencyOutput: async () => null, getActorUserId: async () => x.a,
     createOrGetTask: async (input: CreateAutomationTaskInput) => { const found = next.get(input.taskKey); if (found) return { kind: "existing", task: found }; const value = automationTask(input, "00000000-0000-4000-8000-000000000008"); next.set(input.taskKey, value); nextCreates++; return { kind: "created", task: value }; },
     completeTask: async () => { completions++; return claimed; }, failTask: async () => { failures++; return { ...claimed, status: "failed" }; }, heartbeatTask: async () => null, reclaimExpiredTasks: async () => [], cancelTask: async () => null,
@@ -33,7 +33,14 @@ async function main() {
   };
   const worker = await runOneBacklinkAutonomyWorkerTask(workerDeps, { workspaceId: x.w, runId: x.r, workerId: "fake", at }); assert.equal(worker.kind, "completed"); assert.equal(nextCreates, 1); assert.equal(completions, 1); assert.equal(handlers, 1);
   const off = await runOneBacklinkAutonomyWorkerTask({ ...workerDeps, runtimeConfig: () => ({ autonomyEnabled: false }), claimNextAllowedTask: async () => { throw new Error("must not claim"); } }, { workspaceId: x.w, runId: x.r, workerId: "fake", at }); assert.equal(off.kind, "disabled");
-  const disabled = await runOneBacklinkAutonomyWorkerTask({ ...workerDeps, getWorkspaceControl: async () => ({ ...control, backlinkAutonomyEnabled: false }), claimNextAllowedTask: async () => claimed }, { workspaceId: x.w, runId: x.r, workerId: "fake", at }); assert.equal(disabled.kind, "retried"); assert.equal(failures, 1);
+  const disabled = await runOneBacklinkAutonomyWorkerTask({ ...workerDeps, getWorkspaceControl: async () => ({ ...control, backlinkAutonomyEnabled: false }), claimNextAllowedTask: async () => claimed }, { workspaceId: x.w, runId: x.r, workerId: "fake", at }); assert.equal(disabled.kind, "terminal"); assert.equal(completions, 2); assert.equal(failures, 0);
+  const noActorTask = { ...claimed, input: { version: 1, domainId: x.d, opportunityId: x.o } }; const noActor = await runOneBacklinkAutonomyWorkerTask({ ...workerDeps, claimNextAllowedTask: async () => noActorTask, getActorUserId: async () => null }, { workspaceId: x.w, runId: x.r, workerId: "fake", at }); assert.equal(noActor.kind, "terminal"); assert.equal(completions, 3);
+  const rejectedTask = { ...claimed, input: {} }; const rejected = await runOneBacklinkAutonomyWorkerTask({ ...workerDeps, claimNextAllowedTask: async () => rejectedTask }, { workspaceId: x.w, runId: x.r, workerId: "fake", at }); assert.equal(rejected.kind, "terminal"); assert.equal(completions, 4);
+  const transient = await runOneBacklinkAutonomyWorkerTask({ ...workerDeps, claimNextAllowedTask: async () => claimed, resolution: { ...workerDeps.resolution, resolve: async () => { throw new Error("transient"); } } }, { workspaceId: x.w, runId: x.r, workerId: "fake", at }); assert.equal(transient.kind, "retried"); assert.equal(failures, 1);
+  const crashNext = new Map<string, AutomationTask>(); let crashCreates = 0, crashCompletionCalls = 0;
+  const crashDeps = { ...workerDeps, claimNextAllowedTask: async () => claimed, createOrGetTask: async (input: CreateAutomationTaskInput) => { const existing = crashNext.get(input.taskKey); if (existing) return { kind: "existing" as const, task: existing }; const created = automationTask(input, "00000000-0000-4000-8000-000000000009"); crashNext.set(input.taskKey, created); crashCreates++; return { kind: "created" as const, task: created }; }, completeTask: async () => { crashCompletionCalls++; if (crashCompletionCalls === 1) throw new Error("simulated crash"); return claimed; }, failTask: async () => ({ ...claimed, status: "failed" as const }) };
+  assert.equal((await runOneBacklinkAutonomyWorkerTask(crashDeps, { workspaceId: x.w, runId: x.r, workerId: "fake", at })).kind, "retried"); assert.equal(crashCreates, 1);
+  assert.equal((await runOneBacklinkAutonomyWorkerTask(crashDeps, { workspaceId: x.w, runId: x.r, workerId: "fake", at })).kind, "completed"); assert.equal(crashCreates, 1);
   console.log("PASS — Backlink autonomy scheduler worker smoke");
 }
 void main();

@@ -50,7 +50,7 @@ export async function createOrGetAutomationTask(client: BacklinkRepositoryClient
   }
 }
 
-type SingleTaskRpc = "claim_next_automation_task" | "heartbeat_automation_task" | "complete_automation_task" | "fail_automation_task" | "cancel_automation_task";
+type SingleTaskRpc = "claim_next_automation_task" | "claim_next_backlink_autonomy_task" | "heartbeat_automation_task" | "complete_automation_task" | "fail_automation_task" | "cancel_automation_task";
 async function callSingleTaskRpc<T extends SingleTaskRpc>(client: BacklinkRepositoryClient, operation: string, rpc: T, args: Database["public"]["Functions"][T]["Args"]): Promise<AutomationTask | null> {
   const { data, error } = await client.rpc(rpc, args);
   if (error != null) throw normalizeBacklinkRepositoryError(operation, error);
@@ -58,6 +58,8 @@ async function callSingleTaskRpc<T extends SingleTaskRpc>(client: BacklinkReposi
   return data[0] == null ? null : mapAutomationTask(data[0]);
 }
 export const claimNextAutomationTask = (client: BacklinkRepositoryClient, input: ClaimNextAutomationTaskInput) => callSingleTaskRpc(client, "claimNextAutomationTask", "claim_next_automation_task", { p_workspace_id: input.workspaceId, p_run_id: input.runId, p_worker_id: input.workerId, p_claimed_at: input.claimedAt, p_lease_duration_seconds: input.leaseDurationSeconds });
+/** Dedicated RPC hardcodes the five autonomy kinds; callers cannot widen it. */
+export const claimNextBacklinkAutonomyTask = (client: BacklinkRepositoryClient, input: ClaimNextAutomationTaskInput) => callSingleTaskRpc(client, "claimNextBacklinkAutonomyTask", "claim_next_backlink_autonomy_task", { p_workspace_id: input.workspaceId, p_run_id: input.runId, p_worker_id: input.workerId, p_claimed_at: input.claimedAt, p_lease_duration_seconds: input.leaseDurationSeconds });
 export const heartbeatAutomationTask = (client: BacklinkRepositoryClient, input: HeartbeatAutomationTaskInput) => callSingleTaskRpc(client, "heartbeatAutomationTask", "heartbeat_automation_task", { p_workspace_id: input.workspaceId, p_task_id: input.taskId, p_worker_id: input.workerId, p_heartbeat_at: input.heartbeatAt, p_lease_duration_seconds: input.leaseDurationSeconds });
 export const completeAutomationTask = (client: BacklinkRepositoryClient, input: CompleteAutomationTaskInput) => callSingleTaskRpc(client, "completeAutomationTask", "complete_automation_task", { p_workspace_id: input.workspaceId, p_task_id: input.taskId, p_worker_id: input.workerId, p_completed_at: input.completedAt, p_output: input.output });
 export const failAutomationTask = (client: BacklinkRepositoryClient, input: FailAutomationTaskInput) => callSingleTaskRpc(client, "failAutomationTask", "fail_automation_task", { p_workspace_id: input.workspaceId, p_task_id: input.taskId, p_worker_id: input.workerId, p_failed_at: input.failedAt, p_error_code: input.errorCode, p_error_message: input.errorMessage });
