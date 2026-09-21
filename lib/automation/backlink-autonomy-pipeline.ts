@@ -1,4 +1,5 @@
 import { evaluateAutonomousOutreachPolicy, type AutonomousOutreachPolicyInput } from "@/lib/backlinks/services/autonomousOutreachPolicy";
+import { buildCampaignPrepareTask, buildDraftPrepareTask, buildOutreachDecisionTask } from "./backlink-autonomy-foundation";
 
 export type BacklinkAutonomyPipelineTaskKind =
   | "backlinks.contact_validation"
@@ -100,4 +101,29 @@ export function evaluateBacklinkAutonomyDownstreamDecision(input: AutonomousOutr
   return decision.kind === "eligible_for_email_sender"
     ? { outcome: "execution_eligible", reasons: [], execution: { kind: "email_sender", workspaceId: input.workspaceId, outreachId: input.outreachId } }
     : { outcome: "execution_eligible", reasons: [], execution: { kind: "contact_form_worker", workspaceId: input.workspaceId, outreachId: input.outreachId } };
+}
+
+/** Pure next-stage descriptors; callers decide whether a closed gate permits enqueueing. */
+export function buildNextDownstreamTask(input: {
+  stage: "campaign_prepare" | "draft_prepare" | "outreach_decision";
+  workspaceId: string;
+  runId: string;
+  completedTaskId: string;
+  domainId: string;
+  opportunityId: string;
+  contactId: string;
+  scheduledAt: string;
+}) {
+  const shared = {
+    workspaceId: input.workspaceId,
+    runId: input.runId,
+    dependsOnTaskId: input.completedTaskId,
+    domainId: input.domainId,
+    opportunityId: input.opportunityId,
+    contactId: input.contactId,
+    scheduledAt: input.scheduledAt,
+  };
+  if (input.stage === "campaign_prepare") return buildCampaignPrepareTask(shared);
+  if (input.stage === "draft_prepare") return buildDraftPrepareTask(shared);
+  return buildOutreachDecisionTask(shared);
 }
