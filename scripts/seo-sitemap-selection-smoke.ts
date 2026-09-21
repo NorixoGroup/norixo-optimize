@@ -61,6 +61,7 @@ const qualityGatedTopicSlugs = [
   "seasonality-guide",
   "review-strategy",
   "local-demand-guide",
+  "pricing-guide",
 ] as const;
 
 const qualityGatedTopics = qualityGatedTopicSlugs.flatMap(
@@ -137,6 +138,10 @@ const qualityGatedReviewStrategyTopics = qualityGatedTopics.filter(
 
 const qualityGatedLocalDemandTopics = qualityGatedTopics.filter(
   ({ topicSlug }) => topicSlug === "local-demand-guide"
+);
+
+const qualityGatedPricingGuideTopics = qualityGatedTopics.filter(
+  ({ topicSlug }) => topicSlug === "pricing-guide"
 );
 
 const exposedQualityFailures = qualityGatedTopics.filter(
@@ -256,6 +261,10 @@ console.log(
 );
 
 console.log(
+  `QUALITY_GATED_PRICING_GUIDE_TOPICS=${qualityGatedPricingGuideTopics.length}`
+);
+
+console.log(
   `EXPOSED_QUALITY_FAIL=${exposedQualityFailures.length}`
 );
 
@@ -311,15 +320,15 @@ if (
   );
 }
 
-if (keptTopics.length !== 2917) {
+if (keptTopics.length !== 3132) {
   throw new Error(
-    `Expected 2917 kept topics, got ${keptTopics.length}`
+    `Expected 3132 kept topics, got ${keptTopics.length}`
   );
 }
 
-if (omittedTopics.length !== 2583) {
+if (omittedTopics.length !== 2368) {
   throw new Error(
-    `Expected 2583 omitted topics, got ${omittedTopics.length}`
+    `Expected 2368 omitted topics, got ${omittedTopics.length}`
   );
 }
 
@@ -408,6 +417,29 @@ for (const { pathname, quality } of qualityGatedLocalDemandTopics) {
   ) {
     throw new Error(
       `Quality-gated local-demand topic failed quality gate: ${pathname} (${quality.status})`
+    );
+  }
+}
+
+if (qualityGatedPricingGuideTopics.length !== 220) {
+  throw new Error(
+    `Expected 220 quality-gated pricing-guide topics, got ${qualityGatedPricingGuideTopics.length}`
+  );
+}
+
+for (const { pathname, quality } of qualityGatedPricingGuideTopics) {
+  if (!isCityTopicSitemapEligible(pathname)) {
+    throw new Error(
+      `Quality-gated pricing-guide topic omitted: ${pathname}`
+    );
+  }
+
+  if (
+    quality.status !== "eligible-safe" &&
+    quality.status !== "qualified-evidence"
+  ) {
+    throw new Error(
+      `Quality-gated pricing-guide topic failed quality gate: ${pathname} (${quality.status})`
     );
   }
 }
@@ -679,7 +711,7 @@ for (const pathname of cohort25Topics) {
 }
 
 const representativeHold =
-  "/airbnb-optimizer/paris/pricing-guide";
+  "/airbnb-optimizer/paris/seo-guide";
 
 if (
   getSearchEligibility(representativeHold).tier !== "hold"
@@ -712,5 +744,6 @@ console.log("QUALITY_GATED_LISTING_AUDIT_PRESERVATION=PASS");
 console.log("QUALITY_GATED_REVENUE_PRESERVATION=PASS");
 console.log("QUALITY_GATED_REVIEW_STRATEGY_PRESERVATION=PASS");
 console.log("QUALITY_GATED_LOCAL_DEMAND_PRESERVATION=PASS");
+console.log("QUALITY_GATED_PRICING_GUIDE_PRESERVATION=PASS");
 console.log("EXPOSED_QUALITY_GUARD=PASS");
 console.log("SITEMAP_SELECTION_SMOKE=PASS");
