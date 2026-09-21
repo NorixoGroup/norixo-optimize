@@ -60,6 +60,7 @@ const qualityGatedTopicSlugs = [
   "competitor-analysis",
   "seasonality-guide",
   "review-strategy",
+  "local-demand-guide",
 ] as const;
 
 const qualityGatedTopics = qualityGatedTopicSlugs.flatMap(
@@ -132,6 +133,10 @@ const qualityGatedSeasonalityTopics = qualityGatedTopics.filter(
 
 const qualityGatedReviewStrategyTopics = qualityGatedTopics.filter(
   ({ topicSlug }) => topicSlug === "review-strategy"
+);
+
+const qualityGatedLocalDemandTopics = qualityGatedTopics.filter(
+  ({ topicSlug }) => topicSlug === "local-demand-guide"
 );
 
 const exposedQualityFailures = qualityGatedTopics.filter(
@@ -247,6 +252,10 @@ console.log(
 );
 
 console.log(
+  `QUALITY_GATED_LOCAL_DEMAND_TOPICS=${qualityGatedLocalDemandTopics.length}`
+);
+
+console.log(
   `EXPOSED_QUALITY_FAIL=${exposedQualityFailures.length}`
 );
 
@@ -302,15 +311,15 @@ if (
   );
 }
 
-if (keptTopics.length !== 2703) {
+if (keptTopics.length !== 2917) {
   throw new Error(
-    `Expected 2703 kept topics, got ${keptTopics.length}`
+    `Expected 2917 kept topics, got ${keptTopics.length}`
   );
 }
 
-if (omittedTopics.length !== 2797) {
+if (omittedTopics.length !== 2583) {
   throw new Error(
-    `Expected 2797 omitted topics, got ${omittedTopics.length}`
+    `Expected 2583 omitted topics, got ${omittedTopics.length}`
   );
 }
 
@@ -378,6 +387,29 @@ if (qualityGatedReviewStrategyTopics.length !== 220) {
   throw new Error(
     `Expected 220 quality-gated review-strategy topics, got ${qualityGatedReviewStrategyTopics.length}`
   );
+}
+
+if (qualityGatedLocalDemandTopics.length !== 220) {
+  throw new Error(
+    `Expected 220 quality-gated local-demand topics, got ${qualityGatedLocalDemandTopics.length}`
+  );
+}
+
+for (const { pathname, quality } of qualityGatedLocalDemandTopics) {
+  if (!isCityTopicSitemapEligible(pathname)) {
+    throw new Error(
+      `Quality-gated local-demand topic omitted: ${pathname}`
+    );
+  }
+
+  if (
+    quality.status !== "eligible-safe" &&
+    quality.status !== "qualified-evidence"
+  ) {
+    throw new Error(
+      `Quality-gated local-demand topic failed quality gate: ${pathname} (${quality.status})`
+    );
+  }
 }
 
 for (const { pathname, quality } of qualityGatedReviewStrategyTopics) {
@@ -679,5 +711,6 @@ console.log("QUALITY_GATED_BUSINESS_TRAVEL_PRESERVATION=PASS");
 console.log("QUALITY_GATED_LISTING_AUDIT_PRESERVATION=PASS");
 console.log("QUALITY_GATED_REVENUE_PRESERVATION=PASS");
 console.log("QUALITY_GATED_REVIEW_STRATEGY_PRESERVATION=PASS");
+console.log("QUALITY_GATED_LOCAL_DEMAND_PRESERVATION=PASS");
 console.log("EXPOSED_QUALITY_GUARD=PASS");
 console.log("SITEMAP_SELECTION_SMOKE=PASS");
