@@ -1,18 +1,19 @@
 import type { Json } from "@/types/database.types";
 import type { CreateAutomationTaskInput, CreateAutomationTaskResult } from "./types";
 
-export type BacklinkAutonomyFoundationTaskKind = "backlinks.contact_resolution.disabled";
+export type BacklinkContactResolutionTaskKind = "backlinks.contact_resolution";
 
 /**
- * Produces an idempotent task request only. No worker, route, cron, persistence,
- * contact mutation, form submission, or provider invocation is introduced here.
+ * Produces an idempotent task request only. The handler is intentionally not
+ * registered with the production worker or any scheduler in this phase.
  */
-export function buildDisabledContactResolutionTask(input: {
+export function buildContactResolutionTask(input: {
   workspaceId: string;
   runId: string;
-  dependsOnTaskId: string;
+  dependsOnTaskId?: string | null;
   domainId: string;
   opportunityId: string;
+  actorUserId: string;
   scheduledAt: string;
 }): CreateAutomationTaskInput {
   return {
@@ -20,20 +21,20 @@ export function buildDisabledContactResolutionTask(input: {
     runId: input.runId,
     dependsOnTaskId: input.dependsOnTaskId,
     system: "backlinks",
-    taskKind: "backlinks.contact_resolution.disabled",
+    taskKind: "backlinks.contact_resolution",
     taskKey: `contact-resolution:${input.opportunityId}:${input.domainId}`,
     priority: 40,
     scheduledAt: input.scheduledAt,
     availableAt: input.scheduledAt,
     maxAttempts: 3,
     backoffBaseSeconds: 60,
-    input: { version: 1, disabled: true, domainId: input.domainId, opportunityId: input.opportunityId } as Json,
+    input: { version: 1, domainId: input.domainId, opportunityId: input.opportunityId, actorUserId: input.actorUserId } as Json,
   };
 }
 
-export async function enqueueDisabledContactResolutionTask(
+export async function enqueueContactResolutionTask(
   createTask: (input: CreateAutomationTaskInput) => Promise<CreateAutomationTaskResult>,
-  input: Parameters<typeof buildDisabledContactResolutionTask>[0],
+  input: Parameters<typeof buildContactResolutionTask>[0],
 ): Promise<CreateAutomationTaskResult> {
-  return createTask(buildDisabledContactResolutionTask(input));
+  return createTask(buildContactResolutionTask(input));
 }

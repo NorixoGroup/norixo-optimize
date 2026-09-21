@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { buildDisabledContactResolutionTask } from "../lib/automation/backlink-autonomy-foundation";
+import { buildContactResolutionTask } from "../lib/automation/backlink-autonomy-foundation";
 import { buildEvidenceBackedContactInput, persistEvidenceBackedResolvedContact, resolveBacklinkContacts } from "../lib/backlinks/services/contactResolutionService";
 import { evaluateAutonomousOutreachPolicy } from "../lib/backlinks/services/autonomousOutreachPolicy";
 
@@ -61,8 +61,8 @@ async function main() {
   assert.equal(evaluateAutonomousOutreachPolicy({ ...policyInput, channel: "contact_form" }).kind, "manual_review");
   assert.equal(evaluateAutonomousOutreachPolicy({ ...policyInput, inboundReplyStop: true }).kind, "manual_review");
   assert.equal(evaluateAutonomousOutreachPolicy({ ...policyInput, complaintOrBounceStop: true }).kind, "manual_review");
-  const task = buildDisabledContactResolutionTask({ workspaceId: "00000000-0000-4000-8000-000000000001", runId: "00000000-0000-4000-8000-000000000002", dependsOnTaskId: "00000000-0000-4000-8000-000000000003", domainId: "00000000-0000-4000-8000-000000000004", opportunityId: "00000000-0000-4000-8000-000000000005", scheduledAt: "2026-09-21T00:00:00.000Z" });
-  assert.equal(task.taskKind, "backlinks.contact_resolution.disabled"); assert.equal(task.dependsOnTaskId, "00000000-0000-4000-8000-000000000003"); assert.equal((task.input as { disabled: boolean }).disabled, true);
+  const task = buildContactResolutionTask({ workspaceId: "00000000-0000-4000-8000-000000000001", runId: "00000000-0000-4000-8000-000000000002", dependsOnTaskId: "00000000-0000-4000-8000-000000000003", domainId: "00000000-0000-4000-8000-000000000004", opportunityId: "00000000-0000-4000-8000-000000000005", actorUserId: "00000000-0000-4000-8000-000000000006", scheduledAt: "2026-09-21T00:00:00.000Z" });
+  assert.equal(task.taskKind, "backlinks.contact_resolution"); assert.equal(task.dependsOnTaskId, "00000000-0000-4000-8000-000000000003"); assert.equal((task.input as { actorUserId: string }).actorUserId, "00000000-0000-4000-8000-000000000006");
   console.log("PASS — Backlink autonomy foundation smoke");
 }
 void main();
