@@ -5,7 +5,8 @@ import { normalizeBacklinkAutonomyRuntimeControl } from "./backlink-autonomy-run
 import type { BacklinkAutonomyRuntimeConfig } from "./backlink-autonomy-runtime-config";
 
 export type BacklinkAutonomySchedulerMode = "preview" | "apply" | "live";
-export type BacklinkAutonomySchedulerDependencies = BacklinkPromotionResolutionEntryDependencies & {
+export type BacklinkAutonomySchedulerDependencies = Omit<BacklinkPromotionResolutionEntryDependencies, "createOrGetTask"> & {
+  createOrGetTask?: BacklinkPromotionResolutionEntryDependencies["createOrGetTask"];
   runtimeConfig: () => BacklinkAutonomyRuntimeConfig;
   listWorkspaceControls: (limit: number) => Promise<readonly AutomationWorkspaceControl[]>;
   listAppliedPromotions: (workspaceId: string, limit: number) => Promise<readonly AppliedBacklinkPromotion[]>;
