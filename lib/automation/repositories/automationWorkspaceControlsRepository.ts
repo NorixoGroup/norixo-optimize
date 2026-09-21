@@ -20,8 +20,10 @@ function mapAutomationWorkspaceControl(
   return {
     workspaceId: row.workspace_id,
     backlinksEnabled: row.backlinks_enabled,
+    backlinkAutonomyEnabled: row.backlink_autonomy_enabled,
     backlinkOutreachScheduleApplyEnabled: row.backlink_outreach_schedule_apply_enabled,
     dryRunOnly: row.dry_run_only,
+    disabledReason: row.disabled_reason,
     lastScheduleApplyAttemptAt: row.last_schedule_apply_attempt_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

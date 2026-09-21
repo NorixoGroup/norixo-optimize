@@ -37,9 +37,10 @@ export type AutomationRun = {
 export type AutomationWorkspaceControl = {
   workspaceId: string;
   backlinksEnabled: boolean;
+  backlinkAutonomyEnabled?: boolean;
   backlinkOutreachScheduleApplyEnabled: boolean;
   dryRunOnly: boolean;
-  disabledReason: string | null;
+  disabledReason?: string | null;
 };
 
 export type CreateAutomationRunInput = {
