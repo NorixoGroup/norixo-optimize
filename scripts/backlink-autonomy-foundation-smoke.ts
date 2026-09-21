@@ -44,13 +44,23 @@ async function main() {
   assert.equal(outside.candidates.length, 0); // third-party addresses are never made sendable evidence.
   const guessed = await resolveBacklinkContacts({ homepageUrl: home, domainHostname: "example.com", fetchPage: async (url) => ({ url, status: 200, contentType: "text/html", body: "Try editor [at] example [dot] com" }) });
   assert.equal(guessed.candidates.length, 0); // The resolver recognizes explicit addresses only; it never synthesizes one.
-  const manual = evaluateAutonomousOutreachPolicy({ backlinksEnabled: true, liveAutomationEnabled: false, evidenceBackedContact: true, contactStatus: "verified", channel: "email", validOpportunity: true, validCampaign: true, validDraft: true, inboundReplyStop: false, complaintOrBounceStop: false, conflictingOpenAttempt: false, rateLimitEligible: true, maxAttemptEligible: true });
+  const policyInput = { backlinksEnabled: true, liveAutomationEnabled: true, evidenceBackedContact: true, contactStatus: "verified", channel: "email" as const, validOpportunity: true, validCampaign: true, validDraft: true, inboundReplyStop: false, complaintOrBounceStop: false, conflictingOpenAttempt: false, rateLimitEligible: true, maxAttemptEligible: true };
+  assert.equal(evaluateAutonomousOutreachPolicy(policyInput).kind, "eligible_for_email_sender");
+  assert.equal(evaluateAutonomousOutreachPolicy({ ...policyInput, contactStatus: "unverified" }).kind, "manual_review");
+  assert.equal(evaluateAutonomousOutreachPolicy({ ...policyInput, contactStatus: "do_not_contact" }).kind, "manual_review");
+  assert.equal(evaluateAutonomousOutreachPolicy({ ...policyInput, contactStatus: "archived" }).kind, "manual_review");
+  assert.equal(evaluateAutonomousOutreachPolicy({ ...policyInput, contactStatus: "unexpected_status" }).kind, "manual_review");
+  const manual = evaluateAutonomousOutreachPolicy({ ...policyInput, liveAutomationEnabled: false });
   assert.equal(manual.kind, "manual_review");
-  assert.equal(evaluateAutonomousOutreachPolicy({ backlinksEnabled: true, liveAutomationEnabled: true, evidenceBackedContact: true, contactStatus: "verified", channel: "linkedin", validOpportunity: true, validCampaign: true, validDraft: true, inboundReplyStop: false, complaintOrBounceStop: false, conflictingOpenAttempt: false, rateLimitEligible: true, maxAttemptEligible: true }).kind, "manual_action_required");
-  assert.equal(evaluateAutonomousOutreachPolicy({ backlinksEnabled: true, liveAutomationEnabled: true, evidenceBackedContact: true, contactStatus: "do_not_contact", channel: "email", validOpportunity: true, validCampaign: true, validDraft: true, inboundReplyStop: false, complaintOrBounceStop: false, conflictingOpenAttempt: false, rateLimitEligible: true, maxAttemptEligible: true }).kind, "manual_review");
-  assert.equal(evaluateAutonomousOutreachPolicy({ backlinksEnabled: true, liveAutomationEnabled: true, evidenceBackedContact: true, contactStatus: "verified", channel: "contact_form", contactFormAmbiguous: true, validOpportunity: true, validCampaign: true, validDraft: true, inboundReplyStop: false, complaintOrBounceStop: false, conflictingOpenAttempt: false, rateLimitEligible: true, maxAttemptEligible: true }).kind, "manual_review");
-  assert.equal(evaluateAutonomousOutreachPolicy({ backlinksEnabled: true, liveAutomationEnabled: true, evidenceBackedContact: true, contactStatus: "verified", channel: "email", validOpportunity: true, validCampaign: true, validDraft: true, inboundReplyStop: true, complaintOrBounceStop: false, conflictingOpenAttempt: false, rateLimitEligible: true, maxAttemptEligible: true }).kind, "manual_review");
-  assert.equal(evaluateAutonomousOutreachPolicy({ backlinksEnabled: true, liveAutomationEnabled: true, evidenceBackedContact: true, contactStatus: "verified", channel: "email", validOpportunity: true, validCampaign: true, validDraft: true, inboundReplyStop: false, complaintOrBounceStop: true, conflictingOpenAttempt: false, rateLimitEligible: true, maxAttemptEligible: true }).kind, "manual_review");
+  assert.equal(evaluateAutonomousOutreachPolicy({ ...policyInput, channel: "linkedin" }).kind, "manual_action_required");
+  assert.equal(evaluateAutonomousOutreachPolicy({ ...policyInput, channel: "linkedin", contactStatus: "do_not_contact" }).kind, "manual_review");
+  assert.equal(evaluateAutonomousOutreachPolicy({ ...policyInput, channel: "linkedin", inboundReplyStop: true }).kind, "manual_review");
+  assert.equal(evaluateAutonomousOutreachPolicy({ ...policyInput, channel: "linkedin", complaintOrBounceStop: true }).kind, "manual_review");
+  assert.equal(evaluateAutonomousOutreachPolicy({ ...policyInput, channel: "contact_form", contactFormAmbiguous: true, contactFormVerified: true }).kind, "manual_review");
+  assert.equal(evaluateAutonomousOutreachPolicy({ ...policyInput, channel: "contact_form", contactFormVerified: true }).kind, "eligible_for_contact_form_worker");
+  assert.equal(evaluateAutonomousOutreachPolicy({ ...policyInput, channel: "contact_form" }).kind, "manual_review");
+  assert.equal(evaluateAutonomousOutreachPolicy({ ...policyInput, inboundReplyStop: true }).kind, "manual_review");
+  assert.equal(evaluateAutonomousOutreachPolicy({ ...policyInput, complaintOrBounceStop: true }).kind, "manual_review");
   const task = buildDisabledContactResolutionTask({ workspaceId: "00000000-0000-4000-8000-000000000001", runId: "00000000-0000-4000-8000-000000000002", dependsOnTaskId: "00000000-0000-4000-8000-000000000003", domainId: "00000000-0000-4000-8000-000000000004", opportunityId: "00000000-0000-4000-8000-000000000005", scheduledAt: "2026-09-21T00:00:00.000Z" });
   assert.equal(task.taskKind, "backlinks.contact_resolution.disabled"); assert.equal(task.dependsOnTaskId, "00000000-0000-4000-8000-000000000003"); assert.equal((task.input as { disabled: boolean }).disabled, true);
   console.log("PASS — Backlink autonomy foundation smoke");

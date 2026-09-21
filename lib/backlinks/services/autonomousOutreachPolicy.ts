@@ -1,7 +1,8 @@
 export type AutonomousOutreachDecision =
   | { kind: "manual_review"; reasons: readonly string[] }
   | { kind: "manual_action_required"; channel: "linkedin" }
-  | { kind: "eligible_for_existing_sender" };
+  | { kind: "eligible_for_email_sender" }
+  | { kind: "eligible_for_contact_form_worker" };
 
 export type AutonomousOutreachPolicyInput = {
   backlinksEnabled: boolean;
@@ -18,16 +19,23 @@ export type AutonomousOutreachPolicyInput = {
   rateLimitEligible: boolean;
   maxAttemptEligible: boolean;
   contactFormAmbiguous?: boolean;
+  contactFormVerified?: boolean;
 };
 
 /** Pure fail-closed policy. It authorizes no provider call. */
 export function evaluateAutonomousOutreachPolicy(input: AutonomousOutreachPolicyInput): AutonomousOutreachDecision {
-  if (input.channel === "linkedin") return { kind: "manual_action_required", channel: "linkedin" };
+  const contactStatusReason = input.contactStatus === "verified"
+    ? false
+    : input.contactStatus === "do_not_contact"
+      ? "CONTACT_DO_NOT_CONTACT"
+      : input.contactStatus === "archived"
+        ? "CONTACT_ARCHIVED"
+        : "CONTACT_NOT_VERIFIED";
   const reasons = [
     !input.backlinksEnabled && "BACKLINKS_DISABLED",
     !input.liveAutomationEnabled && "LIVE_AUTOMATION_DISABLED",
     !input.evidenceBackedContact && "CONTACT_EVIDENCE_INSUFFICIENT",
-    (input.contactStatus === "do_not_contact" || input.contactStatus === "archived") && "CONTACT_UNAVAILABLE",
+    contactStatusReason,
     !input.validOpportunity && "OPPORTUNITY_INVALID",
     !input.validCampaign && "CAMPAIGN_INVALID",
     !input.validDraft && "DRAFT_INVALID",
@@ -37,6 +45,11 @@ export function evaluateAutonomousOutreachPolicy(input: AutonomousOutreachPolicy
     !input.rateLimitEligible && "RATE_LIMIT",
     !input.maxAttemptEligible && "MAX_ATTEMPTS",
     input.channel === "contact_form" && input.contactFormAmbiguous && "CONTACT_FORM_AMBIGUOUS",
+    input.channel === "contact_form" && input.contactFormVerified !== true && "CONTACT_FORM_NOT_VERIFIED",
   ].filter((value): value is string => Boolean(value));
-  return reasons.length ? { kind: "manual_review", reasons } : { kind: "eligible_for_existing_sender" };
+  if (reasons.length) return { kind: "manual_review", reasons };
+  if (input.channel === "linkedin") return { kind: "manual_action_required", channel: "linkedin" };
+  return input.channel === "email"
+    ? { kind: "eligible_for_email_sender" }
+    : { kind: "eligible_for_contact_form_worker" };
 }
