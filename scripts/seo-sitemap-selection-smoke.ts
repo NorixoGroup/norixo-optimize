@@ -62,6 +62,7 @@ const qualityGatedTopicSlugs = [
   "review-strategy",
   "local-demand-guide",
   "pricing-guide",
+  "seo-guide",
 ] as const;
 
 const qualityGatedTopics = qualityGatedTopicSlugs.flatMap(
@@ -142,6 +143,10 @@ const qualityGatedLocalDemandTopics = qualityGatedTopics.filter(
 
 const qualityGatedPricingGuideTopics = qualityGatedTopics.filter(
   ({ topicSlug }) => topicSlug === "pricing-guide"
+);
+
+const qualityGatedSeoGuideTopics = qualityGatedTopics.filter(
+  ({ topicSlug }) => topicSlug === "seo-guide"
 );
 
 const exposedQualityFailures = qualityGatedTopics.filter(
@@ -265,6 +270,10 @@ console.log(
 );
 
 console.log(
+  `QUALITY_GATED_SEO_GUIDE_TOPICS=${qualityGatedSeoGuideTopics.length}`
+);
+
+console.log(
   `EXPOSED_QUALITY_FAIL=${exposedQualityFailures.length}`
 );
 
@@ -320,15 +329,15 @@ if (
   );
 }
 
-if (keptTopics.length !== 3132) {
+if (keptTopics.length !== 3348) {
   throw new Error(
-    `Expected 3132 kept topics, got ${keptTopics.length}`
+    `Expected 3348 kept topics, got ${keptTopics.length}`
   );
 }
 
-if (omittedTopics.length !== 2368) {
+if (omittedTopics.length !== 2152) {
   throw new Error(
-    `Expected 2368 omitted topics, got ${omittedTopics.length}`
+    `Expected 2152 omitted topics, got ${omittedTopics.length}`
   );
 }
 
@@ -440,6 +449,29 @@ for (const { pathname, quality } of qualityGatedPricingGuideTopics) {
   ) {
     throw new Error(
       `Quality-gated pricing-guide topic failed quality gate: ${pathname} (${quality.status})`
+    );
+  }
+}
+
+if (qualityGatedSeoGuideTopics.length !== 220) {
+  throw new Error(
+    `Expected 220 quality-gated seo-guide topics, got ${qualityGatedSeoGuideTopics.length}`
+  );
+}
+
+for (const { pathname, quality } of qualityGatedSeoGuideTopics) {
+  if (!isCityTopicSitemapEligible(pathname)) {
+    throw new Error(
+      `Quality-gated seo-guide topic omitted: ${pathname}`
+    );
+  }
+
+  if (
+    quality.status !== "eligible-safe" &&
+    quality.status !== "qualified-evidence"
+  ) {
+    throw new Error(
+      `Quality-gated seo-guide topic failed quality gate: ${pathname} (${quality.status})`
     );
   }
 }
@@ -711,7 +743,7 @@ for (const pathname of cohort25Topics) {
 }
 
 const representativeHold =
-  "/airbnb-optimizer/paris/seo-guide";
+  "/airbnb-optimizer/paris/conversion-guide";
 
 if (
   getSearchEligibility(representativeHold).tier !== "hold"
@@ -745,5 +777,6 @@ console.log("QUALITY_GATED_REVENUE_PRESERVATION=PASS");
 console.log("QUALITY_GATED_REVIEW_STRATEGY_PRESERVATION=PASS");
 console.log("QUALITY_GATED_LOCAL_DEMAND_PRESERVATION=PASS");
 console.log("QUALITY_GATED_PRICING_GUIDE_PRESERVATION=PASS");
+console.log("QUALITY_GATED_SEO_GUIDE_PRESERVATION=PASS");
 console.log("EXPOSED_QUALITY_GUARD=PASS");
 console.log("SITEMAP_SELECTION_SMOKE=PASS");
