@@ -59,6 +59,7 @@ const qualityGatedTopicSlugs = [
   "pricing-positioning",
   "competitor-analysis",
   "seasonality-guide",
+  "review-strategy",
 ] as const;
 
 const qualityGatedTopics = qualityGatedTopicSlugs.flatMap(
@@ -127,6 +128,10 @@ const qualityGatedCompetitorAnalysisTopics = qualityGatedTopics.filter(
 
 const qualityGatedSeasonalityTopics = qualityGatedTopics.filter(
   ({ topicSlug }) => topicSlug === "seasonality-guide"
+);
+
+const qualityGatedReviewStrategyTopics = qualityGatedTopics.filter(
+  ({ topicSlug }) => topicSlug === "review-strategy"
 );
 
 const exposedQualityFailures = qualityGatedTopics.filter(
@@ -238,6 +243,10 @@ console.log(
 );
 
 console.log(
+  `QUALITY_GATED_REVIEW_STRATEGY_TOPICS=${qualityGatedReviewStrategyTopics.length}`
+);
+
+console.log(
   `EXPOSED_QUALITY_FAIL=${exposedQualityFailures.length}`
 );
 
@@ -293,15 +302,15 @@ if (
   );
 }
 
-if (keptTopics.length !== 2489) {
+if (keptTopics.length !== 2703) {
   throw new Error(
-    `Expected 2489 kept topics, got ${keptTopics.length}`
+    `Expected 2703 kept topics, got ${keptTopics.length}`
   );
 }
 
-if (omittedTopics.length !== 3011) {
+if (omittedTopics.length !== 2797) {
   throw new Error(
-    `Expected 3011 omitted topics, got ${omittedTopics.length}`
+    `Expected 2797 omitted topics, got ${omittedTopics.length}`
   );
 }
 
@@ -363,6 +372,29 @@ if (qualityGatedSeasonalityTopics.length !== 220) {
   throw new Error(
     `Expected 220 quality-gated seasonality topics, got ${qualityGatedSeasonalityTopics.length}`
   );
+}
+
+if (qualityGatedReviewStrategyTopics.length !== 220) {
+  throw new Error(
+    `Expected 220 quality-gated review-strategy topics, got ${qualityGatedReviewStrategyTopics.length}`
+  );
+}
+
+for (const { pathname, quality } of qualityGatedReviewStrategyTopics) {
+  if (!isCityTopicSitemapEligible(pathname)) {
+    throw new Error(
+      `Quality-gated review-strategy topic omitted: ${pathname}`
+    );
+  }
+
+  if (
+    quality.status !== "eligible-safe" &&
+    quality.status !== "qualified-evidence"
+  ) {
+    throw new Error(
+      `Quality-gated review-strategy topic failed quality gate: ${pathname} (${quality.status})`
+    );
+  }
 }
 
 for (const { pathname, quality } of qualityGatedSeasonalityTopics) {
@@ -646,5 +678,6 @@ console.log("QUALITY_GATED_DESCRIPTION_PRESERVATION=PASS");
 console.log("QUALITY_GATED_BUSINESS_TRAVEL_PRESERVATION=PASS");
 console.log("QUALITY_GATED_LISTING_AUDIT_PRESERVATION=PASS");
 console.log("QUALITY_GATED_REVENUE_PRESERVATION=PASS");
+console.log("QUALITY_GATED_REVIEW_STRATEGY_PRESERVATION=PASS");
 console.log("EXPOSED_QUALITY_GUARD=PASS");
 console.log("SITEMAP_SELECTION_SMOKE=PASS");
