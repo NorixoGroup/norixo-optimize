@@ -45,8 +45,10 @@ function control(
   return {
     workspaceId,
     backlinksEnabled,
+    backlinkAutonomyEnabled: false,
     backlinkOutreachScheduleApplyEnabled,
     dryRunOnly,
+    disabledReason: null,
     lastScheduleApplyAttemptAt: null,
     createdAt,
     updatedAt: createdAt,
