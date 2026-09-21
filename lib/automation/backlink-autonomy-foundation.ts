@@ -2,6 +2,7 @@ import type { Json } from "@/types/database.types";
 import type { CreateAutomationTaskInput, CreateAutomationTaskResult } from "./types";
 
 export type BacklinkContactResolutionTaskKind = "backlinks.contact_resolution";
+export type BacklinkContactValidationTaskKind = "backlinks.contact_validation";
 
 /**
  * Produces an idempotent task request only. The handler is intentionally not
@@ -37,4 +38,50 @@ export async function enqueueContactResolutionTask(
   input: Parameters<typeof buildContactResolutionTask>[0],
 ): Promise<CreateAutomationTaskResult> {
   return createTask(buildContactResolutionTask(input));
+}
+
+/** Pure descriptor builder; validation tasks are not enqueued by this module. */
+export function buildContactValidationTask(input: {
+  workspaceId: string;
+  runId: string;
+  dependsOnTaskId: string;
+  domainId: string;
+  opportunityId: string;
+  contactId: string;
+  scheduledAt: string;
+}): CreateAutomationTaskInput {
+  return {
+    workspaceId: input.workspaceId,
+    runId: input.runId,
+    dependsOnTaskId: input.dependsOnTaskId,
+    system: "backlinks",
+    taskKind: "backlinks.contact_validation",
+    taskKey: `contact-validation:${input.opportunityId}:${input.contactId}`,
+    priority: 40,
+    scheduledAt: input.scheduledAt,
+    availableAt: input.scheduledAt,
+    maxAttempts: 3,
+    backoffBaseSeconds: 60,
+    input: { version: 1, domainId: input.domainId, opportunityId: input.opportunityId, contactId: input.contactId } as Json,
+  };
+}
+
+export function buildContactValidationTasksForResolution(input: {
+  workspaceId: string;
+  runId: string;
+  resolutionTaskId: string;
+  domainId: string;
+  opportunityId: string;
+  contactIds: readonly string[];
+  scheduledAt: string;
+}): CreateAutomationTaskInput[] {
+  return [...new Set(input.contactIds)].map((contactId) => buildContactValidationTask({
+    workspaceId: input.workspaceId,
+    runId: input.runId,
+    dependsOnTaskId: input.resolutionTaskId,
+    domainId: input.domainId,
+    opportunityId: input.opportunityId,
+    contactId,
+    scheduledAt: input.scheduledAt,
+  }));
 }
