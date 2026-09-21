@@ -3,6 +3,7 @@ import type { CreateAutomationTaskInput, CreateAutomationTaskResult } from "./ty
 
 export type BacklinkContactResolutionTaskKind = "backlinks.contact_resolution";
 export type BacklinkContactValidationTaskKind = "backlinks.contact_validation";
+export type BacklinkDownstreamTaskKind = "backlinks.campaign_prepare" | "backlinks.draft_prepare" | "backlinks.outreach_decision";
 
 /**
  * Produces an idempotent task request only. The handler is intentionally not
@@ -84,4 +85,43 @@ export function buildContactValidationTasksForResolution(input: {
     contactId,
     scheduledAt: input.scheduledAt,
   }));
+}
+
+function buildDownstreamTask(input: {
+  workspaceId: string;
+  runId: string;
+  dependsOnTaskId: string;
+  domainId: string;
+  opportunityId: string;
+  contactId: string;
+  scheduledAt: string;
+  taskKind: BacklinkDownstreamTaskKind;
+  taskKeyPrefix: string;
+}): CreateAutomationTaskInput {
+  return {
+    workspaceId: input.workspaceId,
+    runId: input.runId,
+    dependsOnTaskId: input.dependsOnTaskId,
+    system: "backlinks",
+    taskKind: input.taskKind,
+    taskKey: `${input.taskKeyPrefix}:${input.opportunityId}:${input.contactId}`,
+    priority: 50,
+    scheduledAt: input.scheduledAt,
+    availableAt: input.scheduledAt,
+    maxAttempts: 3,
+    backoffBaseSeconds: 60,
+    input: { version: 1, domainId: input.domainId, opportunityId: input.opportunityId, contactId: input.contactId } as Json,
+  };
+}
+
+export function buildCampaignPrepareTask(input: Omit<Parameters<typeof buildDownstreamTask>[0], "taskKind" | "taskKeyPrefix">): CreateAutomationTaskInput {
+  return buildDownstreamTask({ ...input, taskKind: "backlinks.campaign_prepare", taskKeyPrefix: "campaign-prepare" });
+}
+
+export function buildDraftPrepareTask(input: Omit<Parameters<typeof buildDownstreamTask>[0], "taskKind" | "taskKeyPrefix">): CreateAutomationTaskInput {
+  return buildDownstreamTask({ ...input, taskKind: "backlinks.draft_prepare", taskKeyPrefix: "draft-prepare" });
+}
+
+export function buildOutreachDecisionTask(input: Omit<Parameters<typeof buildDownstreamTask>[0], "taskKind" | "taskKeyPrefix">): CreateAutomationTaskInput {
+  return buildDownstreamTask({ ...input, taskKind: "backlinks.outreach_decision", taskKeyPrefix: "outreach-decision" });
 }
