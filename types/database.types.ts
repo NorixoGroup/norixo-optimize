@@ -1549,9 +1549,9 @@ export type Database = {
         ]
       }
       automation_workspace_controls: {
-        Row: { backlink_outreach_schedule_apply_enabled: boolean; backlinks_enabled: boolean; created_at: string; disabled_reason: string | null; dry_run_only: boolean; last_schedule_apply_attempt_at: string | null; updated_at: string; updated_by: string | null; workspace_id: string }
-        Insert: { backlink_outreach_schedule_apply_enabled?: boolean; backlinks_enabled?: boolean; created_at?: string; disabled_reason?: string | null; dry_run_only?: boolean; last_schedule_apply_attempt_at?: string | null; updated_at?: string; updated_by?: string | null; workspace_id: string }
-        Update: { backlink_outreach_schedule_apply_enabled?: boolean; backlinks_enabled?: boolean; created_at?: string; disabled_reason?: string | null; dry_run_only?: boolean; last_schedule_apply_attempt_at?: string | null; updated_at?: string; updated_by?: string | null; workspace_id?: string }
+        Row: { backlink_autonomy_enabled: boolean; backlink_outreach_schedule_apply_enabled: boolean; backlinks_enabled: boolean; created_at: string; disabled_reason: string | null; dry_run_only: boolean; last_schedule_apply_attempt_at: string | null; updated_at: string; updated_by: string | null; workspace_id: string }
+        Insert: { backlink_autonomy_enabled?: boolean; backlink_outreach_schedule_apply_enabled?: boolean; backlinks_enabled?: boolean; created_at?: string; disabled_reason?: string | null; dry_run_only?: boolean; last_schedule_apply_attempt_at?: string | null; updated_at?: string; updated_by?: string | null; workspace_id: string }
+        Update: { backlink_autonomy_enabled?: boolean; backlink_outreach_schedule_apply_enabled?: boolean; backlinks_enabled?: boolean; created_at?: string; disabled_reason?: string | null; dry_run_only?: boolean; last_schedule_apply_attempt_at?: string | null; updated_at?: string; updated_by?: string | null; workspace_id?: string }
         Relationships: []
       }
       backlink_outreach_schedule_apply_locks: {
