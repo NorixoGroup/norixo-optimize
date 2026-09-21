@@ -67,6 +67,7 @@ const qualityGatedTopicSlugs = [
   "booking-conversion",
   "ranking-factors",
   "search-visibility",
+  "photo-order",
 ] as const;
 
 const qualityGatedTopics = qualityGatedTopicSlugs.flatMap(
@@ -165,6 +166,10 @@ const qualityGatedRankingFactorsTopics = qualityGatedTopics.filter(
 
 const qualityGatedSearchVisibilityTopics = qualityGatedTopics.filter(
   ({ topicSlug }) => topicSlug === "search-visibility"
+);
+
+const qualityGatedPhotoOrderTopics = qualityGatedTopics.filter(
+  ({ topicSlug }) => topicSlug === "photo-order"
 );
 
 const exposedQualityFailures = qualityGatedTopics.filter(
@@ -304,6 +309,9 @@ console.log(
 console.log(
   `QUALITY_GATED_SEARCH_VISIBILITY_TOPICS=${qualityGatedSearchVisibilityTopics.length}`
 );
+console.log(
+  `QUALITY_GATED_PHOTO_ORDER_TOPICS=${qualityGatedPhotoOrderTopics.length}`
+);
 
 console.log(
   `EXPOSED_QUALITY_FAIL=${exposedQualityFailures.length}`
@@ -361,15 +369,15 @@ if (
   );
 }
 
-if (keptTopics.length !== 4209) {
+if (keptTopics.length !== 4424) {
   throw new Error(
-    `Expected 4209 kept topics, got ${keptTopics.length}`
+    `Expected 4424 kept topics, got ${keptTopics.length}`
   );
 }
 
-if (omittedTopics.length !== 1291) {
+if (omittedTopics.length !== 1076) {
   throw new Error(
-    `Expected 1291 omitted topics, got ${omittedTopics.length}`
+    `Expected 1076 omitted topics, got ${omittedTopics.length}`
   );
 }
 
@@ -905,6 +913,30 @@ console.log("QUALITY_GATED_SEO_GUIDE_PRESERVATION=PASS");
 console.log("QUALITY_GATED_AMENITIES_PRESERVATION=PASS");
 console.log("QUALITY_GATED_BOOKING_CONVERSION_PRESERVATION=PASS");
 console.log("QUALITY_GATED_RANKING_FACTORS_PRESERVATION=PASS");
+if (qualityGatedPhotoOrderTopics.length !== 220) {
+  throw new Error(
+    `Expected 220 quality-gated photo-order topics, got ${qualityGatedPhotoOrderTopics.length}`
+  );
+}
+
+for (const { pathname, quality } of qualityGatedPhotoOrderTopics) {
+  if (!isCityTopicSitemapEligible(pathname)) {
+    throw new Error(
+      `Expected quality-gated photo-order path in sitemap: ${pathname}`
+    );
+  }
+
+  if (
+    quality.status !== "eligible-safe" &&
+    quality.status !== "qualified-evidence"
+  ) {
+    throw new Error(
+      `Unsafe photo-order quality status for ${pathname}: ${quality.status}`
+    );
+  }
+}
+
 console.log("QUALITY_GATED_SEARCH_VISIBILITY_PRESERVATION=PASS");
+console.log("QUALITY_GATED_PHOTO_ORDER_PRESERVATION=PASS");
 console.log("EXPOSED_QUALITY_GUARD=PASS");
 console.log("SITEMAP_SELECTION_SMOKE=PASS");

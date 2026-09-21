@@ -238,6 +238,7 @@ const QUALITY_GATED_ROLLOUT_TOPICS = new Set([
   "booking-conversion",
   "ranking-factors",
   "search-visibility",
+  "photo-order",
 ]);
 
 function isQualityGatedRolloutPath(
