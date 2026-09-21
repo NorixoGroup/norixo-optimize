@@ -5342,6 +5342,7 @@ export type Database = {
         Returns: Database["public"]["Tables"]["backlink_verification_jobs"]["Row"][]
       }
       claim_next_automation_task: { Args: { p_claimed_at: string; p_lease_duration_seconds: number; p_run_id: string; p_worker_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
+      claim_next_backlink_autonomy_task: { Args: { p_claimed_at: string; p_lease_duration_seconds: number; p_run_id: string; p_worker_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
       heartbeat_backlink_verification_job: {
         Args: { p_heartbeat_at: string; p_job_id: string; p_lease_duration_seconds: number; p_worker_id: string }
         Returns: Database["public"]["Tables"]["backlink_verification_jobs"]["Row"][]
