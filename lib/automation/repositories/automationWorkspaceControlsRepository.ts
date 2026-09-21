@@ -110,6 +110,20 @@ export async function listAutomationWorkspaceControlsForBacklinkOutreachSchedule
   );
 }
 
+/** Dedicated autonomy selector; deliberately independent from legacy dry-run scheduling. */
+export async function listAutomationWorkspaceControlsForBacklinkAutonomy(
+  client: BacklinkRepositoryClient,
+  limit: number,
+): Promise<AutomationWorkspaceControl[]> {
+  const operation = "listAutomationWorkspaceControlsForBacklinkAutonomy";
+  const { data, error } = await client.from("automation_workspace_controls")
+    .select("workspace_id, backlinks_enabled, backlink_autonomy_enabled, backlink_outreach_schedule_apply_enabled, dry_run_only, disabled_reason, last_schedule_apply_attempt_at, created_at, updated_at")
+    .eq("backlinks_enabled", true).eq("backlink_autonomy_enabled", true).is("disabled_reason", null)
+    .order("workspace_id", { ascending: true }).limit(limit);
+  if (error != null) throw normalizeBacklinkRepositoryError(operation, error);
+  return (data ?? []).map((row) => ({ workspaceId: row.workspace_id, backlinksEnabled: row.backlinks_enabled, backlinkAutonomyEnabled: row.backlink_autonomy_enabled, backlinkOutreachScheduleApplyEnabled: row.backlink_outreach_schedule_apply_enabled, dryRunOnly: row.dry_run_only, disabledReason: row.disabled_reason, lastScheduleApplyAttemptAt: row.last_schedule_apply_attempt_at, createdAt: row.created_at, updatedAt: row.updated_at }));
+}
+
 export async function listAutomationWorkspaceControlsForBacklinkReverification(
   client: BacklinkRepositoryClient,
   limit: number,
