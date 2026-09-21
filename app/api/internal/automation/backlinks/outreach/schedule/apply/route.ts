@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
         getWorkspaceControl: async (workspaceId) => {
           const { data, error } = await client
             .from("automation_workspace_controls")
-            .select("workspace_id, backlinks_enabled, backlink_outreach_schedule_apply_enabled, dry_run_only, disabled_reason, last_schedule_apply_attempt_at, created_at, updated_at")
+            .select("workspace_id, backlinks_enabled, backlink_autonomy_enabled, backlink_outreach_schedule_apply_enabled, dry_run_only, disabled_reason, last_schedule_apply_attempt_at, created_at, updated_at")
             .eq("workspace_id", workspaceId)
             .maybeSingle();
           if (error != null) {
@@ -85,6 +85,7 @@ export async function POST(request: NextRequest) {
             : {
                 workspaceId: data.workspace_id,
                 backlinksEnabled: data.backlinks_enabled,
+                backlinkAutonomyEnabled: data.backlink_autonomy_enabled,
                 backlinkOutreachScheduleApplyEnabled: data.backlink_outreach_schedule_apply_enabled,
                 dryRunOnly: data.dry_run_only,
                 lastScheduleApplyAttemptAt: data.last_schedule_apply_attempt_at,

@@ -106,6 +106,7 @@ export async function runBacklinkOutreachScheduleApply(
               getWorkspaceControl: async () => ({
                 workspaceId,
                 backlinksEnabled: true,
+                backlinkAutonomyEnabled: false,
                 backlinkOutreachScheduleApplyEnabled: true,
                 dryRunOnly: true,
                 lastScheduleApplyAttemptAt: control.last_schedule_apply_attempt_at,
