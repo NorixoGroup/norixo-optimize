@@ -63,6 +63,7 @@ const qualityGatedTopicSlugs = [
   "local-demand-guide",
   "pricing-guide",
   "seo-guide",
+  "amenities-guide",
 ] as const;
 
 const qualityGatedTopics = qualityGatedTopicSlugs.flatMap(
@@ -147,6 +148,9 @@ const qualityGatedPricingGuideTopics = qualityGatedTopics.filter(
 
 const qualityGatedSeoGuideTopics = qualityGatedTopics.filter(
   ({ topicSlug }) => topicSlug === "seo-guide"
+);
+const qualityGatedAmenitiesTopics = qualityGatedTopics.filter(
+  ({ topicSlug }) => topicSlug === "amenities-guide"
 );
 
 const exposedQualityFailures = qualityGatedTopics.filter(
@@ -272,6 +276,9 @@ console.log(
 console.log(
   `QUALITY_GATED_SEO_GUIDE_TOPICS=${qualityGatedSeoGuideTopics.length}`
 );
+console.log(
+  `QUALITY_GATED_AMENITIES_TOPICS=${qualityGatedAmenitiesTopics.length}`
+);
 
 console.log(
   `EXPOSED_QUALITY_FAIL=${exposedQualityFailures.length}`
@@ -329,15 +336,15 @@ if (
   );
 }
 
-if (keptTopics.length !== 3348) {
+if (keptTopics.length !== 3563) {
   throw new Error(
-    `Expected 3348 kept topics, got ${keptTopics.length}`
+    `Expected 3563 kept topics, got ${keptTopics.length}`
   );
 }
 
-if (omittedTopics.length !== 2152) {
+if (omittedTopics.length !== 1937) {
   throw new Error(
-    `Expected 2152 omitted topics, got ${omittedTopics.length}`
+    `Expected 1937 omitted topics, got ${omittedTopics.length}`
   );
 }
 
@@ -472,6 +479,29 @@ for (const { pathname, quality } of qualityGatedSeoGuideTopics) {
   ) {
     throw new Error(
       `Quality-gated seo-guide topic failed quality gate: ${pathname} (${quality.status})`
+    );
+  }
+}
+
+if (qualityGatedAmenitiesTopics.length !== 220) {
+  throw new Error(
+    `Expected 220 quality-gated amenities topics, got ${qualityGatedAmenitiesTopics.length}`
+  );
+}
+
+for (const { pathname, quality } of qualityGatedAmenitiesTopics) {
+  if (!isCityTopicSitemapEligible(pathname)) {
+    throw new Error(
+      `Quality-gated amenities topic omitted: ${pathname}`
+    );
+  }
+
+  if (
+    quality.status !== "eligible-safe" &&
+    quality.status !== "qualified-evidence"
+  ) {
+    throw new Error(
+      `Quality-gated amenities topic failed quality gate: ${pathname} (${quality.status})`
     );
   }
 }
@@ -778,5 +808,6 @@ console.log("QUALITY_GATED_REVIEW_STRATEGY_PRESERVATION=PASS");
 console.log("QUALITY_GATED_LOCAL_DEMAND_PRESERVATION=PASS");
 console.log("QUALITY_GATED_PRICING_GUIDE_PRESERVATION=PASS");
 console.log("QUALITY_GATED_SEO_GUIDE_PRESERVATION=PASS");
+console.log("QUALITY_GATED_AMENITIES_PRESERVATION=PASS");
 console.log("EXPOSED_QUALITY_GUARD=PASS");
 console.log("SITEMAP_SELECTION_SMOKE=PASS");
