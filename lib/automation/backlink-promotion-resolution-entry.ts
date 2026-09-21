@@ -1,4 +1,4 @@
-import type { CreateAutomationTaskInput } from "./types";
+import type { CreateAutomationRunInput, CreateAutomationTaskInput } from "./types";
 import { buildContactResolutionTask } from "./backlink-autonomy-foundation";
 
 export type BacklinkPromotionResolutionMode = "preview" | "apply" | "live";
@@ -33,6 +33,37 @@ export type BacklinkPromotionResolutionEntryDependencies = {
   createOrGetTask?: (input: CreateAutomationTaskInput) => Promise<{ kind: "created" | "existing"; task: { id: string } }>;
 };
 
+export const BACKLINK_AUTONOMY_RUN_KIND = "backlinks.autonomy";
+
+/**
+ * The completed promotion run is immutable provenance. Each canonical applied
+ * promotion instead receives one independently executable, idempotent run.
+ */
+export function buildBacklinkAutonomyRun(input: {
+  promotion: AppliedBacklinkPromotion;
+  scheduledAt: string;
+}): CreateAutomationRunInput {
+  const { promotion } = input;
+  return {
+    workspaceId: promotion.workspaceId,
+    system: "backlinks",
+    runKind: BACKLINK_AUTONOMY_RUN_KIND,
+    idempotencyKey: `backlinks-autonomy:promotion:${promotion.applicationId}`,
+    mode: "dry_run",
+    triggerSource: "internal",
+    requestedBy: promotion.actorUserId,
+    scheduledAt: input.scheduledAt,
+    input: {
+      version: 1,
+      promotionApplicationId: promotion.applicationId,
+      promotionRunId: promotion.runId,
+      promotionTaskId: promotion.promotionTaskId,
+      opportunityId: promotion.opportunityId,
+      domainId: promotion.domainId,
+    },
+  };
+}
+
 export type BacklinkPromotionResolutionEntryResult = {
   outcome: "disabled" | "blocked" | "preview" | "task_created" | "task_existing";
   reasons: readonly string[];
@@ -50,7 +81,7 @@ function stopped(outcome: "disabled" | "blocked", reason: string): BacklinkPromo
  */
 export async function enterPromotedOpportunityContactResolution(
   deps: BacklinkPromotionResolutionEntryDependencies,
-  input: { promotion: AppliedBacklinkPromotion; control: BacklinkPromotionResolutionControl; mode: BacklinkPromotionResolutionMode; scheduledAt: string },
+  input: { promotion: AppliedBacklinkPromotion; autonomyRunId: string; control: BacklinkPromotionResolutionControl; mode: BacklinkPromotionResolutionMode; scheduledAt: string },
 ): Promise<BacklinkPromotionResolutionEntryResult> {
   const { promotion, control } = input;
   if (control.backlinksEnabled !== true) return stopped("disabled", "BACKLINKS_DISABLED");
@@ -72,12 +103,16 @@ export async function enterPromotedOpportunityContactResolution(
 
   const task = buildContactResolutionTask({
     workspaceId: promotion.workspaceId,
-    runId: promotion.runId,
-    dependsOnTaskId: promotion.promotionTaskId,
+    runId: input.autonomyRunId,
     domainId: promotion.domainId,
     opportunityId: promotion.opportunityId,
     actorUserId: promotion.actorUserId,
     scheduledAt: input.scheduledAt,
+    promotionProvenance: {
+      promotionApplicationId: promotion.applicationId,
+      promotionRunId: promotion.runId,
+      promotionTaskId: promotion.promotionTaskId,
+    },
   });
   if (input.mode === "preview") return { outcome: "preview", reasons: [], task, taskId: null };
   if (input.mode !== "apply" && input.mode !== "live") return stopped("disabled", "AUTONOMY_MODE_DISABLED");

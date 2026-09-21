@@ -30,7 +30,7 @@ export function createClosedBacklinkAutonomyRuntime(deps: ClosedBacklinkAutonomy
     getControl,
     async previewPromotionEntry(input) {
       const control = await getControl(input.promotion.workspaceId);
-      const result = await enterPromotedOpportunityContactResolution(deps.entry, { promotion: input.promotion, control, mode: "preview", scheduledAt: input.scheduledAt });
+      const result = await enterPromotedOpportunityContactResolution(deps.entry, { promotion: input.promotion, autonomyRunId: `preview:${input.promotion.applicationId}`, control, mode: "preview", scheduledAt: input.scheduledAt });
       return { control, task: result.task, reasons: result.reasons };
     },
     async dispatchClaimedTask(input) {

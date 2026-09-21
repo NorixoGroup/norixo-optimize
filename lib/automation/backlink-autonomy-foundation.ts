@@ -17,6 +17,11 @@ export function buildContactResolutionTask(input: {
   opportunityId: string;
   actorUserId: string;
   scheduledAt: string;
+  promotionProvenance?: {
+    promotionApplicationId: string;
+    promotionRunId: string;
+    promotionTaskId: string;
+  };
 }): CreateAutomationTaskInput {
   return {
     workspaceId: input.workspaceId,
@@ -30,7 +35,13 @@ export function buildContactResolutionTask(input: {
     availableAt: input.scheduledAt,
     maxAttempts: 3,
     backoffBaseSeconds: 60,
-    input: { version: 1, domainId: input.domainId, opportunityId: input.opportunityId, actorUserId: input.actorUserId } as Json,
+    input: {
+      version: 1,
+      domainId: input.domainId,
+      opportunityId: input.opportunityId,
+      actorUserId: input.actorUserId,
+      ...(input.promotionProvenance == null ? {} : input.promotionProvenance),
+    } as Json,
   };
 }
 
