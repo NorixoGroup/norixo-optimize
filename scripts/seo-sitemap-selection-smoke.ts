@@ -65,6 +65,7 @@ const qualityGatedTopicSlugs = [
   "seo-guide",
   "amenities-guide",
   "booking-conversion",
+  "ranking-factors",
 ] as const;
 
 const qualityGatedTopics = qualityGatedTopicSlugs.flatMap(
@@ -155,6 +156,10 @@ const qualityGatedAmenitiesTopics = qualityGatedTopics.filter(
 );
 const qualityGatedBookingConversionTopics = qualityGatedTopics.filter(
   ({ topicSlug }) => topicSlug === "booking-conversion"
+);
+
+const qualityGatedRankingFactorsTopics = qualityGatedTopics.filter(
+  ({ topicSlug }) => topicSlug === "ranking-factors"
 );
 
 const exposedQualityFailures = qualityGatedTopics.filter(
@@ -288,6 +293,10 @@ console.log(
 );
 
 console.log(
+  `QUALITY_GATED_RANKING_FACTORS_TOPICS=${qualityGatedRankingFactorsTopics.length}`
+);
+
+console.log(
   `EXPOSED_QUALITY_FAIL=${exposedQualityFailures.length}`
 );
 
@@ -343,15 +352,15 @@ if (
   );
 }
 
-if (keptTopics.length !== 3778) {
+if (keptTopics.length !== 3994) {
   throw new Error(
-    `Expected 3778 kept topics, got ${keptTopics.length}`
+    `Expected 3994 kept topics, got ${keptTopics.length}`
   );
 }
 
-if (omittedTopics.length !== 1722) {
+if (omittedTopics.length !== 1506) {
   throw new Error(
-    `Expected 1722 omitted topics, got ${omittedTopics.length}`
+    `Expected 1506 omitted topics, got ${omittedTopics.length}`
   );
 }
 
@@ -509,6 +518,29 @@ for (const { pathname, quality } of qualityGatedBookingConversionTopics) {
   ) {
     throw new Error(
       `Quality-gated booking-conversion topic failed quality gate: ${pathname} (${quality.status})`
+    );
+  }
+}
+
+if (qualityGatedRankingFactorsTopics.length !== 220) {
+  throw new Error(
+    `Expected 220 quality-gated ranking-factors topics, got ${qualityGatedRankingFactorsTopics.length}`
+  );
+}
+
+for (const { pathname, quality } of qualityGatedRankingFactorsTopics) {
+  if (!isCityTopicSitemapEligible(pathname)) {
+    throw new Error(
+      `Quality-gated ranking-factors topic omitted: ${pathname}`
+    );
+  }
+
+  if (
+    quality.status !== "eligible-safe" &&
+    quality.status !== "qualified-evidence"
+  ) {
+    throw new Error(
+      `Quality-gated ranking-factors topic failed quality gate: ${pathname} (${quality.status})`
     );
   }
 }
@@ -840,5 +872,6 @@ console.log("QUALITY_GATED_PRICING_GUIDE_PRESERVATION=PASS");
 console.log("QUALITY_GATED_SEO_GUIDE_PRESERVATION=PASS");
 console.log("QUALITY_GATED_AMENITIES_PRESERVATION=PASS");
 console.log("QUALITY_GATED_BOOKING_CONVERSION_PRESERVATION=PASS");
+console.log("QUALITY_GATED_RANKING_FACTORS_PRESERVATION=PASS");
 console.log("EXPOSED_QUALITY_GUARD=PASS");
 console.log("SITEMAP_SELECTION_SMOKE=PASS");
