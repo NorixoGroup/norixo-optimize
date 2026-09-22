@@ -62,7 +62,7 @@ async function main() {
   assert(providerSource.includes(ZEROBOUNCE_EU_VALIDATE_ENDPOINT));
   assert(!providerSource.includes("api.zerobounce.net/v2/validate"));
   assert(!providerSource.includes("Email Finder") && !providerSource.includes("guessformat"));
-  assert(!providerSource.includes("console.") && !providerSource.includes("JSON.stringify(payload)"));
+  assert(!providerSource.includes("console.") && !providerSource.includes("JSON.stringify(payload)") && !providerSource.includes(".text("));
   assert(!coordinatorSource.includes('.from("backlink_contacts")') && !coordinatorSource.includes("updateBacklinkContact"));
   assert.equal(getConfiguredMailboxVerificationProvider({}), null);
   assert.equal(getConfiguredMailboxVerificationProvider({ BACKLINK_MAILBOX_VERIFICATION_PROVIDER: "zerobounce" }), null);
@@ -79,7 +79,11 @@ async function main() {
   const payloadBoundary = zeroBounce({ status: "valid", arbitrary: { email, response: "provider payload" } });
   assert.deepEqual((await payloadBoundary.provider.verify({ email, domain: "example.invalid" })).safeMetadata, {});
   assert.equal((await zeroBounce({ status: 42 }).provider.verify({ email, domain: "example.invalid" })).status, "provider_error");
-  assert.equal((await zeroBounce({ status: "valid" }, 500).provider.verify({ email, domain: "example.invalid" })).status, "provider_error");
+  for (const [httpStatus, safeReason] of [[400, "ZEROBOUNCE_HTTP_400"], [401, "ZEROBOUNCE_HTTP_401"], [403, "ZEROBOUNCE_HTTP_403"], [418, "ZEROBOUNCE_HTTP_4XX"], [429, "ZEROBOUNCE_HTTP_429"], [500, "ZEROBOUNCE_HTTP_5XX"], [503, "ZEROBOUNCE_HTTP_5XX"]] as const) {
+    const result = await zeroBounce({ status: "valid" }, httpStatus).provider.verify({ email, domain: "example.invalid" });
+    assert.equal(result.status, "provider_error");
+    assert.equal(result.safeReason, safeReason);
+  }
   const eu = zeroBounce({ status: "valid" });
   await eu.provider.verify({ email, domain: "example.invalid" });
   assert.equal(eu.requestedUrl().split("?")[0], ZEROBOUNCE_EU_VALIDATE_ENDPOINT);

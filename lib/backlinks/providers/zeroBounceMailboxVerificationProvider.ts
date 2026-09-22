@@ -22,6 +22,13 @@ function providerError(reason: string): MailboxVerificationResult {
   return { status: "provider_error", provider: "zerobounce", safeReason: reason };
 }
 
+function httpErrorReason(status: number): string {
+  if (status === 400 || status === 401 || status === 403 || status === 429) return `ZEROBOUNCE_HTTP_${status}`;
+  if (status >= 400 && status <= 499) return "ZEROBOUNCE_HTTP_4XX";
+  if (status >= 500 && status <= 599) return "ZEROBOUNCE_HTTP_5XX";
+  return "ZEROBOUNCE_HTTP_ERROR";
+}
+
 function optionalBoolean(value: unknown): boolean | undefined {
   if (value === true || value === "true") return true;
   if (value === false || value === "false") return false;
@@ -68,7 +75,7 @@ export function createZeroBounceMailboxVerificationProvider(options: ZeroBounceM
       const timeout = setTimeout(() => controller.abort(), timeoutMs);
       try {
         const response = await fetchImpl(endpoint, { method: "GET", signal: controller.signal, headers: { accept: "application/json" } });
-        if (!response.ok) return providerError("ZEROBOUNCE_HTTP_ERROR");
+        if (!response.ok) return providerError(httpErrorReason(response.status));
         let payload: unknown;
         try {
           payload = await response.json();
