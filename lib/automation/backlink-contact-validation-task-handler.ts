@@ -18,6 +18,8 @@ export type BacklinkContactValidationTaskDependencies = {
     workspace_id?: string;
     domain_id: string;
     contact_status: string;
+    do_not_contact_at?: string | null;
+    archived_at?: string | null;
     email_normalized: string | null;
     contact_form_url: string | null;
     linkedin_url: string | null;
@@ -32,6 +34,9 @@ export type BacklinkContactValidationTaskResult = {
   domainId: string;
   opportunityId: string;
   contactId: string;
+  contactStatus: string | null;
+  currentNormalizedEmail: string | null;
+  suppressed: boolean;
   email: BacklinkContactValidationResult["email"];
   contactForm: BacklinkContactValidationResult["contactForm"];
   linkedin: BacklinkContactValidationResult["linkedin"];
@@ -46,6 +51,9 @@ function blocked(input: BacklinkContactValidationTaskInput, reason: string): Bac
     domainId: input.domainId,
     opportunityId: input.opportunityId,
     contactId: input.contactId,
+    contactStatus: null,
+    currentNormalizedEmail: null,
+    suppressed: false,
     email: null,
     contactForm: null,
     linkedin: null,
@@ -101,6 +109,9 @@ export async function executeBacklinkContactValidationTask(
     domainId: input.domainId,
     opportunityId: input.opportunityId,
     contactId: input.contactId,
+    contactStatus: contact.contact_status,
+    currentNormalizedEmail: contact.email_normalized,
+    suppressed: contact.contact_status === "do_not_contact" || contact.contact_status === "archived" || contact.do_not_contact_at != null || contact.archived_at != null,
     email: validation.email,
     contactForm: validation.contactForm,
     linkedin: validation.linkedin,

@@ -42,6 +42,14 @@ function fixture(options: { channel?: "email" | "contact_form" | "linkedin"; con
       getContact: async (_workspace: string, id: string) => contacts.find((item) => item.id === id)!,
       hasMxRecords: async () => true,
     },
+    mailbox: {
+      getProvider: () => null,
+      getContact: async (_workspace: string, id: string) => {
+        const contact = contacts.find((item) => item.id === id);
+        return contact == null ? null : { ...contact, do_not_contact_at: null, archived_at: null };
+      },
+      record: async () => { throw new Error("must not persist mailbox verification in legacy verified fixture"); },
+    },
     campaign: {
       getDomain: async () => domain, getOpportunity: async () => opportunity, getContact: async (_workspace: string, id: string) => contacts.find((item) => item.id === id)!,
       findCampaignMembership: async () => counters.campaignCreates ? { campaignId: "campaign", membershipStatus: "active" } : null,
@@ -73,8 +81,8 @@ async function main() {
   const linkedin = fixture({ channel: "linkedin", contacts: [verified()], resolution: resolved([emailCandidate]) }); await enter(linkedin); const d = await cycle(linkedin, "linkedin"); assert.equal(d.outcome, "manual_review"); assert.equal(linkedin.counters.linkedin, 0);
   // E/F/G and all policy stops remain terminal before campaign/draft work.
   const multi = fixture({ contacts: [verified("contact-1"), verified("contact-2", "second@example.test")], resolution: resolved([emailCandidate, { ...emailCandidate, email: "second@example.test", evidence: [{ ...emailCandidate.evidence[0]!, value: "second@example.test" }] }]) }); await enter(multi); const e = await cycle(multi); assert.equal(e.outcome, "manual_review"); assert.deepEqual(e.reasonCodes, ["CONTACT_SELECTION_REQUIRED"]); assert.equal(multi.counters.campaignCreates + multi.counters.draftCreates, 0);
-  const dnc = fixture({ contacts: [{ ...verified(), contact_status: "do_not_contact" }], resolution: resolved([emailCandidate]) }); await enter(dnc); assert.equal((await cycle(dnc)).outcome, "manual_review");
-  const archived = fixture({ contacts: [{ ...verified(), contact_status: "archived" }], resolution: resolved([emailCandidate]) }); await enter(archived); assert.equal((await cycle(archived)).outcome, "manual_review");
+  const dnc = fixture({ contacts: [{ ...verified(), contact_status: "do_not_contact" }], resolution: resolved([emailCandidate]) }); await enter(dnc); assert.equal((await cycle(dnc)).outcome, "blocked");
+  const archived = fixture({ contacts: [{ ...verified(), contact_status: "archived" }], resolution: resolved([emailCandidate]) }); await enter(archived); assert.equal((await cycle(archived)).outcome, "blocked");
   const reply = fixture({ contacts: [verified()], resolution: resolved([emailCandidate]), decisionStop: "reply" }); await enter(reply); const g = await cycle(reply); assert.equal(g.outcome, "blocked"); assert.deepEqual(g.reasonCodes, ["INBOUND_REPLY_STOP"]);
   for (const [stop, reason] of [["bounce", "PROVIDER_STOP"], ["rate", "RATE_LIMIT"], ["max", "MAX_ATTEMPTS"]] as const) { const stopped = fixture({ contacts: [verified()], resolution: resolved([emailCandidate]), decisionStop: stop }); await enter(stopped); const result = await cycle(stopped); assert.equal(result.outcome, "blocked"); assert.deepEqual(result.reasonCodes, [reason]); }
   const invalid = fixture({ resolution: resolved([emailCandidate]), invalidWorkspace: true }); await enter(invalid); const invalidResult = await cycle(invalid); assert.equal(invalidResult.outcome, "manual_review"); assert.deepEqual(invalidResult.reasonCodes, ["WORKSPACE_OR_DOMAIN_OPPORTUNITY_MISMATCH"]);

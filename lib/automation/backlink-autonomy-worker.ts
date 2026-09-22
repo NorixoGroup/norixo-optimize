@@ -6,7 +6,7 @@ import type { BacklinkAutonomyRuntimeConfig } from "./backlink-autonomy-runtime-
 import { runBacklinkAutonomyOrchestrator } from "./backlink-master-autonomy-orchestrator";
 import type { Json } from "@/types/database.types";
 
-export const BACKLINK_AUTONOMY_TASK_KINDS = ["backlinks.contact_resolution", "backlinks.contact_validation", "backlinks.campaign_prepare", "backlinks.draft_prepare", "backlinks.outreach_decision"] as const;
+export const BACKLINK_AUTONOMY_TASK_KINDS = ["backlinks.contact_resolution", "backlinks.contact_validation", "backlinks.mailbox_verification", "backlinks.campaign_prepare", "backlinks.draft_prepare", "backlinks.outreach_decision"] as const;
 export type BacklinkAutonomyWorkerDependencies = AutomationTaskDependencies & BacklinkAutonomyDispatcherDependencies & {
   runtimeConfig: () => BacklinkAutonomyRuntimeConfig;
   getWorkspaceControl: (workspaceId: string) => Promise<import("./types").AutomationWorkspaceControl | null>;
@@ -44,14 +44,17 @@ export async function runOneBacklinkAutonomyWorkerTask(deps: BacklinkAutonomyWor
   try {
     const dependency = await deps.getDependencyOutput(task);
     const actorUserId = string(record(task.input)?.actorUserId) ?? await deps.getActorUserId({ workspaceId: task.workspaceId, task });
-    if (actorUserId == null) { await completeOrThrow(deps, task, input.workerId, input.at, terminalOutput(["AUTONOMY_ACTOR_MISSING"])); return { kind: "terminal", reasonCodes: ["AUTONOMY_ACTOR_MISSING"], taskId: task.id, nextTaskId: null }; }
-    const dispatched = await dispatchBacklinkAutonomyTask(deps, { task, mode: "apply", control, state: { actorUserId, campaignId: string(dependency?.campaignId) ?? undefined, outreachId: string(dependency?.outreachId) ?? undefined, channel: (dependency?.channel === "email" || dependency?.channel === "contact_form" || dependency?.channel === "linkedin") ? dependency.channel : "email" } });
+    const actorRequired = task.taskKind === "backlinks.contact_resolution" || task.taskKind === "backlinks.campaign_prepare" || task.taskKind === "backlinks.draft_prepare";
+    if (actorRequired && actorUserId == null) { await completeOrThrow(deps, task, input.workerId, input.at, terminalOutput(["AUTONOMY_ACTOR_MISSING"])); return { kind: "terminal", reasonCodes: ["AUTONOMY_ACTOR_MISSING"], taskId: task.id, nextTaskId: null }; }
+    const dispatched = await dispatchBacklinkAutonomyTask(deps, { task, mode: "apply", control, state: { actorUserId: actorUserId ?? "", campaignId: string(dependency?.campaignId) ?? undefined, outreachId: string(dependency?.outreachId) ?? undefined, channel: (dependency?.channel === "email" || dependency?.channel === "contact_form" || dependency?.channel === "linkedin") ? dependency.channel : "email" } });
     if (dispatched.kind === "rejected") { await completeOrThrow(deps, task, input.workerId, input.at, terminalOutput([dispatched.reason])); return { kind: "terminal", reasonCodes: [dispatched.reason], taskId: task.id, nextTaskId: null }; }
     const output = record(dispatched.output) ?? {};
     const contactIds = dispatched.taskKind === "backlinks.contact_resolution" ? [...new Set([...(dispatched.output.createdContactIds), ...(dispatched.output.existingContactIds)])] : [string(record(task.input)?.contactId)].filter((id): id is string => id != null);
-    const stage = dispatched.taskKind.replace("backlinks.", "") as "contact_resolution" | "contact_validation" | "campaign_prepare" | "draft_prepare" | "outreach_decision";
+    const stage = dispatched.taskKind.replace("backlinks.", "") as "contact_resolution" | "contact_validation" | "mailbox_verification" | "campaign_prepare" | "draft_prepare" | "outreach_decision";
     const decision = dispatched.taskKind === "backlinks.outreach_decision" ? dispatched.output : undefined;
-    const next = await runBacklinkAutonomyOrchestrator({ createOrGetTask: deps.createOrGetTask }, { workspaceId: task.workspaceId, runId: task.runId, domainId: string(record(task.input)?.domainId) ?? "", opportunityId: string(record(task.input)?.opportunityId) ?? "", scheduledAt: input.at, mode: "apply", control, progress: { stage, completedTaskId: task.id, completedTaskKind: task.taskKind, contactIds, decision } });
+    const validation = dispatched.taskKind === "backlinks.contact_validation" ? dispatched.output : undefined;
+    const mailboxVerification = dispatched.taskKind === "backlinks.mailbox_verification" ? dispatched.output : undefined;
+    const next = await runBacklinkAutonomyOrchestrator({ createOrGetTask: deps.createOrGetTask }, { workspaceId: task.workspaceId, runId: task.runId, domainId: string(record(task.input)?.domainId) ?? "", opportunityId: string(record(task.input)?.opportunityId) ?? "", scheduledAt: input.at, mode: "apply", control, progress: { stage, completedTaskId: task.id, completedTaskKind: task.taskKind, contactIds, decision, validation, mailboxVerification } });
     if (next.outcome === "task_created" || next.outcome === "task_existing") {
       await completeOrThrow(deps, task, input.workerId, input.at, JSON.parse(JSON.stringify(dispatched.output)) as Json);
       return { kind: "completed", reasonCodes: [], taskId: task.id, nextTaskId: next.taskId };

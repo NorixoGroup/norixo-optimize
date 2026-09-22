@@ -4,6 +4,8 @@ import { getBacklinkOpportunityById } from "@/lib/backlinks/repositories/opportu
 import { getBacklinkContactById, listBacklinkContactsByDomain } from "@/lib/backlinks/repositories/contactsRepository";
 import { createContact } from "@/lib/backlinks/services/contactService";
 import { resolveBacklinkContacts } from "@/lib/backlinks/services/contactResolutionService";
+import { getConfiguredMailboxVerificationProvider } from "@/lib/backlinks/providers/zeroBounceMailboxVerificationProvider";
+import { recordMailboxVerificationAndMaybePromote } from "@/lib/backlinks/repositories/mailboxVerificationsRepository";
 import { createOrGetAutomationRun, getAutomationWorkspaceControl } from "./repositories/automationRunsRepository";
 import { claimNextBacklinkAutonomyTask, completeAutomationTask, createOrGetAutomationTask, failAutomationTask, getAutomationTaskByIdInRun, heartbeatAutomationTask, reclaimExpiredBacklinkAutonomyTasks } from "./repositories/automationTasksRepository";
 import { listAutomationWorkspaceControlsForBacklinkAutonomy } from "./repositories/automationWorkspaceControlsRepository";
@@ -84,13 +86,18 @@ function blockedHandlers(client: ReturnType<typeof createSupabaseAdminClient>): 
       getContact: async (workspaceId, contactId) => getBacklinkContactById(client, workspaceId, contactId),
       hasMxRecords: async () => null,
     },
+    mailbox: {
+      getContact: async (workspaceId, contactId) => getBacklinkContactById(client, workspaceId, contactId),
+      getProvider: () => getConfiguredMailboxVerificationProvider(),
+      record: (input) => recordMailboxVerificationAndMaybePromote(client, input),
+    },
     campaign: { getDomain: unavailable, getOpportunity: unavailable, getContact: unavailable, findCampaignMembership: unavailable, prepareCampaign: unavailable },
     draft: { getDomain: unavailable, getOpportunity: unavailable, getContact: unavailable, getCampaign: unavailable, getActiveOutreach: unavailable, createDraft: unavailable },
     decision: { getFacts: unavailable },
   } as BacklinkAutonomyDispatcherDependencies;
 }
 
-/** Production adapters resolve and persist contacts, then stop at validation; no outbound executor is wired here. */
+/** Production adapters resolve, validate, and verify mailboxes; no outbound executor is wired here. */
 export function createBacklinkAutonomyProductionDependencies(): BacklinkAutonomyProductionDependencies {
   const client = createSupabaseAdminClient();
   const handlers = blockedHandlers(client);

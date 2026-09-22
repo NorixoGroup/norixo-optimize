@@ -1,9 +1,11 @@
 import type { CreateAutomationTaskInput } from "./types";
-import { buildContactValidationTask } from "./backlink-autonomy-foundation";
+import { buildContactValidationTask, buildMailboxVerificationTask } from "./backlink-autonomy-foundation";
 import { buildNextDownstreamTask, type BacklinkAutonomyDecisionResult } from "./backlink-autonomy-pipeline";
+import type { BacklinkContactValidationTaskResult } from "./backlink-contact-validation-task-handler";
+import type { BacklinkMailboxVerificationTaskResult } from "./backlink-mailbox-verification-task-handler";
 
 export type BacklinkAutonomyMode = "disabled" | "preview" | "apply" | "live";
-export type BacklinkAutonomyStage = "contact_resolution" | "contact_validation" | "campaign_prepare" | "draft_prepare" | "outreach_decision" | "execution_boundary" | "completed" | "manual_review" | "blocked" | "dead_letter";
+export type BacklinkAutonomyStage = "contact_resolution" | "contact_validation" | "mailbox_verification" | "campaign_prepare" | "draft_prepare" | "outreach_decision" | "execution_boundary" | "completed" | "manual_review" | "blocked" | "dead_letter";
 
 export type BacklinkAutonomyControl = {
   backlinksEnabled: boolean;
@@ -20,6 +22,8 @@ export type BacklinkAutonomyProgress = {
   completedTaskKind: string;
   contactIds?: readonly string[];
   decision?: BacklinkAutonomyDecisionResult;
+  validation?: BacklinkContactValidationTaskResult;
+  mailboxVerification?: BacklinkMailboxVerificationTaskResult;
 };
 
 export type BacklinkMasterAutonomyOrchestratorInput = {
@@ -71,6 +75,7 @@ function nextTask(input: BacklinkMasterAutonomyOrchestratorInput): CreateAutomat
   const expectedTaskKind: Record<Exclude<BacklinkAutonomyProgress["stage"], "dead_letter">, string> = {
     contact_resolution: "backlinks.contact_resolution",
     contact_validation: "backlinks.contact_validation",
+    mailbox_verification: "backlinks.mailbox_verification",
     campaign_prepare: "backlinks.campaign_prepare",
     draft_prepare: "backlinks.draft_prepare",
     outreach_decision: "backlinks.outreach_decision",
@@ -85,6 +90,23 @@ function nextTask(input: BacklinkMasterAutonomyOrchestratorInput): CreateAutomat
     return buildContactValidationTask({ ...common, dependsOnTaskId: input.progress.completedTaskId });
   }
   if (input.progress.stage === "contact_validation") {
+    const validation = input.progress.validation;
+    if (validation == null) return stopped("blocked", "blocked", "VALIDATION_RESULT_MISSING");
+    if (validation.suppressed || validation.contactStatus === "do_not_contact" || validation.contactStatus === "archived") return stopped("blocked", "blocked", "CONTACT_SUPPRESSED");
+    if (validation.status === "blocked") return stopped("blocked", "blocked", validation.reasons[0] ?? "CONTACT_VALIDATION_BLOCKED");
+    if (validation.status === "manual_review") return stopped("manual_review", "manual_review", "CONTACT_VALIDATION_MANUAL_REVIEW");
+    if (validation.status === "invalid") return stopped("blocked", "blocked", "CONTACT_VALIDATION_INVALID");
+    if (validation.email === "unverified" && validation.currentNormalizedEmail != null && validation.contactStatus === "unverified" && validation.status === "unverified") {
+      return buildMailboxVerificationTask({ ...common, dependsOnTaskId: input.progress.completedTaskId, currentNormalizedEmail: validation.currentNormalizedEmail });
+    }
+    if (validation.email != null && validation.status !== "verified") return stopped("blocked", "blocked", "EMAIL_VALIDATION_NOT_ELIGIBLE");
+    if (input.control.campaignApplyAuthorized !== true) return stopped("manual_review", "manual_review", "CAMPAIGN_APPLY_AUTHORIZATION_REQUIRED");
+    return buildNextDownstreamTask({ ...common, stage: "campaign_prepare" });
+  }
+  if (input.progress.stage === "mailbox_verification") {
+    const verification = input.progress.mailboxVerification;
+    if (verification == null) return stopped("blocked", "blocked", "MAILBOX_VERIFICATION_RESULT_MISSING");
+    if (verification.outcome !== "verified" || verification.contactStatus !== "verified") return stopped("blocked", "blocked", verification.reason);
     if (input.control.campaignApplyAuthorized !== true) return stopped("manual_review", "manual_review", "CAMPAIGN_APPLY_AUTHORIZATION_REQUIRED");
     return buildNextDownstreamTask({ ...common, stage: "campaign_prepare" });
   }

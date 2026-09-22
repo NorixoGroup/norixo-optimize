@@ -1,8 +1,10 @@
 import type { Json } from "@/types/database.types";
+import { createHash } from "node:crypto";
 import type { CreateAutomationTaskInput, CreateAutomationTaskResult } from "./types";
 
 export type BacklinkContactResolutionTaskKind = "backlinks.contact_resolution";
 export type BacklinkContactValidationTaskKind = "backlinks.contact_validation";
+export type BacklinkMailboxVerificationTaskKind = "backlinks.mailbox_verification";
 export type BacklinkDownstreamTaskKind = "backlinks.campaign_prepare" | "backlinks.draft_prepare" | "backlinks.outreach_decision";
 
 /**
@@ -96,6 +98,44 @@ export function buildContactValidationTasksForResolution(input: {
     contactId,
     scheduledAt: input.scheduledAt,
   }));
+}
+
+/**
+ * The task key contains only an email fingerprint. The canonical normalized
+ * email remains in the minimal task input because the coordinator must detect
+ * a stale contact email before it can call a provider.
+ */
+export function buildMailboxVerificationTask(input: {
+  workspaceId: string;
+  runId: string;
+  dependsOnTaskId: string;
+  domainId: string;
+  opportunityId: string;
+  contactId: string;
+  currentNormalizedEmail: string;
+  scheduledAt: string;
+}): CreateAutomationTaskInput {
+  const emailFingerprint = createHash("sha256").update(input.currentNormalizedEmail, "utf8").digest("hex");
+  return {
+    workspaceId: input.workspaceId,
+    runId: input.runId,
+    dependsOnTaskId: input.dependsOnTaskId,
+    system: "backlinks",
+    taskKind: "backlinks.mailbox_verification",
+    taskKey: `mailbox-verification:${input.opportunityId}:${input.contactId}:${emailFingerprint}`,
+    priority: 45,
+    scheduledAt: input.scheduledAt,
+    availableAt: input.scheduledAt,
+    maxAttempts: 3,
+    backoffBaseSeconds: 60,
+    input: {
+      version: 1,
+      domainId: input.domainId,
+      opportunityId: input.opportunityId,
+      contactId: input.contactId,
+      currentNormalizedEmail: input.currentNormalizedEmail,
+    } as Json,
+  };
 }
 
 function buildDownstreamTask(input: {

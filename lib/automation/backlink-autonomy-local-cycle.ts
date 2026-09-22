@@ -70,8 +70,12 @@ export async function runBacklinkAutonomyCycle(input: {
       continue;
     }
     if (dispatched.taskKind === "backlinks.contact_validation") {
-      if (dispatched.output.status !== "verified") return { outcome: dispatched.output.manualReviewRequired ? "manual_review" : "blocked", reasonCodes: dispatched.output.reasons, steps: steps + 1, taskIds, readyTransitionRequired: false };
-      const next = await runBacklinkAutonomyOrchestrator({ createOrGetTask: input.taskDependencies.createOrGetTask }, { workspaceId: input.workspaceId, runId: input.runId, domainId: input.domainId, opportunityId: input.opportunityId, scheduledAt: input.scheduledAt, mode: input.mode, control: input.control, progress: { stage: "contact_validation", completedTaskId: task.id, completedTaskKind: task.taskKind, contactIds: [dispatched.output.contactId] } });
+      const next = await runBacklinkAutonomyOrchestrator({ createOrGetTask: input.taskDependencies.createOrGetTask }, { workspaceId: input.workspaceId, runId: input.runId, domainId: input.domainId, opportunityId: input.opportunityId, scheduledAt: input.scheduledAt, mode: input.mode, control: input.control, progress: { stage: "contact_validation", completedTaskId: task.id, completedTaskKind: task.taskKind, contactIds: [dispatched.output.contactId], validation: dispatched.output } });
+      const stopped = terminal(next, steps + 1, taskIds); if (stopped != null) return stopped;
+      continue;
+    }
+    if (dispatched.taskKind === "backlinks.mailbox_verification") {
+      const next = await runBacklinkAutonomyOrchestrator({ createOrGetTask: input.taskDependencies.createOrGetTask }, { workspaceId: input.workspaceId, runId: input.runId, domainId: input.domainId, opportunityId: input.opportunityId, scheduledAt: input.scheduledAt, mode: input.mode, control: input.control, progress: { stage: "mailbox_verification", completedTaskId: task.id, completedTaskKind: task.taskKind, contactIds: [String((task.input as Record<string, unknown>).contactId)], mailboxVerification: dispatched.output } });
       const stopped = terminal(next, steps + 1, taskIds); if (stopped != null) return stopped;
       continue;
     }

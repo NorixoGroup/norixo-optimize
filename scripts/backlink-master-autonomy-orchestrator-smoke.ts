@@ -38,7 +38,8 @@ async function main() {
   assert.equal((await runBacklinkAutonomyOrchestrator(deps, { ...base, progress: { ...base.progress, completedTaskKind: "backlinks.draft_prepare" } })).outcome, "blocked");
   assert.equal((await runBacklinkAutonomyOrchestrator(deps, { ...base, mode: "apply" })).outcome, "task_created");
   assert.equal((await runBacklinkAutonomyOrchestrator(deps, { ...base, mode: "apply" })).outcome, "task_existing"); assert.equal(writes, 1);
-  const validation = { ...base, mode: "apply" as const, progress: { stage: "contact_validation" as const, completedTaskId: "validation", completedTaskKind: "backlinks.contact_validation", contactIds: ["contact"] } };
+  const validationResult = { status: "verified" as const, domainId: "domain", opportunityId: "opportunity", contactId: "contact", contactStatus: "verified", currentNormalizedEmail: "editor@example.test", suppressed: false, email: "verified" as const, contactForm: null, linkedin: null, statusTransition: "preserved" as const, manualReviewRequired: false, reasons: [] };
+  const validation = { ...base, mode: "apply" as const, progress: { stage: "contact_validation" as const, completedTaskId: "validation", completedTaskKind: "backlinks.contact_validation", contactIds: ["contact"], validation: validationResult } };
   assert.equal((await runBacklinkAutonomyOrchestrator(deps, validation)).outcome, "manual_review");
   assert.equal((await runBacklinkAutonomyOrchestrator(deps, { ...validation, control: { ...control, campaignApplyAuthorized: true } })).task?.taskKind, "backlinks.campaign_prepare");
   const completedDecision = evaluateBacklinkAutonomyDownstreamDecision(policy);

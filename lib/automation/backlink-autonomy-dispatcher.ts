@@ -10,6 +10,11 @@ import {
   type BacklinkContactValidationTaskResult,
 } from "./backlink-contact-validation-task-handler";
 import {
+  executeBacklinkMailboxVerificationTask,
+  type BacklinkMailboxVerificationTaskDependencies,
+  type BacklinkMailboxVerificationTaskResult,
+} from "./backlink-mailbox-verification-task-handler";
+import {
   executeBacklinkCampaignPrepareTask,
   executeBacklinkDraftPrepareTask,
   executeBacklinkOutreachDecisionTask,
@@ -32,6 +37,7 @@ export type BacklinkAutonomyDispatcherControl = {
 export type BacklinkAutonomyDispatcherDependencies = {
   resolution: BacklinkContactResolutionTaskDependencies;
   validation: BacklinkContactValidationTaskDependencies;
+  mailbox: BacklinkMailboxVerificationTaskDependencies;
   campaign: CampaignPrepareTaskDependencies;
   draft: DraftPrepareTaskDependencies;
   decision: OutreachDecisionTaskDependencies;
@@ -40,6 +46,7 @@ export type BacklinkAutonomyDispatchState = { actorUserId: string; campaignId?: 
 export type BacklinkAutonomyDispatchResult =
   | { kind: "executed"; taskKind: "backlinks.contact_resolution"; output: BacklinkContactResolutionTaskResult }
   | { kind: "executed"; taskKind: "backlinks.contact_validation"; output: BacklinkContactValidationTaskResult }
+  | { kind: "executed"; taskKind: "backlinks.mailbox_verification"; output: BacklinkMailboxVerificationTaskResult }
   | { kind: "executed"; taskKind: "backlinks.campaign_prepare"; output: CampaignPrepareTaskResult }
   | { kind: "executed"; taskKind: "backlinks.draft_prepare"; output: DraftPrepareTaskResult }
   | { kind: "executed"; taskKind: "backlinks.outreach_decision"; output: BacklinkAutonomyDecisionResult }
@@ -78,6 +85,11 @@ export async function dispatchBacklinkAutonomyTask(
   }
   if (value.contactId == null) return { kind: "rejected", reason: "TASK_INPUT_INVALID" };
   if (input.task.taskKind === "backlinks.contact_validation") return { kind: "executed", taskKind: input.task.taskKind, output: await executeBacklinkContactValidationTask(deps.validation, { ...value, contactId: value.contactId }) };
+  if (input.task.taskKind === "backlinks.mailbox_verification") {
+    const currentNormalizedEmail = text(fields(input.task)?.currentNormalizedEmail);
+    if (currentNormalizedEmail == null) return { kind: "rejected", reason: "TASK_INPUT_INVALID" };
+    return { kind: "executed", taskKind: input.task.taskKind, output: await executeBacklinkMailboxVerificationTask(deps.mailbox, { ...value, contactId: value.contactId, currentNormalizedEmail }) };
+  }
   if (input.task.taskKind === "backlinks.campaign_prepare") return { kind: "executed", taskKind: input.task.taskKind, output: await executeBacklinkCampaignPrepareTask(deps.campaign, { ...value, contactId: value.contactId, actorUserId: input.state.actorUserId, campaignPreparationConfirmed: input.control.campaignApplyAuthorized === true }) };
   if (input.task.taskKind === "backlinks.draft_prepare") {
     if (input.state.campaignId == null || input.state.channel == null) return { kind: "rejected", reason: "DRAFT_CONTEXT_MISSING" };
