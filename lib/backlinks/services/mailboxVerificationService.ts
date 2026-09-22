@@ -4,6 +4,12 @@ export type MailboxVerificationResult = {
   status: MailboxVerificationStatus;
   provider: string | null;
   safeReason: string;
+  providerReference?: string | null;
+  safeMetadata?: {
+    catchAll?: boolean;
+    disposable?: boolean;
+    roleBased?: boolean;
+  } | null;
 };
 
 export interface MailboxVerificationProvider {
