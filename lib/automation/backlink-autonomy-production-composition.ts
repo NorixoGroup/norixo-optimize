@@ -3,6 +3,7 @@ import { getBacklinkDomainById } from "@/lib/backlinks/repositories/domainsRepos
 import { getBacklinkOpportunityById } from "@/lib/backlinks/repositories/opportunitiesRepository";
 import { getBacklinkContactById, listBacklinkContactsByDomain } from "@/lib/backlinks/repositories/contactsRepository";
 import { createContact } from "@/lib/backlinks/services/contactService";
+import { resolveBacklinkContacts } from "@/lib/backlinks/services/contactResolutionService";
 import { createOrGetAutomationRun, getAutomationWorkspaceControl } from "./repositories/automationRunsRepository";
 import { claimNextBacklinkAutonomyTask, completeAutomationTask, createOrGetAutomationTask, failAutomationTask, getAutomationTaskByIdInRun, heartbeatAutomationTask, reclaimExpiredBacklinkAutonomyTasks } from "./repositories/automationTasksRepository";
 import { listAutomationWorkspaceControlsForBacklinkAutonomy } from "./repositories/automationWorkspaceControlsRepository";
@@ -75,9 +76,7 @@ function blockedHandlers(client: ReturnType<typeof createSupabaseAdminClient>): 
       getOpportunity: async (workspaceId, opportunityId) => getBacklinkOpportunityById(client, workspaceId, opportunityId),
       listContactsByDomain: async (workspaceId, domainId) => listBacklinkContactsByDomain(client, workspaceId, domainId),
       createContact: (workspaceId, actorUserId, input) => createContact(client, workspaceId, actorUserId, input),
-      // Contact discovery and persistence require a separately authorized production capability.
-      // G2C.2 terminalizes this boundary before it can perform an external fetch or DB write.
-      resolve: async () => ({ status: "blocked", inspectedUrls: [], candidates: [], reasons: ["CONTACT_RESOLUTION_PRODUCTION_NOT_AUTHORIZED"] }),
+      resolve: resolveBacklinkContacts,
     },
     validation: {
       getDomain: async (workspaceId, domainId) => getBacklinkDomainById(client, workspaceId, domainId),
@@ -91,7 +90,7 @@ function blockedHandlers(client: ReturnType<typeof createSupabaseAdminClient>): 
   } as BacklinkAutonomyDispatcherDependencies;
 }
 
-/** Production adapters deliberately stop at the contact-resolution authorization boundary; G2C.2 has no discovery, persistence, downstream, or outbound capability. */
+/** Production adapters resolve and persist contacts, then stop at validation; no outbound executor is wired here. */
 export function createBacklinkAutonomyProductionDependencies(): BacklinkAutonomyProductionDependencies {
   const client = createSupabaseAdminClient();
   const handlers = blockedHandlers(client);

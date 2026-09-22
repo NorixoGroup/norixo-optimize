@@ -117,7 +117,8 @@ async function main() {
   assert.match(composition, /reclaimExpiredBacklinkAutonomyTasks/, "production worker must use the filtered reclaim adapter");
   assert.doesNotMatch(composition, /reclaimExpiredAutomationTasks\(/, "production worker must not use generic reclaim");
   assert.doesNotMatch(composition, /backlink_outreach|resend|linkedin/i, "production composition must not scan or execute outbound workflows");
-  assert.match(composition, /CONTACT_RESOLUTION_PRODUCTION_NOT_AUTHORIZED/, "unconfigured contact discovery must terminalize before external fetch or persistence");
+  assert.match(composition, /resolve: resolveBacklinkContacts/, "production composition must wire the canonical bounded resolver");
+  assert.doesNotMatch(composition, /CONTACT_RESOLUTION_PRODUCTION_NOT_AUTHORIZED/, "production composition must not retain the discovery blocking stub");
   assert.match(route, /if \(deps\.runtimeConfig\(\)\.autonomyEnabled !== true\)/, "cron has a global fail-closed gate before production composition");
   assert.equal(BACKLINK_AUTONOMY_CRON_WORKSPACE_LIMIT, 5);
   assert.equal(BACKLINK_AUTONOMY_CRON_PROMOTION_LIMIT, 10);

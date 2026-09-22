@@ -32,6 +32,19 @@ export type ContactResolutionPage = {
 
 export type ContactResolutionFetcher = (url: string) => Promise<ContactResolutionPage>;
 
+export function createOfficialOriginRedirectAuthorization(officialOrigin: string): (input: { toUrl: URL }) => boolean {
+  let expected: URL;
+  try {
+    expected = new URL(officialOrigin);
+  } catch {
+    throw new Error("Contact resolution official origin is invalid.");
+  }
+  if (expected.protocol !== "https:" || expected.username !== "" || expected.password !== "") {
+    throw new Error("Contact resolution official origin is invalid.");
+  }
+  return ({ toUrl }) => toUrl.origin === expected.origin;
+}
+
 /**
  * Production adapter for a future worker. It deliberately reuses the existing
  * DNS/private-address, redirect, timeout, and response-size protections in
@@ -40,9 +53,13 @@ export type ContactResolutionFetcher = (url: string) => Promise<ContactResolutio
 export function createSafeContactResolutionFetcher(input: {
   timeoutMs?: number;
   maxBytes?: number;
+  officialOrigin?: string;
 } = {}): ContactResolutionFetcher {
   const timeoutMs = input.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const maxResponseBytes = input.maxBytes ?? DEFAULT_MAX_BYTES;
+  const authorizeRedirect = input.officialOrigin == null
+    ? undefined
+    : createOfficialOriginRedirectAuthorization(input.officialOrigin);
   return async (url) => {
     const response = await fetchHttp({
       url,
@@ -50,7 +67,7 @@ export function createSafeContactResolutionFetcher(input: {
       maxRedirects: 2,
       maxResponseBytes,
       userAgent: "NorixoBacklinksContactResolution/1.0",
-    });
+    }, { authorizeRedirect });
     return {
       url: response.finalUrl,
       status: response.status,
@@ -272,21 +289,12 @@ export async function persistEvidenceBackedResolvedContact<T>(
   return input ? createContact(input) : null;
 }
 
-function hostname(value: string): string | null {
+function sameOfficialHttpsUrl(value: string, baseUrl: URL, officialOrigin: URL): string | null {
   try {
-    const result = new URL(value);
-    return result.hostname.toLowerCase().replace(/^www\./, "");
-  } catch {
-    return null;
-  }
-}
-
-function sameOriginHttpUrl(value: string, origin: URL, expectedHostname: string): string | null {
-  try {
-    const url = new URL(value, origin);
-    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+    const url = new URL(value, baseUrl);
+    if (url.protocol !== "https:") return null;
     if (url.username || url.password) return null;
-    if (url.hostname.toLowerCase().replace(/^www\./, "") !== expectedHostname) return null;
+    if (url.origin !== officialOrigin.origin) return null;
     url.hash = "";
     return url.toString();
   } catch {
@@ -321,7 +329,7 @@ function addEvidence(
   }
 }
 
-function pageEvidence(page: ContactResolutionPage, origin: URL, expectedHostname: string, candidates: Map<string, ContactResolutionCandidate>): string[] {
+function pageEvidence(page: ContactResolutionPage, origin: URL, officialOrigin: URL, expectedHostname: string, candidates: Map<string, ContactResolutionCandidate>): string[] {
   const document = parseHtmlDocument({ url: page.url, status: page.status, contentType: page.contentType, body: page.body, fetchedAt: "" });
   if (!document.isHtml || document.isEmpty) return [];
   const anchors = extractHtmlAnchors(document).anchors;
@@ -352,7 +360,7 @@ function pageEvidence(page: ContactResolutionPage, origin: URL, expectedHostname
       if (/^\/(?:in|company)\//i.test(absolute.pathname)) addEvidence(candidates, { kind: "linkedin", value: absolute.toString(), sourceUrl: page.url, confidence: "medium" });
       continue;
     }
-    const safe = sameOriginHttpUrl(href, origin, expectedHostname);
+    const safe = sameOfficialHttpsUrl(href, origin, officialOrigin);
     if (!safe) continue;
     if (RELEVANT_PATH.test(new URL(safe).pathname) || /contact|editorial|team|write for us|contribute|advertise|press/i.test(`${anchor.text} ${anchor.title ?? ""}`)) discovered.push(safe);
   }
@@ -392,7 +400,7 @@ export async function resolveBacklinkContacts(input: ContactResolutionInput): Pr
   } catch {
     return { status: "blocked", inspectedUrls: [], candidates: [], reasons: ["INVALID_OR_UNSAFE_INPUT"] };
   }
-  const homepage = sameOriginHttpUrl(input.homepageUrl, homepageOrigin, expectedHostname);
+  const homepage = sameOfficialHttpsUrl(input.homepageUrl, homepageOrigin, homepageOrigin);
   const maxPages = input.maxPages ?? DEFAULT_MAX_PAGES;
   const maxBytes = input.maxBytes ?? DEFAULT_MAX_BYTES;
   const requestTimeoutMs = input.requestTimeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -413,9 +421,10 @@ export async function resolveBacklinkContacts(input: ContactResolutionInput): Pr
       page = await fetchWithinTimeout(input.fetchPage, url, requestTimeoutMs);
     } catch { reasons.push("FETCH_FAILED"); continue; }
     if (page.status < 200 || page.status >= 300 || Buffer.byteLength(page.body, "utf8") > maxBytes) { reasons.push("PAGE_SKIPPED"); continue; }
-    const finalHostname = hostname(page.url);
-    if (finalHostname !== expectedHostname) { reasons.push("CROSS_ORIGIN_REDIRECT_SKIPPED"); continue; }
-    const found = pageEvidence(page, new URL(page.url), expectedHostname, candidates);
+    let finalUrl: URL;
+    try { finalUrl = new URL(page.url); } catch { reasons.push("CROSS_ORIGIN_REDIRECT_SKIPPED"); continue; }
+    if (finalUrl.protocol !== "https:" || finalUrl.origin !== homepageOrigin.origin) { reasons.push("CROSS_ORIGIN_REDIRECT_SKIPPED"); continue; }
+    const found = pageEvidence(page, finalUrl, homepageOrigin, expectedHostname, candidates);
     if (found.includes("AMBIGUOUS_FORM")) ambiguous = true;
     for (const next of found) if (next !== "AMBIGUOUS_FORM" && !inspected.has(next) && !queue.includes(next)) queue.push(next);
   }

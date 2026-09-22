@@ -114,7 +114,11 @@ export async function executeBacklinkContactResolutionTask(
   const resolution = await resolve({
     homepageUrl: `https://${domain.hostname}`,
     domainHostname: domain.hostname,
-    fetchPage: dependencies.fetchPage ?? createSafeContactResolutionFetcher({ maxBytes: 500_000, timeoutMs: 6_000 }),
+    fetchPage: dependencies.fetchPage ?? createSafeContactResolutionFetcher({
+      maxBytes: 500_000,
+      timeoutMs: 6_000,
+      officialOrigin: `https://${domain.hostname}`,
+    }),
     maxPages: 6,
     maxBytes: 500_000,
     requestTimeoutMs: 6_000,

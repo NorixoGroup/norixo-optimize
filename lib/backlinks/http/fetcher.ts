@@ -1,7 +1,7 @@
 import http from "node:http";
 import https from "node:https";
 
-import type { HttpFetchRequest, HttpFetchResponse } from "./types";
+import type { HttpFetchRequest, HttpFetchResponse, HttpRedirectAuthorizationInput } from "./types";
 import type { HttpFetchTransportInput, HttpFetchTransportResponse } from "./types";
 import type { DnsLookup } from "./url-safety";
 import { resolveSafeHttpTarget } from "./url-safety";
@@ -118,9 +118,24 @@ function getHeader(headers: Record<string, string>, name: string): string | null
   return found?.[1] ?? null;
 }
 
+function parseRedirectTarget(location: string, currentUrl: string): URL {
+  let target: URL;
+  try {
+    target = new URL(location, currentUrl);
+  } catch {
+    throw new Error("HTTP redirect target is not allowed.");
+  }
+  if ((target.protocol !== "http:" && target.protocol !== "https:") || target.username !== "" || target.password !== "") {
+    throw new Error("HTTP redirect target is not allowed.");
+  }
+  return target;
+}
+
 export type HttpFetchDependencies = {
   dnsLookup?: DnsLookup;
   transport?: (input: HttpFetchTransportInput) => Promise<HttpFetchTransportResponse>;
+  /** Runtime-only caller policy, evaluated before DNS resolution or a GET for the redirect target. */
+  authorizeRedirect?: (input: HttpRedirectAuthorizationInput) => boolean;
 };
 
 export async function fetchHttp(
@@ -165,7 +180,11 @@ export async function fetchHttp(
           throw new Error("HTTP redirect limit exceeded.");
         }
 
-        currentUrl = new URL(location, currentUrl).toString();
+        const redirectTarget = parseRedirectTarget(location, currentUrl);
+        if (dependencies.authorizeRedirect != null && dependencies.authorizeRedirect({ fromUrl: target.url, toUrl: redirectTarget }) !== true) {
+          throw new Error("HTTP redirect target is not authorized.");
+        }
+        currentUrl = redirectTarget.toString();
         redirectCount += 1;
         continue;
       }
