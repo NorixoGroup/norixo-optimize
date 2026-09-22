@@ -31,6 +31,15 @@ type Props = {
   }>;
 };
 
+function hasRichCityContext(city: City): boolean {
+  return Boolean(
+    city.marketAngle &&
+      city.competitionAngle &&
+      city.pricingAngle &&
+      city.guestExpectationAngle
+  );
+}
+
 function marketAngleLine(city: City): string {
   return city.marketAngle ?? `Use ${city.name}, ${city.country}, as geographic context and validate market-specific claims with current evidence before applying them to a listing.`;
 }
@@ -101,8 +110,12 @@ function buildTopicSpecificAnalysis(city: City, topic: LocalSeoTopic) {
     return {
       heading: `Visibility and listing clarity in ${city.name}`,
       paragraphs: [
-        `${marketAngleLine(city)} In practice, ${topic.label.toLowerCase()} in ${city.name} is about making the listing easier to understand, easier to trust, and easier to compare in a crowded search result.`,
-        `${guestExpectationAngleLine(city)} Clearer titles, sharper positioning, and stronger copy work best when they reflect the local market instead of repeating generic Airbnb language.`,
+        hasRichCityContext(city)
+          ? `${marketAngleLine(city)} In practice, ${topic.label.toLowerCase()} in ${city.name} is about making the listing easier to understand, easier to trust, and easier to compare in a crowded search result.`
+          : `${marketAngleLine(city)} For ${topic.label.toLowerCase()}, improve clarity, trust, and comparability using evidence visible in the listing and observable alternatives.`,
+        hasRichCityContext(city)
+          ? `${guestExpectationAngleLine(city)} Clearer titles, sharper positioning, and stronger copy work best when they reflect the local market instead of repeating generic Airbnb language.`
+          : `${guestExpectationAngleLine(city)} Keep titles, positioning, and copy specific to the property instead of presenting unverified local behavior as market fact.`,
       ],
     };
   }
@@ -121,7 +134,9 @@ function buildTopicSpecificAnalysis(city: City, topic: LocalSeoTopic) {
         city.avgRating !== undefined
           ? `The average rating bar in ${city.name} sits near ${city.avgRating.toFixed(1)}/5, so guests compare not only price but also reassurance, consistency, and detail before they book.`
           : `Use the listing's own review history and observable trust signals in ${city.name} instead of relying on an unsupported city-wide rating benchmark.`,
-        `${guestExpectationAngleLine(city)} For ${topic.label.toLowerCase()}, the strongest gains usually come from removing uncertainty, showing the stay clearly, and reinforcing why this listing feels safer or easier to choose than nearby alternatives.`,
+        hasRichCityContext(city)
+          ? `${guestExpectationAngleLine(city)} For ${topic.label.toLowerCase()}, the strongest gains usually come from removing uncertainty, showing the stay clearly, and reinforcing why this listing feels safer or easier to choose than nearby alternatives.`
+          : `${guestExpectationAngleLine(city)} For ${topic.label.toLowerCase()}, focus on removing uncertainty and making verifiable strengths, limitations, and trust signals easier to understand.`,
       ],
     };
   }
@@ -137,8 +152,12 @@ function buildTopicSpecificAnalysis(city: City, topic: LocalSeoTopic) {
     return {
       heading: `Guest-fit strategy in ${city.name}`,
       paragraphs: [
-        `${marketAngleLine(city)} In ${city.name}, different guest types compare stays through very practical signals: layout, comfort, clarity, and how well the listing matches the trip they are actually planning.`,
-        `${guestExpectationAngleLine(city)} For ${topic.label.toLowerCase()}, the page should help hosts align pricing, amenities, and listing framing with the needs of the guest profile most likely to convert.`,
+        hasRichCityContext(city)
+          ? `${marketAngleLine(city)} In ${city.name}, different guest types compare stays through very practical signals: layout, comfort, clarity, and how well the listing matches the trip they are actually planning.`
+          : `${marketAngleLine(city)} For ${topic.label.toLowerCase()}, evaluate layout, comfort, clarity, amenities, and stay conditions from what the listing can actually demonstrate.`,
+        hasRichCityContext(city)
+          ? `${guestExpectationAngleLine(city)} For ${topic.label.toLowerCase()}, the page should help hosts align pricing, amenities, and listing framing with the needs of the guest profile most likely to convert.`
+          : `${guestExpectationAngleLine(city)} Align pricing, amenities, and listing framing with observable property and booking evidence rather than an assumed city-wide guest profile.`,
       ],
     };
   }
@@ -146,8 +165,12 @@ function buildTopicSpecificAnalysis(city: City, topic: LocalSeoTopic) {
   return {
     heading: `How ${topic.label.toLowerCase()} applies in ${city.name}`,
     paragraphs: [
-      `${competitionAngleLine(city)} In ${city.name}, strong Airbnb performance depends on how clearly the listing communicates value, quality, and fit for the trip.`,
-      `${topic.description} ${guestExpectationAngleLine(city)} The strongest pages for this market connect local demand, competitive positioning, and booking confidence instead of relying on generic listing advice.`,
+      hasRichCityContext(city)
+        ? `${competitionAngleLine(city)} In ${city.name}, strong Airbnb performance depends on how clearly the listing communicates value, quality, and fit for the trip.`
+        : `${competitionAngleLine(city)} Evaluate value, quality, and trip fit from the listing and observable alternatives rather than assuming a city-wide performance pattern.`,
+      hasRichCityContext(city)
+        ? `${topic.description} ${guestExpectationAngleLine(city)} The strongest pages for this market connect local demand, competitive positioning, and booking confidence instead of relying on generic listing advice.`
+        : `${topic.description} ${guestExpectationAngleLine(city)} Connect the recommendation to verifiable listing evidence and current observable comparisons rather than unsupported local-demand claims.`,
     ],
   };
 }

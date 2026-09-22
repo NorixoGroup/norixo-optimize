@@ -3541,7 +3541,108 @@ export const cities: City[] = [
       "Pricing should follow local demand, seasonality, nearby comparable listings, and the quality of the listing presentation.",
     guestExpectationAngle:
       "Guests expect excellent photos, transparent information, reliable amenities, and a smooth booking experience.",
-  }
+  },
+  {
+    slug: "atlanta",
+    name: "Atlanta",
+    country: "United States",
+  },
+  {
+    slug: "myrtle-beach",
+    name: "Myrtle Beach",
+    country: "United States",
+  },
+  {
+    slug: "charleston",
+    name: "Charleston",
+    country: "United States",
+  },
+  {
+    slug: "hilton-head-island",
+    name: "Hilton Head Island",
+    country: "United States",
+  },
+  {
+    slug: "florianopolis",
+    name: "Florianópolis",
+    country: "Brazil",
+  },
+  {
+    slug: "salvador",
+    name: "Salvador",
+    country: "Brazil",
+  },
+  {
+    slug: "johor-bahru",
+    name: "Johor Bahru",
+    country: "Malaysia",
+  },
+  {
+    slug: "george-town",
+    name: "George Town",
+    country: "Malaysia",
+  },
+  {
+    slug: "kota-kinabalu",
+    name: "Kota Kinabalu",
+    country: "Malaysia",
+  },
+  {
+    slug: "busan",
+    name: "Busan",
+    country: "South Korea",
+  },
+  {
+    slug: "jeju-island",
+    name: "Jeju Island",
+    country: "South Korea",
+  },
+  {
+    slug: "goa",
+    name: "Goa",
+    country: "India",
+  },
+  {
+    slug: "naha",
+    name: "Naha",
+    country: "Japan",
+  },
+  {
+    slug: "medina",
+    name: "Medina",
+    country: "Saudi Arabia",
+  },
+  {
+    slug: "al-khobar",
+    name: "Al Khobar",
+    country: "Saudi Arabia",
+  },
+  {
+    slug: "sharjah",
+    name: "Sharjah",
+    country: "United Arab Emirates",
+  },
+  {
+    slug: "savannah",
+    name: "Savannah",
+    country: "United States",
+  },
+  {
+    slug: "gatlinburg",
+    name: "Gatlinburg",
+    country: "United States",
+  },
+  {
+    slug: "pigeon-forge",
+    name: "Pigeon Forge",
+    country: "United States",
+  },
+  {
+    slug: "north-myrtle-beach",
+    name: "North Myrtle Beach",
+    country: "United States",
+  },
+
 ];
 
 export function getCityBySlug(slug: string): City | undefined {

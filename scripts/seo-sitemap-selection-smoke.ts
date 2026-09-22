@@ -357,15 +357,18 @@ console.log(
   `EXPOSED_QUALITY_FAIL=${exposedQualityFailures.length}`
 );
 
-if (allHubs.length !== 220) {
+if (allHubs.length !== cities.length) {
   throw new Error(
-    `Expected 220 hubs, got ${allHubs.length}`
+    `Expected ${cities.length} hubs, got ${allHubs.length}`
   );
 }
 
-if (allTopics.length !== 5500) {
+const expectedTopicTotal =
+  cities.length * localSeoTopics.length;
+
+if (allTopics.length !== expectedTopicTotal) {
   throw new Error(
-    `Expected 5500 topics, got ${allTopics.length}`
+    `Expected ${expectedTopicTotal} topics, got ${allTopics.length}`
   );
 }
 
@@ -409,9 +412,9 @@ if (
   );
 }
 
-if (keptTopics.length !== 5500) {
+if (keptTopics.length !== expectedTopicTotal) {
   throw new Error(
-    `Expected 5500 kept topics, got ${keptTopics.length}`
+    `Expected ${expectedTopicTotal} kept topics, got ${keptTopics.length}`
   );
 }
 
@@ -421,75 +424,75 @@ if (omittedTopics.length !== 0) {
   );
 }
 
-if (qualityGatedOccupancyTopics.length !== 220) {
+if (qualityGatedOccupancyTopics.length !== cities.length) {
   throw new Error(
-    `Expected 220 quality-gated occupancy topics, got ${qualityGatedOccupancyTopics.length}`
+    `Expected ${cities.length} quality-gated occupancy topics, got ${qualityGatedOccupancyTopics.length}`
   );
 }
 
-if (qualityGatedTitleTopics.length !== 220) {
+if (qualityGatedTitleTopics.length !== cities.length) {
   throw new Error(
-    `Expected 220 quality-gated title topics, got ${qualityGatedTitleTopics.length}`
+    `Expected ${cities.length} quality-gated title topics, got ${qualityGatedTitleTopics.length}`
   );
 }
 
-if (qualityGatedGuestTrustTopics.length !== 220) {
+if (qualityGatedGuestTrustTopics.length !== cities.length) {
   throw new Error(
-    `Expected 220 quality-gated guest-trust topics, got ${qualityGatedGuestTrustTopics.length}`
+    `Expected ${cities.length} quality-gated guest-trust topics, got ${qualityGatedGuestTrustTopics.length}`
   );
 }
 
-if (qualityGatedPhotoTipsTopics.length !== 220) {
+if (qualityGatedPhotoTipsTopics.length !== cities.length) {
   throw new Error(
-    `Expected 220 quality-gated photo-tips topics, got ${qualityGatedPhotoTipsTopics.length}`
+    `Expected ${cities.length} quality-gated photo-tips topics, got ${qualityGatedPhotoTipsTopics.length}`
   );
 }
 
-if (qualityGatedDescriptionTopics.length !== 220) {
+if (qualityGatedDescriptionTopics.length !== cities.length) {
   throw new Error(
-    `Expected 220 quality-gated description topics, got ${qualityGatedDescriptionTopics.length}`
+    `Expected ${cities.length} quality-gated description topics, got ${qualityGatedDescriptionTopics.length}`
   );
 }
 
-if (qualityGatedBusinessTravelTopics.length !== 220) {
+if (qualityGatedBusinessTravelTopics.length !== cities.length) {
   throw new Error(
-    `Expected 220 quality-gated business-travel topics, got ${qualityGatedBusinessTravelTopics.length}`
+    `Expected ${cities.length} quality-gated business-travel topics, got ${qualityGatedBusinessTravelTopics.length}`
   );
 }
 
-if (qualityGatedRevenueTopics.length !== 220) {
+if (qualityGatedRevenueTopics.length !== cities.length) {
   throw new Error(
-    `Expected 220 quality-gated revenue topics, got ${qualityGatedRevenueTopics.length}`
+    `Expected ${cities.length} quality-gated revenue topics, got ${qualityGatedRevenueTopics.length}`
   );
 }
 
-if (qualityGatedPricingPositioningTopics.length !== 220) {
+if (qualityGatedPricingPositioningTopics.length !== cities.length) {
   throw new Error(
-    `Expected 220 quality-gated pricing-positioning topics, got ${qualityGatedPricingPositioningTopics.length}`
+    `Expected ${cities.length} quality-gated pricing-positioning topics, got ${qualityGatedPricingPositioningTopics.length}`
   );
 }
 
-if (qualityGatedCompetitorAnalysisTopics.length !== 220) {
+if (qualityGatedCompetitorAnalysisTopics.length !== cities.length) {
   throw new Error(
-    `Expected 220 quality-gated competitor-analysis topics, got ${qualityGatedCompetitorAnalysisTopics.length}`
+    `Expected ${cities.length} quality-gated competitor-analysis topics, got ${qualityGatedCompetitorAnalysisTopics.length}`
   );
 }
 
-if (qualityGatedSeasonalityTopics.length !== 220) {
+if (qualityGatedSeasonalityTopics.length !== cities.length) {
   throw new Error(
-    `Expected 220 quality-gated seasonality topics, got ${qualityGatedSeasonalityTopics.length}`
+    `Expected ${cities.length} quality-gated seasonality topics, got ${qualityGatedSeasonalityTopics.length}`
   );
 }
 
-if (qualityGatedReviewStrategyTopics.length !== 220) {
+if (qualityGatedReviewStrategyTopics.length !== cities.length) {
   throw new Error(
-    `Expected 220 quality-gated review-strategy topics, got ${qualityGatedReviewStrategyTopics.length}`
+    `Expected ${cities.length} quality-gated review-strategy topics, got ${qualityGatedReviewStrategyTopics.length}`
   );
 }
 
-if (qualityGatedLocalDemandTopics.length !== 220) {
+if (qualityGatedLocalDemandTopics.length !== cities.length) {
   throw new Error(
-    `Expected 220 quality-gated local-demand topics, got ${qualityGatedLocalDemandTopics.length}`
+    `Expected ${cities.length} quality-gated local-demand topics, got ${qualityGatedLocalDemandTopics.length}`
   );
 }
 
@@ -510,9 +513,9 @@ for (const { pathname, quality } of qualityGatedLocalDemandTopics) {
   }
 }
 
-if (qualityGatedPricingGuideTopics.length !== 220) {
+if (qualityGatedPricingGuideTopics.length !== cities.length) {
   throw new Error(
-    `Expected 220 quality-gated pricing-guide topics, got ${qualityGatedPricingGuideTopics.length}`
+    `Expected ${cities.length} quality-gated pricing-guide topics, got ${qualityGatedPricingGuideTopics.length}`
   );
 }
 
@@ -533,9 +536,9 @@ for (const { pathname, quality } of qualityGatedPricingGuideTopics) {
   }
 }
 
-if (qualityGatedSeoGuideTopics.length !== 220) {
+if (qualityGatedSeoGuideTopics.length !== cities.length) {
   throw new Error(
-    `Expected 220 quality-gated seo-guide topics, got ${qualityGatedSeoGuideTopics.length}`
+    `Expected ${cities.length} quality-gated seo-guide topics, got ${qualityGatedSeoGuideTopics.length}`
   );
 }
 
@@ -556,9 +559,9 @@ for (const { pathname, quality } of qualityGatedSeoGuideTopics) {
   }
 }
 
-if (qualityGatedBookingConversionTopics.length !== 220) {
+if (qualityGatedBookingConversionTopics.length !== cities.length) {
   throw new Error(
-    `Expected 220 quality-gated booking-conversion topics, got ${qualityGatedBookingConversionTopics.length}`
+    `Expected ${cities.length} quality-gated booking-conversion topics, got ${qualityGatedBookingConversionTopics.length}`
   );
 }
 
@@ -579,15 +582,15 @@ for (const { pathname, quality } of qualityGatedBookingConversionTopics) {
   }
 }
 
-if (qualityGatedRankingFactorsTopics.length !== 220) {
+if (qualityGatedRankingFactorsTopics.length !== cities.length) {
   throw new Error(
-    `Expected 220 quality-gated ranking-factors topics, got ${qualityGatedRankingFactorsTopics.length}`
+    `Expected ${cities.length} quality-gated ranking-factors topics, got ${qualityGatedRankingFactorsTopics.length}`
   );
 }
 
-if (qualityGatedSearchVisibilityTopics.length !== 220) {
+if (qualityGatedSearchVisibilityTopics.length !== cities.length) {
   throw new Error(
-    `Expected 220 quality-gated search-visibility topics, got ${qualityGatedSearchVisibilityTopics.length}`
+    `Expected ${cities.length} quality-gated search-visibility topics, got ${qualityGatedSearchVisibilityTopics.length}`
   );
 }
 
@@ -625,9 +628,9 @@ for (const { pathname, quality } of qualityGatedRankingFactorsTopics) {
   }
 }
 
-if (qualityGatedAmenitiesTopics.length !== 220) {
+if (qualityGatedAmenitiesTopics.length !== cities.length) {
   throw new Error(
-    `Expected 220 quality-gated amenities topics, got ${qualityGatedAmenitiesTopics.length}`
+    `Expected ${cities.length} quality-gated amenities topics, got ${qualityGatedAmenitiesTopics.length}`
   );
 }
 
@@ -733,9 +736,9 @@ for (const { pathname, quality } of qualityGatedRevenueTopics) {
   }
 }
 
-if (qualityGatedListingAuditTopics.length !== 220) {
+if (qualityGatedListingAuditTopics.length !== cities.length) {
   throw new Error(
-    `Expected 220 quality-gated listing-audit topics, got ${qualityGatedListingAuditTopics.length}`
+    `Expected ${cities.length} quality-gated listing-audit topics, got ${qualityGatedListingAuditTopics.length}`
   );
 }
 
@@ -953,9 +956,9 @@ console.log("QUALITY_GATED_SEO_GUIDE_PRESERVATION=PASS");
 console.log("QUALITY_GATED_AMENITIES_PRESERVATION=PASS");
 console.log("QUALITY_GATED_BOOKING_CONVERSION_PRESERVATION=PASS");
 console.log("QUALITY_GATED_RANKING_FACTORS_PRESERVATION=PASS");
-if (qualityGatedPhotoOrderTopics.length !== 220) {
+if (qualityGatedPhotoOrderTopics.length !== cities.length) {
   throw new Error(
-    `Expected 220 quality-gated photo-order topics, got ${qualityGatedPhotoOrderTopics.length}`
+    `Expected ${cities.length} quality-gated photo-order topics, got ${qualityGatedPhotoOrderTopics.length}`
   );
 }
 
@@ -977,9 +980,9 @@ for (const { pathname, quality } of qualityGatedPhotoOrderTopics) {
 }
 
 console.log("QUALITY_GATED_SEARCH_VISIBILITY_PRESERVATION=PASS");
-if (qualityGatedFirstPhotoTopics.length !== 220) {
+if (qualityGatedFirstPhotoTopics.length !== cities.length) {
   throw new Error(
-    `Expected 220 quality-gated first-photo topics, got ${qualityGatedFirstPhotoTopics.length}`
+    `Expected ${cities.length} quality-gated first-photo topics, got ${qualityGatedFirstPhotoTopics.length}`
   );
 }
 
@@ -1003,9 +1006,9 @@ for (const { pathname, quality } of qualityGatedFirstPhotoTopics) {
 console.log("QUALITY_GATED_PHOTO_ORDER_PRESERVATION=PASS");
 console.log("QUALITY_GATED_FIRST_PHOTO_PRESERVATION=PASS");
 
-if (qualityGatedFamilyTravelTopics.length !== 220) {
+if (qualityGatedFamilyTravelTopics.length !== cities.length) {
   throw new Error(
-    `Expected 220 quality-gated family-travel-guide topics, got ${qualityGatedFamilyTravelTopics.length}`
+    `Expected ${cities.length} quality-gated family-travel-guide topics, got ${qualityGatedFamilyTravelTopics.length}`
   );
 }
 
@@ -1028,9 +1031,9 @@ for (const { pathname, quality } of qualityGatedFamilyTravelTopics) {
 
 console.log("QUALITY_GATED_FAMILY_TRAVEL_PRESERVATION=PASS");
 
-if (qualityGatedLongStayTopics.length !== 220) {
+if (qualityGatedLongStayTopics.length !== cities.length) {
   throw new Error(
-    `Expected 220 quality-gated long-stay-guide topics, got ${qualityGatedLongStayTopics.length}`
+    `Expected ${cities.length} quality-gated long-stay-guide topics, got ${qualityGatedLongStayTopics.length}`
   );
 }
 
@@ -1053,9 +1056,9 @@ for (const { pathname, quality } of qualityGatedLongStayTopics) {
 
 console.log("QUALITY_GATED_LONG_STAY_PRESERVATION=PASS");
 
-if (qualityGatedMarketAnalysisTopics.length !== 220) {
+if (qualityGatedMarketAnalysisTopics.length !== cities.length) {
   throw new Error(
-    `Expected 220 quality-gated market-analysis topics, got ${qualityGatedMarketAnalysisTopics.length}`
+    `Expected ${cities.length} quality-gated market-analysis topics, got ${qualityGatedMarketAnalysisTopics.length}`
   );
 }
 

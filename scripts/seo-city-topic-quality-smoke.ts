@@ -35,8 +35,10 @@ for (const city of cities) {
 
 const expectedTotal = cities.length * localSeoTopics.length;
 
-if (total !== 5500 || expectedTotal !== 5500) {
-  throw new Error(`Unexpected city-topic total: ${total}`);
+if (total !== expectedTotal) {
+  throw new Error(
+    `Unexpected city-topic total: ${total}/${expectedTotal}`
+  );
 }
 
 if (technicalSafe !== total) {

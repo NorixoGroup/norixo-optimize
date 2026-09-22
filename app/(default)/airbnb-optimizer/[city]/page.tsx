@@ -50,6 +50,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 /** Copy helpers — only use fields present on `City` (no invented stats). */
+function hasRichCityContext(c: City): boolean {
+  return Boolean(
+    c.marketAngle &&
+      c.competitionAngle &&
+      c.pricingAngle &&
+      c.guestExpectationAngle
+  );
+}
+
 function marketAngleLine(c: City): string {
   return c.marketAngle ?? `Use ${c.name}, ${c.country}, as geographic context and validate market-specific claims with current evidence before applying them to a listing.`;
 }
@@ -193,9 +202,20 @@ export default async function CityOptimizerPage({ params }: PageProps) {
           How to Optimize Your Airbnb Listing in {name}
         </h1>
         <p className="mt-3 max-w-2xl text-[15px] leading-7 text-slate-700">
-          Stand out in the {name} market with a listing that converts views into bookings.{" "}
-          {marketAngleLine(city)} This guide shows how guests browse in {name}, what they expect to see,
-          and which changes move occupancy first.
+          {hasRichCityContext(city) ? (
+            <>
+              Stand out in the {name} market with a listing that converts views into bookings.{" "}
+              {marketAngleLine(city)} This guide shows how guests browse in {name}, what they expect to see,
+              and which changes move occupancy first.
+            </>
+          ) : (
+            <>
+              Use {name}, {country}, as geographic context while improving the listing from evidence
+              the property can actually support. {marketAngleLine(city)} This guide focuses on clearer
+              presentation, observable comparisons, and listing-level signals rather than unsupported
+              city-wide assumptions.
+            </>
+          )}
         </p>
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <Link
@@ -218,9 +238,19 @@ export default async function CityOptimizerPage({ params }: PageProps) {
             {name} market snapshot
           </h2>
           <p className="mt-2 text-[15px] leading-7 text-slate-700">
-            {name} is a competitive short-term rental market in {country}. {competitionAngleLine(city)}{" "}
-            Your photos, description, and amenities still need to justify your nightly rate against
-            what guests see in search.
+            {hasRichCityContext(city) ? (
+              <>
+                {name} is a competitive short-term rental market in {country}. {competitionAngleLine(city)}{" "}
+                Your photos, description, and amenities still need to justify your nightly rate against
+                what guests see in search.
+              </>
+            ) : (
+              <>
+                Use {name}, {country}, as the geographic frame for comparison. {competitionAngleLine(city)}{" "}
+                Evaluate photos, description, amenities, and price against observable alternatives
+                instead of assuming a city-wide competitive pattern.
+              </>
+            )}
           </p>
           <ul className="mt-4 space-y-1.5 text-[13px] leading-6 text-slate-700">
             {avgRating !== undefined ? (
@@ -311,9 +341,19 @@ export default async function CityOptimizerPage({ params }: PageProps) {
           What hosts in {name} should prioritize
         </h2>
         <p className="mt-2 max-w-3xl text-[15px] leading-7 text-slate-700">
-          Optimization is not generic advice. {competitionAngleLine(city)} In {name}, it means aligning how
-          you present your home with how guests already shop—using the same signals they see beside
-          your listing in search.
+          {hasRichCityContext(city) ? (
+            <>
+              Optimization is not generic advice. {competitionAngleLine(city)} In {name}, it means aligning how
+              you present your home with how guests already shop—using the same signals they see beside
+              your listing in search.
+            </>
+          ) : (
+            <>
+              Optimization should stay specific to the property. {competitionAngleLine(city)} Compare
+              observable listing signals such as clarity, amenities, photos, rules, and price without
+              treating unverified city-wide behavior as fact.
+            </>
+          )}
         </p>
         <div className="mt-6 grid gap-6 text-sm text-slate-800 md:grid-cols-2">
           <div>
@@ -321,9 +361,18 @@ export default async function CityOptimizerPage({ params }: PageProps) {
               Why Airbnb optimization matters in {name}
             </h3>
             <p className="mt-2 text-[13px] leading-6 text-slate-700">
-              {guestExpectationAngleLine(city)} Travelers choosing {name} skim dozens of listings; the winner
-              is rarely the cheapest alone—it is the one that looks trustworthy, complete, and easy
-              to understand in seconds.
+              {hasRichCityContext(city) ? (
+                <>
+                  {guestExpectationAngleLine(city)} Travelers choosing {name} skim dozens of listings; the winner
+                  is rarely the cheapest alone—it is the one that looks trustworthy, complete, and easy
+                  to understand in seconds.
+                </>
+              ) : (
+                <>
+                  {guestExpectationAngleLine(city)} Improve trust by making the stay, amenities, access,
+                  limitations, and value proposition easy to verify from the listing itself.
+                </>
+              )}
             </p>
           </div>
           <div>
@@ -340,8 +389,11 @@ export default async function CityOptimizerPage({ params }: PageProps) {
               Photos and listing quality in {name}
             </h3>
             <p className="mt-2 text-[13px] leading-6 text-slate-700">
-              {photoMarketLine(city)} Re-order for clarity, add captions where they remove
-              doubt, and make sure your cover image matches what {name} guests filter for.
+              {photoMarketLine(city)} Re-order for clarity and add captions where they remove
+              doubt.{" "}
+              {hasRichCityContext(city)
+                ? `Make sure your cover image matches what ${name} guests filter for.`
+                : "Choose a cover image that clearly represents a verifiable strength of the property."}
             </p>
           </div>
           <div>
@@ -441,7 +493,12 @@ export default async function CityOptimizerPage({ params }: PageProps) {
           <ul className="mt-4 space-y-1.5 text-[13px] leading-6 text-slate-700">
             <li>• Overall conversion score out of 10 with category breakdowns.</li>
             <li>• Listing Quality Index (0–100) that captures quality and competitiveness.</li>
-            <li>• Recommended photo order tailored to {name}-style browsing behavior.</li>
+            <li>
+                •{" "}
+                {hasRichCityContext(city)
+                  ? `Recommended photo order tailored to ${name}-style browsing behavior.`
+                  : "Recommended photo order based on the property's clearest and most verifiable strengths."}
+              </li>
             <li>• Copy tweaks that reinforce trust and clarity for international guests.</li>
           </ul>
         </div>
@@ -469,7 +526,11 @@ export default async function CityOptimizerPage({ params }: PageProps) {
               <p className="mt-2 text-2xl font-semibold text-emerald-600">
                 6.3<span className="text-sm text-emerald-500"> / 10</span>
               </p>
-              <p className="mt-1 text-[11px] text-slate-500">Below top {name} competitors.</p>
+              <p className="mt-1 text-[11px] text-slate-500">
+                {hasRichCityContext(city)
+                  ? `Below top ${name} competitors.`
+                  : "Illustrative score for this mock audit."}
+              </p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -487,9 +548,19 @@ export default async function CityOptimizerPage({ params }: PageProps) {
               Top recommendations
             </p>
             <ul className="mt-3 space-y-1.5 text-[12px] leading-5 text-slate-800">
-              <li>• Highlight proximity to key {name} landmarks in first paragraph.</li>
+              <li>
+                •{" "}
+                {hasRichCityContext(city)
+                  ? `Highlight proximity to key ${name} landmarks in first paragraph.`
+                  : "Highlight only location advantages that can be verified for the property."}
+              </li>
               <li>• Swap in brighter living-room photo as the cover image.</li>
-              <li>• Add missing amenities that guests filter for in this area.</li>
+              <li>
+                •{" "}
+                {hasRichCityContext(city)
+                  ? "Add missing amenities that guests filter for in this area."
+                  : "Make important available amenities complete, accurate, and easy to verify."}
+              </li>
             </ul>
           </div>
         </div>
