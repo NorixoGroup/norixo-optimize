@@ -1,11 +1,12 @@
 import type { CreateAutomationTaskInput } from "./types";
-import { buildContactValidationTask, buildMailboxVerificationTask } from "./backlink-autonomy-foundation";
+import { buildContactFormPrepareTask, buildContactValidationTask, buildMailboxVerificationTask } from "./backlink-autonomy-foundation";
 import { buildNextDownstreamTask, type BacklinkAutonomyDecisionResult } from "./backlink-autonomy-pipeline";
 import type { BacklinkContactValidationTaskResult } from "./backlink-contact-validation-task-handler";
 import type { BacklinkMailboxVerificationTaskResult } from "./backlink-mailbox-verification-task-handler";
+import type { BacklinkContactFormPrepareTaskResult } from "./backlink-contact-form-prepare-task-handler";
 
 export type BacklinkAutonomyMode = "disabled" | "preview" | "apply" | "live";
-export type BacklinkAutonomyStage = "contact_resolution" | "contact_validation" | "mailbox_verification" | "campaign_prepare" | "draft_prepare" | "outreach_decision" | "execution_boundary" | "completed" | "manual_review" | "blocked" | "dead_letter";
+export type BacklinkAutonomyStage = "contact_resolution" | "contact_validation" | "mailbox_verification" | "campaign_prepare" | "draft_prepare" | "outreach_decision" | "contact_form_prepare" | "execution_boundary" | "completed" | "manual_review" | "blocked" | "dead_letter";
 
 export type BacklinkAutonomyControl = {
   backlinksEnabled: boolean;
@@ -24,6 +25,7 @@ export type BacklinkAutonomyProgress = {
   decision?: BacklinkAutonomyDecisionResult;
   validation?: BacklinkContactValidationTaskResult;
   mailboxVerification?: BacklinkMailboxVerificationTaskResult;
+  contactFormPrepare?: BacklinkContactFormPrepareTaskResult;
 };
 
 export type BacklinkMasterAutonomyOrchestratorInput = {
@@ -79,6 +81,7 @@ function nextTask(input: BacklinkMasterAutonomyOrchestratorInput): CreateAutomat
     campaign_prepare: "backlinks.campaign_prepare",
     draft_prepare: "backlinks.draft_prepare",
     outreach_decision: "backlinks.outreach_decision",
+    contact_form_prepare: "backlinks.contact_form_prepare",
   };
   if (input.progress.completedTaskKind !== expectedTaskKind[input.progress.stage]) {
     return stopped("blocked", "blocked", "ILLEGAL_STAGE_TRANSITION");
@@ -112,9 +115,17 @@ function nextTask(input: BacklinkMasterAutonomyOrchestratorInput): CreateAutomat
   }
   if (input.progress.stage === "campaign_prepare") return buildNextDownstreamTask({ ...common, stage: "draft_prepare" });
   if (input.progress.stage === "draft_prepare") return buildNextDownstreamTask({ ...common, stage: "outreach_decision" });
+  if (input.progress.stage === "contact_form_prepare") {
+    const prepared = input.progress.contactFormPrepare;
+    if (prepared == null) return stopped("blocked", "blocked", "CONTACT_FORM_PREPARE_RESULT_MISSING");
+    return { outcome: "manual_review", stage: "manual_review", reasonCodes: [prepared.reason], task: null, taskId: null, readyTransitionRequired: true };
+  }
   const decision = input.progress.decision;
   if (decision == null) return stopped("blocked", "blocked", "DECISION_RESULT_MISSING");
-  if (decision.outcome === "execution_eligible") return { outcome: "execution_pending", stage: "execution_boundary", reasonCodes: [decision.execution?.kind === "email_sender" ? "EMAIL_EXECUTION_PENDING" : "CONTACT_FORM_EXECUTION_PENDING"], task: null, taskId: null, readyTransitionRequired: true };
+  if (decision.outcome === "execution_eligible" && decision.execution?.kind === "contact_form_worker") {
+    return buildContactFormPrepareTask({ ...common, dependsOnTaskId: input.progress.completedTaskId, outreachId: decision.execution.outreachId });
+  }
+  if (decision.outcome === "execution_eligible") return { outcome: "execution_pending", stage: "execution_boundary", reasonCodes: ["EMAIL_EXECUTION_PENDING"], task: null, taskId: null, readyTransitionRequired: true };
   if (decision.outcome === "manual_action_required" || decision.outcome === "manual_review") return { outcome: "manual_review", stage: "manual_review", reasonCodes: decision.reasons, task: null, taskId: null, readyTransitionRequired: false };
   return { outcome: "blocked", stage: "blocked", reasonCodes: decision.reasons, task: null, taskId: null, readyTransitionRequired: false };
 }

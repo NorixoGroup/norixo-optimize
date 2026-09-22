@@ -5,6 +5,7 @@ import type { CreateAutomationTaskInput, CreateAutomationTaskResult } from "./ty
 export type BacklinkContactResolutionTaskKind = "backlinks.contact_resolution";
 export type BacklinkContactValidationTaskKind = "backlinks.contact_validation";
 export type BacklinkMailboxVerificationTaskKind = "backlinks.mailbox_verification";
+export type BacklinkContactFormPrepareTaskKind = "backlinks.contact_form_prepare";
 export type BacklinkDownstreamTaskKind = "backlinks.campaign_prepare" | "backlinks.draft_prepare" | "backlinks.outreach_decision";
 
 /**
@@ -134,6 +135,40 @@ export function buildMailboxVerificationTask(input: {
       opportunityId: input.opportunityId,
       contactId: input.contactId,
       currentNormalizedEmail: input.currentNormalizedEmail,
+    } as Json,
+  };
+}
+
+/** A closed handoff to the canonical human approval/queue contract. */
+export function buildContactFormPrepareTask(input: {
+  workspaceId: string;
+  runId: string;
+  dependsOnTaskId: string;
+  domainId: string;
+  opportunityId: string;
+  contactId: string;
+  outreachId: string;
+  scheduledAt: string;
+}): CreateAutomationTaskInput {
+  return {
+    workspaceId: input.workspaceId,
+    runId: input.runId,
+    dependsOnTaskId: input.dependsOnTaskId,
+    system: "backlinks",
+    taskKind: "backlinks.contact_form_prepare",
+    taskKey: `contact-form-prepare:${input.outreachId}`,
+    priority: 60,
+    scheduledAt: input.scheduledAt,
+    availableAt: input.scheduledAt,
+    maxAttempts: 1,
+    backoffBaseSeconds: 60,
+    input: {
+      version: 1,
+      domainId: input.domainId,
+      opportunityId: input.opportunityId,
+      contactId: input.contactId,
+      outreachId: input.outreachId,
+      executionKind: "contact_form_worker",
     } as Json,
   };
 }

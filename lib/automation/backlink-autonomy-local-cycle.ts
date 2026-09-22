@@ -93,6 +93,11 @@ export async function runBacklinkAutonomyCycle(input: {
       const stopped = terminal(next, steps + 1, taskIds); if (stopped != null) return stopped;
       continue;
     }
+    if (dispatched.taskKind === "backlinks.contact_form_prepare") {
+      const next = await runBacklinkAutonomyOrchestrator({ createOrGetTask: input.taskDependencies.createOrGetTask }, { workspaceId: input.workspaceId, runId: input.runId, domainId: input.domainId, opportunityId: input.opportunityId, scheduledAt: input.scheduledAt, mode: input.mode, control: input.control, progress: { stage: "contact_form_prepare", completedTaskId: task.id, completedTaskKind: task.taskKind, contactIds: [String((task.input as Record<string, unknown>).contactId)], contactFormPrepare: dispatched.output } });
+      const stopped = terminal(next, steps + 1, taskIds); if (stopped != null) return stopped;
+      continue;
+    }
     const next = await runBacklinkAutonomyOrchestrator({ createOrGetTask: input.taskDependencies.createOrGetTask }, { workspaceId: input.workspaceId, runId: input.runId, domainId: input.domainId, opportunityId: input.opportunityId, scheduledAt: input.scheduledAt, mode: input.mode, control: input.control, progress: { stage: "outreach_decision", completedTaskId: task.id, completedTaskKind: task.taskKind, contactIds: [String((task.input as Record<string, unknown>).contactId)], decision: dispatched.output } });
     const stopped = terminal(next, steps + 1, taskIds); if (stopped != null) return stopped;
   }
