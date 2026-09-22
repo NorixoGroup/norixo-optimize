@@ -243,6 +243,7 @@ const QUALITY_GATED_ROLLOUT_TOPICS = new Set([
   "family-travel-guide",
   "long-stay-guide",
   "market-analysis",
+  "conversion-guide",
 ]);
 
 function isQualityGatedRolloutPath(

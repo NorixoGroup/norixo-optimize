@@ -72,6 +72,7 @@ const qualityGatedTopicSlugs = [
   "family-travel-guide",
   "long-stay-guide",
   "market-analysis",
+  "conversion-guide",
 ] as const;
 
 const qualityGatedTopics = qualityGatedTopicSlugs.flatMap(
@@ -190,6 +191,10 @@ const qualityGatedLongStayTopics = qualityGatedTopics.filter(
 
 const qualityGatedMarketAnalysisTopics = qualityGatedTopics.filter(
   ({ topicSlug }) => topicSlug === "market-analysis"
+);
+
+const qualityGatedConversionGuideTopics = qualityGatedTopics.filter(
+  ({ topicSlug }) => topicSlug === "conversion-guide"
 );
 
 const exposedQualityFailures = qualityGatedTopics.filter(
@@ -344,6 +349,9 @@ console.log(
 console.log(
   `QUALITY_GATED_MARKET_ANALYSIS_TOPICS=${qualityGatedMarketAnalysisTopics.length}`
 );
+console.log(
+  `QUALITY_GATED_CONVERSION_GUIDE_TOPICS=${qualityGatedConversionGuideTopics.length}`
+);
 
 console.log(
   `EXPOSED_QUALITY_FAIL=${exposedQualityFailures.length}`
@@ -401,15 +409,15 @@ if (
   );
 }
 
-if (keptTopics.length !== 5284) {
+if (keptTopics.length !== 5500) {
   throw new Error(
-    `Expected 5284 kept topics, got ${keptTopics.length}`
+    `Expected 5500 kept topics, got ${keptTopics.length}`
   );
 }
 
-if (omittedTopics.length !== 216) {
+if (omittedTopics.length !== 0) {
   throw new Error(
-    `Expected 216 omitted topics, got ${omittedTopics.length}`
+    `Expected 0 omitted topics, got ${omittedTopics.length}`
   );
 }
 
@@ -917,9 +925,9 @@ if (
   );
 }
 
-if (isCityTopicSitemapEligible(representativeHold)) {
+if (!isCityTopicSitemapEligible(representativeHold)) {
   throw new Error(
-    "Representative unprotected HOLD path must be omitted"
+    "Representative quality-gated HOLD path must be included"
   );
 }
 
@@ -929,7 +937,7 @@ console.log("GSC_PROTECTED_TOPIC_PRESERVATION=PASS");
 console.log("SITEMAP_EXPERIMENT_TOPIC_PRESERVATION=PASS");
 console.log("COHORT_25_TOPIC_PRESERVATION=PASS");
 console.log("COHORT_25_OVERLAP_GUARD=PASS");
-console.log("UNPROTECTED_HOLD_OMISSION=PASS");
+console.log("QUALITY_GATED_HOLD_INCLUSION=PASS");
 console.log("QUALITY_GATED_OCCUPANCY_PRESERVATION=PASS");
 console.log("QUALITY_GATED_TITLE_PRESERVATION=PASS");
 console.log("QUALITY_GATED_GUEST_TRUST_PRESERVATION=PASS");
