@@ -2,9 +2,12 @@ export type City = {
   slug: string;
   name: string;
   country: string;
-  avgPrice: number;
-  avgRating: number;
-  avgPhotos: number;
+  /** Legacy benchmark; omit when no verified source is available. */
+  avgPrice?: number;
+  /** Legacy benchmark; omit when no verified source is available. */
+  avgRating?: number;
+  /** Legacy benchmark; omit when no verified source is available. */
+  avgPhotos?: number;
   /** One line: what shapes demand in this market */
   marketAngle: string;
   /** One line: how guests compare listings locally */

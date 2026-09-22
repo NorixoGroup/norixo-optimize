@@ -51,6 +51,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 /** Copy helpers — only use fields present on `City` (no invented stats). */
 function pricingContextLine(c: City): string {
+  if (c.avgPrice === undefined) {
+    return `Compare ${c.name} listings using observable rates, stay conditions, amenities, and presentation instead of relying on an unsupported city-wide average.`;
+  }
   if (c.avgPrice >= 175) {
     return `Typical well-positioned listings in ${c.name} cluster around €${c.avgPrice.toFixed(0)} per night—guests compare value carefully at this level.`;
   }
@@ -61,6 +64,9 @@ function pricingContextLine(c: City): string {
 }
 
 function photoMarketLine(c: City): string {
+  if (c.avgPhotos === undefined) {
+    return `Evaluate photo coverage in ${c.name} from the listing itself: show the important spaces clearly and order the gallery around verifiable property features.`;
+  }
   if (c.avgPhotos >= 24) {
     return `Strong listings in ${c.name} average about ${c.avgPhotos} photos—guests are used to scrolling a full gallery before they shortlist.`;
   }
@@ -71,6 +77,9 @@ function photoMarketLine(c: City): string {
 }
 
 function ratingPressureLine(c: City): string {
+  if (c.avgRating === undefined) {
+    return `Use the listing's own review history and observable trust signals in ${c.name} rather than assuming a city-wide rating benchmark.`;
+  }
   if (c.avgRating >= 4.75) {
     return `Guest ratings in ${c.name} often sit around ${c.avgRating.toFixed(1)}/5 for top performers—new reviews and visible quality signals weigh heavily.`;
   }
@@ -198,55 +207,76 @@ export default async function CityOptimizerPage({ params }: PageProps) {
             what guests see in search.
           </p>
           <ul className="mt-4 space-y-1.5 text-[13px] leading-6 text-slate-700">
-            <li>
-              • Competitive stays in {name} often sit near {avgRating.toFixed(1)}/5—gaps in
-              polish or clarity are easy for guests to spot when they scroll.
-            </li>
-            <li>
-              • Listings with roughly {avgPhotos} photos set the visual bar; a thin gallery
-              makes even fair pricing feel risky.
-            </li>
-            <li>
-              • At about €{avgPrice.toFixed(0)} per night on average for strong listings, guests
-              weigh every detail before they commit.
-            </li>
+            {avgRating !== undefined ? (
+              <li>
+                • Competitive stays in {name} often sit near {avgRating.toFixed(1)}/5—gaps in
+                polish or clarity are easy for guests to spot when they scroll.
+              </li>
+            ) : null}
+            {avgPhotos !== undefined ? (
+              <li>
+                • Listings with roughly {avgPhotos} photos set the visual bar; a thin gallery
+                makes even fair pricing feel risky.
+              </li>
+            ) : null}
+            {avgPrice !== undefined ? (
+              <li>
+                • At about €{avgPrice.toFixed(0)} per night on average for strong listings, guests
+                weigh every detail before they commit.
+              </li>
+            ) : null}
+            {avgPrice === undefined &&
+            avgRating === undefined &&
+            avgPhotos === undefined ? (
+              <li>
+                • Compare observable listing evidence such as current rates, amenities,
+                stay conditions, reviews, and presentation instead of relying on unsupported
+                city-wide averages.
+              </li>
+            ) : null}
           </ul>
         </div>
 
         <div className="nk-card nk-card-hover grid gap-3 p-5 text-sm text-slate-800 sm:grid-cols-2">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Avg. nightly price
-            </p>
-            <p className="mt-2 text-2xl font-semibold text-slate-900">
-              €{avgPrice.toFixed(0)}
-            </p>
-            <p className="mt-1 text-[11px] text-slate-500">
-              Typical pricing for well-positioned listings in {name}.
-            </p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Avg. guest rating
-            </p>
-            <p className="mt-2 text-2xl font-semibold text-emerald-600">
-              {avgRating.toFixed(1)}<span className="text-sm text-emerald-500"> / 5</span>
-            </p>
-            <p className="mt-1 text-[11px] text-slate-500">
-              Highly rated stays are now the norm – not the exception.
-            </p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Avg. photos per listing
-            </p>
-            <p className="mt-2 text-2xl font-semibold text-slate-900">
-              {avgPhotos}
-            </p>
-            <p className="mt-1 text-[11px] text-slate-500">
-              You need a strong first 5 photos to win the click.
-            </p>
-          </div>
+          {avgPrice !== undefined ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Avg. nightly price
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-slate-900">
+                €{avgPrice.toFixed(0)}
+              </p>
+              <p className="mt-1 text-[11px] text-slate-500">
+                Typical pricing for well-positioned listings in {name}.
+              </p>
+            </div>
+          ) : null}
+          {avgRating !== undefined ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Avg. guest rating
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-emerald-600">
+                {avgRating.toFixed(1)}<span className="text-sm text-emerald-500"> / 5</span>
+              </p>
+              <p className="mt-1 text-[11px] text-slate-500">
+                Highly rated stays are now the norm – not the exception.
+              </p>
+            </div>
+          ) : null}
+          {avgPhotos !== undefined ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Avg. photos per listing
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-slate-900">
+                {avgPhotos}
+              </p>
+              <p className="mt-1 text-[11px] text-slate-500">
+                You need a strong first 5 photos to win the click.
+              </p>
+            </div>
+          ) : null}
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
               Key takeaway
@@ -285,9 +315,8 @@ export default async function CityOptimizerPage({ params }: PageProps) {
               Pricing strategy in {name}
             </h3>
             <p className="mt-2 text-[13px] leading-6 text-slate-700">
-              {pricingAngle} {pricingContextLine(city)} Use your calendar and comps to stay
-              coherent: if your presentation lags peers near €{avgPrice.toFixed(0)}, guests assume
-              the gap is justified—or they book elsewhere.
+              {pricingAngle} {pricingContextLine(city)} Use your calendar and comparable
+              listings to keep pricing and presentation coherent.
             </p>
           </div>
           <div>
