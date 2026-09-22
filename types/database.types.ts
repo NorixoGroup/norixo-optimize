@@ -1009,6 +1009,15 @@ export type Database = {
           },
         ]
       }
+      backlink_contact_mailbox_verifications: {
+        Row: { checked_at: string; contact_id: string; created_at: string; email_fingerprint: string; id: string; provider: string; provider_reference: string | null; result: string; safe_metadata: Json | null; verification_key: string; workspace_id: string }
+        Insert: { checked_at: string; contact_id: string; created_at?: string; email_fingerprint: string; id?: string; provider: string; provider_reference?: string | null; result: string; safe_metadata?: Json | null; verification_key: string; workspace_id: string }
+        Update: { checked_at?: string; contact_id?: string; created_at?: string; email_fingerprint?: string; id?: string; provider?: string; provider_reference?: string | null; result?: string; safe_metadata?: Json | null; verification_key?: string; workspace_id?: string }
+        Relationships: [
+          { foreignKeyName: "backlink_contact_mailbox_verifications_contact_id_fkey"; columns: ["contact_id"]; isOneToOne: false; referencedRelation: "backlink_contacts"; referencedColumns: ["id"] },
+          { foreignKeyName: "backlink_contact_mailbox_verifications_workspace_id_fkey"; columns: ["workspace_id"]; isOneToOne: false; referencedRelation: "workspaces"; referencedColumns: ["id"] },
+        ]
+      }
       backlink_domain_tags: {
         Row: {
           added_at: string
@@ -5372,6 +5381,10 @@ export type Database = {
       heartbeat_automation_task: { Args: { p_heartbeat_at: string; p_lease_duration_seconds: number; p_task_id: string; p_worker_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
       reclaim_expired_automation_tasks: { Args: { p_limit: number; p_reclaimed_at: string; p_run_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
       reclaim_expired_backlink_autonomy_tasks: { Args: { p_limit: number; p_reclaimed_at: string; p_run_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
+      record_backlink_contact_mailbox_verification_and_maybe_promote: {
+        Args: { p_checked_at: string; p_contact_id: string; p_email_fingerprint: string; p_provider: string; p_provider_reference?: string | null; p_result: string; p_safe_metadata?: Json | null; p_verification_key: string; p_workspace_id: string }
+        Returns: { contact_status: string; disposition: string; verification_id: string; verified_at: string | null }[]
+      }
       start_automation_run: {
         Args: { p_run_id: string; p_started_at: string; p_workspace_id: string }
         Returns: Database["public"]["Tables"]["automation_runs"]["Row"][]
