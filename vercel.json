@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/internal/cron/backlinks/autonomy",
-      "schedule": "*/15 * * * *"
+      "schedule": "15 6 * * *"
     }
   ]
 }
