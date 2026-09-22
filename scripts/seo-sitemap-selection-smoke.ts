@@ -69,6 +69,7 @@ const qualityGatedTopicSlugs = [
   "search-visibility",
   "photo-order",
   "first-photo",
+  "family-travel-guide",
 ] as const;
 
 const qualityGatedTopics = qualityGatedTopicSlugs.flatMap(
@@ -175,6 +176,10 @@ const qualityGatedPhotoOrderTopics = qualityGatedTopics.filter(
 
 const qualityGatedFirstPhotoTopics = qualityGatedTopics.filter(
   ({ topicSlug }) => topicSlug === "first-photo"
+);
+
+const qualityGatedFamilyTravelTopics = qualityGatedTopics.filter(
+  ({ topicSlug }) => topicSlug === "family-travel-guide"
 );
 
 const exposedQualityFailures = qualityGatedTopics.filter(
@@ -320,6 +325,9 @@ console.log(
 console.log(
   `QUALITY_GATED_FIRST_PHOTO_TOPICS=${qualityGatedFirstPhotoTopics.length}`
 );
+console.log(
+  `QUALITY_GATED_FAMILY_TRAVEL_TOPICS=${qualityGatedFamilyTravelTopics.length}`
+);
 
 console.log(
   `EXPOSED_QUALITY_FAIL=${exposedQualityFailures.length}`
@@ -377,15 +385,15 @@ if (
   );
 }
 
-if (keptTopics.length !== 4639) {
+if (keptTopics.length !== 4854) {
   throw new Error(
-    `Expected 4639 kept topics, got ${keptTopics.length}`
+    `Expected 4854 kept topics, got ${keptTopics.length}`
   );
 }
 
-if (omittedTopics.length !== 861) {
+if (omittedTopics.length !== 646) {
   throw new Error(
-    `Expected 861 omitted topics, got ${omittedTopics.length}`
+    `Expected 646 omitted topics, got ${omittedTopics.length}`
   );
 }
 
@@ -970,5 +978,30 @@ for (const { pathname, quality } of qualityGatedFirstPhotoTopics) {
 
 console.log("QUALITY_GATED_PHOTO_ORDER_PRESERVATION=PASS");
 console.log("QUALITY_GATED_FIRST_PHOTO_PRESERVATION=PASS");
+
+if (qualityGatedFamilyTravelTopics.length !== 220) {
+  throw new Error(
+    `Expected 220 quality-gated family-travel-guide topics, got ${qualityGatedFamilyTravelTopics.length}`
+  );
+}
+
+for (const { pathname, quality } of qualityGatedFamilyTravelTopics) {
+  if (!isCityTopicSitemapEligible(pathname)) {
+    throw new Error(
+      `Expected quality-gated family-travel-guide path in sitemap: ${pathname}`
+    );
+  }
+
+  if (
+    quality.status !== "eligible-safe" &&
+    quality.status !== "qualified-evidence"
+  ) {
+    throw new Error(
+      `Unsafe family-travel-guide quality status for ${pathname}: ${quality.status}`
+    );
+  }
+}
+
+console.log("QUALITY_GATED_FAMILY_TRAVEL_PRESERVATION=PASS");
 console.log("EXPOSED_QUALITY_GUARD=PASS");
 console.log("SITEMAP_SELECTION_SMOKE=PASS");

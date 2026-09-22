@@ -240,6 +240,7 @@ const QUALITY_GATED_ROLLOUT_TOPICS = new Set([
   "search-visibility",
   "photo-order",
   "first-photo",
+  "family-travel-guide",
 ]);
 
 function isQualityGatedRolloutPath(
