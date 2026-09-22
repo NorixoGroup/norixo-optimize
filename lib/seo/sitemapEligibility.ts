@@ -239,6 +239,7 @@ const QUALITY_GATED_ROLLOUT_TOPICS = new Set([
   "ranking-factors",
   "search-visibility",
   "photo-order",
+  "first-photo",
 ]);
 
 function isQualityGatedRolloutPath(

@@ -68,6 +68,7 @@ const qualityGatedTopicSlugs = [
   "ranking-factors",
   "search-visibility",
   "photo-order",
+  "first-photo",
 ] as const;
 
 const qualityGatedTopics = qualityGatedTopicSlugs.flatMap(
@@ -170,6 +171,10 @@ const qualityGatedSearchVisibilityTopics = qualityGatedTopics.filter(
 
 const qualityGatedPhotoOrderTopics = qualityGatedTopics.filter(
   ({ topicSlug }) => topicSlug === "photo-order"
+);
+
+const qualityGatedFirstPhotoTopics = qualityGatedTopics.filter(
+  ({ topicSlug }) => topicSlug === "first-photo"
 );
 
 const exposedQualityFailures = qualityGatedTopics.filter(
@@ -312,6 +317,9 @@ console.log(
 console.log(
   `QUALITY_GATED_PHOTO_ORDER_TOPICS=${qualityGatedPhotoOrderTopics.length}`
 );
+console.log(
+  `QUALITY_GATED_FIRST_PHOTO_TOPICS=${qualityGatedFirstPhotoTopics.length}`
+);
 
 console.log(
   `EXPOSED_QUALITY_FAIL=${exposedQualityFailures.length}`
@@ -369,15 +377,15 @@ if (
   );
 }
 
-if (keptTopics.length !== 4424) {
+if (keptTopics.length !== 4639) {
   throw new Error(
-    `Expected 4424 kept topics, got ${keptTopics.length}`
+    `Expected 4639 kept topics, got ${keptTopics.length}`
   );
 }
 
-if (omittedTopics.length !== 1076) {
+if (omittedTopics.length !== 861) {
   throw new Error(
-    `Expected 1076 omitted topics, got ${omittedTopics.length}`
+    `Expected 861 omitted topics, got ${omittedTopics.length}`
   );
 }
 
@@ -937,6 +945,30 @@ for (const { pathname, quality } of qualityGatedPhotoOrderTopics) {
 }
 
 console.log("QUALITY_GATED_SEARCH_VISIBILITY_PRESERVATION=PASS");
+if (qualityGatedFirstPhotoTopics.length !== 220) {
+  throw new Error(
+    `Expected 220 quality-gated first-photo topics, got ${qualityGatedFirstPhotoTopics.length}`
+  );
+}
+
+for (const { pathname, quality } of qualityGatedFirstPhotoTopics) {
+  if (!isCityTopicSitemapEligible(pathname)) {
+    throw new Error(
+      `Expected quality-gated first-photo path in sitemap: ${pathname}`
+    );
+  }
+
+  if (
+    quality.status !== "eligible-safe" &&
+    quality.status !== "qualified-evidence"
+  ) {
+    throw new Error(
+      `Unsafe first-photo quality status for ${pathname}: ${quality.status}`
+    );
+  }
+}
+
 console.log("QUALITY_GATED_PHOTO_ORDER_PRESERVATION=PASS");
+console.log("QUALITY_GATED_FIRST_PHOTO_PRESERVATION=PASS");
 console.log("EXPOSED_QUALITY_GUARD=PASS");
 console.log("SITEMAP_SELECTION_SMOKE=PASS");
