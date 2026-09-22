@@ -9,13 +9,13 @@ export type City = {
   /** Legacy benchmark; omit when no verified source is available. */
   avgPhotos?: number;
   /** One line: what shapes demand in this market */
-  marketAngle: string;
+  marketAngle?: string;
   /** One line: how guests compare listings locally */
-  competitionAngle: string;
+  competitionAngle?: string;
   /** One line: pricing / positioning nuance (no invented stats) */
-  pricingAngle: string;
+  pricingAngle?: string;
   /** One line: what guests look for before they book */
-  guestExpectationAngle: string;
+  guestExpectationAngle?: string;
 };
 
 export const cities: City[] = [

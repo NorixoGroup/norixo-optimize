@@ -46,10 +46,10 @@ type Cohort25TopicBuilder = (
     City,
     | "name"
     | "country"
-    | "marketAngle"
-    | "competitionAngle"
-    | "pricingAngle"
-    | "guestExpectationAngle"
+
+
+
+
   >,
 ) => Cohort25CityTopicRepairContent;
 
@@ -72,7 +72,7 @@ const COHORT_25_TOPIC_BUILDERS: Record<string, Cohort25TopicBuilder> = {
       {
         heading: "Improve differentiation without speculation",
         body:
-          `Prefer specific, verifiable characteristics of the property over generic superlatives or assumptions about what guests in the city want. As a qualitative comparison prompt for ${city.name}, consider this existing local context: ${city.competitionAngle} Keep the wording readable and focused on evidence visible to the guest.`,
+          `Prefer specific, verifiable characteristics of the property over generic superlatives or assumptions about what guests in the city want. Keep the wording readable and focused on evidence visible to the guest.`,
       },
     ],
     actionBridge:
@@ -87,7 +87,7 @@ const COHORT_25_TOPIC_BUILDERS: Record<string, Cohort25TopicBuilder> = {
       {
         heading: "Lead with the actual stay proposition",
         body:
-          `Check whether the opening explains what the property is, who it can accommodate and which verifiable characteristics matter most. As qualitative context for ${city.name}, use this existing market angle to decide which claims still need listing-level proof: ${city.marketAngle} Avoid spending the strongest opening space on generic destination language.`,
+          `Check whether the opening explains what the property is, who it can accommodate and which verifiable characteristics matter most. Avoid spending the strongest opening space on generic destination language.`,
       },
       {
         heading: "Remove information gaps",
@@ -117,7 +117,7 @@ const COHORT_25_TOPIC_BUILDERS: Record<string, Cohort25TopicBuilder> = {
       {
         heading: "Prove the complete stay",
         body:
-          `Verify that important rooms, sleeping spaces, bathrooms, useful amenities, access features and any material limitations are represented clearly where photographs can reasonably show them. Use this existing ${city.name} guest-expectation angle as a prompt for deciding which practical details deserve especially clear visual proof: ${city.guestExpectationAngle}`,
+          `Verify that important rooms, sleeping spaces, bathrooms, useful amenities, access features and any material limitations are represented clearly where photographs can reasonably show them. Give especially clear visual proof to practical details that materially affect the stay.`,
       },
       {
         heading: "Match photos with written claims",
@@ -142,7 +142,7 @@ const COHORT_25_TOPIC_BUILDERS: Record<string, Cohort25TopicBuilder> = {
       {
         heading: "Clarify practical expectations",
         body:
-          `Review arrival, access, property conditions, important rules and material limitations. For ${city.name}, use this existing guest-expectation context to identify details that may deserve clearer reassurance: ${city.guestExpectationAngle} Put decision-critical information where a guest can find it before booking instead of relying on assumptions or later explanations.`,
+          `Review arrival, access, property conditions, important rules and material limitations. For ${city.name}, identify details that may deserve clearer reassurance from the listing's own evidence. Put decision-critical information where a guest can find it before booking instead of relying on assumptions or later explanations.`,
       },
       {
         heading: "Use review evidence at listing level",
@@ -167,7 +167,7 @@ const COHORT_25_TOPIC_BUILDERS: Record<string, Cohort25TopicBuilder> = {
       {
         heading: "Separate possible constraints",
         body:
-          `Distinguish visibility, presentation, pricing, availability and conversion hypotheses instead of treating every weak outcome as the same problem. When pricing is one of those hypotheses in ${city.name}, use this existing qualitative pricing context as a diagnostic prompt rather than a target rate or numerical benchmark: ${city.pricingAngle} Use first-party listing evidence where available to decide which constraint is best supported.`,
+          `Distinguish visibility, presentation, pricing, availability and conversion hypotheses instead of treating every weak outcome as the same problem. When pricing is one of those hypotheses in ${city.name}, use current observable comparables rather than a presumed city-wide target rate. Use first-party listing evidence where available to decide which constraint is best supported.`,
       },
       {
         heading: "Prioritize one defensible action",
@@ -209,9 +209,9 @@ export function getCohort25CityTopicRepairContent(
   return builder({
     name: city.name,
     country: city.country,
-    marketAngle: city.marketAngle,
-    competitionAngle: city.competitionAngle,
-    pricingAngle: city.pricingAngle,
-    guestExpectationAngle: city.guestExpectationAngle,
+
+
+
+
   });
 }

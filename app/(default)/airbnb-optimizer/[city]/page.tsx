@@ -50,6 +50,22 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 /** Copy helpers — only use fields present on `City` (no invented stats). */
+function marketAngleLine(c: City): string {
+  return c.marketAngle ?? `Use ${c.name}, ${c.country}, as geographic context and validate market-specific claims with current evidence before applying them to a listing.`;
+}
+
+function competitionAngleLine(c: City): string {
+  return c.competitionAngle ?? `Compare the listing with observable alternatives in ${c.name} rather than assuming a city-wide competitive pattern.`;
+}
+
+function pricingAngleLine(c: City): string {
+  return c.pricingAngle ?? `Evaluate pricing in ${c.name} from current comparable listings, stay conditions, availability, and first-party performance evidence.`;
+}
+
+function guestExpectationAngleLine(c: City): string {
+  return c.guestExpectationAngle ?? `Use the listing's own guest questions, reviews, rules, amenities, and presentation to identify expectation gaps instead of assuming city-wide guest preferences.`;
+}
+
 function pricingContextLine(c: City): string {
   if (c.avgPrice === undefined) {
     return `Compare ${c.name} listings using observable rates, stay conditions, amenities, and presentation instead of relying on an unsupported city-wide average.`;
@@ -135,10 +151,10 @@ export default async function CityOptimizerPage({ params }: PageProps) {
     avgPrice,
     avgRating,
     avgPhotos,
-    marketAngle,
-    competitionAngle,
-    pricingAngle,
-    guestExpectationAngle,
+
+
+
+
   } = city;
 
   const countrySlug = countryToSlug(country);
@@ -178,7 +194,7 @@ export default async function CityOptimizerPage({ params }: PageProps) {
         </h1>
         <p className="mt-3 max-w-2xl text-[15px] leading-7 text-slate-700">
           Stand out in the {name} market with a listing that converts views into bookings.{" "}
-          {marketAngle} This guide shows how guests browse in {name}, what they expect to see,
+          {marketAngleLine(city)} This guide shows how guests browse in {name}, what they expect to see,
           and which changes move occupancy first.
         </p>
         <div className="mt-5 flex flex-wrap items-center gap-3">
@@ -202,7 +218,7 @@ export default async function CityOptimizerPage({ params }: PageProps) {
             {name} market snapshot
           </h2>
           <p className="mt-2 text-[15px] leading-7 text-slate-700">
-            {name} is a competitive short-term rental market in {country}. {competitionAngle}{" "}
+            {name} is a competitive short-term rental market in {country}. {competitionAngleLine(city)}{" "}
             Your photos, description, and amenities still need to justify your nightly rate against
             what guests see in search.
           </p>
@@ -295,7 +311,7 @@ export default async function CityOptimizerPage({ params }: PageProps) {
           What hosts in {name} should prioritize
         </h2>
         <p className="mt-2 max-w-3xl text-[15px] leading-7 text-slate-700">
-          Optimization is not generic advice. {competitionAngle} In {name}, it means aligning how
+          Optimization is not generic advice. {competitionAngleLine(city)} In {name}, it means aligning how
           you present your home with how guests already shop—using the same signals they see beside
           your listing in search.
         </p>
@@ -305,7 +321,7 @@ export default async function CityOptimizerPage({ params }: PageProps) {
               Why Airbnb optimization matters in {name}
             </h3>
             <p className="mt-2 text-[13px] leading-6 text-slate-700">
-              {guestExpectationAngle} Travelers choosing {name} skim dozens of listings; the winner
+              {guestExpectationAngleLine(city)} Travelers choosing {name} skim dozens of listings; the winner
               is rarely the cheapest alone—it is the one that looks trustworthy, complete, and easy
               to understand in seconds.
             </p>
@@ -315,7 +331,7 @@ export default async function CityOptimizerPage({ params }: PageProps) {
               Pricing strategy in {name}
             </h3>
             <p className="mt-2 text-[13px] leading-6 text-slate-700">
-              {pricingAngle} {pricingContextLine(city)} Use your calendar and comparable
+              {pricingAngleLine(city)} {pricingContextLine(city)} Use your calendar and comparable
               listings to keep pricing and presentation coherent.
             </p>
           </div>

@@ -31,10 +31,26 @@ type Props = {
   }>;
 };
 
+function marketAngleLine(city: City): string {
+  return city.marketAngle ?? `Use ${city.name}, ${city.country}, as geographic context and validate market-specific claims with current evidence before applying them to a listing.`;
+}
+
+function competitionAngleLine(city: City): string {
+  return city.competitionAngle ?? `Compare the listing with observable alternatives in ${city.name} rather than assuming a city-wide competitive pattern.`;
+}
+
+function pricingAngleLine(city: City): string {
+  return city.pricingAngle ?? `Evaluate pricing in ${city.name} from current comparable listings, stay conditions, availability, and first-party performance evidence.`;
+}
+
+function guestExpectationAngleLine(city: City): string {
+  return city.guestExpectationAngle ?? `Use the listing's own guest questions, reviews, rules, amenities, and presentation to identify expectation gaps instead of assuming city-wide guest preferences.`;
+}
+
 function buildExecutiveSummary(city: City, topic: LocalSeoTopic) {
   return [
-    `${topic.description} In ${city.name}, ${city.marketAngle.toLowerCase()}`,
-    `Hosts in ${city.name}, ${city.country} compete in a market where ${city.competitionAngle.toLowerCase()} ${city.guestExpectationAngle}`,
+    `${topic.description} ${marketAngleLine(city)}`,
+    `For ${city.name}, ${city.country}, ${competitionAngleLine(city)} ${guestExpectationAngleLine(city)}`,
   ];
 }
 
@@ -54,9 +70,9 @@ function buildTopicSpecificAnalysis(city: City, topic: LocalSeoTopic) {
       heading: `Pricing and revenue strategy in ${city.name}`,
       paragraphs: [
         city.avgPrice !== undefined
-          ? `${city.pricingAngle} With an average reference price around €${city.avgPrice} per night, ${city.name} rewards listings that make their value obvious before guests even open the calendar.`
-          : `${city.pricingAngle} Compare observable current rates and listing features in ${city.name} instead of relying on an unsupported city-wide price average.`,
-        `${city.competitionAngle} For ${topic.label.toLowerCase()}, the real goal is to match rate, perceived quality, and demand so that pricing supports both occupancy and revenue instead of weakening both.`,
+          ? `${pricingAngleLine(city)} With an average reference price around €${city.avgPrice} per night, ${city.name} rewards listings that make their value obvious before guests even open the calendar.`
+          : `${pricingAngleLine(city)} Compare observable current rates and listing features in ${city.name} instead of relying on an unsupported city-wide price average.`,
+        `${competitionAngleLine(city)} For ${topic.label.toLowerCase()}, the real goal is to match rate, perceived quality, and demand so that pricing supports both occupancy and revenue instead of weakening both.`,
       ],
     };
   }
@@ -66,9 +82,9 @@ function buildTopicSpecificAnalysis(city: City, topic: LocalSeoTopic) {
       heading: `Photo strategy for ${city.name} listings`,
       paragraphs: [
         city.avgPhotos !== undefined
-          ? `Listings in ${city.name} average about ${city.avgPhotos} photos, which means guests expect a complete visual story before they trust the stay. ${city.guestExpectationAngle}`
+          ? `Listings in ${city.name} average about ${city.avgPhotos} photos, which means guests expect a complete visual story before they trust the stay. ${guestExpectationAngleLine(city)}`
           : `Evaluate photo coverage from the listing itself in ${city.name}: show the important spaces clearly and use verifiable property features instead of assuming a city-wide photo benchmark.`,
-        `${city.competitionAngle} For ${topic.label.toLowerCase()}, the cover image, the order of the first rooms, and the clarity of what guests will experience matter more than simply uploading more photos.`,
+        `${competitionAngleLine(city)} For ${topic.label.toLowerCase()}, the cover image, the order of the first rooms, and the clarity of what guests will experience matter more than simply uploading more photos.`,
       ],
     };
   }
@@ -85,8 +101,8 @@ function buildTopicSpecificAnalysis(city: City, topic: LocalSeoTopic) {
     return {
       heading: `Visibility and listing clarity in ${city.name}`,
       paragraphs: [
-        `${city.marketAngle} In practice, ${topic.label.toLowerCase()} in ${city.name} is about making the listing easier to understand, easier to trust, and easier to compare in a crowded search result.`,
-        `${city.guestExpectationAngle} Clearer titles, sharper positioning, and stronger copy work best when they reflect the local market instead of repeating generic Airbnb language.`,
+        `${marketAngleLine(city)} In practice, ${topic.label.toLowerCase()} in ${city.name} is about making the listing easier to understand, easier to trust, and easier to compare in a crowded search result.`,
+        `${guestExpectationAngleLine(city)} Clearer titles, sharper positioning, and stronger copy work best when they reflect the local market instead of repeating generic Airbnb language.`,
       ],
     };
   }
@@ -105,7 +121,7 @@ function buildTopicSpecificAnalysis(city: City, topic: LocalSeoTopic) {
         city.avgRating !== undefined
           ? `The average rating bar in ${city.name} sits near ${city.avgRating.toFixed(1)}/5, so guests compare not only price but also reassurance, consistency, and detail before they book.`
           : `Use the listing's own review history and observable trust signals in ${city.name} instead of relying on an unsupported city-wide rating benchmark.`,
-        `${city.guestExpectationAngle} For ${topic.label.toLowerCase()}, the strongest gains usually come from removing uncertainty, showing the stay clearly, and reinforcing why this listing feels safer or easier to choose than nearby alternatives.`,
+        `${guestExpectationAngleLine(city)} For ${topic.label.toLowerCase()}, the strongest gains usually come from removing uncertainty, showing the stay clearly, and reinforcing why this listing feels safer or easier to choose than nearby alternatives.`,
       ],
     };
   }
@@ -121,8 +137,8 @@ function buildTopicSpecificAnalysis(city: City, topic: LocalSeoTopic) {
     return {
       heading: `Guest-fit strategy in ${city.name}`,
       paragraphs: [
-        `${city.marketAngle} In ${city.name}, different guest types compare stays through very practical signals: layout, comfort, clarity, and how well the listing matches the trip they are actually planning.`,
-        `${city.guestExpectationAngle} For ${topic.label.toLowerCase()}, the page should help hosts align pricing, amenities, and listing framing with the needs of the guest profile most likely to convert.`,
+        `${marketAngleLine(city)} In ${city.name}, different guest types compare stays through very practical signals: layout, comfort, clarity, and how well the listing matches the trip they are actually planning.`,
+        `${guestExpectationAngleLine(city)} For ${topic.label.toLowerCase()}, the page should help hosts align pricing, amenities, and listing framing with the needs of the guest profile most likely to convert.`,
       ],
     };
   }
@@ -130,8 +146,8 @@ function buildTopicSpecificAnalysis(city: City, topic: LocalSeoTopic) {
   return {
     heading: `How ${topic.label.toLowerCase()} applies in ${city.name}`,
     paragraphs: [
-      `${city.competitionAngle} In ${city.name}, strong Airbnb performance depends on how clearly the listing communicates value, quality, and fit for the trip.`,
-      `${topic.description} ${city.guestExpectationAngle} The strongest pages for this market connect local demand, competitive positioning, and booking confidence instead of relying on generic listing advice.`,
+      `${competitionAngleLine(city)} In ${city.name}, strong Airbnb performance depends on how clearly the listing communicates value, quality, and fit for the trip.`,
+      `${topic.description} ${guestExpectationAngleLine(city)} The strongest pages for this market connect local demand, competitive positioning, and booking confidence instead of relying on generic listing advice.`,
     ],
   };
 }
@@ -600,21 +616,21 @@ export default async function LocalSeoPage({ params }: Props) {
         <article className="rounded-3xl bg-white p-6 shadow-sm">
           <h2 className="text-xl font-semibold">Market context</h2>
           <p className="mt-4 leading-7 text-[#4C5C55]">
-            {city.marketAngle}
+            {marketAngleLine(city)}
           </p>
         </article>
 
         <article className="rounded-3xl bg-white p-6 shadow-sm">
           <h2 className="text-xl font-semibold">Competition</h2>
           <p className="mt-4 leading-7 text-[#4C5C55]">
-            {city.competitionAngle}
+            {competitionAngleLine(city)}
           </p>
         </article>
 
         <article className="rounded-3xl bg-white p-6 shadow-sm">
           <h2 className="text-xl font-semibold">Guest expectations</h2>
           <p className="mt-4 leading-7 text-[#4C5C55]">
-            {city.guestExpectationAngle}
+            {guestExpectationAngleLine(city)}
           </p>
         </article>
       </section>
