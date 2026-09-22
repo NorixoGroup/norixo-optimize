@@ -241,6 +241,7 @@ const QUALITY_GATED_ROLLOUT_TOPICS = new Set([
   "photo-order",
   "first-photo",
   "family-travel-guide",
+  "long-stay-guide",
 ]);
 
 function isQualityGatedRolloutPath(

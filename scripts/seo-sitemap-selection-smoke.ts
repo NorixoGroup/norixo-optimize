@@ -70,6 +70,7 @@ const qualityGatedTopicSlugs = [
   "photo-order",
   "first-photo",
   "family-travel-guide",
+  "long-stay-guide",
 ] as const;
 
 const qualityGatedTopics = qualityGatedTopicSlugs.flatMap(
@@ -180,6 +181,10 @@ const qualityGatedFirstPhotoTopics = qualityGatedTopics.filter(
 
 const qualityGatedFamilyTravelTopics = qualityGatedTopics.filter(
   ({ topicSlug }) => topicSlug === "family-travel-guide"
+);
+
+const qualityGatedLongStayTopics = qualityGatedTopics.filter(
+  ({ topicSlug }) => topicSlug === "long-stay-guide"
 );
 
 const exposedQualityFailures = qualityGatedTopics.filter(
@@ -328,6 +333,9 @@ console.log(
 console.log(
   `QUALITY_GATED_FAMILY_TRAVEL_TOPICS=${qualityGatedFamilyTravelTopics.length}`
 );
+console.log(
+  `QUALITY_GATED_LONG_STAY_TOPICS=${qualityGatedLongStayTopics.length}`
+);
 
 console.log(
   `EXPOSED_QUALITY_FAIL=${exposedQualityFailures.length}`
@@ -385,15 +393,15 @@ if (
   );
 }
 
-if (keptTopics.length !== 4854) {
+if (keptTopics.length !== 5069) {
   throw new Error(
-    `Expected 4854 kept topics, got ${keptTopics.length}`
+    `Expected 5069 kept topics, got ${keptTopics.length}`
   );
 }
 
-if (omittedTopics.length !== 646) {
+if (omittedTopics.length !== 431) {
   throw new Error(
-    `Expected 646 omitted topics, got ${omittedTopics.length}`
+    `Expected 431 omitted topics, got ${omittedTopics.length}`
   );
 }
 
@@ -1003,5 +1011,30 @@ for (const { pathname, quality } of qualityGatedFamilyTravelTopics) {
 }
 
 console.log("QUALITY_GATED_FAMILY_TRAVEL_PRESERVATION=PASS");
+
+if (qualityGatedLongStayTopics.length !== 220) {
+  throw new Error(
+    `Expected 220 quality-gated long-stay-guide topics, got ${qualityGatedLongStayTopics.length}`
+  );
+}
+
+for (const { pathname, quality } of qualityGatedLongStayTopics) {
+  if (!isCityTopicSitemapEligible(pathname)) {
+    throw new Error(
+      `Expected quality-gated long-stay-guide path in sitemap: ${pathname}`
+    );
+  }
+
+  if (
+    quality.status !== "eligible-safe" &&
+    quality.status !== "qualified-evidence"
+  ) {
+    throw new Error(
+      `Unsafe long-stay-guide quality status for ${pathname}: ${quality.status}`
+    );
+  }
+}
+
+console.log("QUALITY_GATED_LONG_STAY_PRESERVATION=PASS");
 console.log("EXPOSED_QUALITY_GUARD=PASS");
 console.log("SITEMAP_SELECTION_SMOKE=PASS");
