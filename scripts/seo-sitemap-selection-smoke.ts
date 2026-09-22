@@ -71,6 +71,7 @@ const qualityGatedTopicSlugs = [
   "first-photo",
   "family-travel-guide",
   "long-stay-guide",
+  "market-analysis",
 ] as const;
 
 const qualityGatedTopics = qualityGatedTopicSlugs.flatMap(
@@ -185,6 +186,10 @@ const qualityGatedFamilyTravelTopics = qualityGatedTopics.filter(
 
 const qualityGatedLongStayTopics = qualityGatedTopics.filter(
   ({ topicSlug }) => topicSlug === "long-stay-guide"
+);
+
+const qualityGatedMarketAnalysisTopics = qualityGatedTopics.filter(
+  ({ topicSlug }) => topicSlug === "market-analysis"
 );
 
 const exposedQualityFailures = qualityGatedTopics.filter(
@@ -336,6 +341,9 @@ console.log(
 console.log(
   `QUALITY_GATED_LONG_STAY_TOPICS=${qualityGatedLongStayTopics.length}`
 );
+console.log(
+  `QUALITY_GATED_MARKET_ANALYSIS_TOPICS=${qualityGatedMarketAnalysisTopics.length}`
+);
 
 console.log(
   `EXPOSED_QUALITY_FAIL=${exposedQualityFailures.length}`
@@ -393,15 +401,15 @@ if (
   );
 }
 
-if (keptTopics.length !== 5069) {
+if (keptTopics.length !== 5284) {
   throw new Error(
-    `Expected 5069 kept topics, got ${keptTopics.length}`
+    `Expected 5284 kept topics, got ${keptTopics.length}`
   );
 }
 
-if (omittedTopics.length !== 431) {
+if (omittedTopics.length !== 216) {
   throw new Error(
-    `Expected 431 omitted topics, got ${omittedTopics.length}`
+    `Expected 216 omitted topics, got ${omittedTopics.length}`
   );
 }
 
@@ -1036,5 +1044,30 @@ for (const { pathname, quality } of qualityGatedLongStayTopics) {
 }
 
 console.log("QUALITY_GATED_LONG_STAY_PRESERVATION=PASS");
+
+if (qualityGatedMarketAnalysisTopics.length !== 220) {
+  throw new Error(
+    `Expected 220 quality-gated market-analysis topics, got ${qualityGatedMarketAnalysisTopics.length}`
+  );
+}
+
+for (const { pathname, quality } of qualityGatedMarketAnalysisTopics) {
+  if (!isCityTopicSitemapEligible(pathname)) {
+    throw new Error(
+      `Expected quality-gated market-analysis path in sitemap: ${pathname}`
+    );
+  }
+
+  if (
+    quality.status !== "eligible-safe" &&
+    quality.status !== "qualified-evidence"
+  ) {
+    throw new Error(
+      `Unsafe market-analysis quality status for ${pathname}: ${quality.status}`
+    );
+  }
+}
+
+console.log("QUALITY_GATED_MARKET_ANALYSIS_PRESERVATION=PASS");
 console.log("EXPOSED_QUALITY_GUARD=PASS");
 console.log("SITEMAP_SELECTION_SMOKE=PASS");
