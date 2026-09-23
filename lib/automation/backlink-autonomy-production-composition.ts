@@ -2,6 +2,11 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getBacklinkDomainById } from "@/lib/backlinks/repositories/domainsRepository";
 import { getBacklinkOpportunityById } from "@/lib/backlinks/repositories/opportunitiesRepository";
 import { getBacklinkContactById, listBacklinkContactsByDomain } from "@/lib/backlinks/repositories/contactsRepository";
+import { getBacklinkCampaignById } from "@/lib/backlinks/repositories/campaignsRepository";
+import { listBacklinkCampaigns } from "@/lib/backlinks/repositories/campaignsRepository";
+import { listCampaignOpportunities } from "@/lib/backlinks/repositories/campaignOpportunitiesRepository";
+import { createBacklinkOutreachDraftRouteServices } from "@/lib/backlinks/services/outreachDraftRouteService";
+import { getActiveBacklinkOutreachByIdentity } from "@/lib/backlinks/repositories/outreachRepository";
 import { createContact } from "@/lib/backlinks/services/contactService";
 import { resolveBacklinkContacts } from "@/lib/backlinks/services/contactResolutionService";
 import { getConfiguredMailboxVerificationProvider } from "@/lib/backlinks/providers/zeroBounceMailboxVerificationProvider";
@@ -92,8 +97,93 @@ function blockedHandlers(client: ReturnType<typeof createSupabaseAdminClient>): 
       getProvider: () => getConfiguredMailboxVerificationProvider(),
       record: (input) => recordMailboxVerificationAndMaybePromote(client, input),
     },
-    campaign: { getDomain: unavailable, getOpportunity: unavailable, getContact: unavailable, findCampaignMembership: unavailable, prepareCampaign: unavailable },
-    draft: { getDomain: unavailable, getOpportunity: unavailable, getContact: unavailable, getCampaign: unavailable, getActiveOutreach: unavailable, createDraft: unavailable },
+    campaign: {
+      getDomain: async (workspaceId, domainId) =>
+        getBacklinkDomainById(client, workspaceId, domainId),
+
+      getOpportunity: async (workspaceId, opportunityId) =>
+        getBacklinkOpportunityById(client, workspaceId, opportunityId),
+
+      getContact: async (workspaceId, contactId) =>
+        getBacklinkContactById(client, workspaceId, contactId),
+
+      findCampaignMembership: async ({ workspaceId, opportunityId }) => {
+        const campaigns = await listBacklinkCampaigns(client, {
+          workspaceId,
+          pagination: { page: 1, pageSize: 100 },
+        });
+
+        for (const campaign of campaigns.items) {
+          const memberships = await listCampaignOpportunities(client, {
+            workspaceId,
+            campaignId: campaign.id,
+            pagination: { page: 1, pageSize: 100 },
+          });
+
+          const membership = memberships.items.find(
+            (item) =>
+              item.opportunity_id === opportunityId &&
+              item.membership_status !== "removed",
+          );
+
+          if (membership != null) {
+            return {
+              campaignId: membership.campaign_id,
+              membershipStatus: membership.membership_status,
+            };
+          }
+        }
+
+        return null;
+      },
+
+      /*
+       * Campaign creation/membership preparation intentionally remains
+       * fail-closed here. Existing campaign memberships can proceed
+       * idempotently; autonomous creation is not introduced by this patch.
+       */
+      prepareCampaign: unavailable,
+    },
+
+    draft: {
+      getDomain: async (workspaceId, domainId) =>
+        getBacklinkDomainById(client, workspaceId, domainId),
+
+      getOpportunity: async (workspaceId, opportunityId) =>
+        getBacklinkOpportunityById(client, workspaceId, opportunityId),
+
+      getContact: async (workspaceId, contactId) =>
+        getBacklinkContactById(client, workspaceId, contactId),
+
+      getCampaign: async (workspaceId, campaignId) =>
+        getBacklinkCampaignById(client, workspaceId, campaignId),
+
+      getActiveOutreach: ({ workspaceId, opportunityId, contactId, channel }) =>
+        getActiveBacklinkOutreachByIdentity(client, {
+          workspaceId,
+          opportunityId,
+          contactId,
+          channel,
+        }),
+
+      createDraft: async (input) => {
+        const result =
+          await createBacklinkOutreachDraftRouteServices(client, client).create(
+            input,
+          );
+
+        return {
+          outreachId: result.outreachId,
+          disposition: result.disposition,
+          status: result.status,
+        };
+      },
+    },
+
+    /*
+     * Decision remains deliberately fail-closed until its complete
+     * production fact assembly is mapped and tested.
+     */
     decision: { getFacts: unavailable },
     contactForm: {
       getLatestApprovalCandidate: (input) =>
