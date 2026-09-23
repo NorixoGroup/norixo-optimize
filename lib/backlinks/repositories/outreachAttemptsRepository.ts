@@ -30,6 +30,7 @@ export type BacklinkOutreachAttemptKind = "initial" | "follow_up";
 export type CreateBacklinkOutreachAttemptInput = { attemptId: string; outreachId: string; actorUserId: string; channel: string; provider: string; recipient: string; idempotencyKey: string; replyTokenHash: string; replyTokenKeyVersion: string; attemptKind: BacklinkOutreachAttemptKind };
 export type BacklinkOutreachAttemptStatePatch = Pick<BacklinkOutreachAttemptInsert, "status" | "provider_message_id" | "error_code" | "error_message" | "accepted_at" | "failed_at" | "resolved_at">;
 export type BacklinkOutreachAttemptRateLimitReason =
+  | "WORKSPACE_30_DAY_LIMIT_REACHED"
   | "WORKSPACE_DAILY_LIMIT_REACHED"
   | "WORKSPACE_HOURLY_LIMIT_REACHED"
   | "DOMAIN_DAILY_LIMIT_REACHED"
@@ -101,7 +102,8 @@ function mapInitialAttemptReservation(value: unknown): {
   if (disposition === "rate_limited") {
     if (
       typeof rateLimitReason !== "string" ||
-      (rateLimitReason !== "WORKSPACE_DAILY_LIMIT_REACHED" &&
+      (rateLimitReason !== "WORKSPACE_30_DAY_LIMIT_REACHED" &&
+        rateLimitReason !== "WORKSPACE_DAILY_LIMIT_REACHED" &&
         rateLimitReason !== "WORKSPACE_HOURLY_LIMIT_REACHED" &&
         rateLimitReason !== "DOMAIN_DAILY_LIMIT_REACHED" &&
         rateLimitReason !== "CONTACT_DAILY_LIMIT_REACHED")
@@ -189,7 +191,8 @@ function mapApprovedInitialAttemptReservation(value: unknown): {
   if (disposition === "rate_limited") {
     if (
       typeof rateLimitReason !== "string" ||
-      (rateLimitReason !== "WORKSPACE_DAILY_LIMIT_REACHED" &&
+      (rateLimitReason !== "WORKSPACE_30_DAY_LIMIT_REACHED" &&
+        rateLimitReason !== "WORKSPACE_DAILY_LIMIT_REACHED" &&
         rateLimitReason !== "WORKSPACE_HOURLY_LIMIT_REACHED" &&
         rateLimitReason !== "DOMAIN_DAILY_LIMIT_REACHED" &&
         rateLimitReason !== "CONTACT_DAILY_LIMIT_REACHED")

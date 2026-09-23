@@ -165,16 +165,29 @@ async function evaluateBacklinkOutreachSendRateLimit(
   | {
       allowed: false;
       reason:
+        | "WORKSPACE_30_DAY_LIMIT_REACHED"
         | "WORKSPACE_DAILY_LIMIT_REACHED"
         | "WORKSPACE_HOURLY_LIMIT_REACHED"
         | "DOMAIN_DAILY_LIMIT_REACHED"
         | "CONTACT_DAILY_LIMIT_REACHED";
     }
 > {
+  const monthlyCutoff = addHours(input.now, -(24 * 30));
   const dailyCutoff = addHours(input.now, -24);
   const hourlyCutoff = addHours(input.now, -1);
-  const recentAttempts = await dependencies.listAttemptSummariesSince(input.workspaceId, dailyCutoff);
-  const hourlyAttempts = recentAttempts.filter((attempt) => Date.parse(attempt.requested_at) >= Date.parse(hourlyCutoff));
+
+  const monthlyAttempts = await dependencies.listAttemptSummariesSince(input.workspaceId, monthlyCutoff);
+  const recentAttempts = monthlyAttempts.filter(
+    (attempt) => Date.parse(attempt.requested_at) >= Date.parse(dailyCutoff),
+  );
+  const hourlyAttempts = recentAttempts.filter(
+    (attempt) => Date.parse(attempt.requested_at) >= Date.parse(hourlyCutoff),
+  );
+
+  if (monthlyAttempts.length >= 100) {
+    return { allowed: false, reason: "WORKSPACE_30_DAY_LIMIT_REACHED" };
+  }
+
   if (recentAttempts.length >= 5) {
     return { allowed: false, reason: "WORKSPACE_DAILY_LIMIT_REACHED" };
   }
