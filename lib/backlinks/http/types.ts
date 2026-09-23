@@ -6,6 +6,11 @@ export interface HttpFetchRequest {
   userAgent?: string;
 }
 
+export type HttpRedirectAuthorizationInput = {
+  fromUrl: URL;
+  toUrl: URL;
+};
+
 export interface HttpFetchResponse {
   finalUrl: string;
   status: number;

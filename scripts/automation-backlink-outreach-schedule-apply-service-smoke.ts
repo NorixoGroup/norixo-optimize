@@ -117,6 +117,7 @@ async function main(): Promise<void> {
     getWorkspaceControl: async (workspace) => ({
       workspaceId: workspace,
       backlinksEnabled: true,
+      backlinkAutonomyEnabled: false,
       backlinkOutreachScheduleApplyEnabled: workspace === workspaceId,
       dryRunOnly: true,
       lastScheduleApplyAttemptAt: null,
@@ -219,6 +220,7 @@ async function main(): Promise<void> {
           getWorkspaceControl: async () => ({
             workspaceId,
             backlinksEnabled: true,
+            backlinkAutonomyEnabled: false,
             backlinkOutreachScheduleApplyEnabled: false,
             dryRunOnly: true,
             lastScheduleApplyAttemptAt: "2026-08-05T10:00:00.000Z",

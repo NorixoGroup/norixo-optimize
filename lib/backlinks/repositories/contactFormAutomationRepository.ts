@@ -145,6 +145,24 @@ export async function getContactFormRunExecutionContext(client: BacklinkReposito
   return { run, approval: approvalResult.data, outreach: outreachResult.data, contact: contactResult.data, opportunity: opportunityResult.data, outreachAttemptCount: attemptsResult.count ?? 0 };
 }
 
+export async function getLatestContactFormApprovalCandidate(
+  client: BacklinkRepositoryClient,
+  input: { workspaceId: string; outreachId: string },
+): Promise<ContactFormApproval | null> {
+  const { data, error } = await client
+    .from("backlink_contact_form_approvals")
+    .select("*")
+    .eq("workspace_id", required(input.workspaceId, "workspaceId"))
+    .eq("outreach_id", required(input.outreachId, "outreachId"))
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error != null) throw rpcError("getLatestContactFormApprovalCandidate", error);
+  return data ?? null;
+}
+
 export async function approveContactFormInitial(client: BacklinkRepositoryClient, input: { workspaceId: string; outreachId: string; approvedByUserId: string; senderName: string; senderEmail: string; senderCompany: string; senderWebsite: string; senderFirstName?: string | null; senderLastName?: string | null }) {
   const args: Database["public"]["Functions"]["approve_backlink_contact_form_initial_v1"]["Args"] = { p_workspace_id: required(input.workspaceId, "workspaceId"), p_outreach_id: required(input.outreachId, "outreachId"), p_approved_by_user_id: required(input.approvedByUserId, "approvedByUserId"), p_sender_name: required(input.senderName, "senderName"), p_sender_email: required(input.senderEmail, "senderEmail"), p_sender_company: required(input.senderCompany, "senderCompany"), p_sender_website: required(input.senderWebsite, "senderWebsite"), p_sender_first_name: optionalSenderIdentityPart(input.senderFirstName, "senderFirstName"), p_sender_last_name: optionalSenderIdentityPart(input.senderLastName, "senderLastName") };
   const { data, error } = await client.rpc("approve_backlink_contact_form_initial_v1", args);

@@ -1009,6 +1009,15 @@ export type Database = {
           },
         ]
       }
+      backlink_contact_mailbox_verifications: {
+        Row: { checked_at: string; contact_id: string; created_at: string; email_fingerprint: string; id: string; provider: string; provider_reference: string | null; result: string; safe_metadata: Json | null; verification_key: string; workspace_id: string }
+        Insert: { checked_at: string; contact_id: string; created_at?: string; email_fingerprint: string; id?: string; provider: string; provider_reference?: string | null; result: string; safe_metadata?: Json | null; verification_key: string; workspace_id: string }
+        Update: { checked_at?: string; contact_id?: string; created_at?: string; email_fingerprint?: string; id?: string; provider?: string; provider_reference?: string | null; result?: string; safe_metadata?: Json | null; verification_key?: string; workspace_id?: string }
+        Relationships: [
+          { foreignKeyName: "backlink_contact_mailbox_verifications_contact_id_fkey"; columns: ["contact_id"]; isOneToOne: false; referencedRelation: "backlink_contacts"; referencedColumns: ["id"] },
+          { foreignKeyName: "backlink_contact_mailbox_verifications_workspace_id_fkey"; columns: ["workspace_id"]; isOneToOne: false; referencedRelation: "workspaces"; referencedColumns: ["id"] },
+        ]
+      }
       backlink_domain_tags: {
         Row: {
           added_at: string
@@ -1549,9 +1558,9 @@ export type Database = {
         ]
       }
       automation_workspace_controls: {
-        Row: { backlink_outreach_schedule_apply_enabled: boolean; backlinks_enabled: boolean; created_at: string; disabled_reason: string | null; dry_run_only: boolean; last_schedule_apply_attempt_at: string | null; updated_at: string; updated_by: string | null; workspace_id: string }
-        Insert: { backlink_outreach_schedule_apply_enabled?: boolean; backlinks_enabled?: boolean; created_at?: string; disabled_reason?: string | null; dry_run_only?: boolean; last_schedule_apply_attempt_at?: string | null; updated_at?: string; updated_by?: string | null; workspace_id: string }
-        Update: { backlink_outreach_schedule_apply_enabled?: boolean; backlinks_enabled?: boolean; created_at?: string; disabled_reason?: string | null; dry_run_only?: boolean; last_schedule_apply_attempt_at?: string | null; updated_at?: string; updated_by?: string | null; workspace_id?: string }
+        Row: { backlink_autonomy_enabled: boolean; backlink_outreach_schedule_apply_enabled: boolean; backlinks_enabled: boolean; created_at: string; disabled_reason: string | null; dry_run_only: boolean; last_schedule_apply_attempt_at: string | null; updated_at: string; updated_by: string | null; workspace_id: string }
+        Insert: { backlink_autonomy_enabled?: boolean; backlink_outreach_schedule_apply_enabled?: boolean; backlinks_enabled?: boolean; created_at?: string; disabled_reason?: string | null; dry_run_only?: boolean; last_schedule_apply_attempt_at?: string | null; updated_at?: string; updated_by?: string | null; workspace_id: string }
+        Update: { backlink_autonomy_enabled?: boolean; backlink_outreach_schedule_apply_enabled?: boolean; backlinks_enabled?: boolean; created_at?: string; disabled_reason?: string | null; dry_run_only?: boolean; last_schedule_apply_attempt_at?: string | null; updated_at?: string; updated_by?: string | null; workspace_id?: string }
         Relationships: []
       }
       backlink_outreach_schedule_apply_locks: {
@@ -5342,6 +5351,7 @@ export type Database = {
         Returns: Database["public"]["Tables"]["backlink_verification_jobs"]["Row"][]
       }
       claim_next_automation_task: { Args: { p_claimed_at: string; p_lease_duration_seconds: number; p_run_id: string; p_worker_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
+      claim_next_backlink_autonomy_task: { Args: { p_claimed_at: string; p_lease_duration_seconds: number; p_run_id: string; p_worker_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
       heartbeat_backlink_verification_job: {
         Args: { p_heartbeat_at: string; p_job_id: string; p_lease_duration_seconds: number; p_worker_id: string }
         Returns: Database["public"]["Tables"]["backlink_verification_jobs"]["Row"][]
@@ -5370,6 +5380,11 @@ export type Database = {
       fail_automation_task: { Args: { p_error_code: string; p_error_message: string; p_failed_at: string; p_task_id: string; p_worker_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
       heartbeat_automation_task: { Args: { p_heartbeat_at: string; p_lease_duration_seconds: number; p_task_id: string; p_worker_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
       reclaim_expired_automation_tasks: { Args: { p_limit: number; p_reclaimed_at: string; p_run_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
+      reclaim_expired_backlink_autonomy_tasks: { Args: { p_limit: number; p_reclaimed_at: string; p_run_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
+      record_backlink_contact_mailbox_verification_and_maybe_promote: {
+        Args: { p_checked_at: string; p_contact_id: string; p_email_fingerprint: string; p_provider: string; p_provider_reference?: string | null; p_result: string; p_safe_metadata?: Json | null; p_verification_key: string; p_workspace_id: string }
+        Returns: { contact_status: string; disposition: string; verification_id: string; verified_at: string | null }[]
+      }
       start_automation_run: {
         Args: { p_run_id: string; p_started_at: string; p_workspace_id: string }
         Returns: Database["public"]["Tables"]["automation_runs"]["Row"][]

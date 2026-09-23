@@ -3,6 +3,11 @@ import assert from "node:assert/strict";
 import { fetchHttp } from "../lib/backlinks/http";
 import { isUnsafeIpAddress, resolveSafeHttpTarget } from "../lib/backlinks/http";
 import type { DnsLookup, HttpFetchRequest, HttpFetchTransportInput, HttpFetchTransportResponse } from "../lib/backlinks/http";
+import { createOfficialOriginRedirectAuthorization } from "../lib/backlinks/services/contactResolutionService";
+import type { HttpVerificationOptions } from "../lib/backlinks/verification/job-types";
+
+type Assert<T extends true> = T;
+type PersistedVerificationHttpOptionsExcludeRedirectAuthorization = Assert<"authorizeRedirect" extends keyof HttpVerificationOptions ? false : true>;
 
 const publicDns: DnsLookup = async (hostname) => {
   if (hostname === "example.com") return [{ address: "93.184.216.34", family: 4 }];
@@ -119,7 +124,7 @@ async function main(): Promise<void> {
       dnsLookup: publicDns,
       transport: async () => response({ status: 302, headers: { location: "file:///etc/passwd" } }),
     }),
-    /HTTP target is not allowed/,
+    /HTTP redirect target is not allowed/,
   );
 
   const redirectHops: string[] = [];
@@ -133,6 +138,79 @@ async function main(): Promise<void> {
     },
   });
   assert.deepEqual(redirectHops, ["redirect.example", "example.com"]);
+
+  const officialRedirectPolicy = createOfficialOriginRedirectAuthorization("https://example.com");
+  const sameOriginHops: string[] = [];
+  await fetchHttp(request("https://example.com/start"), {
+    dnsLookup: publicDns,
+    authorizeRedirect: officialRedirectPolicy,
+    transport: async (input) => {
+      sameOriginHops.push(input.url.toString());
+      return input.url.pathname === "/start"
+        ? response({ status: 302, headers: { location: "https://example.com/contact?source=redirect" } })
+        : response();
+    },
+  });
+  assert.deepEqual(sameOriginHops, ["https://example.com/start", "https://example.com/contact?source=redirect"]);
+
+  const rejectedCrossOriginHops: string[] = [];
+  await assert.rejects(
+    () => fetchHttp(request("https://example.com/start"), {
+      dnsLookup: publicDns,
+      authorizeRedirect: officialRedirectPolicy,
+      transport: async (input) => {
+        rejectedCrossOriginHops.push(input.url.toString());
+        return response({ status: 302, headers: { location: "https://redirect.example/contact" } });
+      },
+    }),
+    /not authorized/,
+  );
+  assert.deepEqual(rejectedCrossOriginHops, ["https://example.com/start"]);
+
+  for (const location of ["http://example.com/contact", "https://sub.example.com/contact", "https://user:pass@example.com/contact"]) {
+    const hops: string[] = [];
+    await assert.rejects(
+      () => fetchHttp(request("https://example.com/start"), {
+        dnsLookup: publicDns,
+        authorizeRedirect: officialRedirectPolicy,
+        transport: async (input) => {
+          hops.push(input.url.toString());
+          return response({ status: 302, headers: { location } });
+        },
+      }),
+      /not (authorized|allowed)/,
+    );
+    assert.deepEqual(hops, ["https://example.com/start"]);
+  }
+
+  let dnsLookups = 0;
+  const rebindingDns: DnsLookup = async () => {
+    dnsLookups += 1;
+    return dnsLookups === 1
+      ? [{ address: "93.184.216.34", family: 4 }]
+      : [{ address: "10.0.0.10", family: 4 }];
+  };
+  const privateRedirectHops: string[] = [];
+  await assert.rejects(
+    () => fetchHttp(request("https://example.com/start"), {
+      dnsLookup: rebindingDns,
+      authorizeRedirect: officialRedirectPolicy,
+      transport: async (input) => {
+        privateRedirectHops.push(input.url.toString());
+        return response({ status: 302, headers: { location: "https://example.com/contact" } });
+      },
+    }),
+    /HTTP target is not allowed/,
+  );
+  assert.deepEqual(privateRedirectHops, ["https://example.com/start"]);
+
+  await assert.rejects(
+    () => fetchHttp(request("https://example.com/loop", { maxRedirects: 1 }), {
+      dnsLookup: publicDns,
+      transport: async () => response({ status: 302, headers: { location: "/loop" } }),
+    }),
+    /redirect limit exceeded/,
+  );
 
   await assert.rejects(
     () => fetchHttp(request("https://example.com/large"), {
