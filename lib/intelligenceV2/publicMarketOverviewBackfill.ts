@@ -125,6 +125,12 @@ type PublicMarketOverviewBackfillDependencies = Readonly<{
   insertArtifact?: (
     payload: PublicMarketOverviewPersistableArtifactRow,
   ) => Promise<PublicMarketOverviewInsertArtifactResult | boolean>;
+  findArtifactByKey?: (
+    artifactKey: string,
+  ) => Promise<PublicMarketOverviewFindArtifactResult>;
+  findActiveArtifact?: (
+    payload: PublicMarketOverviewPersistableArtifactRow,
+  ) => Promise<PublicMarketOverviewFindArtifactResult>;
   builderDependencies?: Omit<PublicMarketOverviewBuilderDependencies, "now" | "loadFacts">;
 }>;
 
@@ -137,6 +143,16 @@ export type PublicMarketOverviewSafeWriteFailure = Readonly<{
 type PublicMarketOverviewInsertArtifactResult =
   | Readonly<{ ok: true; status: "inserted" | "already_existing" }>
   | Readonly<{ ok: false; failure: PublicMarketOverviewSafeWriteFailure }>;
+
+type PublicMarketOverviewExistingArtifact = Readonly<{
+  id: string;
+  artifactKey: string;
+  createdAt: string;
+}>;
+
+type PublicMarketOverviewFindArtifactResult =
+  | Readonly<{ ok: true; row: PublicMarketOverviewExistingArtifact | null }>
+  | Readonly<{ ok: false }>;
 
 type CandidateTarget = Readonly<{
   country: string;
@@ -317,6 +333,58 @@ async function insertArtifactIntoSupabase(
       ok: false,
       failure: extractSafeWriteFailure(error),
     };
+  }
+}
+
+function mapExistingArtifact(value: unknown): PublicMarketOverviewExistingArtifact | null {
+  if (value == null || typeof value !== "object") return null;
+  const row = value as { id?: unknown; artifact_key?: unknown; created_at?: unknown };
+  if (
+    typeof row.id !== "string" || row.id.trim().length === 0 ||
+    typeof row.artifact_key !== "string" || row.artifact_key.trim().length === 0 ||
+    typeof row.created_at !== "string" || !Number.isFinite(Date.parse(row.created_at))
+  ) return null;
+  return Object.freeze({ id: row.id, artifactKey: row.artifact_key, createdAt: row.created_at });
+}
+
+async function findArtifactByKeyFromSupabase(
+  artifactKey: string,
+): Promise<PublicMarketOverviewFindArtifactResult> {
+  try {
+    const admin = createSupabaseAdminClient();
+    const { data, error } = await admin
+      .from("benchmark_artifacts")
+      .select("id,artifact_key,created_at")
+      .eq("artifact_key", artifactKey)
+      .limit(1);
+    if (error || !Array.isArray(data)) return { ok: false };
+    if (data[0] == null) return { ok: true, row: null };
+    const row = mapExistingArtifact(data[0]);
+    return row == null ? { ok: false } : { ok: true, row };
+  } catch {
+    return { ok: false };
+  }
+}
+
+async function findActiveArtifactFromSupabase(
+  payload: PublicMarketOverviewPersistableArtifactRow,
+): Promise<PublicMarketOverviewFindArtifactResult> {
+  try {
+    const admin = createSupabaseAdminClient();
+    const { data, error } = await admin
+      .from("benchmark_artifacts")
+      .select("id,artifact_key,created_at")
+      .eq("benchmark_type", payload.benchmark_type)
+      .eq("market_cell_key", payload.market_cell_key)
+      .eq("intended_use", "public_market_overview")
+      .neq("approval_status", "revoked")
+      .order("created_at", { ascending: false });
+    if (error || !Array.isArray(data)) return { ok: false };
+    const rows = data.map(mapExistingArtifact);
+    if (rows.some((row) => row == null)) return { ok: false };
+    return { ok: true, row: rows[0] ?? null };
+  } catch {
+    return { ok: false };
   }
 }
 
@@ -771,6 +839,13 @@ export async function buildPublicMarketOverviewBackfill(
   });
 
   const insertArtifact = dependencies.insertArtifact ?? insertArtifactIntoSupabase;
+  const findArtifactByKey =
+    dependencies.findArtifactByKey ?? findArtifactByKeyFromSupabase;
+  const findActiveArtifact =
+    dependencies.findActiveArtifact ?? findActiveArtifactFromSupabase;
+  const hasSupersessionLookup =
+    dependencies.insertArtifact == null ||
+    (dependencies.findArtifactByKey != null && dependencies.findActiveArtifact != null);
   const builderDependencies = dependencies.builderDependencies ?? {};
 
   const candidates: PublicMarketOverviewBackfillCandidate[] = [];
@@ -861,6 +936,7 @@ export async function buildPublicMarketOverviewBackfill(
         continue;
       }
 
+      let persistableArtifact = buildResult.persistableArtifact;
       let insertResult: PublicMarketOverviewInsertArtifactResult = {
         ok: false,
         failure: Object.freeze({
@@ -870,9 +946,25 @@ export async function buildPublicMarketOverviewBackfill(
         }),
       };
       try {
-        insertResult = normalizeInsertResult(
-          await insertArtifact(buildResult.persistableArtifact),
-        );
+        if (hasSupersessionLookup) {
+          const existingByKey = await findArtifactByKey(
+            buildResult.persistableArtifact.artifact_key,
+          );
+          if (!existingByKey.ok) {
+            throw new Error("artifact_key_lookup_failed");
+          }
+          if (existingByKey.row == null) {
+            const active = await findActiveArtifact(buildResult.persistableArtifact);
+            if (!active.ok) {
+              throw new Error("active_artifact_lookup_failed");
+            }
+            persistableArtifact = Object.freeze({
+              ...buildResult.persistableArtifact,
+              supersedes_artifact_id: active.row?.id ?? null,
+            });
+          }
+        }
+        insertResult = normalizeInsertResult(await insertArtifact(persistableArtifact));
       } catch {
         insertResult = {
           ok: false,
@@ -900,7 +992,7 @@ export async function buildPublicMarketOverviewBackfill(
             artifactKey: buildResult.artifact.artifactKey,
             status: "failed",
             wouldWrite: eligibleExposure,
-            persistableArtifact: buildResult.persistableArtifact,
+            persistableArtifact,
             writeFailure: insertResult.failure,
           }),
         );
@@ -923,7 +1015,7 @@ export async function buildPublicMarketOverviewBackfill(
             artifactKey: buildResult.artifact.artifactKey,
             status: "already_existing",
             wouldWrite: eligibleExposure,
-            persistableArtifact: buildResult.persistableArtifact,
+            persistableArtifact,
             writeFailure: null,
           }),
         );
@@ -945,7 +1037,7 @@ export async function buildPublicMarketOverviewBackfill(
           artifactKey: buildResult.artifact.artifactKey,
           status: "inserted",
           wouldWrite: eligibleExposure,
-          persistableArtifact: buildResult.persistableArtifact,
+          persistableArtifact,
           writeFailure: null,
         }),
       );

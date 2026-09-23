@@ -612,11 +612,17 @@ export async function buildPublicMarketOverviewArtifact(
   const capturePeriodBucket = toUtcMonthBucket(window.windowEndedAt);
   const sourceDiversityBand = deriveSourceDiversityBand(sourceClassCount);
   const platform = normalized.platform;
-  const propertyType = normalizeIntelligencePropertyType(normalized.propertyType);
+  const requestedPropertyType = normalizeIntelligencePropertyType(
+    normalized.propertyType,
+  );
+  const resolvedPropertyType =
+    normalized.propertyScope === "broader_market"
+      ? "unknown"
+      : requestedPropertyType;
 
   if (
     (platform !== "all" && normalizeIntelligencePlatform(platform) === "unknown") ||
-    (normalized.propertyScope === "exact" && propertyType === "unknown") ||
+    (normalized.propertyScope === "exact" && requestedPropertyType === "unknown") ||
     (sourceDiversityBand !== "low" && sourceDiversityBand !== "moderate")
   ) {
     return buildUnavailableResult({
@@ -637,7 +643,7 @@ export async function buildPublicMarketOverviewArtifact(
     city: normalized.city,
     platform,
     platformScope: normalized.platformScope,
-    propertyType,
+    propertyType: resolvedPropertyType,
     currency: normalized.currency,
     propertyScope: normalized.propertyScope,
     windowStartedAt: windowStartedAtIso,
@@ -676,7 +682,7 @@ export async function buildPublicMarketOverviewArtifact(
     country: normalized.country,
     city: normalized.city,
     platform: normalized.platform,
-    propertyType,
+    propertyType: resolvedPropertyType,
     currency: normalized.currency,
   });
   const validityEnd = new Date(window.windowEndedAt.getTime() + 30 * DAY_MS);
@@ -692,7 +698,7 @@ export async function buildPublicMarketOverviewArtifact(
     country: normalized.country,
     city: normalized.city,
     platform: normalized.platform,
-    propertyType,
+    propertyType: resolvedPropertyType,
     currency: normalized.currency,
     capturePeriodBucket,
     windowStartedAt: windowStartedAtIso,

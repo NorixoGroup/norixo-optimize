@@ -327,6 +327,12 @@ async function main() {
     assert.equal(broader.available, true);
   if (broader.available) {
     assert.equal(broader.includedSampleSize, 17);
+    assert.equal(broader.artifact.propertyType, "unknown");
+    assert.equal(broader.persistableArtifact.property_type, "unknown");
+    assert.equal(
+      broader.persistableArtifact.market_cell_key,
+      "v1|ma|marrakech|all|unknown|unknown|eur",
+    );
     assert.equal(broader.artifact.platform, "all");
     assert.equal(broader.artifact.exposureStatus, "public_usable_with_limits");
     assert.equal(
@@ -348,6 +354,63 @@ async function main() {
     assert.equal(
       broader.artifact.limitationCodes.includes("limited_sample_size"),
       true,
+    );
+  }
+
+  const broaderStudio = await buildPublicMarketOverviewArtifact(
+    {
+      country: "ma",
+      city: "marrakech",
+      platformScope: "all_platforms",
+      propertyType: "studio",
+      currency: "EUR",
+      propertyScope: "broader_market",
+    },
+    {
+      now: () => new Date("2026-07-15T00:00:00.000Z"),
+      loadFacts: injectRows([
+        ...buildRows({ count: 9, propertyType: "unknown", periods: ["2026-05"] }),
+        ...buildRows({ count: 3, propertyType: "unknown", periods: ["2026-06"] }),
+        ...buildRows({ count: 3, propertyType: "unknown", periods: ["2026-07"] }),
+        ...buildRows({ count: 2, propertyType: "villa", periods: ["2026-07"], priceStart: 600 }),
+      ]),
+    },
+  );
+  assert.equal(broaderStudio.available, true);
+  if (broader.available && broaderStudio.available) {
+    assert.equal(broaderStudio.artifact.propertyType, "unknown");
+    assert.equal(
+      broaderStudio.persistableArtifact.market_cell_key,
+      broader.persistableArtifact.market_cell_key,
+    );
+    assert.equal(broaderStudio.artifact.artifactKey, broader.artifact.artifactKey);
+  }
+
+  const exactMixedRows = await buildPublicMarketOverviewArtifact(
+    {
+      country: "ma",
+      city: "marrakech",
+      platformScope: "all_platforms",
+      propertyType: "apartment",
+      currency: "EUR",
+      propertyScope: "exact",
+    },
+    {
+      now: () => new Date("2026-07-15T00:00:00.000Z"),
+      loadFacts: injectRows([
+        ...buildRows({ count: 18, propertyType: "apartment" }),
+        ...buildRows({ count: 9, propertyType: "studio", priceStart: 500 }),
+        ...buildRows({ count: 9, propertyType: "villa", priceStart: 800 }),
+      ]),
+    },
+  );
+  assert.equal(exactMixedRows.available, true);
+  if (exactMixedRows.available) {
+    assert.equal(exactMixedRows.includedSampleSize, 18);
+    assert.equal(exactMixedRows.artifact.propertyType, "apartment");
+    assert.equal(
+      exactMixedRows.persistableArtifact.market_cell_key,
+      "v1|ma|marrakech|all|apartment|unknown|eur",
     );
   }
 

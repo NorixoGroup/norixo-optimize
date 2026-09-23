@@ -105,6 +105,7 @@ type PublicMarketOverviewArtifactLoadInput = Readonly<{
 
 type PublicMarketOverviewArtifactDbRow = Readonly<{
   id?: unknown;
+  supersedes_artifact_id?: unknown;
   benchmark_type?: unknown;
   approval_status?: unknown;
   approved_for_internal?: unknown;
@@ -132,6 +133,8 @@ type PublicMarketOverviewArtifactDbRow = Readonly<{
 }>;
 
 type NormalizedPublicArtifact = Readonly<{
+  id: string | null;
+  supersedesArtifactId: string | null;
   benchmarkType: "pricing_distribution";
   approvalStatus: "internal_approved";
   approvedForInternal: true;
@@ -270,6 +273,7 @@ async function loadArtifactsFromSupabase(
       .select(
         [
           "id",
+          "supersedes_artifact_id",
           "benchmark_type",
           "approval_status",
           "approved_for_internal",
@@ -326,6 +330,11 @@ async function loadArtifactsFromSupabase(
 function mapRow(
   row: PublicMarketOverviewArtifactDbRow,
 ): NormalizedPublicArtifact | null {
+  const id = row.id == null ? null : parseNonEmptyString(row.id);
+  const supersedesArtifactId =
+    row.supersedes_artifact_id == null
+      ? null
+      : parseNonEmptyString(row.supersedes_artifact_id);
   const benchmarkType = parseNonEmptyString(row.benchmark_type);
   const approvalStatus = parseNonEmptyString(row.approval_status);
   const approvedForInternal = parseBoolean(row.approved_for_internal);
@@ -391,6 +400,8 @@ function mapRow(
   }
 
   return Object.freeze({
+    id,
+    supersedesArtifactId,
     benchmarkType: "pricing_distribution",
     approvalStatus: "internal_approved",
     approvedForInternal: true,
@@ -463,7 +474,15 @@ function deriveConfidence(
 function selectBestArtifactForCurrency(
   artifacts: readonly NormalizedPublicArtifact[],
 ): NormalizedPublicArtifact | null {
+  const supersededIds = new Set(
+    artifacts
+      .map((artifact) => artifact.supersedesArtifactId)
+      .filter((id): id is string => id != null),
+  );
   const sorted = [...artifacts].sort((left, right) => {
+    const leftSuperseded = left.id != null && supersededIds.has(left.id);
+    const rightSuperseded = right.id != null && supersededIds.has(right.id);
+    if (leftSuperseded !== rightSuperseded) return leftSuperseded ? 1 : -1;
     const validFromDelta = Date.parse(right.validFrom) - Date.parse(left.validFrom);
     if (validFromDelta !== 0) {
       return validFromDelta;

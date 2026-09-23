@@ -191,6 +191,34 @@ async function main() {
 
   {
     const result = await getPublicMarketOverviewEvidence(buildInput(), {
+      loadArtifacts: async () => Object.freeze({
+        ok: true,
+        rows: Object.freeze([
+          buildRow({ id: "v1", median_price: 68, created_at: "2026-07-10T00:00:00.000Z" }),
+          buildRow({ id: "v2", supersedes_artifact_id: "v1", median_price: 75, created_at: "2026-07-11T00:00:00.000Z" }),
+        ]),
+      }),
+    });
+    assert.equal(result.status, "available");
+    if (result.status === "available") assert.equal(result.benchmark.median, 75);
+  }
+
+  {
+    const result = await getPublicMarketOverviewEvidence(buildInput(), {
+      loadArtifacts: async () => Object.freeze({
+        ok: true,
+        rows: Object.freeze([
+          buildRow({ id: "v1", median_price: 68 }),
+          buildRow({ id: "v2", supersedes_artifact_id: "v1", approval_status: "draft", median_price: 75 }),
+        ]),
+      }),
+    });
+    assert.equal(result.status, "available");
+    if (result.status === "available") assert.equal(result.benchmark.median, 68);
+  }
+
+  {
+    const result = await getPublicMarketOverviewEvidence(buildInput(), {
       loadArtifacts: async () =>
         Object.freeze({
           ok: true,

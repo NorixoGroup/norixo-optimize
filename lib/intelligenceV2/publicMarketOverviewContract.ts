@@ -137,7 +137,7 @@ export type PublicMarketOverviewPersistableArtifactRow = Readonly<{
   aggregation_policy_version: PricingBenchmarkArtifactPayload["aggregation_policy_version"];
   approval_policy_version: PricingBenchmarkArtifactPayload["approval_policy_version"];
   market_cell_policy_version: PricingBenchmarkArtifactPayload["market_cell_policy_version"];
-  supersedes_artifact_id: null;
+  supersedes_artifact_id: string | null;
   intended_use: "public_market_overview";
   aggregation_window: "rolling_90_days";
   platform_scope: PublicMarketOverviewPlatformScope;

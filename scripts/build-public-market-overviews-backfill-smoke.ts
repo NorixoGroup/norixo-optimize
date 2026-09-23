@@ -560,10 +560,109 @@ async function main() {
     noPrivateSelectorImport.includes('onConflict: "artifact_key"'),
     true,
   );
+  assert.equal(
+    noPrivateSelectorImport.includes('.eq("benchmark_type", payload.benchmark_type)'),
+    true,
+  );
   assert.deepEqual(PUBLIC_MARKET_OVERVIEW_ARTIFACT_UPSERT_OPTIONS, {
     onConflict: "artifact_key",
     ignoreDuplicates: true,
   });
+
+  const lifecycleOptions: PublicMarketOverviewBackfillOptions = {
+    mode: "apply",
+    confirmWrite: true,
+    country: "ma",
+    city: "marrakech",
+    platform: "airbnb",
+    platformScope: "single_platform",
+    propertyType: null,
+    currency: "EUR",
+    windowDays: 90,
+    limit: null,
+  };
+  const lifecycleRows = buildRows({ count: 18, propertyType: "unknown" });
+  const writtenPayloads: Array<{ supersedes_artifact_id: string | null }> = [];
+  const firstVersion = await runBackfill(lifecycleOptions, lifecycleRows, {
+    findArtifactByKey: async () => ({ ok: true as const, row: null }),
+    findActiveArtifact: async () => ({ ok: true as const, row: null }),
+    insertArtifact: async (payload) => {
+      writtenPayloads.push(payload);
+      return { ok: true as const, status: "inserted" as const };
+    },
+  });
+  assert.equal(firstVersion.ok, true);
+  assert.equal(writtenPayloads[0]?.supersedes_artifact_id, null);
+
+  const secondVersion = await runBackfill(lifecycleOptions, lifecycleRows, {
+    findArtifactByKey: async () => ({ ok: true as const, row: null }),
+    findActiveArtifact: async () => ({ ok: true as const, row: { id: "v1", artifactKey: "key-1", createdAt: "2026-07-01T00:00:00.000Z" } }),
+    insertArtifact: async (payload) => {
+      writtenPayloads.push(payload);
+      return { ok: true as const, status: "inserted" as const };
+    },
+  });
+  assert.equal(secondVersion.ok, true);
+  assert.equal(writtenPayloads[1]?.supersedes_artifact_id, "v1");
+
+  const thirdVersion = await runBackfill(lifecycleOptions, lifecycleRows, {
+    findArtifactByKey: async () => ({ ok: true as const, row: null }),
+    findActiveArtifact: async () => ({ ok: true as const, row: { id: "v2", artifactKey: "key-2", createdAt: "2026-07-02T00:00:00.000Z" } }),
+    insertArtifact: async (payload) => {
+      writtenPayloads.push(payload);
+      return { ok: true as const, status: "inserted" as const };
+    },
+  });
+  assert.equal(thirdVersion.ok, true);
+  assert.equal(writtenPayloads[2]?.supersedes_artifact_id, "v2");
+
+  const idempotentVersion = await runBackfill(lifecycleOptions, lifecycleRows, {
+    findArtifactByKey: async () => ({ ok: true as const, row: { id: "v3", artifactKey: "same-key", createdAt: "2026-07-03T00:00:00.000Z" } }),
+    findActiveArtifact: async () => { throw new Error("same key must not seek a predecessor"); },
+    insertArtifact: async (payload) => {
+      writtenPayloads.push(payload);
+      return { ok: true as const, status: "already_existing" as const };
+    },
+  });
+  assert.equal(idempotentVersion.ok, true);
+  assert.equal(writtenPayloads[3]?.supersedes_artifact_id, null);
+
+  const differentCellRows = lifecycleRows.map((row) => ({
+    ...row,
+    city: "casablanca",
+    market_cell_key: row.market_cell_key.replace("marrakech", "casablanca"),
+  }));
+  const differentCell = await runBackfill(
+    { ...lifecycleOptions, city: "casablanca" },
+    differentCellRows,
+    {
+      findArtifactByKey: async () => ({ ok: true as const, row: null }),
+      findActiveArtifact: async (payload) => {
+        assert.equal(payload.market_cell_key.includes("casablanca"), true);
+        return { ok: true as const, row: null };
+      },
+      insertArtifact: async (payload) => {
+        writtenPayloads.push(payload);
+        return { ok: true as const, status: "inserted" as const };
+      },
+    },
+  );
+  assert.equal(differentCell.ok, true);
+  assert.equal(writtenPayloads[4]?.supersedes_artifact_id, null);
+
+  const differentBenchmarkType = await runBackfill(lifecycleOptions, lifecycleRows, {
+    findArtifactByKey: async () => ({ ok: true as const, row: null }),
+    findActiveArtifact: async (payload) => {
+      assert.equal(payload.benchmark_type, "pricing_distribution");
+      return { ok: true as const, row: null };
+    },
+    insertArtifact: async (payload) => {
+      writtenPayloads.push(payload);
+      return { ok: true as const, status: "inserted" as const };
+    },
+  });
+  assert.equal(differentBenchmarkType.ok, true);
+  assert.equal(writtenPayloads[5]?.supersedes_artifact_id, null);
 
   console.info("PASS — Public market overview artifact key uniqueness smoke");
 }
