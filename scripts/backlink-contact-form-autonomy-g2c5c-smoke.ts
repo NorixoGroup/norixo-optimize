@@ -29,7 +29,15 @@ async function main() {
   const linkedin = await orchestrate({ stage: "outreach_decision", completedTaskId: "linkedin-decision", completedTaskKind: "backlinks.outreach_decision", contactIds: [ids.contact], decision: { outcome: "manual_action_required", reasons: ["LINKEDIN_MANUAL_ACTION_REQUIRED"], execution: { kind: "linkedin_manual_action", workspaceId: ids.workspace, outreachId: ids.outreach } } });
   assert.equal(linkedin.outcome, "manual_review", "T3 LinkedIn stays manual");
 
-  const result = await executeBacklinkContactFormPrepareTask({ workspaceId: ids.workspace, domainId: ids.domain, opportunityId: ids.opportunity, contactId: ids.contact, outreachId: ids.outreach, executionKind: "contact_form_worker" });
+  const result = await executeBacklinkContactFormPrepareTask(
+    {
+      getLatestApprovalCandidate: async () => null,
+      queueExistingApproval: async () => {
+        throw new Error("must not queue contact form without an existing approval");
+      },
+    },
+    { workspaceId: ids.workspace, domainId: ids.domain, opportunityId: ids.opportunity, contactId: ids.contact, outreachId: ids.outreach, executionKind: "contact_form_worker" },
+  );
   assert.deepEqual(result, { outcome: "manual_review", outreachId: ids.outreach, reason: "CONTACT_FORM_APPROVAL_REQUIRED", queuedRunId: null }, "T4/T5 no approval is fabricated or queued");
   const terminal = await orchestrate({ stage: "contact_form_prepare", completedTaskId: "prepare", completedTaskKind: "backlinks.contact_form_prepare", contactIds: [ids.contact], contactFormPrepare: result });
   assert.equal(terminal.outcome, "manual_review"); assert.deepEqual(terminal.reasonCodes, ["CONTACT_FORM_APPROVAL_REQUIRED"]); assert.equal(terminal.readyTransitionRequired, true);

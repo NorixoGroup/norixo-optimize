@@ -45,6 +45,7 @@ export type BacklinkAutonomyDispatcherDependencies = {
   campaign: CampaignPrepareTaskDependencies;
   draft: DraftPrepareTaskDependencies;
   decision: OutreachDecisionTaskDependencies;
+  contactForm: import("./backlink-contact-form-prepare-task-handler").BacklinkContactFormPrepareTaskDependencies;
 };
 export type BacklinkAutonomyDispatchState = { actorUserId: string; campaignId?: string; outreachId?: string; channel?: "email" | "contact_form" | "linkedin" };
 export type BacklinkAutonomyDispatchResult =
@@ -98,7 +99,7 @@ export async function dispatchBacklinkAutonomyTask(
   if (input.task.taskKind === "backlinks.contact_form_prepare") {
     const outreachId = text(fields(input.task)?.outreachId);
     if (outreachId == null || fields(input.task)?.executionKind !== "contact_form_worker") return { kind: "rejected", reason: "TASK_INPUT_INVALID" };
-    return { kind: "executed", taskKind: input.task.taskKind, output: await executeBacklinkContactFormPrepareTask({ ...value, contactId: value.contactId, outreachId, executionKind: "contact_form_worker" }) };
+    return { kind: "executed", taskKind: input.task.taskKind, output: await executeBacklinkContactFormPrepareTask(deps.contactForm, { ...value, contactId: value.contactId, outreachId, executionKind: "contact_form_worker" }) };
   }
   if (input.task.taskKind === "backlinks.campaign_prepare") return { kind: "executed", taskKind: input.task.taskKind, output: await executeBacklinkCampaignPrepareTask(deps.campaign, { ...value, contactId: value.contactId, actorUserId: input.state.actorUserId, campaignPreparationConfirmed: input.control.campaignApplyAuthorized === true }) };
   if (input.task.taskKind === "backlinks.draft_prepare") {

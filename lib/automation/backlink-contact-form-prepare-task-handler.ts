@@ -7,26 +7,79 @@ export type BacklinkContactFormPrepareTaskInput = {
   executionKind: "contact_form_worker";
 };
 
-export type BacklinkContactFormPrepareTaskResult = {
-  outcome: "manual_review";
-  outreachId: string;
-  reason: "CONTACT_FORM_APPROVAL_REQUIRED";
-  queuedRunId: null;
+export type BacklinkContactFormPrepareTaskResult =
+  | {
+      outcome: "manual_review";
+      outreachId: string;
+      reason: "CONTACT_FORM_APPROVAL_REQUIRED" | "CONTACT_FORM_APPROVAL_INVALID";
+      queuedRunId: null;
+    }
+  | {
+      outcome: "queued";
+      outreachId: string;
+      reason: null;
+      queuedRunId: string;
+    };
+
+export type BacklinkContactFormPrepareTaskDependencies = {
+  getLatestApprovalCandidate: (input: {
+    workspaceId: string;
+    outreachId: string;
+  }) => Promise<{ id: string } | null>;
+
+  queueExistingApproval: (input: {
+    workspaceId: string;
+    outreachId: string;
+    approvalId: string;
+  }) => Promise<{ run_id: string; disposition: string; state: string }>;
 };
 
 /**
- * Contact-form approvals are immutable, human-admin records. The existing
- * Ready service cannot authorize this channel, and the queue contract accepts
- * only a still-draft outreach with such an approval. This task deliberately
- * creates neither; the navigation worker remains the sole executor.
+ * Autonomous bridge only.
+ *
+ * It may reuse an approval previously created through the human approval
+ * boundary. It MUST NOT create, mutate, synthesize, or infer an approval.
+ * queue_backlink_contact_form_run_v1 remains the final authority for
+ * verification freshness, approval fingerprint freshness, outreach state,
+ * suppression rules, and live-run idempotency.
  */
 export async function executeBacklinkContactFormPrepareTask(
+  deps: BacklinkContactFormPrepareTaskDependencies,
   input: BacklinkContactFormPrepareTaskInput,
 ): Promise<BacklinkContactFormPrepareTaskResult> {
-  return {
-    outcome: "manual_review",
+  const approval = await deps.getLatestApprovalCandidate({
+    workspaceId: input.workspaceId,
     outreachId: input.outreachId,
-    reason: "CONTACT_FORM_APPROVAL_REQUIRED",
-    queuedRunId: null,
-  };
+  });
+
+  if (approval == null) {
+    return {
+      outcome: "manual_review",
+      outreachId: input.outreachId,
+      reason: "CONTACT_FORM_APPROVAL_REQUIRED",
+      queuedRunId: null,
+    };
+  }
+
+  try {
+    const queued = await deps.queueExistingApproval({
+      workspaceId: input.workspaceId,
+      outreachId: input.outreachId,
+      approvalId: approval.id,
+    });
+
+    return {
+      outcome: "queued",
+      outreachId: input.outreachId,
+      reason: null,
+      queuedRunId: queued.run_id,
+    };
+  } catch {
+    return {
+      outcome: "manual_review",
+      outreachId: input.outreachId,
+      reason: "CONTACT_FORM_APPROVAL_INVALID",
+      queuedRunId: null,
+    };
+  }
 }

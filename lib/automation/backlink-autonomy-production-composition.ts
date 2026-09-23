@@ -6,6 +6,7 @@ import { createContact } from "@/lib/backlinks/services/contactService";
 import { resolveBacklinkContacts } from "@/lib/backlinks/services/contactResolutionService";
 import { getConfiguredMailboxVerificationProvider } from "@/lib/backlinks/providers/zeroBounceMailboxVerificationProvider";
 import { recordMailboxVerificationAndMaybePromote } from "@/lib/backlinks/repositories/mailboxVerificationsRepository";
+import { getLatestContactFormApprovalCandidate, queueContactFormRun } from "@/lib/backlinks/repositories/contactFormAutomationRepository";
 import { createOrGetAutomationRun, getAutomationWorkspaceControl } from "./repositories/automationRunsRepository";
 import { claimNextBacklinkAutonomyTask, completeAutomationTask, createOrGetAutomationTask, failAutomationTask, getAutomationTaskByIdInRun, heartbeatAutomationTask, reclaimExpiredBacklinkAutonomyTasks } from "./repositories/automationTasksRepository";
 import { listAutomationWorkspaceControlsForBacklinkAutonomy } from "./repositories/automationWorkspaceControlsRepository";
@@ -94,6 +95,12 @@ function blockedHandlers(client: ReturnType<typeof createSupabaseAdminClient>): 
     campaign: { getDomain: unavailable, getOpportunity: unavailable, getContact: unavailable, findCampaignMembership: unavailable, prepareCampaign: unavailable },
     draft: { getDomain: unavailable, getOpportunity: unavailable, getContact: unavailable, getCampaign: unavailable, getActiveOutreach: unavailable, createDraft: unavailable },
     decision: { getFacts: unavailable },
+    contactForm: {
+      getLatestApprovalCandidate: (input) =>
+        getLatestContactFormApprovalCandidate(client, input),
+      queueExistingApproval: (input) =>
+        queueContactFormRun(client, input),
+    },
   } as BacklinkAutonomyDispatcherDependencies;
 }
 

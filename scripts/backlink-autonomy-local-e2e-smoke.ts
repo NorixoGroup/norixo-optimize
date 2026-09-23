@@ -62,6 +62,12 @@ function fixture(options: { channel?: "email" | "contact_form" | "linkedin"; con
       createDraft: async () => { if (options.throwDraft) throw new Error("transient draft"); counters.draftCreates++; return { outreachId: "outreach", disposition: "created" as const, status: "draft" }; },
     },
     decision: { getFacts: async () => ({ backlinksEnabled: true, liveAutomationEnabled: true, evidenceBackedContact: true, contactStatus: contacts[0]?.contact_status ?? "unverified", channel: options.channel ?? "email", validOpportunity: true, validCampaign: true, validDraft: true, inboundReplyStop: options.decisionStop === "reply", complaintOrBounceStop: options.decisionStop === "bounce", conflictingOpenAttempt: false, rateLimitEligible: options.decisionStop !== "rate", maxAttemptEligible: options.decisionStop !== "max", contactFormVerified: options.channel === "contact_form" }) },
+    contactForm: {
+      getLatestApprovalCandidate: async () => null,
+      queueExistingApproval: async () => {
+        throw new Error("must not queue contact form without an existing approval");
+      },
+    },
   };
   return { deps, handlers, contacts, counters, queue, byKey };
 }

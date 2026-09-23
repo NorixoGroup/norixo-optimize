@@ -118,7 +118,26 @@ function nextTask(input: BacklinkMasterAutonomyOrchestratorInput): CreateAutomat
   if (input.progress.stage === "contact_form_prepare") {
     const prepared = input.progress.contactFormPrepare;
     if (prepared == null) return stopped("blocked", "blocked", "CONTACT_FORM_PREPARE_RESULT_MISSING");
-    return { outcome: "manual_review", stage: "manual_review", reasonCodes: [prepared.reason], task: null, taskId: null, readyTransitionRequired: true };
+
+    if (prepared.outcome === "queued") {
+      return {
+        outcome: "execution_pending",
+        stage: "execution_boundary",
+        reasonCodes: ["CONTACT_FORM_RUN_QUEUED"],
+        task: null,
+        taskId: null,
+        readyTransitionRequired: true,
+      };
+    }
+
+    return {
+      outcome: "manual_review",
+      stage: "manual_review",
+      reasonCodes: [prepared.reason],
+      task: null,
+      taskId: null,
+      readyTransitionRequired: true,
+    };
   }
   const decision = input.progress.decision;
   if (decision == null) return stopped("blocked", "blocked", "DECISION_RESULT_MISSING");
