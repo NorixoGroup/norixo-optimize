@@ -1,3 +1,5 @@
+import { isActionableLinkedInProfileUrl } from "./contactValidationService";
+
 export type OutreachDraftChannel = "email" | "linkedin" | "contact_form";
 export type OutreachDraftEligibilityReason = "CONTACT_DO_NOT_CONTACT" | "CONTACT_ARCHIVED" | "OUTREACH_ALREADY_ACTIVE";
 type Contact = { id: string; contact_key: string; full_name: string | null; role_title: string | null; contact_status: string; email_normalized: string | null; linkedin_url: string | null; contact_form_url: string | null };
@@ -23,7 +25,7 @@ export function resolveBacklinkOutreachChannels(
   const available = contact.contact_status !== "do_not_contact" && contact.contact_status !== "archived";
   const channels: OutreachDraftChannel[] = [];
   if (available && contact.email_normalized) channels.push("email");
-  if (available && contact.linkedin_url) channels.push("linkedin");
+  if (available && isActionableLinkedInProfileUrl(contact.linkedin_url)) channels.push("linkedin");
   if (available && contact.contact_form_verified === true && isEligibleContactFormUrl(contact.contact_form_url)) channels.push("contact_form");
   return channels;
 }

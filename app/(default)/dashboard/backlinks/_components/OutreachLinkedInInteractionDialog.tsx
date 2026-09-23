@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getSharedSession } from "@/lib/supabase/sharedAuth";
 import { getStoredWorkspaceId } from "@/lib/workspaces/getStoredWorkspaceId";
+import { isActionableLinkedInProfileUrl } from "@/lib/backlinks/services/contactValidationService";
 
 type Props = {
   outreachId: string;
@@ -202,6 +203,9 @@ export default function OutreachLinkedInInteractionDialog(p: Props) {
 
   const replyEntryAvailable = state === "message_sent";
   const replyAlreadyConfirmed = state === "reply_confirmed";
+  const actionableLinkedInUrl = p.linkedinUrl != null && isActionableLinkedInProfileUrl(p.linkedinUrl)
+    ? p.linkedinUrl
+    : null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
@@ -216,10 +220,16 @@ export default function OutreachLinkedInInteractionDialog(p: Props) {
 
         <p className="mt-2 text-sm text-slate-600">
           Norixo n’envoie rien automatiquement. {p.contactName}
-          {p.linkedinUrl ? ` · ${p.linkedinUrl}` : ""}
+          {actionableLinkedInUrl ? <> · <a href={actionableLinkedInUrl} target="_blank" rel="noopener noreferrer" className="underline">{actionableLinkedInUrl}</a></> : p.linkedinUrl ? ` · ${p.linkedinUrl}` : ""}
         </p>
 
-        {state === "none" ? (
+        {!actionableLinkedInUrl ? (
+          <p className="mt-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
+            Un profil LinkedIn individuel au format /in/ est requis avant de pouvoir enregistrer une invitation ou un message.
+          </p>
+        ) : null}
+
+        {actionableLinkedInUrl && state === "none" ? (
           <button
             type="button"
             disabled={busy}
@@ -237,7 +247,7 @@ export default function OutreachLinkedInInteractionDialog(p: Props) {
           </button>
         ) : null}
 
-        {state === "invitation_pending" ? (
+        {actionableLinkedInUrl && state === "invitation_pending" ? (
           <div className="mt-4 flex flex-wrap gap-3">
             <button
               type="button"
@@ -297,7 +307,7 @@ export default function OutreachLinkedInInteractionDialog(p: Props) {
           </div>
         ) : null}
 
-        {state === "connection_accepted" ? (
+        {actionableLinkedInUrl && state === "connection_accepted" ? (
           <div className="mt-4">
             <pre className="whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-sm">
               {p.message}
@@ -321,7 +331,7 @@ export default function OutreachLinkedInInteractionDialog(p: Props) {
           </div>
         ) : null}
 
-        {replyEntryAvailable ? (
+        {actionableLinkedInUrl && replyEntryAvailable ? (
           <div className="mt-6 rounded-2xl border border-slate-200 p-4">
             <h3 className="font-semibold">
               Réponse reçue sur LinkedIn

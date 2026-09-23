@@ -77,13 +77,22 @@ function isHttpsOfficialUrl(value: string, domainHostname: string): boolean {
   }
 }
 
-function isLinkedInUrl(value: string): boolean {
+/** Public LinkedIn references may identify either a person or an organization. */
+export function isLinkedInEvidenceUrl(value: string): boolean {
   try {
     const url = new URL(value);
     return url.protocol === "https:" && (url.hostname === "linkedin.com" || url.hostname.endsWith(".linkedin.com")) && /^\/(?:in|company)\//i.test(url.pathname);
   } catch {
     return false;
   }
+}
+
+/**
+ * Matches the existing manual-interaction RPC invariant exactly. Only an
+ * individual profile can be used for Backlinks invitation/message actions.
+ */
+export function isActionableLinkedInProfileUrl(value: string | null | undefined): boolean {
+  return typeof value === "string" && value.trim() === value && /^https:\/\/(?:www\.)?linkedin\.com\/in\/[^/?#]+\/?(?:\?[^#]*)?$/.test(value);
 }
 
 /**
@@ -133,7 +142,7 @@ export function validateBacklinkContact(input: BacklinkContactValidationInput): 
 
   let linkedin: ContactValidationDisposition | null = null;
   if (input.linkedinUrl != null) {
-    if (isLinkedInUrl(input.linkedinUrl) && hasEvidence(evidence, "linkedin", input.linkedinUrl, input.domainHostname)) {
+    if (isLinkedInEvidenceUrl(input.linkedinUrl) && hasEvidence(evidence, "linkedin", input.linkedinUrl, input.domainHostname)) {
       linkedin = "manual_action_required";
       reasons.push("LINKEDIN_MANUAL_ACTION_REQUIRED");
     } else {

@@ -1,8 +1,13 @@
-import { getBacklinkOutreachDraftEligibilityForMembership } from "../lib/backlinks/services/outreachDraftEligibilityService";
+import { getBacklinkOutreachDraftEligibilityForMembership, resolveBacklinkOutreachChannels } from "../lib/backlinks/services/outreachDraftEligibilityService";
 
 function assert(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(message); }
 
 async function main() {
+  const actionable = { contact_status: "verified", email_normalized: null, linkedin_url: "https://www.linkedin.com/in/editor/?trk=public_profile", contact_form_url: null };
+  assert(resolveBacklinkOutreachChannels(actionable).includes("linkedin"), "Individual LinkedIn profiles must remain eligible.");
+  for (const linkedin_url of ["https://www.linkedin.com/company/example/", "http://linkedin.com/in/editor", "https://example.com/in/editor", "https://linkedin.com/in/", "not a url", ""]) {
+    assert(!resolveBacklinkOutreachChannels({ ...actionable, linkedin_url }).includes("linkedin"), `Non-actionable LinkedIn target must be ineligible: ${linkedin_url}`);
+  }
   let mutations = 0;
   const result = await getBacklinkOutreachDraftEligibilityForMembership({
     getMembership: async () => ({ campaign_id: "campaign", opportunity_id: "opportunity" }),

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { buildContactValidationTask, buildContactValidationTasksForResolution } from "../lib/automation/backlink-autonomy-foundation";
 import { executeBacklinkContactValidationTask } from "../lib/automation/backlink-contact-validation-task-handler";
-import { validateBacklinkContact } from "../lib/backlinks/services/contactValidationService";
+import { isActionableLinkedInProfileUrl, validateBacklinkContact } from "../lib/backlinks/services/contactValidationService";
 
 const domain = "example.com";
 const evidence = (kind: string, value: string) => JSON.stringify([{ kind, value, sourceUrl: "https://example.com/contact", confidence: kind === "mailto" ? "strong" : "medium" }]);
@@ -40,6 +40,12 @@ async function main() {
   const linkedin = "https://www.linkedin.com/company/example/";
   assert.equal(validateBacklinkContact({ ...base, linkedinUrl: linkedin, sourceReference: evidence("linkedin", linkedin) }).linkedin, "manual_action_required");
   assert.equal(validateBacklinkContact({ ...base, linkedinUrl: "https://example.com/in/example", sourceReference: evidence("linkedin", "https://example.com/in/example") }).linkedin, "invalid");
+  for (const value of ["https://linkedin.com/in/editor", "https://www.linkedin.com/in/editor/", "https://linkedin.com/in/editor?trk=public_profile"]) {
+    assert.equal(isActionableLinkedInProfileUrl(value), true, `Expected actionable LinkedIn profile: ${value}`);
+  }
+  for (const value of [linkedin, "http://linkedin.com/in/editor", "https://sub.linkedin.com/in/editor", "https://linkedin.com/in/", "https://linkedin.com/in/editor#about", " https://linkedin.com/in/editor", "https://example.com/in/editor", "not a url"]) {
+    assert.equal(isActionableLinkedInProfileUrl(value), false, `Expected non-actionable LinkedIn value: ${value}`);
+  }
 
   const descriptor = buildContactValidationTask({ workspaceId: "workspace", runId: "run", dependsOnTaskId: "resolution", domainId: "domain", opportunityId: "opportunity", contactId: "contact", scheduledAt: "2026-09-21T00:00:00.000Z" });
   assert.equal(descriptor.taskKind, "backlinks.contact_validation");

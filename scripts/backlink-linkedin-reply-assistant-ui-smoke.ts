@@ -23,6 +23,16 @@ for (const marker of [
   'confirmReply("negative")',
   'postInteraction("reply-confirmed"',
   "Norixo n’envoie rien automatiquement.",
+  "isActionableLinkedInProfileUrl",
+  "const actionableLinkedInUrl",
+  'actionableLinkedInUrl && state === "none"',
+  'actionableLinkedInUrl && state === "invitation_pending"',
+  'actionableLinkedInUrl && state === "connection_accepted"',
+  "actionableLinkedInUrl && replyEntryAvailable",
+  "Un profil LinkedIn individuel au format /in/ est requis",
+  'href={actionableLinkedInUrl}',
+  'target="_blank"',
+  'rel="noopener noreferrer"',
 ]) {
   assert.ok(dialog.includes(marker), `missing dialog marker: ${marker}`);
 }
