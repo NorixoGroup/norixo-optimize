@@ -27,6 +27,12 @@ const organizationJsonLd = {
   name: "Norixo",
   url: siteUrl,
   logo: `${siteUrl}/favicon.png`,
+  sameAs: [
+    "https://www.linkedin.com/company/norixo-io/",
+    "https://www.instagram.com/norixo.io/",
+    "https://www.facebook.com/people/Norixo/61591109797778/",
+    "https://github.com/NorixoGroup",
+  ],
 };
 const websiteJsonLd = {
   "@context": "https://schema.org",
