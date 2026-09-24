@@ -1,4 +1,9 @@
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import {
+  BENCHMARK_ARTIFACT_SUPERSESSION_EDGE_TABLE,
+  persistBenchmarkArtifactSupersessionEdges,
+  type BenchmarkArtifactSupersessionEdgeRow,
+} from "./benchmarkArtifactLineage";
 
 import {
   buildMarketCellV1,
@@ -131,6 +136,9 @@ type PublicMarketOverviewBackfillDependencies = Readonly<{
   findActiveArtifact?: (
     payload: PublicMarketOverviewPersistableArtifactRow,
   ) => Promise<PublicMarketOverviewFindArtifactResult>;
+  writeSupersessionEdges?: (
+    rows: readonly BenchmarkArtifactSupersessionEdgeRow[],
+  ) => Promise<void>;
   builderDependencies?: Omit<PublicMarketOverviewBuilderDependencies, "now" | "loadFacts">;
 }>;
 
@@ -363,6 +371,26 @@ async function findArtifactByKeyFromSupabase(
     return row == null ? { ok: false } : { ok: true, row };
   } catch {
     return { ok: false };
+  }
+}
+
+async function writeSupersessionEdgesToSupabase(
+  rows: readonly BenchmarkArtifactSupersessionEdgeRow[],
+): Promise<void> {
+  if (rows.length === 0) {
+    return;
+  }
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin
+    .from(BENCHMARK_ARTIFACT_SUPERSESSION_EDGE_TABLE)
+    .upsert([...rows], {
+      onConflict: "successor_artifact_id,predecessor_artifact_id",
+      ignoreDuplicates: true,
+    });
+
+  if (error) {
+    throw error;
   }
 }
 
@@ -843,9 +871,14 @@ export async function buildPublicMarketOverviewBackfill(
     dependencies.findArtifactByKey ?? findArtifactByKeyFromSupabase;
   const findActiveArtifact =
     dependencies.findActiveArtifact ?? findActiveArtifactFromSupabase;
+  const writeSupersessionEdges =
+    dependencies.writeSupersessionEdges ?? writeSupersessionEdgesToSupabase;
   const hasSupersessionLookup =
     dependencies.insertArtifact == null ||
     (dependencies.findArtifactByKey != null && dependencies.findActiveArtifact != null);
+  const hasSupersessionEdgeWriter =
+    dependencies.insertArtifact == null ||
+    dependencies.writeSupersessionEdges != null;
   const builderDependencies = dependencies.builderDependencies ?? {};
 
   const candidates: PublicMarketOverviewBackfillCandidate[] = [];
@@ -937,6 +970,7 @@ export async function buildPublicMarketOverviewBackfill(
       }
 
       let persistableArtifact = buildResult.persistableArtifact;
+      let predecessorArtifactId: string | null = null;
       let insertResult: PublicMarketOverviewInsertArtifactResult = {
         ok: false,
         failure: Object.freeze({
@@ -958,13 +992,39 @@ export async function buildPublicMarketOverviewBackfill(
             if (!active.ok) {
               throw new Error("active_artifact_lookup_failed");
             }
+            predecessorArtifactId = active.row?.id ?? null;
             persistableArtifact = Object.freeze({
               ...buildResult.persistableArtifact,
-              supersedes_artifact_id: active.row?.id ?? null,
+              supersedes_artifact_id: predecessorArtifactId,
             });
           }
         }
         insertResult = normalizeInsertResult(await insertArtifact(persistableArtifact));
+
+        if (
+          insertResult.ok &&
+          insertResult.status === "inserted" &&
+          predecessorArtifactId != null &&
+          hasSupersessionEdgeWriter
+        ) {
+          const insertedArtifact = await findArtifactByKey(
+            buildResult.persistableArtifact.artifact_key,
+          );
+
+          if (!insertedArtifact.ok || insertedArtifact.row == null) {
+            throw new Error("inserted_artifact_lookup_failed");
+          }
+
+          await persistBenchmarkArtifactSupersessionEdges({
+            edges: [
+              {
+                successorArtifactId: insertedArtifact.row.id,
+                predecessorArtifactId,
+              },
+            ],
+            writer: writeSupersessionEdges,
+          });
+        }
       } catch {
         insertResult = {
           ok: false,

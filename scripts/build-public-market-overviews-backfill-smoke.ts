@@ -664,6 +664,175 @@ async function main() {
   assert.equal(differentBenchmarkType.ok, true);
   assert.equal(writtenPayloads[5]?.supersedes_artifact_id, null);
 
+  const lineageWrittenEdges: Array<{
+    successor_artifact_id: string;
+    predecessor_artifact_id: string;
+  }> = [];
+
+  let lineageKeyLookupCount = 0;
+
+  const lineageApply = await runBackfill(
+    lifecycleOptions,
+    lifecycleRows,
+    {
+      findArtifactByKey: async () => {
+        lineageKeyLookupCount += 1;
+
+        if (lineageKeyLookupCount === 1) {
+          return {
+            ok: true as const,
+            row: null,
+          };
+        }
+
+        return {
+          ok: true as const,
+          row: {
+            id: "successor-v2",
+            artifactKey: "successor-key-v2",
+            createdAt: "2026-07-04T00:00:00.000Z",
+          },
+        };
+      },
+
+      findActiveArtifact: async () => ({
+        ok: true as const,
+        row: {
+          id: "legacy-v1",
+          artifactKey: "legacy-key-v1",
+          createdAt: "2026-07-01T00:00:00.000Z",
+        },
+      }),
+
+      insertArtifact: async (payload) => {
+        assert.equal(payload.supersedes_artifact_id, "legacy-v1");
+
+        return {
+          ok: true as const,
+          status: "inserted" as const,
+        };
+      },
+
+      writeSupersessionEdges: async (rows) => {
+        lineageWrittenEdges.push(...rows);
+      },
+    },
+  );
+
+  assert.equal(lineageApply.ok, true);
+  assert.equal(lineageWrittenEdges.length, 1);
+  assert.deepEqual(lineageWrittenEdges[0], {
+    successor_artifact_id: "successor-v2",
+    predecessor_artifact_id: "legacy-v1",
+  });
+
+  let idempotentEdgeWriterCalls = 0;
+
+  const lineageAlreadyExisting = await runBackfill(
+    lifecycleOptions,
+    lifecycleRows,
+    {
+      findArtifactByKey: async () => ({
+        ok: true as const,
+        row: {
+          id: "existing-v3",
+          artifactKey: "same-key",
+          createdAt: "2026-07-05T00:00:00.000Z",
+        },
+      }),
+
+      findActiveArtifact: async () => {
+        throw new Error(
+          "same artifact key must not perform active predecessor lookup",
+        );
+      },
+
+      insertArtifact: async () => ({
+        ok: true as const,
+        status: "already_existing" as const,
+      }),
+
+      writeSupersessionEdges: async () => {
+        idempotentEdgeWriterCalls += 1;
+      },
+    },
+  );
+
+  assert.equal(lineageAlreadyExisting.ok, true);
+  assert.equal(idempotentEdgeWriterCalls, 0);
+
+  let firstVersionEdgeWriterCalls = 0;
+
+  const lineageFirstVersion = await runBackfill(
+    lifecycleOptions,
+    lifecycleRows,
+    {
+      findArtifactByKey: async () => ({
+        ok: true as const,
+        row: null,
+      }),
+
+      findActiveArtifact: async () => ({
+        ok: true as const,
+        row: null,
+      }),
+
+      insertArtifact: async () => ({
+        ok: true as const,
+        status: "inserted" as const,
+      }),
+
+      writeSupersessionEdges: async () => {
+        firstVersionEdgeWriterCalls += 1;
+      },
+    },
+  );
+
+  assert.equal(lineageFirstVersion.ok, true);
+  assert.equal(firstVersionEdgeWriterCalls, 0);
+
+  let failedInsertEdgeWriterCalls = 0;
+
+  const lineageFailedInsert = await runBackfill(
+    lifecycleOptions,
+    lifecycleRows,
+    {
+      findArtifactByKey: async () => ({
+        ok: true as const,
+        row: null,
+      }),
+
+      findActiveArtifact: async () => ({
+        ok: true as const,
+        row: {
+          id: "legacy-before-failure",
+          artifactKey: "legacy-before-failure-key",
+          createdAt: "2026-07-01T00:00:00.000Z",
+        },
+      }),
+
+      insertArtifact: async () => ({
+        ok: false as const,
+        failure: {
+          code: "TEST_INSERT_FAILURE",
+          schemaField: null,
+          message: "mock insert failure",
+        },
+      }),
+
+      writeSupersessionEdges: async () => {
+        failedInsertEdgeWriterCalls += 1;
+      },
+    },
+  );
+
+  assert.equal(lineageFailedInsert.ok, true);
+  assert.equal(failedInsertEdgeWriterCalls, 0);
+
+  console.info("PASS — P10-D first version emits no lineage edge");
+  console.info("PASS — P10-D inserted successor persists lineage edge");
+  console.info("PASS — P10-D already-existing artifact emits no duplicate edge");
+  console.info("PASS — P10-D failed artifact insert emits no lineage edge");
   console.info("PASS — Public market overview artifact key uniqueness smoke");
 }
 
