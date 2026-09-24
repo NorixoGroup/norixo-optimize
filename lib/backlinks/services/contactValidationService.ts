@@ -69,6 +69,23 @@ function isOfficialEmail(email: string, domainHostname: string): boolean {
   return domain === expected || domain?.endsWith(`.${expected}`) === true;
 }
 
+/** Current persisted evidence required by the autonomous decision boundary. */
+export function hasCurrentBacklinkContactChannelEvidence(input: {
+  domainHostname: string;
+  channel: "email" | "linkedin";
+  email: string | null;
+  linkedinUrl: string | null;
+  sourceReference: string | null;
+}): boolean {
+  const evidence = parseEvidence(input.sourceReference);
+  if (input.channel === "email") {
+    const email = input.email;
+    return email != null && email === email.trim().toLowerCase() && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) && isOfficialEmail(email, input.domainHostname) &&
+      (hasEvidence(evidence, "mailto", email, input.domainHostname) || hasEvidence(evidence, "visible_email", email, input.domainHostname));
+  }
+  return input.linkedinUrl != null && isActionableLinkedInProfileUrl(input.linkedinUrl) && hasEvidence(evidence, "linkedin", input.linkedinUrl, input.domainHostname);
+}
+
 function isHttpsOfficialUrl(value: string, domainHostname: string): boolean {
   try {
     return new URL(value).protocol === "https:" && sameOfficialHost(value, domainHostname);

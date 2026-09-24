@@ -8,6 +8,7 @@ import {
 } from "./outreachDraftEligibilityService";
 import { BacklinkOutreachReplyCorrelationIdentityError, deriveBacklinkOutreachReplyCorrelationIdentity, reconstructBacklinkOutreachReplyToForAttempt, type BacklinkOutreachReplyTokenKeyring } from "./outreachReplyCorrelationIdentity";
 import type { AutomationWorkspaceControl } from "@/lib/automation/workspace-control-types";
+import { evaluateBacklinkOutreachRateEligibility } from "./outreachRateEligibilityService";
 
 type Outreach = {
   id: string;
@@ -148,10 +149,6 @@ async function reconcileAccepted(
   }
 }
 
-function addHours(iso: string, hours: number): string {
-  return new Date(Date.parse(iso) + hours * 60 * 60 * 1000).toISOString();
-}
-
 async function evaluateBacklinkOutreachSendRateLimit(
   dependencies: BacklinkOutreachEmailSendDependencies,
   input: {
@@ -172,55 +169,11 @@ async function evaluateBacklinkOutreachSendRateLimit(
         | "CONTACT_DAILY_LIMIT_REACHED";
     }
 > {
-  const monthlyCutoff = addHours(input.now, -(24 * 30));
-  const dailyCutoff = addHours(input.now, -24);
-  const hourlyCutoff = addHours(input.now, -1);
-
-  const monthlyAttempts = await dependencies.listAttemptSummariesSince(input.workspaceId, monthlyCutoff);
-  const recentAttempts = monthlyAttempts.filter(
-    (attempt) => Date.parse(attempt.requested_at) >= Date.parse(dailyCutoff),
-  );
-  const hourlyAttempts = recentAttempts.filter(
-    (attempt) => Date.parse(attempt.requested_at) >= Date.parse(hourlyCutoff),
-  );
-
-  if (monthlyAttempts.length >= 100) {
-    return { allowed: false, reason: "WORKSPACE_30_DAY_LIMIT_REACHED" };
-  }
-
-  if (recentAttempts.length >= 5) {
-    return { allowed: false, reason: "WORKSPACE_DAILY_LIMIT_REACHED" };
-  }
-  if (hourlyAttempts.length >= 2) {
-    return { allowed: false, reason: "WORKSPACE_HOURLY_LIMIT_REACHED" };
-  }
-
-  const uniqueOutreachIds = [...new Set(recentAttempts.map((attempt) => attempt.outreach_id))];
-  const outreachRows = await Promise.all(uniqueOutreachIds.map((outreachId) => dependencies.getOutreach(input.workspaceId, outreachId)));
-  const outreachById = new Map(outreachRows.map((row) => [row.id, row] as const));
-  const uniqueOpportunityIds = [...new Set(outreachRows.map((row) => row.opportunity_id))];
-  const opportunityRows = await Promise.all(uniqueOpportunityIds.map((opportunityId) => dependencies.eligibility.getOpportunity(input.workspaceId, opportunityId)));
-  const domainByOpportunityId = new Map(opportunityRows.map((row) => [row.id, row.domain_id] as const));
-
-  let sameContactCount = 0;
-  let sameDomainCount = 0;
-  for (const attempt of recentAttempts) {
-    const outreach = outreachById.get(attempt.outreach_id);
-    if (outreach?.contact_id === input.contactId) {
-      sameContactCount += 1;
-    }
-    const domainId = outreach != null ? domainByOpportunityId.get(outreach.opportunity_id) : null;
-    if (domainId === input.domainId) {
-      sameDomainCount += 1;
-    }
-  }
-  if (sameDomainCount >= 1) {
-    return { allowed: false, reason: "DOMAIN_DAILY_LIMIT_REACHED" };
-  }
-  if (sameContactCount >= 1) {
-    return { allowed: false, reason: "CONTACT_DAILY_LIMIT_REACHED" };
-  }
-  return { allowed: true };
+  return evaluateBacklinkOutreachRateEligibility({
+    listAttemptSummariesSince: dependencies.listAttemptSummariesSince,
+    getOutreach: dependencies.getOutreach,
+    getOpportunity: dependencies.eligibility.getOpportunity,
+  }, input);
 }
 
 export function sendBacklinkOutreachEmail(

@@ -11,7 +11,13 @@ import { createContact } from "@/lib/backlinks/services/contactService";
 import { resolveBacklinkContacts } from "@/lib/backlinks/services/contactResolutionService";
 import { getConfiguredMailboxVerificationProvider } from "@/lib/backlinks/providers/zeroBounceMailboxVerificationProvider";
 import { recordMailboxVerificationAndMaybePromote } from "@/lib/backlinks/repositories/mailboxVerificationsRepository";
-import { getLatestContactFormApprovalCandidate, queueContactFormRun } from "@/lib/backlinks/repositories/contactFormAutomationRepository";
+import { getLatestContactFormApprovalCandidate, listCurrentVerifiedContactFormEvidenceContactIds, queueContactFormRun } from "@/lib/backlinks/repositories/contactFormAutomationRepository";
+import { getBacklinkOutreachById } from "@/lib/backlinks/repositories/outreachRepository";
+import { getOpenBacklinkOutreachAttemptForOutreach, listBacklinkOutreachAttemptSendWindowRows } from "@/lib/backlinks/repositories/outreachAttemptsRepository";
+import { hasBacklinkOutreachInboundReplyStopEffect } from "@/lib/backlinks/repositories/outreachInboundEffectsRepository";
+import { listBacklinkOutreachDeliveryEventsForOutreach } from "@/lib/backlinks/repositories/outreachDeliveryEventsRepository";
+import { getBacklinkOutreachDeliveryEffectByDeliveryEventId } from "@/lib/backlinks/repositories/outreachDeliveryEffectsRepository";
+import { assembleBacklinkAutonomyDecisionFacts } from "./backlink-autonomy-decision-facts";
 import { createOrGetAutomationRun, getAutomationWorkspaceControl } from "./repositories/automationRunsRepository";
 import { claimNextBacklinkAutonomyTask, completeAutomationTask, createOrGetAutomationTask, failAutomationTask, getAutomationTaskByIdInRun, heartbeatAutomationTask, reclaimExpiredBacklinkAutonomyTasks } from "./repositories/automationTasksRepository";
 import { listAutomationWorkspaceControlsForBacklinkAutonomy } from "./repositories/automationWorkspaceControlsRepository";
@@ -180,11 +186,35 @@ function blockedHandlers(client: ReturnType<typeof createSupabaseAdminClient>): 
       },
     },
 
-    /*
-     * Decision remains deliberately fail-closed until its complete
-     * production fact assembly is mapped and tested.
-     */
-    decision: { getFacts: unavailable },
+    decision: { getFacts: assembleBacklinkAutonomyDecisionFacts({
+      getOutreach: (workspaceId, outreachId) => getBacklinkOutreachById(client, workspaceId, outreachId),
+      getDomain: (workspaceId, domainId) => getBacklinkDomainById(client, workspaceId, domainId),
+      getOpportunity: (workspaceId, opportunityId) => getBacklinkOpportunityById(client, workspaceId, opportunityId),
+      getContact: (workspaceId, contactId) => getBacklinkContactById(client, workspaceId, contactId),
+      getCampaign: (workspaceId, campaignId) => getBacklinkCampaignById(client, workspaceId, campaignId),
+      getMembership: async (workspaceId, campaignId, opportunityId) => {
+        const page = await listCampaignOpportunities(client, { workspaceId, campaignId, pagination: { page: 1, pageSize: 100 } });
+        return page.items.find((item) => item.opportunity_id === opportunityId) ?? null;
+      },
+      hasCurrentContactFormEvidence: async (workspaceId, contact) => (await listCurrentVerifiedContactFormEvidenceContactIds(client, workspaceId, [contact])).has(contact.id),
+      hasInboundReplyStop: (workspaceId, outreachId) => hasBacklinkOutreachInboundReplyStopEffect(client, workspaceId, outreachId),
+      hasComplaintOrBounceStop: async (workspaceId, outreachId) => {
+        const events = await listBacklinkOutreachDeliveryEventsForOutreach(client, workspaceId, outreachId);
+        for (const event of events) {
+          if (event.event_type !== "email.complained" && !(event.event_type === "email.bounced" && event.bounce_type === "permanent")) continue;
+          const effect = await getBacklinkOutreachDeliveryEffectByDeliveryEventId(client as never, event.id);
+          if (effect?.status === "applied" && effect.workspace_id === workspaceId && effect.outreach_id === outreachId) return true;
+        }
+        return false;
+      },
+      getOpenAttempt: (workspaceId, outreachId) => getOpenBacklinkOutreachAttemptForOutreach(client, workspaceId, outreachId),
+      getWorkspaceControl: (workspaceId) => getAutomationWorkspaceControl(client, workspaceId),
+      rateEligibility: {
+        listAttemptSummariesSince: (workspaceId, since) => listBacklinkOutreachAttemptSendWindowRows(client, workspaceId, since),
+        getOutreach: (workspaceId, outreachId) => getBacklinkOutreachById(client, workspaceId, outreachId),
+        getOpportunity: (workspaceId, opportunityId) => getBacklinkOpportunityById(client, workspaceId, opportunityId),
+      },
+    }) },
     contactForm: {
       getLatestApprovalCandidate: (input) =>
         getLatestContactFormApprovalCandidate(client, input),
