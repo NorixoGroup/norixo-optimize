@@ -74,7 +74,6 @@ async function main() {
   assert.deepEqual(evaluateBacklinkAutonomyDownstreamDecision(policy).execution, { kind: "email_sender", workspaceId: "workspace", outreachId: "outreach" });
   assert.equal(evaluateBacklinkAutonomyDownstreamDecision({ ...policy, contactStatus: "unverified" }).outcome, "manual_review");
   assert.deepEqual(evaluateBacklinkAutonomyDownstreamDecision({ ...policy, channel: "contact_form", contactFormVerified: true }).execution, { kind: "contact_form_worker", workspaceId: "workspace", outreachId: "outreach" });
-  assert.equal(evaluateBacklinkAutonomyDownstreamDecision({ ...policy, channel: "contact_form", contactFormVerified: true, contactFormAmbiguous: true }).outcome, "manual_review");
   assert.deepEqual(evaluateBacklinkAutonomyDownstreamDecision({ ...policy, channel: "linkedin" }).execution, { kind: "linkedin_manual_action", workspaceId: "workspace", outreachId: "outreach" });
   for (const change of [
     { contactStatus: "do_not_contact" },

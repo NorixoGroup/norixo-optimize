@@ -66,12 +66,11 @@ export async function executeBacklinkDraftPrepareTask(deps: DraftPrepareTaskDepe
 }
 
 export type OutreachDecisionTaskDependencies = {
-  getFacts: (input: { workspaceId: string; outreachId: string }) => Promise<Omit<Parameters<typeof evaluateBacklinkAutonomyDownstreamDecision>[0], "workspaceId" | "outreachId" | "liveAutomationEnabled"> & { liveAutomationEnabled?: boolean; contactFormCaptchaOrManualReview?: boolean }>;
+  getFacts: (input: { workspaceId: string; outreachId: string }) => Promise<Omit<Parameters<typeof evaluateBacklinkAutonomyDownstreamDecision>[0], "workspaceId" | "outreachId" | "liveAutomationEnabled"> & { liveAutomationEnabled?: boolean }>;
 };
 
 /** Default-false live autonomy gate; this handler cannot invoke an executor. */
 export async function executeBacklinkOutreachDecisionTask(deps: OutreachDecisionTaskDependencies, input: { workspaceId: string; outreachId: string }): Promise<BacklinkAutonomyDecisionResult> {
   const facts = await deps.getFacts(input);
-  if (facts.contactFormCaptchaOrManualReview) return { outcome: "manual_review", reasons: ["CONTACT_FORM_MANUAL_REVIEW_REQUIRED"], execution: null };
   return evaluateBacklinkAutonomyDownstreamDecision({ ...facts, workspaceId: input.workspaceId, outreachId: input.outreachId, liveAutomationEnabled: facts.liveAutomationEnabled === true });
 }

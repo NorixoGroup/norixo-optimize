@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 import { buildNextDownstreamTask } from "../lib/automation/backlink-autonomy-pipeline";
 import {
@@ -80,8 +81,12 @@ async function main() {
   assert.equal(senderCalls, 0);
   assert.equal((await executeBacklinkOutreachDecisionTask({ getFacts: async () => ({ ...facts, liveAutomationEnabled: true, contactStatus: "unverified" }) }, { workspaceId: "workspace", outreachId: "outreach" })).execution, null);
   assert.equal((await executeBacklinkOutreachDecisionTask({ getFacts: async () => ({ ...facts, liveAutomationEnabled: true, inboundReplyStop: true }) }, { workspaceId: "workspace", outreachId: "outreach" })).outcome, "blocked");
-  assert.equal((await executeBacklinkOutreachDecisionTask({ getFacts: async () => ({ ...facts, liveAutomationEnabled: true, channel: "contact_form" as const, contactFormVerified: true, contactFormAmbiguous: true }) }, { workspaceId: "workspace", outreachId: "outreach" })).outcome, "manual_review");
-  assert.equal((await executeBacklinkOutreachDecisionTask({ getFacts: async () => ({ ...facts, liveAutomationEnabled: true, channel: "contact_form" as const, contactFormVerified: true, contactFormCaptchaOrManualReview: true }) }, { workspaceId: "workspace", outreachId: "outreach" })).outcome, "manual_review");
+  const contactForm = await executeBacklinkOutreachDecisionTask({ getFacts: async () => ({ ...facts, liveAutomationEnabled: true, channel: "contact_form" as const, contactFormVerified: true }) }, { workspaceId: "workspace", outreachId: "outreach" });
+  assert.equal(contactForm.execution?.kind, "contact_form_worker");
+  const decisionHandler = readFileSync(new URL("../lib/automation/backlink-downstream-task-handlers.ts", import.meta.url), "utf8");
+  const staticPolicy = readFileSync(new URL("../lib/backlinks/services/autonomousOutreachPolicy.ts", import.meta.url), "utf8");
+  assert.doesNotMatch(decisionHandler, /contactFormCaptchaOrManualReview/);
+  assert.doesNotMatch(staticPolicy, /contactFormAmbiguous/);
   assert.equal((await executeBacklinkOutreachDecisionTask({ getFacts: async () => ({ ...facts, liveAutomationEnabled: true, channel: "linkedin" as const }) }, { workspaceId: "workspace", outreachId: "outreach" })).outcome, "manual_action_required");
 
   const next = { workspaceId: "workspace", runId: "run", completedTaskId: "completed", domainId: "domain", opportunityId: "opportunity", contactId: "contact", scheduledAt: "2026-09-21T00:00:00.000Z" };

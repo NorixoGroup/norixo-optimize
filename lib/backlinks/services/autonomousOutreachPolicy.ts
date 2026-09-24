@@ -18,7 +18,6 @@ export type AutonomousOutreachPolicyInput = {
   conflictingOpenAttempt: boolean;
   rateLimitEligible: boolean;
   maxAttemptEligible: boolean;
-  contactFormAmbiguous?: boolean;
   contactFormVerified?: boolean;
 };
 
@@ -44,7 +43,6 @@ export function evaluateAutonomousOutreachPolicy(input: AutonomousOutreachPolicy
     input.conflictingOpenAttempt && "OPEN_ATTEMPT",
     !input.rateLimitEligible && "RATE_LIMIT",
     !input.maxAttemptEligible && "MAX_ATTEMPTS",
-    input.channel === "contact_form" && input.contactFormAmbiguous && "CONTACT_FORM_AMBIGUOUS",
     input.channel === "contact_form" && input.contactFormVerified !== true && "CONTACT_FORM_NOT_VERIFIED",
   ].filter((value): value is string => Boolean(value));
   if (reasons.length) return { kind: "manual_review", reasons };

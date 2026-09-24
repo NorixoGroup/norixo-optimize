@@ -56,7 +56,6 @@ async function main() {
   assert.equal(evaluateAutonomousOutreachPolicy({ ...policyInput, channel: "linkedin", contactStatus: "do_not_contact" }).kind, "manual_review");
   assert.equal(evaluateAutonomousOutreachPolicy({ ...policyInput, channel: "linkedin", inboundReplyStop: true }).kind, "manual_review");
   assert.equal(evaluateAutonomousOutreachPolicy({ ...policyInput, channel: "linkedin", complaintOrBounceStop: true }).kind, "manual_review");
-  assert.equal(evaluateAutonomousOutreachPolicy({ ...policyInput, channel: "contact_form", contactFormAmbiguous: true, contactFormVerified: true }).kind, "manual_review");
   assert.equal(evaluateAutonomousOutreachPolicy({ ...policyInput, channel: "contact_form", contactFormVerified: true }).kind, "eligible_for_contact_form_worker");
   assert.equal(evaluateAutonomousOutreachPolicy({ ...policyInput, channel: "contact_form" }).kind, "manual_review");
   assert.equal(evaluateAutonomousOutreachPolicy({ ...policyInput, inboundReplyStop: true }).kind, "manual_review");
