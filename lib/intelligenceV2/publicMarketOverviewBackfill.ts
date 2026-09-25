@@ -405,6 +405,10 @@ async function findActiveArtifactFromSupabase(
       .eq("benchmark_type", payload.benchmark_type)
       .eq("market_cell_key", payload.market_cell_key)
       .eq("intended_use", "public_market_overview")
+      .eq("aggregation_window", payload.aggregation_window)
+      .eq("platform_scope", payload.platform_scope)
+      .eq("capacity_scope", payload.capacity_scope)
+      .eq("property_scope", payload.property_scope)
       .neq("approval_status", "revoked")
       .order("created_at", { ascending: false });
     if (error || !Array.isArray(data)) return { ok: false };
