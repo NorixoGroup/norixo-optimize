@@ -2,16 +2,32 @@ import assert from "node:assert/strict";
 
 import {
   createPlaywrightChromiumBrowserRuntime,
+  validateContactFormNavigationUrl,
+  resolveHostnamePublicAddresses,
   type ContactFormBrowserRequest,
 } from "../lib/backlinks/services/contactFormNavigationWorker";
+import { buildContactFormPinnedConnectionTarget } from "../lib/backlinks/services/contactFormProxyPolicy";
 
 const targetUrl = "https://hostalaska.org/contact";
 const observedRequests: ContactFormBrowserRequest[] = [];
 
 async function main() {
+  const target = await validateContactFormNavigationUrl(
+    targetUrl,
+    resolveHostnamePublicAddresses,
+  );
+  assert.equal(target.ok, true, "Host Alaska target must pass contact-form URL validation");
+  if (!target.ok) return;
+
+  const pinnedTarget = buildContactFormPinnedConnectionTarget({
+    authorityHostname: target.hostname,
+    selectedAddress: target.selectedAddress,
+    port: Number(target.url.port || "443"),
+  });
+
   const runtime = await createPlaywrightChromiumBrowserRuntime();
   try {
-    const session = await runtime.openContext();
+    const session = await runtime.openContext({ pinnedTarget });
     try {
       await session.page.routeRequests(async (request) => {
         observedRequests.push(request);

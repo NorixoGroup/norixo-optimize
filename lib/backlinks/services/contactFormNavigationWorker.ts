@@ -294,6 +294,99 @@ const INSPECT_FORMS_EXPRESSION = String.raw`(() => {
   };
 })()`;
 
+
+const LIST_SUBMIT_CONTROLS_EXPRESSION = String.raw`((ordinal) => {
+  const form = document.forms.item(ordinal);
+  if (!form) return [];
+
+  const visible = (element) => {
+    const style = window.getComputedStyle(element);
+    return style.display !== "none" &&
+      style.visibility !== "hidden" &&
+      style.opacity !== "0" &&
+      element.getClientRects().length > 0;
+  };
+
+  const allControls = Array.from(
+    form.querySelectorAll("input, textarea, select, button")
+  );
+
+  return Array.from(
+    form.querySelectorAll('button[type="submit"], input[type="submit"]')
+  ).map((element) => {
+    const controlOrdinal = allControls.indexOf(element);
+    const tag =
+      element.tagName.toLowerCase() === "button" ? "button" : "input";
+    const hidden =
+      tag === "input" &&
+      String(element.type || "").toLowerCase() === "hidden";
+    const disabled =
+      element.disabled === true ||
+      element.getAttribute("aria-disabled") === "true";
+
+    return {
+      formOrdinal: ordinal,
+      controlOrdinal,
+      tag,
+      type: "submit",
+      name: element.getAttribute("name")?.trim() || null,
+      id: element.id?.trim() || null,
+      visible: visible(element),
+      enabled: !disabled,
+      disabled,
+      hidden,
+    };
+  });
+})(arguments[0])`;
+
+
+const OBSERVE_SUBMISSION_CONFIRMATION_EXPRESSION = String.raw`((selectedFormOrdinal) => {
+  const visible = (element) => {
+    const style = window.getComputedStyle(element);
+    return style.display !== "none" &&
+      style.visibility !== "hidden" &&
+      style.opacity !== "0" &&
+      element.getClientRects().length > 0;
+  };
+
+  const success = Array.from(
+    document.querySelectorAll(
+      '[data-norixo-contact-form-confirmation="success"], [data-contact-form-confirmation="success"], [data-contact-form-success="true"], [role="status"][data-contact-form-result="success"], [role="alert"][data-contact-form-result="success"]'
+    )
+  ).find(visible);
+
+  const replacement = Array.from(
+    document.querySelectorAll(
+      '[data-norixo-contact-form-replacement="success"], [data-contact-form-replacement="success"]'
+    )
+  ).find(visible);
+
+  const selectedFormPresent =
+    selectedFormOrdinal >= 0
+      ? document.forms.item(selectedFormOrdinal) != null
+      : false;
+
+  const element =
+    replacement && !selectedFormPresent ? replacement : success;
+
+  return element
+    ? {
+        replacement: Boolean(replacement && !selectedFormPresent),
+        id: element.id?.trim() || null,
+        role: element.getAttribute("role"),
+        textLength: (element.textContent ?? "")
+          .trim()
+          .replace(/\s+/g, " ")
+          .length,
+      }
+    : {
+        replacement: false,
+        id: null,
+        role: null,
+        textLength: 0,
+      };
+})(arguments[0])`;
+
 function adaptPlaywrightPage(page: Page): ContactFormBrowserPage {
   const controlLocator = (locator: ContactFormFieldLocator) => page.locator("form").nth(locator.formOrdinal).locator("input, textarea, select, button").nth(locator.controlOrdinal);
   return {
@@ -390,35 +483,10 @@ function adaptPlaywrightPage(page: Page): ContactFormBrowserPage {
     },
     listSubmitControls: async (formOrdinal) => {
       type SubmitControlRaw = Omit<ContactFormSubmitControl, "fingerprint">;
-      const controls = await page.evaluate((ordinal): SubmitControlRaw[] => {
-        const form = document.forms.item(ordinal);
-        if (!form) return [];
-        const visible = (element: Element) => {
-          const htmlElement = element as HTMLElement;
-          const style = window.getComputedStyle(htmlElement);
-          return style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0" && htmlElement.getClientRects().length > 0;
-        };
-        const allControls = Array.from(form.querySelectorAll("input, textarea, select, button"));
-        return Array.from(form.querySelectorAll('button[type="submit"], input[type="submit"]')).map((element) => {
-          const input = element as HTMLButtonElement | HTMLInputElement;
-          const controlOrdinal = allControls.indexOf(element);
-          const tag = element.tagName.toLowerCase() === "button" ? "button" : "input";
-          const hidden = tag === "input" && (input as HTMLInputElement).type.toLowerCase() === "hidden";
-          const disabled = input.disabled === true || input.getAttribute("aria-disabled") === "true";
-          return {
-            formOrdinal: ordinal,
-            controlOrdinal,
-            tag,
-            type: "submit",
-            name: input.getAttribute("name")?.trim() || null,
-            id: input.id?.trim() || null,
-            visible: visible(input),
-            enabled: !disabled,
-            disabled,
-            hidden,
-          };
-        });
-      }, formOrdinal);
+      const controls = await page.evaluate(
+        LIST_SUBMIT_CONTROLS_EXPRESSION,
+        formOrdinal,
+      ) as SubmitControlRaw[];
       return controls.map((control) => ({
         ...control,
         fingerprint: contactFormSafeFingerprint({
@@ -454,25 +522,15 @@ function adaptPlaywrightPage(page: Page): ContactFormBrowserPage {
       } catch {
         return { confirmed: false, reason: "final_url_invalid", finalUrl };
       }
-      const marker = await page.evaluate((selectedFormOrdinal) => {
-        const visible = (element: Element) => {
-          const htmlElement = element as HTMLElement;
-          const style = window.getComputedStyle(htmlElement);
-          return style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0" && htmlElement.getClientRects().length > 0;
-        };
-        const success = Array.from(document.querySelectorAll('[data-norixo-contact-form-confirmation="success"], [data-contact-form-confirmation="success"], [data-contact-form-success="true"], [role="status"][data-contact-form-result="success"], [role="alert"][data-contact-form-result="success"]')).find(visible);
-        const replacement = Array.from(document.querySelectorAll('[data-norixo-contact-form-replacement="success"], [data-contact-form-replacement="success"]')).find(visible);
-        const selectedFormPresent = selectedFormOrdinal >= 0 ? document.forms.item(selectedFormOrdinal) != null : false;
-        const element = replacement && !selectedFormPresent ? replacement : success;
-        return element
-          ? {
-              replacement: Boolean(replacement && !selectedFormPresent),
-              id: (element as HTMLElement).id?.trim() || null,
-              role: element.getAttribute("role"),
-              textLength: (element.textContent ?? "").trim().replace(/\s+/g, " ").length,
-            }
-          : { replacement: false, id: null, role: null, textLength: 0 };
-      }, input.selectedFormOrdinal);
+      const marker = await page.evaluate(
+        OBSERVE_SUBMISSION_CONFIRMATION_EXPRESSION,
+        input.selectedFormOrdinal,
+      ) as {
+        replacement: boolean;
+        id: string | null;
+        role: string | null;
+        textLength: number;
+      };
       if (marker.textLength > 0) {
         return {
           confirmed: true,
