@@ -368,6 +368,11 @@ export default async function GuidePage({ params }: Props) {
           }),
       headline: guide.title,
       description: guide.description,
+      ...(guide.evidenceSources?.sources.length
+        ? {
+            citation: guide.evidenceSources.sources.map((source) => source.href),
+          }
+        : {}),
     },
     ...(usesCanonicalGuideEntityGraph
       ? [
