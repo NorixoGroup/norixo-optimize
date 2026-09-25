@@ -32,6 +32,8 @@ import {
   type ContactFormSubmitControl,
   type ContactFormSubmitRequestAllowance,
 } from "@/lib/backlinks/services/contactFormSubmission";
+import { startContactFormPinnedBrowserProxy } from "@/lib/backlinks/services/contactFormPinnedBrowserProxy";
+import { buildContactFormPinnedConnectionTarget, type ContactFormPinnedConnectionTarget } from "@/lib/backlinks/services/contactFormProxyPolicy";
 import type { Json } from "@/types/database.types";
 
 const UNSAFE_MUTATION_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -71,7 +73,7 @@ export type ContactFormBrowserPage = {
 export type ContactFormBrowserSession = { page: ContactFormBrowserPage; close: () => Promise<void> };
 export type ContactFormBrowserRuntime = {
   name: string;
-  openContext: () => Promise<ContactFormBrowserSession>;
+  openContext: (input?: { pinnedTarget: ContactFormPinnedConnectionTarget }) => Promise<ContactFormBrowserSession>;
   close?: () => Promise<void>;
 };
 export type ContactFormPageSignals = Readonly<{
@@ -155,11 +157,39 @@ export function createContactFormNavigationDependencies(client: BacklinkReposito
 
 export async function createPlaywrightChromiumBrowserRuntime(): Promise<ContactFormBrowserRuntime> {
   const { chromium } = await import("playwright-core");
-  const browser = await chromium.launch({ headless: true });
+  let activeClose: (() => Promise<void>) | null = null;
   return {
     name: "playwright-chromium",
-    openContext: async () => createPlaywrightBrowserSession(browser),
-    close: () => browser.close(),
+    openContext: async (input) => {
+      if (input?.pinnedTarget == null) throw new Error("CONTACT_FORM_PINNED_TARGET_REQUIRED");
+      const proxy = await startContactFormPinnedBrowserProxy({ target: input.pinnedTarget });
+      let browser: Browser | null = null;
+      try {
+        const launchedBrowser = await chromium.launch({
+          headless: true,
+          args: [
+            `--proxy-server=http://${proxy.host}:${proxy.port}`,
+            "--proxy-bypass-list=<-loopback>",
+            "--disable-quic",
+          ],
+        });
+        browser = launchedBrowser;
+        const session = await createPlaywrightBrowserSession(launchedBrowser);
+        let closePromise: Promise<void> | null = null;
+        activeClose = () => {
+          closePromise ??= Promise.allSettled([session.close(), launchedBrowser.close(), proxy.close()]).then(() => undefined);
+          return closePromise;
+        };
+        return { page: session.page, close: activeClose };
+      } catch (error) {
+        await browser?.close();
+        await proxy.close();
+        throw error;
+      }
+    },
+    close: async () => {
+      await activeClose?.();
+    },
   };
 }
 
@@ -657,7 +687,12 @@ async function executeClaimedContactFormNavigationWorkerOnce(
     let navigationRequestCount = 0;
     const networkPolicy: { violation: UrlValidationFailure | null } = { violation: null };
     const submitAllowance = createSubmitAllowanceState();
-    session = await deps.browserRuntime.openContext();
+    const pinnedTarget = buildContactFormPinnedConnectionTarget({
+      authorityHostname: target.hostname,
+      selectedAddress: target.selectedAddress,
+      port: Number(target.url.port || "443"),
+    });
+    session = await deps.browserRuntime.openContext({ pinnedTarget });
     session.page.onPopup(() => {
       popupBlockedCount += 1;
     });
@@ -670,6 +705,10 @@ async function executeClaimedContactFormNavigationWorkerOnce(
         const requestTarget = await validateContactFormNavigationUrl(request.url, deps.resolveHostname);
         if (!requestTarget.ok) {
           networkPolicy.violation ??= requestTarget;
+          return "abort";
+        }
+        if (!matchesPinnedAuthority(requestTarget, target)) {
+          networkPolicy.violation ??= validationFailure("CONTACT_FORM_PINNED_TARGET_MISMATCH", "pinned_target_mismatch", {});
           return "abort";
         }
         return "continue";
@@ -699,6 +738,10 @@ async function executeClaimedContactFormNavigationWorkerOnce(
       const requestTarget = await validateContactFormNavigationUrl(request.url, deps.resolveHostname);
       if (!requestTarget.ok) {
         networkPolicy.violation ??= requestTarget;
+        return "abort";
+      }
+      if (!matchesPinnedAuthority(requestTarget, target)) {
+        networkPolicy.violation ??= validationFailure("CONTACT_FORM_PINNED_TARGET_MISMATCH", "pinned_target_mismatch", {});
         return "abort";
       }
       return "continue";
@@ -845,6 +888,10 @@ async function executeClaimedContactFormNavigationWorkerOnce(
       }
     }
   }
+}
+
+function matchesPinnedAuthority(requestTarget: UrlValidationOk, pinnedTarget: UrlValidationOk): boolean {
+  return requestTarget.hostname === pinnedTarget.hostname && requestTarget.url.port === pinnedTarget.url.port;
 }
 
 function validateWorkerOptions(options: { leaseDurationSeconds: number; heartbeatIntervalMs: number; navigationTimeoutMs: number; runTimeoutMs: number; redirectLimit: number }) {
