@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { I18nProvider } from "@/components/i18n/I18nProvider";
 import Footer from "@/components/Footer";
 import type { Locale } from "@/data/i18n";
+import { legalI18n } from "@/data/marketing/legalI18n";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,6 +28,18 @@ const organizationJsonLd = {
   name: "Norixo",
   url: siteUrl,
   logo: `${siteUrl}/favicon.png`,
+  description: defaultDescription,
+  legalName: legalI18n.en.companyNameValue,
+  contactPoint: {
+    "@type": "ContactPoint",
+    contactType: "customer support",
+    email: legalI18n.en.contactValue,
+    url: `${siteUrl}/contact`,
+  },
+  address: {
+    "@type": "PostalAddress",
+    streetAddress: legalI18n.en.registeredOfficeValue,
+  },
   sameAs: [
     "https://www.linkedin.com/company/norixo-io/",
     "https://www.instagram.com/norixo.io/",

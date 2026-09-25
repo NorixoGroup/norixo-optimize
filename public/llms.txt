@@ -7,14 +7,18 @@ Norixo helps hosts and property managers analyze listing presentation, positioni
 ## Main pages
 
 - https://norixo.io/ — Norixo homepage and product overview
+- https://norixo.io/about — About Norixo
 - https://norixo.io/how-it-works — How Norixo analyzes and structures listing optimization
 - https://norixo.io/pricing — Norixo plans and pricing
 - https://norixo.io/demo — Product demonstration
+- https://norixo.io/free-audit — Free Audit
 - https://norixo.io/solutions — Listing optimization solutions
 - https://norixo.io/guides — Educational guides
 - https://norixo.io/articles — Articles about listing optimization and short-term rental performance
 - https://norixo.io/research — Research and market-oriented content
 - https://norixo.io/rankings — Ranking and comparative content
+- https://norixo.io/tools — Free Tools & Calculators
+- https://norixo.io/reports — Airbnb Market Reports
 
 ## Listing optimization solutions
 
