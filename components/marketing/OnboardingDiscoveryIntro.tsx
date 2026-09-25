@@ -125,19 +125,6 @@ export function OnboardingDiscoveryIntro({
               </ul>
             </div>
 
-            <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-50 px-4 py-3">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                  Impact revenu estimé
-                </p>
-                <p className="mt-1 text-sm font-medium text-emerald-800">
-                  +€280 to +€620 / month
-                </p>
-              </div>
-              <span className="text-[11px] text-emerald-700">
-                Basé sur des annonces optimisées similaires.
-              </span>
-            </div>
           </div>
         </aside>
       </section>
