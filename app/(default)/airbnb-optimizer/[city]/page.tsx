@@ -75,42 +75,6 @@ function guestExpectationAngleLine(c: City): string {
   return c.guestExpectationAngle ?? `Use the listing's own guest questions, reviews, rules, amenities, and presentation to identify expectation gaps instead of assuming city-wide guest preferences.`;
 }
 
-function pricingContextLine(c: City): string {
-  if (c.avgPrice === undefined) {
-    return `Compare ${c.name} listings using observable rates, stay conditions, amenities, and presentation instead of relying on an unsupported city-wide average.`;
-  }
-  if (c.avgPrice >= 175) {
-    return `Typical well-positioned listings in ${c.name} cluster around €${c.avgPrice.toFixed(0)} per night—guests compare value carefully at this level.`;
-  }
-  if (c.avgPrice <= 140) {
-    return `With typical nightly prices near €${c.avgPrice.toFixed(0)} in ${c.name}, small upgrades in presentation can still shift which listing wins the booking.`;
-  }
-  return `At roughly €${c.avgPrice.toFixed(0)} per night on average for strong listings in ${c.name}, clarity on value and positioning matters as much as the rate itself.`;
-}
-
-function photoMarketLine(c: City): string {
-  if (c.avgPhotos === undefined) {
-    return `Evaluate photo coverage in ${c.name} from the listing itself: show the important spaces clearly and order the gallery around verifiable property features.`;
-  }
-  if (c.avgPhotos >= 24) {
-    return `Strong listings in ${c.name} average about ${c.avgPhotos} photos—guests are used to scrolling a full gallery before they shortlist.`;
-  }
-  if (c.avgPhotos <= 21) {
-    return `With around ${c.avgPhotos} photos typical for competitive listings in ${c.name}, each image must work harder to build trust and context.`;
-  }
-  return `Listings near ${c.avgPhotos} photos on average in ${c.name} still need a deliberate order: lead with proof of space, light, and location.`;
-}
-
-function ratingPressureLine(c: City): string {
-  if (c.avgRating === undefined) {
-    return `Use the listing's own review history and observable trust signals in ${c.name} rather than assuming a city-wide rating benchmark.`;
-  }
-  if (c.avgRating >= 4.75) {
-    return `Guest ratings in ${c.name} often sit around ${c.avgRating.toFixed(1)}/5 for top performers—new reviews and visible quality signals weigh heavily.`;
-  }
-  return `With many stays clustering near ${c.avgRating.toFixed(1)}/5 in ${c.name}, ${c.country}, hosts benefit from listings that read as polished and complete before the first message.`;
-}
-
 /** Rotating, deterministic picks so related hubs vary by city as the roster grows (max 4). */
 function relatedHubCitiesFor(currentSlug: string, limit = 4): City[] {
   const others = cities.filter((c) => c.slug !== currentSlug);
@@ -157,13 +121,6 @@ export default async function CityOptimizerPage({ params }: PageProps) {
   const {
     name,
     country,
-    avgPrice,
-    avgRating,
-    avgPhotos,
-
-
-
-
   } = city;
 
   const countrySlug = countryToSlug(country);
@@ -253,83 +210,23 @@ export default async function CityOptimizerPage({ params }: PageProps) {
             )}
           </p>
           <ul className="mt-4 space-y-1.5 text-[13px] leading-6 text-slate-700">
-            {avgRating !== undefined ? (
-              <li>
-                • Competitive stays in {name} often sit near {avgRating.toFixed(1)}/5—gaps in
-                polish or clarity are easy for guests to spot when they scroll.
-              </li>
-            ) : null}
-            {avgPhotos !== undefined ? (
-              <li>
-                • Listings with roughly {avgPhotos} photos set the visual bar; a thin gallery
-                makes even fair pricing feel risky.
-              </li>
-            ) : null}
-            {avgPrice !== undefined ? (
-              <li>
-                • At about €{avgPrice.toFixed(0)} per night on average for strong listings, guests
-                weigh every detail before they commit.
-              </li>
-            ) : null}
-            {avgPrice === undefined &&
-            avgRating === undefined &&
-            avgPhotos === undefined ? (
-              <li>
-                • Compare observable listing evidence such as current rates, amenities,
-                stay conditions, reviews, and presentation instead of relying on unsupported
-                city-wide averages.
-              </li>
-            ) : null}
+            <li>
+              • Compare observable listing evidence such as current rates, amenities,
+              stay conditions, reviews, and presentation instead of relying on unsupported
+              city-wide averages.
+            </li>
           </ul>
         </div>
 
         <div className="nk-card nk-card-hover grid gap-3 p-5 text-sm text-slate-800 sm:grid-cols-2">
-          {avgPrice !== undefined ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Avg. nightly price
-              </p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900">
-                €{avgPrice.toFixed(0)}
-              </p>
-              <p className="mt-1 text-[11px] text-slate-500">
-                Typical pricing for well-positioned listings in {name}.
-              </p>
-            </div>
-          ) : null}
-          {avgRating !== undefined ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Avg. guest rating
-              </p>
-              <p className="mt-2 text-2xl font-semibold text-emerald-600">
-                {avgRating.toFixed(1)}<span className="text-sm text-emerald-500"> / 5</span>
-              </p>
-              <p className="mt-1 text-[11px] text-slate-500">
-                Highly rated stays are now the norm – not the exception.
-              </p>
-            </div>
-          ) : null}
-          {avgPhotos !== undefined ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Avg. photos per listing
-              </p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900">
-                {avgPhotos}
-              </p>
-              <p className="mt-1 text-[11px] text-slate-500">
-                You need a strong first 5 photos to win the click.
-              </p>
-            </div>
-          ) : null}
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
               Key takeaway
             </p>
             <p className="mt-2 text-[13px] leading-6 text-slate-700">
-              Small improvements in photos, copy and amenities can move you above the
-              average listing in {name} and unlock more bookings.
+              Review photos, copy, amenities, pricing, and stay conditions against
+              observable alternatives in {name}, then prioritize changes supported by
+              current listing and market evidence.
             </p>
           </div>
         </div>
@@ -380,7 +277,7 @@ export default async function CityOptimizerPage({ params }: PageProps) {
               Pricing strategy in {name}
             </h3>
             <p className="mt-2 text-[13px] leading-6 text-slate-700">
-              {pricingAngleLine(city)} {pricingContextLine(city)} Use your calendar and comparable
+              {pricingAngleLine(city)} Use your calendar and observable comparable
               listings to keep pricing and presentation coherent.
             </p>
           </div>
@@ -389,7 +286,7 @@ export default async function CityOptimizerPage({ params }: PageProps) {
               Photos and listing quality in {name}
             </h3>
             <p className="mt-2 text-[13px] leading-6 text-slate-700">
-              {photoMarketLine(city)} Re-order for clarity and add captions where they remove
+              Review the listing's own photo coverage. Re-order for clarity and add captions where they remove
               doubt.{" "}
               {hasRichCityContext(city)
                 ? `Make sure your cover image matches what ${name} guests filter for.`
@@ -401,7 +298,7 @@ export default async function CityOptimizerPage({ params }: PageProps) {
               How to increase bookings in {name}
             </h3>
             <p className="mt-2 text-[13px] leading-6 text-slate-700">
-              {ratingPressureLine(city)} Pair visible polish with a description that answers
+              Use the listing's own review history and observable trust signals. Pair visible polish with a description that answers
               “who this is for” in {name}—families, remote workers, weekend explorers—so the
               right guests stop comparing and start booking.
             </p>

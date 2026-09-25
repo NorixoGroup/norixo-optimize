@@ -207,11 +207,7 @@ export default async function CountryPage({ params }: Props) {
               className="rounded-2xl border border-[#10231F]/10 bg-white p-5 transition hover:-translate-y-0.5 hover:shadow-md"
             >
               <p className="font-semibold">{city.name}</p>
-              {city.avgPrice !== undefined ? (
-                <p className="mt-2 text-sm text-[#5F6F68]">
-                  Average reference price: €{city.avgPrice}/night
-                </p>
-              ) : null}
+
             </Link>
           ))}
         </div>

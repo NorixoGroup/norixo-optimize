@@ -147,17 +147,7 @@ export default function AirbnbOptimizerHubPage() {
               <h2 className="mt-3 text-2xl font-semibold">{city.name}</h2>
               <p className="mt-3 leading-7 text-[#4C5C55]">{city.marketAngle ??
                   `Explore listing optimization guidance for ${city.name}, ${city.country}, without relying on unsupported city-wide benchmarks.`}</p>
-              <div className="mt-4 flex flex-wrap gap-3 text-sm text-[#5F6F68]">
-                {city.avgPrice !== undefined ? (
-                  <span>EUR {city.avgPrice}/night</span>
-                ) : null}
-                {city.avgRating !== undefined ? (
-                  <span>{city.avgRating.toFixed(1)}/5</span>
-                ) : null}
-                {city.avgPhotos !== undefined ? (
-                  <span>{city.avgPhotos} photos</span>
-                ) : null}
-              </div>
+
             </Link>
           ))}
         </div>

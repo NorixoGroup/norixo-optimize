@@ -78,9 +78,7 @@ function buildTopicSpecificAnalysis(city: City, topic: LocalSeoTopic) {
     return {
       heading: `Pricing and revenue strategy in ${city.name}`,
       paragraphs: [
-        city.avgPrice !== undefined
-          ? `${pricingAngleLine(city)} With an average reference price around €${city.avgPrice} per night, ${city.name} rewards listings that make their value obvious before guests even open the calendar.`
-          : `${pricingAngleLine(city)} Compare observable current rates and listing features in ${city.name} instead of relying on an unsupported city-wide price average.`,
+        `${pricingAngleLine(city)} Compare observable current rates and listing features in ${city.name} instead of relying on an unsupported city-wide price average.`,
         `${competitionAngleLine(city)} For ${topic.label.toLowerCase()}, the real goal is to match rate, perceived quality, and demand so that pricing supports both occupancy and revenue instead of weakening both.`,
       ],
     };
@@ -90,9 +88,7 @@ function buildTopicSpecificAnalysis(city: City, topic: LocalSeoTopic) {
     return {
       heading: `Photo strategy for ${city.name} listings`,
       paragraphs: [
-        city.avgPhotos !== undefined
-          ? `Listings in ${city.name} average about ${city.avgPhotos} photos, which means guests expect a complete visual story before they trust the stay. ${guestExpectationAngleLine(city)}`
-          : `Evaluate photo coverage from the listing itself in ${city.name}: show the important spaces clearly and use verifiable property features instead of assuming a city-wide photo benchmark.`,
+        `Evaluate photo coverage from the listing itself in ${city.name}: show the important spaces clearly and use verifiable property features instead of assuming a city-wide photo benchmark.`,
         `${competitionAngleLine(city)} For ${topic.label.toLowerCase()}, the cover image, the order of the first rooms, and the clarity of what guests will experience matter more than simply uploading more photos.`,
       ],
     };
@@ -131,9 +127,7 @@ function buildTopicSpecificAnalysis(city: City, topic: LocalSeoTopic) {
     return {
       heading: `Trust and conversion signals in ${city.name}`,
       paragraphs: [
-        city.avgRating !== undefined
-          ? `The average rating bar in ${city.name} sits near ${city.avgRating.toFixed(1)}/5, so guests compare not only price but also reassurance, consistency, and detail before they book.`
-          : `Use the listing's own review history and observable trust signals in ${city.name} instead of relying on an unsupported city-wide rating benchmark.`,
+        `Use the listing's own review history and observable trust signals in ${city.name} instead of relying on an unsupported city-wide rating benchmark.`,
         hasRichCityContext(city)
           ? `${guestExpectationAngleLine(city)} For ${topic.label.toLowerCase()}, the strongest gains usually come from removing uncertainty, showing the stay clearly, and reinforcing why this listing feels safer or easier to choose than nearby alternatives.`
           : `${guestExpectationAngleLine(city)} For ${topic.label.toLowerCase()}, focus on removing uncertainty and making verifiable strengths, limitations, and trust signals easier to understand.`,
@@ -666,46 +660,7 @@ export default async function LocalSeoPage({ params }: Props) {
         </div>
       </section>
 
-      <section className="mx-auto max-w-5xl px-6 pb-12">
-        <h2 className="text-2xl font-semibold">Local KPI snapshot</h2>
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
-          <article className="rounded-3xl bg-white p-6 shadow-sm">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#5F6F68]">
-              Avg. nightly price
-            </p>
-            <p className="mt-3 text-3xl font-semibold text-[#10231F]">
-              {city.avgPrice !== undefined ? `€${city.avgPrice}` : "Not published"}
-            </p>
-            <p className="mt-3 text-sm leading-6 text-[#5F6F68]">
-              Reference pricing signal for stronger listings in {city.name}.
-            </p>
-          </article>
-          <article className="rounded-3xl bg-white p-6 shadow-sm">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#5F6F68]">
-              Avg. guest rating
-            </p>
-            <p className="mt-3 text-3xl font-semibold text-[#10231F]">
-              {city.avgRating !== undefined
-                ? `${city.avgRating.toFixed(1)} / 5`
-                : "Not published"}
-            </p>
-            <p className="mt-3 text-sm leading-6 text-[#5F6F68]">
-              Trust and quality pressure guests bring into this market.
-            </p>
-          </article>
-          <article className="rounded-3xl bg-white p-6 shadow-sm">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#5F6F68]">
-              Avg. photos
-            </p>
-            <p className="mt-3 text-3xl font-semibold text-[#10231F]">
-              {city.avgPhotos !== undefined ? city.avgPhotos : "Not published"}
-            </p>
-            <p className="mt-3 text-sm leading-6 text-[#5F6F68]">
-              Visual completeness benchmark for listings in {city.name}.
-            </p>
-          </article>
-        </div>
-      </section>
+
 
         </>
       )}
