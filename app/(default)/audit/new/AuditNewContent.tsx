@@ -173,23 +173,7 @@ function detectPlatform(
   return "unknown";
 }
 
-function generateEstimatedScore(url: string) {
-  let hash = 0;
-  for (let i = 0; i < url.length; i++) {
-    hash = (hash + url.charCodeAt(i) * (i + 1)) % 1000;
-  }
 
-  const score = 5.8 + (hash % 25) / 10; // 5.8 → 8.3
-  return Math.round(score * 10) / 10;
-}
-
-function generatePreviewInsights(platform: string) {
-  return [
-    "Annonce avec signaux partiels de confiance",
-    "Description probablement améliorable sur l'accroche initiale",
-    "Positionnement à clarifier face aux annonces similaires",
-  ];
-}
 
 function normalizeRenderedStrings(values: string[]) {
   return values.map((value) => value.trim()).filter(Boolean);
@@ -229,58 +213,6 @@ function getPhotoStatusLabel(subScore: ReturnType<typeof getSubScore>) {
   return "Galerie complète";
 }
 
-function buildFastPreview({
-  url,
-  title,
-  platform,
-}: {
-  url: string;
-  title: string;
-  platform: string;
-}): GuestAuditPreview {
-  return {
-    listing_url: url,
-    title: title.trim() || "Annonce en cours d'analyse",
-    platform,
-    score: 7.8,
-    insights: [
-      "Votre annonce semble correcte, mais certains signaux visibles limitent encore sa conversion.",
-    ],
-    recommendations: [
-      "Commencez par clarifier les visuels et la promesse principale pour renforcer l'impact de la fiche.",
-    ],
-    summary: "Aperçu rapide disponible pendant que l'analyse complète se termine.",
-    marketComparison: null,
-    estimatedRevenue: null,
-    bookingPotential: null,
-    occupancyObservation: null,
-    marketPositioning: {
-      status: "partial",
-      comparableCount: 0,
-      summary: "Comparaison locale en cours de chargement.",
-      comparables: [],
-      metrics: [],
-    },
-    subScores: [
-      {
-        key: "photos",
-        label: "Photos",
-        status: "partial",
-        score: 6.9,
-        weight: 0.2,
-        reason: "estimation_rapide",
-      },
-      {
-        key: "description",
-        label: "Description",
-        status: "partial",
-        score: 7.4,
-        weight: 0.15,
-        reason: "estimation_rapide",
-      },
-    ],
-  };
-}
 
 export default function PublicAuditPage() {
   const searchParams = useSearchParams();
@@ -295,12 +227,6 @@ export default function PublicAuditPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   const [guestAudit, setGuestAudit] = useState<GuestAuditPreview | null>(null);
-  const [fastPreview, setFastPreview] = useState<GuestAuditPreview | null>(null);
-  const [preview, setPreview] = useState<null | {
-    platform: string;
-    score: number;
-    insights: string[];
-  }>(null);
   const [isBackgroundLoading, setIsBackgroundLoading] = useState(false);
   const [selectedOffer, setSelectedOffer] = useState<
     (typeof PAYWALL_OFFERS)[number]["code"]
@@ -503,52 +429,7 @@ export default function PublicAuditPage() {
     () => LOADING_STEPS[stepIndex] ?? LOADING_STEPS[0],
     [stepIndex]
   );
-  const previewAsGuestAudit = useMemo<GuestAuditPreview | null>(() => {
-    if (!preview) return null;
-
-    return {
-      listing_url: url.trim(),
-      title: title.trim() || "Annonce en cours d'analyse",
-      platform: preview.platform === "unknown" ? "other" : preview.platform,
-      score: preview.score,
-      insights: preview.insights,
-      recommendations: [],
-      summary: "Score estimé avant analyse complète",
-      marketComparison: null,
-      estimatedRevenue: null,
-      bookingPotential: null,
-      occupancyObservation: null,
-      marketPositioning: {
-        status: "partial",
-        comparableCount: 0,
-        summary: "Basé sur données publiques visibles",
-        comparables: [],
-        metrics: [],
-      },
-      subScores: [
-        {
-          key: "photos",
-          label: "Photos",
-          status: "partial",
-          score: null,
-          weight: 0.2,
-          reason: "preview_local",
-        },
-        {
-          key: "description",
-          label: "Description",
-          status: "partial",
-          score: null,
-          weight: 0.15,
-          reason: "preview_local",
-        },
-      ],
-    };
-  }, [preview, title, url]);
-  const displayPreview = useMemo(
-    () => guestAudit ?? fastPreview ?? previewAsGuestAudit,
-    [guestAudit, fastPreview, previewAsGuestAudit]
-  );
+  const displayPreview = guestAudit;
   const isProvisionalPreview = isBackgroundLoading && !guestAudit;
   const isAirbnbBlockedPreview = displayPreview?.reason === "airbnb_blocked";
   const isRestoredDraftView = useMemo(
@@ -691,8 +572,6 @@ export default function PublicAuditPage() {
     }
 
     setGuestAudit(null);
-    setFastPreview(null);
-    setPreview(null);
     setIsBackgroundLoading(false);
     clearGuestAuditDraft(normalizedUrl);
 
@@ -701,116 +580,38 @@ export default function PublicAuditPage() {
     setProgress(10);
 
     try {
-      console.log("[audit/new] before preview computation", {
-        submitId,
-        normalizedUrl,
-      });
       const detectedPlatformForSubmit = validation.platform;
-      const score = generateEstimatedScore(normalizedUrl);
-      const insights = generatePreviewInsights(detectedPlatformForSubmit);
-      console.log("[audit/new] preview computed", {
-        detectedPlatformForSubmit,
-        score,
-        insightsCount: insights.length,
-      });
-      console.log("[audit/new] before API call", {
-        hasApiCall: false,
-        note: "guest preview flow is local-only",
-      });
 
       if (submitId !== activeSubmitIdRef.current) {
-        console.log("[audit/new] submit aborted (stale submitId)", {
-          submitId,
-          activeSubmitId: activeSubmitIdRef.current,
-        });
         return;
       }
 
-      console.log("[audit/new] before preview state update", { submitId });
-      setPreview({
+      const guestToken = getOrCreateGuestAuditToken();
+
+      saveGuestAuditDraft({
+        guest_token: guestToken,
+        listing_url: normalizedUrl,
+        title: title.trim() || undefined,
         platform: detectedPlatformForSubmit,
-        score,
-        insights,
+        selected_offer: selectedOffer,
+        property_type_override: propertyTypeOverride.trim() || undefined,
+        generated_at: new Date().toISOString(),
+        status: "pending",
+        payment_status: "unpaid",
+        preview_payload: null,
+        full_payload: null,
+        result: {
+          insights: [],
+          recommendations: [],
+          raw_payload: null,
+        },
       });
 
-      const previewPayload: GuestAuditPreview = {
-        listing_url: normalizedUrl,
-        title: title.trim() || "Annonce en cours d'analyse",
-        platform: detectedPlatformForSubmit,
-        score,
-        insights,
-        recommendations: [],
-        summary: "Score estimé avant analyse complète",
-        marketComparison: null,
-        estimatedRevenue: null,
-        bookingPotential: null,
-        occupancyObservation: null,
-        marketPositioning: {
-          status: "partial",
-          comparableCount: 0,
-          summary: "Basé sur données publiques visibles",
-          comparables: [],
-          metrics: [],
-        },
-        subScores: [
-          {
-            key: "photos",
-            label: "Photos",
-            status: "partial",
-            score: null,
-            weight: 0.2,
-            reason: "preview_local",
-          },
-          {
-            key: "description",
-            label: "Description",
-            status: "partial",
-            score: null,
-            weight: 0.15,
-            reason: "preview_local",
-          },
-        ],
-      };
-
       setGuestAudit(null);
-      setFastPreview(previewPayload);
       setIsBackgroundLoading(false);
       setStepIndex(LOADING_STEPS.length - 1);
       setProgress(100);
       setIsSubmitting(false);
-
-      console.log("[audit/new] before navigation/redirect/push", {
-        hasNavigation: false,
-        note: "no redirect in guest preview submit",
-      });
-      console.log("[audit/new] before draft save", {
-        listing_url: previewPayload.listing_url,
-        platform: previewPayload.platform,
-      });
-      const guestToken = getOrCreateGuestAuditToken();
-      saveGuestAuditDraft({
-        guest_token: guestToken,
-        listing_url: normalizedUrl,
-        title: previewPayload.title,
-        platform: previewPayload.platform,
-        selected_offer: selectedOffer,
-        property_type_override: propertyTypeOverride.trim() || undefined,
-        generated_at: new Date().toISOString(),
-        status: "completed",
-        payment_status: "unpaid",
-        preview_payload: previewPayload,
-        full_payload: previewPayload,
-        result: {
-          score: previewPayload.score,
-          insights: previewPayload.insights,
-          recommendations: previewPayload.recommendations,
-          raw_payload: previewPayload,
-        },
-      });
-      console.log("[audit/new] submit success end", {
-        submitId,
-        savedDraft: true,
-      });
     } catch (err) {
       if (previewTimerRef.current) {
         window.clearTimeout(previewTimerRef.current);
@@ -1057,7 +858,7 @@ export default function PublicAuditPage() {
                     value={url}
                     onChange={(e) => {
                       const previousListingUrl =
-                        guestAudit?.listing_url ?? fastPreview?.listing_url ?? null;
+                        guestAudit?.listing_url ?? null;
                       const nextUrl = e.target.value;
                       activeSubmitIdRef.current += 1;
                       if (previewTimerRef.current) {
@@ -1067,8 +868,6 @@ export default function PublicAuditPage() {
                       setUrl(nextUrl);
                       setError(null);
                       setGuestAudit(null);
-                      setFastPreview(null);
-                      setPreview(null);
                       setIsBackgroundLoading(false);
                       setIsSubmitting(false);
                       if (previousListingUrl) {
