@@ -633,7 +633,7 @@ export default async function CityOptimizerPage({ params }: PageProps) {
             <Link href="/guides/airbnb-listing-audit" className="underline-offset-4 hover:underline">
               Listing audit
             </Link>
-            <Link href="/analyze" className="underline-offset-4 hover:underline">
+            <Link href="/sign-in?next=/audit/new" className="underline-offset-4 hover:underline">
               Run an Airbnb audit
             </Link>
           </nav>

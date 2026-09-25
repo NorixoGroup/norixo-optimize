@@ -14,7 +14,7 @@ export function GuideHero({
   eyebrow,
   title,
   subtitle,
-  primaryCtaHref = "/analyze",
+  primaryCtaHref = "/sign-in?next=/audit/new",
   primaryCtaLabel = "Audit my Airbnb listing",
   secondaryCtaHref = "/guides",
   secondaryCtaLabel = "Explore guides",

@@ -101,7 +101,7 @@ export default async function SolutionPage({ params }: Props) {
 
         <div className="mt-8 flex flex-wrap gap-3">
           <Link
-            href="/analyze"
+            href="/sign-in?next=/audit/new"
             className="rounded-full bg-[#10231F] px-6 py-3 text-sm font-semibold text-white"
           >
             {solution.cta}
@@ -327,7 +327,7 @@ export default async function SolutionPage({ params }: Props) {
             trust, and conversion issues that may be blocking bookings.
           </p>
           <Link
-            href="/analyze"
+            href="/sign-in?next=/audit/new"
             className="mt-6 inline-flex rounded-full bg-white px-6 py-3 text-sm font-semibold text-[#10231F]"
           >
             Start an Airbnb audit

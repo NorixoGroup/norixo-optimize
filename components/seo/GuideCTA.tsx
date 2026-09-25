@@ -10,7 +10,7 @@ type GuideCTAProps = {
 export function GuideCTA({
   title = "Find what is blocking your Airbnb bookings",
   description = "Norixo analyzes your listing, pricing, description, photos, and market positioning to reveal the highest-impact improvements.",
-  href = "/analyze",
+  href = "/sign-in?next=/audit/new",
   label = "Start an Airbnb listing audit",
 }: GuideCTAProps) {
   return (

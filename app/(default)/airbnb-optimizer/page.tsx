@@ -114,7 +114,7 @@ export default function AirbnbOptimizerHubPage() {
             Explore Paris optimizer
           </Link>
           <Link
-            href="/analyze"
+            href="/sign-in?next=/audit/new"
             className="rounded-full border border-[#10231F]/20 px-6 py-3 text-sm font-semibold"
           >
             Audit my Airbnb listing

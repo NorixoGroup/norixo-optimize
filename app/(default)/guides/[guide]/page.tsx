@@ -461,7 +461,7 @@ export default async function GuidePage({ params }: Props) {
         eyebrow="Airbnb optimization guide"
         title={guide.heroTitle}
         subtitle={guide.heroSubtitle}
-        primaryCtaHref="/analyze"
+        primaryCtaHref="/sign-in?next=/audit/new"
         primaryCtaLabel={guide.cta?.label ?? "Audit my Airbnb listing"}
         secondaryCtaHref="/pricing"
         secondaryCtaLabel="View pricing"

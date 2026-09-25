@@ -46,6 +46,14 @@ Areas covered by Norixo content and analysis include:
 
 Recommendations depend on the listing and available analysis context. Norixo does not guarantee ranking, occupancy, revenue, or booking outcomes.
 
+## Analysis boundaries
+
+- The Free Audit is a market-level preview based on available market context.
+- The optional listing URL in the Free Audit is not submitted for, or used in, a listing-specific audit.
+- Listing-specific analysis is performed by the full Norixo audit.
+- Norixo produces analysis and optimization recommendations; it does not automatically edit or modify listings on Airbnb, Booking.com, or other platforms.
+- Recommendations and estimates are decision-support outputs, not guarantees of ranking, occupancy, bookings, or revenue.
+
 ## Contact
 
 - https://norixo.io/contact — Contact Norixo

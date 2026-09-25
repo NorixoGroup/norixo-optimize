@@ -149,7 +149,9 @@ export const homeI18n = {
       estimatedImpactValue: "Audit-based estimate",
       similarListings: "based on similar optimized listings",
       revenueImpact: "Revenue impact",
-      revenueImpactValue: "+€280 to +€620",
+      revenueImpactValue: "Illustrative example: +€280 to +€620",
+      revenueImpactExampleNote:
+        "Example only — actual results vary by property, market, pricing and demand.",
       recommendationsTitle: "Priority recommendations",
       recommendations: [
         "Reorder photos to highlight the terrace and the view.",
@@ -368,7 +370,9 @@ export const homeI18n = {
       estimatedImpactValue: "Estimation basée sur l’audit",
       similarListings: "basé sur des annonces similaires optimisées",
       revenueImpact: "Impact revenu",
-      revenueImpactValue: "+280 € à +620 €",
+      revenueImpactValue: "Exemple illustratif : +280 € à +620 €",
+      revenueImpactExampleNote:
+        "Exemple uniquement : les résultats réels varient selon le bien, le marché, le prix et la demande.",
       recommendationsTitle: "Recommandations prioritaires",
       recommendations: [
         "Réorganiser les photos pour mettre en avant la terrasse et la vue.",
@@ -587,7 +591,9 @@ export const homeI18n = {
       estimatedImpactValue: "Stima basata sull’audit",
       similarListings: "basado en anuncios similares optimizados",
       revenueImpact: "Impacto en ingresos",
-      revenueImpactValue: "+280 € a +620 €",
+      revenueImpactValue: "Ejemplo ilustrativo: +280 € a +620 €",
+      revenueImpactExampleNote:
+        "Solo es un ejemplo: los resultados reales varían según la propiedad, el mercado, el precio y la demanda.",
       recommendationsTitle: "Recomendaciones prioritarias",
       recommendations: [
         "Reordenar las fotos para destacar la terraza y la vista.",
@@ -805,7 +811,9 @@ export const homeI18n = {
       estimatedImpactValue: "Auditbasierte Schätzung",
       similarListings: "basierend auf ähnlichen optimierten Inseraten",
       revenueImpact: "Umsatzeffekt",
-      revenueImpactValue: "+280 € bis +620 €",
+      revenueImpactValue: "Illustratives Beispiel: +280 € bis +620 €",
+      revenueImpactExampleNote:
+        "Nur ein Beispiel: Die tatsächlichen Ergebnisse variieren je nach Unterkunft, Markt, Preisgestaltung und Nachfrage.",
       recommendationsTitle: "Priorisierte Empfehlungen",
       recommendations: [
         "Fotos neu anordnen, um Terrasse und Aussicht hervorzuheben.",
@@ -1023,7 +1031,9 @@ export const homeI18n = {
       estimatedImpactValue: "Estimación basada en la auditoría",
       similarListings: "baseado em anúncios semelhantes otimizados",
       revenueImpact: "Impacto na receita",
-      revenueImpactValue: "+280 € a +620 €",
+      revenueImpactValue: "Exemplo ilustrativo: +280 € a +620 €",
+      revenueImpactExampleNote:
+        "Apenas um exemplo: os resultados reais variam conforme a propriedade, o mercado, os preços e a procura.",
       recommendationsTitle: "Recomendações prioritárias",
       recommendations: [
         "Reorganizar as fotos para destacar primeiro o terraço e a vista.",
@@ -1241,7 +1251,9 @@ export const homeI18n = {
       estimatedImpactValue: "Auditgebaseerde schatting",
       similarListings: "gebaseerd op vergelijkbare geoptimaliseerde advertenties",
       revenueImpact: "Omzetimpact",
-      revenueImpactValue: "+€280 tot +€620",
+      revenueImpactValue: "Illustratief voorbeeld: +€280 tot +€620",
+      revenueImpactExampleNote:
+        "Alleen een voorbeeld: werkelijke resultaten verschillen per accommodatie, markt, prijs en vraag.",
       recommendationsTitle: "Belangrijkste aanbevelingen",
       recommendations: [
         "Zet terras- en uitzichtfoto's vooraan.",
@@ -1459,7 +1471,9 @@ export const homeI18n = {
       estimatedImpactValue: "Estimación basada en la auditoría",
       similarListings: "basato su annunci simili ottimizzati",
       revenueImpact: "Impatto sui ricavi",
-      revenueImpactValue: "+280 € a +620 €",
+      revenueImpactValue: "Esempio illustrativo: +280 € a +620 €",
+      revenueImpactExampleNote:
+        "Solo un esempio: i risultati effettivi variano in base alla struttura, al mercato, ai prezzi e alla domanda.",
       recommendationsTitle: "Raccomandazioni prioritarie",
       recommendations: [
         "Riordinare le foto per mettere in risalto la terrazza e la vista.",
@@ -1677,7 +1691,9 @@ export const homeI18n = {
       estimatedImpactValue: "監査に基づく推定",
       similarListings: "最適化された類似掲載に基づく",
       revenueImpact: "収益インパクト",
-      revenueImpactValue: "+€280〜+€620",
+      revenueImpactValue: "例示：+€280〜+€620",
+      revenueImpactExampleNote:
+        "これは例示です。実際の結果は物件、市場、価格設定、需要によって異なります。",
       recommendationsTitle: "優先すべき推奨事項",
       recommendations: [
         "テラスと眺望を強調するように写真を並び替える。",
@@ -1895,7 +1911,9 @@ export const homeI18n = {
       estimatedImpactValue: "基于审计的估算",
       similarListings: "基于类似已优化房源",
       revenueImpact: "收入影响",
-      revenueImpactValue: "+€280 到 +€620",
+      revenueImpactValue: "示例：+€280 到 +€620",
+      revenueImpactExampleNote:
+        "仅作示例；实际结果因房源、市场、定价和需求而异。",
       recommendationsTitle: "优先建议",
       recommendations: [
         "重新排序图片，突出露台和景观。",
@@ -2113,7 +2131,9 @@ export const homeI18n = {
       estimatedImpactValue: "감사 기반 추정",
       similarListings: "최적화된 유사 숙소 기준",
       revenueImpact: "수익 영향",
-      revenueImpactValue: "+€280~+€620",
+      revenueImpactValue: "예시: +€280~+€620",
+      revenueImpactExampleNote:
+        "예시일 뿐이며 실제 결과는 숙소, 시장, 가격 및 수요에 따라 달라집니다.",
       recommendationsTitle: "우선 권장사항",
       recommendations: [
         "테라스와 전망이 돋보이도록 사진 순서를 재정렬합니다.",
@@ -2331,7 +2351,9 @@ export const homeI18n = {
       estimatedImpactValue: "تقدير قائم على التدقيق",
       similarListings: "استنادًا إلى إعلانات مشابهة تم تحسينها",
       revenueImpact: "أثر الإيرادات",
-      revenueImpactValue: "+€280 إلى +€620",
+      revenueImpactValue: "مثال توضيحي: +€280 إلى +€620",
+      revenueImpactExampleNote:
+        "هذا مثال فقط؛ تختلف النتائج الفعلية حسب العقار والسوق والتسعير والطلب.",
       recommendationsTitle: "التوصيات ذات الأولوية",
       recommendations: [
         "إعادة ترتيب الصور لإبراز الشرفة والإطلالة.",

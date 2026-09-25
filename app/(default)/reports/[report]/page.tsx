@@ -364,7 +364,7 @@ export default async function MarketReportPage({ params }: Props) {
             quality and conversion blockers.
           </p>
           <Link
-            href="/analyze"
+            href="/sign-in?next=/audit/new"
             className="mt-6 inline-flex rounded-full bg-white px-6 py-3 text-sm font-semibold text-[#10231F]"
           >
             Start an Airbnb audit

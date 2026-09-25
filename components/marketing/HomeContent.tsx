@@ -567,6 +567,9 @@ export function HomeContent() {
                   <p className="mt-1 text-sm font-semibold text-amber-900">
                     {copy.reportPreview.revenueImpactValue}
                   </p>
+                  <p className="mt-1 text-[11px] leading-5 text-amber-800">
+                    {copy.reportPreview.revenueImpactExampleNote}
+                  </p>
                 </div>
               </div>
 

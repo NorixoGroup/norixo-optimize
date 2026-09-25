@@ -153,7 +153,7 @@ export default async function CountryPage({ params }: Props) {
 
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
-              href="/analyze"
+              href="/sign-in?next=/audit/new"
               className="rounded-full bg-[#10231F] px-6 py-3 text-sm font-semibold text-white"
             >
               Audit my Airbnb listing
@@ -238,7 +238,7 @@ export default async function CountryPage({ params }: Props) {
               Explore Airbnb guides
             </Link>
             <Link
-              href="/analyze"
+              href="/sign-in?next=/audit/new"
               className="rounded-full border border-white/30 px-6 py-3 text-sm font-semibold text-white"
             >
               Audit my Airbnb listing
