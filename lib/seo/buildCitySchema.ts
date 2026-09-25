@@ -15,7 +15,7 @@ export function buildCitySchema(input: CitySchemaInput): Record<string, unknown>
   const canonicalUrl = `${baseUrl.replace(/\/$/, "")}/airbnb-optimizer/${city.slug}`;
 
   const pageTitle = `Airbnb Listing Optimization Guide for ${city.name}`;
-  const pageDescription = `Learn how to optimize your Airbnb listing in ${city.name}, ${city.country} to improve bookings and overall listing performance.`;
+  const pageDescription = `Learn how to review and optimize your Airbnb listing in ${city.name}, ${city.country}, including photos, copy, amenities and pricing context.`;
 
   const webPage: Record<string, unknown> = {
     "@context": "https://schema.org",
@@ -35,7 +35,7 @@ export function buildCitySchema(input: CitySchemaInput): Record<string, unknown>
     mainEntity: [
       {
         "@type": "Question",
-        name: `How can I improve my Airbnb listing performance in ${city.name}?`,
+        name: `What should I review when optimizing my Airbnb listing in ${city.name}?`,
         acceptedAnswer: {
           "@type": "Answer",
           text: `Focus on your first photos, opening description and amenity list. Guests comparing places in ${city.name} quickly scan for a strong first image, a clear explanation of who the listing is for, and the essentials they expect for their stay.`,
@@ -43,10 +43,10 @@ export function buildCitySchema(input: CitySchemaInput): Record<string, unknown>
       },
       {
         "@type": "Question",
-        name: `Do better photos really increase bookings in ${city.name}?`,
+        name: `What should I review in my listing photos for ${city.name}?`,
         acceptedAnswer: {
           "@type": "Answer",
-          text: `Yes. High-quality photos with a strong cover image are one of the main drivers of clicks and bookings in ${city.name}. Reordering your gallery to highlight light, space and unique features can significantly improve listing performance.`,
+          text: `Review whether your cover image and gallery clearly represent the property's light, space, layout and distinctive features. Photo order can also help guests understand the listing more quickly while comparing options in ${city.name}.`,
         },
       },
       {
@@ -59,10 +59,10 @@ export function buildCitySchema(input: CitySchemaInput): Record<string, unknown>
       },
       {
         "@type": "Question",
-        name: `Can a listing optimization tool help increase bookings in ${city.name}?`,
+        name: `What can a listing optimization tool review for a property in ${city.name}?`,
         acceptedAnswer: {
           "@type": "Answer",
-          text: `A dedicated optimization tool can audit your listing for ${city.name}, benchmark it against similar homes and provide an actionable checklist to improve conversion, photos, copy and pricing.`,
+          text: `A listing optimization tool can review listing presentation, photos, copy, amenities and pricing context, then organize observations and recommendations into an actionable checklist.`,
         },
       },
     ],

@@ -377,7 +377,7 @@ export default async function CityOptimizerPage({ params }: PageProps) {
       </section>
 
       {/* Example audit */}
-      <section className="grid gap-6 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]" aria-labelledby="example-audit-heading">
+      <section aria-labelledby="example-audit-heading">
         <div className="nk-card nk-card-hover p-6">
           <h2 id="example-audit-heading" className="nk-section-title">
             Example audit for a {name} listing
@@ -400,67 +400,7 @@ export default async function CityOptimizerPage({ params }: PageProps) {
           </ul>
         </div>
 
-        <div className="nk-card nk-card-hover space-y-3 bg-slate-50 p-5">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Sample results
-              </p>
-              <p className="mt-1 text-sm font-semibold text-slate-900">
-                {name} · 1BR apartment
-              </p>
-            </div>
-            <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
-              Mock audit
-            </span>
-          </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Conversion score
-              </p>
-              <p className="mt-2 text-2xl font-semibold text-emerald-600">
-                6.3<span className="text-sm text-emerald-500"> / 10</span>
-              </p>
-              <p className="mt-1 text-[11px] text-slate-500">
-                {hasRichCityContext(city)
-                  ? `Below top ${name} competitors.`
-                  : "Illustrative score for this mock audit."}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Listing Quality Index
-              </p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900">
-                74<span className="text-sm text-slate-500"> / 100</span>
-              </p>
-              <p className="mt-1 text-[11px] text-emerald-700">Competitive, with clear upside.</p>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-              Top recommendations
-            </p>
-            <ul className="mt-3 space-y-1.5 text-[12px] leading-5 text-slate-800">
-              <li>
-                •{" "}
-                {hasRichCityContext(city)
-                  ? `Highlight proximity to key ${name} landmarks in first paragraph.`
-                  : "Highlight only location advantages that can be verified for the property."}
-              </li>
-              <li>• Swap in brighter living-room photo as the cover image.</li>
-              <li>
-                •{" "}
-                {hasRichCityContext(city)
-                  ? "Add missing amenities that guests filter for in this area."
-                  : "Make important available amenities complete, accurate, and easy to verify."}
-              </li>
-            </ul>
-          </div>
-        </div>
       </section>
 
       {eligibleTopics.length > 0 ? (
