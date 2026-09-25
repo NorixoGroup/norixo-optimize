@@ -5,6 +5,26 @@ export type ContactFormProxyDnsAddress = {
   family: 4 | 6;
 };
 
+export type ContactFormPinnedConnectionTarget = Readonly<{
+  authorityHostname: string;
+  socketAddress: string;
+  socketFamily: 4 | 6;
+  port: number;
+}>;
+
+export function buildContactFormPinnedConnectionTarget(input: {
+  authorityHostname: string;
+  selectedAddress: ContactFormProxyDnsAddress;
+  port: number;
+}): ContactFormPinnedConnectionTarget {
+  return {
+    authorityHostname: input.authorityHostname,
+    socketAddress: input.selectedAddress.address,
+    socketFamily: input.selectedAddress.family,
+    port: input.port,
+  };
+}
+
 export type ContactFormProxyConnectionPlan = {
   hostname: string;
   port: number;

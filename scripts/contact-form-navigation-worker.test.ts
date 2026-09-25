@@ -805,3 +805,54 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
+
+test("validated navigation target preserves public DNS addresses and selects deterministically", async () => {
+  const result = await validateContactFormNavigationUrl(
+    "https://publisher.example/contact",
+    async () => [
+      { address: "2001:4860:4860::8888", family: 6 },
+      { address: "93.184.216.35", family: 4 },
+      { address: "93.184.216.34", family: 4 },
+    ],
+  );
+
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+
+  assert.deepEqual(result.validatedAddresses, [
+    { address: "93.184.216.34", family: 4 },
+    { address: "93.184.216.35", family: 4 },
+    { address: "2001:4860:4860::8888", family: 6 },
+  ]);
+
+  assert.deepEqual(result.selectedAddress, {
+    address: "93.184.216.34",
+    family: 4,
+  });
+});
+
+test("validated navigation target selection is independent of DNS answer order", async () => {
+  const first = await validateContactFormNavigationUrl(
+    "https://publisher.example/contact",
+    async () => [
+      { address: "93.184.216.35", family: 4 },
+      { address: "93.184.216.34", family: 4 },
+    ],
+  );
+
+  const second = await validateContactFormNavigationUrl(
+    "https://publisher.example/contact",
+    async () => [
+      { address: "93.184.216.34", family: 4 },
+      { address: "93.184.216.35", family: 4 },
+    ],
+  );
+
+  assert.equal(first.ok, true);
+  assert.equal(second.ok, true);
+
+  if (!first.ok || !second.ok) return;
+
+  assert.deepEqual(first.selectedAddress, second.selectedAddress);
+  assert.deepEqual(first.validatedAddresses, second.validatedAddresses);
+});

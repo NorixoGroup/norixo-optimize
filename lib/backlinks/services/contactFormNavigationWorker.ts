@@ -121,7 +121,14 @@ export type ContactFormNavigationMetadata = Readonly<{
   networkMutationBlockedCount: number;
   navigationRequestCount: number;
 }>;
-type UrlValidationOk = Readonly<{ ok: true; url: URL; hostname: string; dns: Json }>;
+type UrlValidationOk = Readonly<{
+  ok: true;
+  url: URL;
+  hostname: string;
+  dns: Json;
+  validatedAddresses: readonly ContactFormDnsAddress[];
+  selectedAddress: ContactFormDnsAddress;
+}>;
 type UrlValidationFailure = Readonly<{ ok: false; code: string; reason: string; metadata: Json }>;
 type UrlValidationResult = UrlValidationOk | UrlValidationFailure;
 
@@ -501,7 +508,26 @@ export async function validateContactFormNavigationUrl(rawUrl: string, resolveHo
       families: Array.from(new Set(records.map((record) => record.family))).join(","),
     });
   }
-  return { ok: true, url, hostname, dns: { address_count: records.length, families: Array.from(new Set(records.map((record) => record.family))).join(","), all_addresses_public: true } };
+  const validatedAddresses = [...records].sort(compareContactFormDnsAddresses);
+  const selectedAddress = validatedAddresses[0];
+
+  return {
+    ok: true,
+    url,
+    hostname,
+    dns: {
+      address_count: validatedAddresses.length,
+      families: Array.from(new Set(validatedAddresses.map((record) => record.family))).join(","),
+      all_addresses_public: true,
+    },
+    validatedAddresses,
+    selectedAddress,
+  };
+}
+
+function compareContactFormDnsAddresses(a: ContactFormDnsAddress, b: ContactFormDnsAddress): number {
+  if (a.family !== b.family) return a.family - b.family;
+  return a.address.localeCompare(b.address);
 }
 
 export function isPublicIpAddress(address: string): boolean {
