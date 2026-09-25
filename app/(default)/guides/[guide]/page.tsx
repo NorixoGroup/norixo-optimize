@@ -359,14 +359,8 @@ export default async function GuidePage({ params }: Props) {
             mainEntityOfPage: { "@id": `${guideUrl}#webpage` },
           }
         : {
-            author: {
-              "@type": "Organization",
-              name: "Norixo",
-            },
-            publisher: {
-              "@type": "Organization",
-              name: "Norixo",
-            },
+            author: { "@id": "https://norixo.io/#organization" },
+            publisher: { "@id": "https://norixo.io/#organization" },
             mainEntityOfPage: {
               "@type": "WebPage",
               "@id": guideUrl,
@@ -429,6 +423,7 @@ export default async function GuidePage({ params }: Props) {
           {
             "@context": "https://schema.org",
             "@type": "Organization",
+            "@id": "https://norixo.io/#organization",
             name: "Norixo",
             url: "https://norixo.io",
           },

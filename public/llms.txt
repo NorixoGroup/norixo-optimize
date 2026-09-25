@@ -16,6 +16,7 @@ Norixo helps hosts and property managers analyze listing presentation, positioni
 - https://norixo.io/guides — Educational guides
 - https://norixo.io/articles — Articles about listing optimization and short-term rental performance
 - https://norixo.io/research — Research and market-oriented content
+- Research Methodology: https://norixo.io/research/methodology
 - https://norixo.io/rankings — Ranking and comparative content
 - https://norixo.io/tools — Free Tools & Calculators
 - https://norixo.io/reports — Airbnb Market Reports

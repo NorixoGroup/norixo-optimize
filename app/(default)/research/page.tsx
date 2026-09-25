@@ -57,11 +57,7 @@ export default function ResearchHubPage() {
       name: "Norixo Research & Methodology",
       description: metadata.description,
       url: "https://norixo.io/research",
-      publisher: {
-        "@type": "Organization",
-        name: "Norixo",
-        url: "https://norixo.io",
-      },
+      publisher: { "@id": "https://norixo.io/#organization" },
     },
     {
       "@context": "https://schema.org",

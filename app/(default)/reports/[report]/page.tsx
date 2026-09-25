@@ -144,24 +144,15 @@ export default async function MarketReportPage({ params }: Props) {
       name: report.title,
       description: report.description,
       url: `https://norixo.io/reports/${report.slug}`,
-      publisher: {
-        "@type": "Organization",
-        name: "Norixo",
-      },
+      publisher: { "@id": "https://norixo.io/#organization" },
     },
     {
       "@context": "https://schema.org",
       "@type": "Article",
       headline: report.title,
       description: report.description,
-      author: {
-        "@type": "Organization",
-        name: "Norixo",
-      },
-      publisher: {
-        "@type": "Organization",
-        name: "Norixo",
-      },
+      author: { "@id": "https://norixo.io/#organization" },
+      publisher: { "@id": "https://norixo.io/#organization" },
       mainEntityOfPage: {
         "@type": "WebPage",
         "@id": `https://norixo.io/reports/${report.slug}`,
@@ -194,6 +185,7 @@ export default async function MarketReportPage({ params }: Props) {
     {
       "@context": "https://schema.org",
       "@type": "Organization",
+      "@id": "https://norixo.io/#organization",
       name: "Norixo",
       url: "https://norixo.io",
     },

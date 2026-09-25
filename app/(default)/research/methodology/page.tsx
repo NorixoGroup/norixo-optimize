@@ -140,15 +140,8 @@ export default function ResearchMethodologyPage() {
       headline: "Public Market Data Methodology",
       description: metadata.description,
       dateModified: "2026-08-26",
-      author: {
-        "@type": "Organization",
-        name: "Norixo",
-      },
-      publisher: {
-        "@type": "Organization",
-        name: "Norixo",
-        url: "https://norixo.io",
-      },
+      author: { "@id": "https://norixo.io/#organization" },
+      publisher: { "@id": "https://norixo.io/#organization" },
       mainEntityOfPage: {
         "@type": "WebPage",
         "@id": "https://norixo.io/research/methodology",

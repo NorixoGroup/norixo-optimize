@@ -258,14 +258,8 @@ export default async function ArticlePage({ params }: Props) {
       "@type": "Article",
       headline: article.title,
       description: article.description,
-      author: {
-        "@type": "Organization",
-        name: "Norixo",
-      },
-      publisher: {
-        "@type": "Organization",
-        name: "Norixo",
-      },
+      author: { "@id": "https://norixo.io/#organization" },
+      publisher: { "@id": "https://norixo.io/#organization" },
       mainEntityOfPage: {
         "@type": "WebPage",
         "@id": `https://norixo.io/articles/${article.slug}`,

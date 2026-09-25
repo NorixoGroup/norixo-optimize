@@ -42,14 +42,8 @@ export default async function RankingPage({ params }: Props) {
       "@type": "Article",
       headline: ranking.title,
       description: ranking.description,
-      author: {
-        "@type": "Organization",
-        name: "Norixo",
-      },
-      publisher: {
-        "@type": "Organization",
-        name: "Norixo",
-      },
+      author: { "@id": "https://norixo.io/#organization" },
+      publisher: { "@id": "https://norixo.io/#organization" },
       mainEntityOfPage: {
         "@type": "WebPage",
         "@id": `https://norixo.io/rankings/${ranking.slug}`,
