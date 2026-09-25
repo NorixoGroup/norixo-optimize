@@ -11,7 +11,7 @@ xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
 <video:video>
 <video:thumbnail_loc>${SITE}/marketing/norixo-demo-thumbnail.jpg</video:thumbnail_loc>
 <video:title>Norixo Demo (Français)</video:title>
-<video:description>Découvrez comment Norixo analyse une annonce Airbnb ou Booking et identifie les optimisations qui augmentent les réservations.</video:description>
+<video:description>Découvrez comment Norixo analyse une annonce Airbnb ou Booking et identifie des priorités d’optimisation concrètes.</video:description>
 <video:content_loc>${SITE}/marketing/norixo-demo-fr.mp4</video:content_loc>
 <video:family_friendly>yes</video:family_friendly>
 </video:video>
@@ -22,7 +22,7 @@ xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
 <video:video>
 <video:thumbnail_loc>${SITE}/marketing/norixo-demo-thumbnail.jpg</video:thumbnail_loc>
 <video:title>Norixo Demo (English)</video:title>
-<video:description>See how Norixo analyzes Airbnb and Booking listings and turns the analysis into concrete actions that increase bookings.</video:description>
+<video:description>See how Norixo analyzes Airbnb and Booking listings and identifies practical optimization priorities.</video:description>
 <video:content_loc>${SITE}/marketing/norixo-demo-en.mp4</video:content_loc>
 <video:family_friendly>yes</video:family_friendly>
 </video:video>

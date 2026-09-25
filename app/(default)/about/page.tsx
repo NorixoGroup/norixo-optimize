@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { defaultLocale } from "@/data/i18n";
 import { buildHreflangAlternates } from "@/lib/seo/hreflang";
 
 const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://norixo.io").replace(
@@ -14,7 +15,7 @@ const pageDescription =
 export const metadata: Metadata = {
   title: pageTitle,
   description: pageDescription,
-  alternates: buildHreflangAlternates("/about"),
+  alternates: buildHreflangAlternates("/about", { locales: [defaultLocale] }),
   openGraph: {
     title: pageTitle,
     description: pageDescription,

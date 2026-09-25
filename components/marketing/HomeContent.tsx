@@ -172,6 +172,17 @@ export function HomeContent() {
 
       <AuthorityTrustLayer copy={authorityCopy} isRtl={locale === "ar"} />
 
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_14px_36px_rgba(15,23,42,0.08)] sm:p-8">
+        <h2 className="text-2xl font-semibold tracking-[-0.02em] text-slate-950">{copy.productFacts.heading}</h2>
+        <p className="mt-3 max-w-4xl text-sm leading-6 text-slate-700">{copy.productFacts.body}</p>
+        <ul className="mt-5 grid gap-3 text-sm leading-6 text-slate-700 sm:grid-cols-2">
+          {copy.productFacts.facts.map((fact) => (
+            <li key={fact} className="rounded-2xl bg-slate-50 px-4 py-3">{fact}</li>
+          ))}
+        </ul>
+        <p className="mt-5 text-sm leading-6 text-slate-600">{copy.productFacts.outcomeBoundary}</p>
+      </section>
+
       {/* QUICK PROCESS SECTION */}
       <section className="grid gap-3 md:grid-cols-4">
         {copy.steps.items.map(({ step, title, text }) => (

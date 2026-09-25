@@ -15,6 +15,12 @@ export const homeI18n = {
       whyText: "A Norixo report turns vague intuitions into clear, concrete and directly actionable priorities.",
       quickLine: "Paste your listing → get your recommendations immediately",
     },
+    productFacts: {
+      heading: "What Norixo does",
+      body: "Norixo is a web application for analyzing and optimizing Airbnb and Booking listings. It combines public listing content with relevant market context to identify priorities and provide practical recommendations.",
+      facts: ["For hosts and property managers", "Input: a public Airbnb or Booking listing URL", "Analysis: listing content, positioning, trust signals, and market context", "Output: prioritized findings and practical recommendations", "Norixo does not automatically modify a listing", "Free preview: market-only. Full audit: listing-specific."],
+      outcomeBoundary: "Recommendations support decisions; they do not guarantee booking, revenue, or conversion outcomes.",
+    },
     proofStats: {
       marketsLabel: "city markets mapped",
       countriesLabel: "countries represented",
@@ -245,6 +251,12 @@ export const homeI18n = {
       whyText: "Un rapport Norixo transforme des intuitions floues en priorités concrètes, lisibles et directement actionnables.",
       quickLine: "Collez votre annonce → obtenez vos recommandations immédiatement",
     },
+    productFacts: {
+      heading: "Ce que fait Norixo",
+      body: "Norixo est une application web d’analyse et d’optimisation des annonces Airbnb et Booking. Elle combine le contenu public de l’annonce et le contexte de marché pertinent pour identifier les priorités et fournir des recommandations concrètes.",
+      facts: ["Pour les hôtes et les gestionnaires de biens", "Entrée : une URL publique d’annonce Airbnb ou Booking", "Analyse : contenu de l’annonce, positionnement, signaux de confiance et contexte de marché", "Résultat : constats priorisés et recommandations concrètes", "Norixo ne modifie pas automatiquement une annonce", "Aperçu gratuit : marché uniquement. Audit complet : analyse spécifique à l’annonce."],
+      outcomeBoundary: "Les recommandations aident à la décision ; elles ne garantissent pas les réservations, le revenu ou la conversion.",
+    },
     proofStats: {
       marketsLabel: "marchés urbains cartographiés",
       countriesLabel: "pays représentés",
@@ -458,6 +470,12 @@ export const homeI18n = {
       whyText: "Un informe Norixo transforma intuiciones vagas en prioridades concretas, claras y directamente accionables.",
       quickLine: "Pega tu anuncio → obtén tus recomendaciones al instante",
     },
+    productFacts: {
+      heading: "Qué hace Norixo",
+      body: "Norixo es una aplicación web para analizar y optimizar anuncios de Airbnb y Booking. Combina el contenido público del anuncio con el contexto de mercado relevante para identificar prioridades y ofrecer recomendaciones prácticas.",
+      facts: ["Para anfitriones y gestores de propiedades", "Entrada: una URL pública de un anuncio de Airbnb o Booking", "Análisis: contenido del anuncio, posicionamiento, señales de confianza y contexto de mercado", "Resultado: hallazgos priorizados y recomendaciones prácticas", "Norixo no modifica un anuncio automáticamente", "Vista previa gratuita: solo mercado. Auditoría completa: específica del anuncio."],
+      outcomeBoundary: "Las recomendaciones ayudan a decidir; no garantizan reservas, ingresos ni resultados de conversión.",
+    },
     proofStats: {
       marketsLabel: "mercados urbanos cartografiados",
       countriesLabel: "paises representados",
@@ -669,6 +687,12 @@ export const homeI18n = {
       whyTitle: "Warum Teams es nutzen",
       whyText: "Ein Norixo-Bericht verwandelt vage Eindrücke in klare, konkrete und direkt umsetzbare Prioritäten.",
       quickLine: "Inserat einfügen → Empfehlungen sofort erhalten",
+    },
+    productFacts: {
+      heading: "Was Norixo macht",
+      body: "Norixo ist eine Webanwendung zur Analyse und Optimierung von Airbnb- und Booking-Inseraten. Sie kombiniert öffentliche Inseratsinhalte mit relevantem Marktkontext, um Prioritäten zu erkennen und praktische Empfehlungen bereitzustellen.",
+      facts: ["Für Gastgeber und Immobilienverwalter", "Eingabe: eine öffentliche URL eines Airbnb- oder Booking-Inserats", "Analyse: Inseratsinhalt, Positionierung, Vertrauenssignale und Marktkontext", "Ergebnis: priorisierte Erkenntnisse und praktische Empfehlungen", "Norixo verändert ein Inserat nicht automatisch", "Kostenlose Vorschau: nur Markt. Vollständiges Audit: inseratsspezifisch."],
+      outcomeBoundary: "Empfehlungen unterstützen Entscheidungen; sie garantieren keine Buchungen, Umsätze oder Conversion-Ergebnisse.",
     },
     proofStats: {
       marketsLabel: "abgedeckte Stadtmärkte",
@@ -882,6 +906,12 @@ export const homeI18n = {
       whyText: "Um relatório Norixo transforma observações dispersas em prioridades claras e acionáveis.",
       quickLine: "Cole o seu anúncio → receba recomendações imediatamente",
     },
+    productFacts: {
+      heading: "O que a Norixo faz",
+      body: "A Norixo é uma aplicação web para analisar e otimizar anúncios Airbnb e Booking. Combina o conteúdo público do anúncio com o contexto de mercado relevante para identificar prioridades e fornecer recomendações práticas.",
+      facts: ["Para anfitriões e gestores de propriedades", "Entrada: um URL público de anúncio Airbnb ou Booking", "Análise: conteúdo do anúncio, posicionamento, sinais de confiança e contexto de mercado", "Resultado: conclusões priorizadas e recomendações práticas", "A Norixo não modifica um anúncio automaticamente", "Prévia gratuita: apenas mercado. Auditoria completa: específica do anúncio."],
+      outcomeBoundary: "As recomendações apoiam decisões; não garantem reservas, receitas nem resultados de conversão.",
+    },
     proofStats: {
       marketsLabel: "mercados urbanos mapeados",
       countriesLabel: "paises representados",
@@ -1093,6 +1123,12 @@ export const homeI18n = {
       whyTitle: "Waarom teams hiervoor kiezen",
       whyText: "Een Norixo-rapport zet losse observaties om in duidelijke en uitvoerbare prioriteiten.",
       quickLine: "Plak uw advertentie → ontvang direct aanbevelingen",
+    },
+    productFacts: {
+      heading: "Wat Norixo doet",
+      body: "Norixo is een webapplicatie voor het analyseren en optimaliseren van Airbnb- en Booking-advertenties. De applicatie combineert openbare advertentie-inhoud met relevante marktcontext om prioriteiten te bepalen en praktische aanbevelingen te geven.",
+      facts: ["Voor hosts en vastgoedbeheerders", "Invoer: een openbare URL van een Airbnb- of Booking-advertentie", "Analyse: advertentie-inhoud, positionering, vertrouwenssignalen en marktcontext", "Uitkomst: geprioriteerde bevindingen en praktische aanbevelingen", "Norixo wijzigt een advertentie niet automatisch", "Gratis preview: alleen markt. Volledige audit: advertentiespecifiek."],
+      outcomeBoundary: "Aanbevelingen ondersteunen beslissingen; ze garanderen geen boekingen, omzet of conversieresultaten.",
     },
     proofStats: {
       marketsLabel: "stedelijke markten in kaart",
@@ -1306,6 +1342,12 @@ export const homeI18n = {
       whyText: "Un report Norixo trasforma intuizioni vaghe in priorità chiare, concrete e direttamente attuabili.",
       quickLine: "Incolla il tuo annuncio → ottieni subito le tue raccomandazioni",
     },
+    productFacts: {
+      heading: "Cosa fa Norixo",
+      body: "Norixo è un’applicazione web per analizzare e ottimizzare gli annunci Airbnb e Booking. Combina il contenuto pubblico dell’annuncio con il contesto di mercato pertinente per individuare le priorità e fornire raccomandazioni pratiche.",
+      facts: ["Per host e gestori di proprietà", "Input: un URL pubblico di un annuncio Airbnb o Booking", "Analisi: contenuto dell’annuncio, posizionamento, segnali di fiducia e contesto di mercato", "Risultato: evidenze prioritarie e raccomandazioni pratiche", "Norixo non modifica automaticamente un annuncio", "Anteprima gratuita: solo mercato. Audit completo: specifico per l’annuncio."],
+      outcomeBoundary: "Le raccomandazioni supportano le decisioni; non garantiscono prenotazioni, ricavi o risultati di conversione.",
+    },
     proofStats: {
       marketsLabel: "mercati urbani mappati",
       countriesLabel: "paesi rappresentati",
@@ -1517,6 +1559,12 @@ export const homeI18n = {
       whyTitle: "チームが導入する理由",
       whyText: "Norixoのレポートは、曖昧な感覚を明確で具体的、かつすぐ実行できる優先事項へと変えます。",
       quickLine: "掲載URLを貼り付ける → すぐに推奨事項を取得",
+    },
+    productFacts: {
+      heading: "Norixoが行うこと",
+      body: "Norixoは、AirbnbとBookingの掲載を分析・最適化するためのウェブアプリケーションです。公開された掲載内容と関連する市場コンテキストを組み合わせ、優先事項を特定して実践的な推奨事項を提供します。",
+      facts: ["ホストと物件管理者向け", "入力：公開されたAirbnbまたはBooking掲載URL", "分析：掲載内容、ポジショニング、信頼シグナル、市場コンテキスト", "出力：優先順位付きの所見と実践的な推奨事項", "Norixoが掲載を自動変更することはありません", "無料プレビュー：市場のみ。完全な監査：掲載固有の分析。"],
+      outcomeBoundary: "推奨事項は意思決定を支援しますが、予約、収益、コンバージョンの結果を保証するものではありません。",
     },
     proofStats: {
       marketsLabel: "対応している都市市場",
@@ -1730,6 +1778,12 @@ export const homeI18n = {
       whyText: "Norixo 报告能把模糊的直觉转化为清晰、具体且可直接执行的优先事项。",
       quickLine: "粘贴你的房源 → 立即获得建议",
     },
+    productFacts: {
+      heading: "Norixo 的功能",
+      body: "Norixo 是一款用于分析和优化 Airbnb 与 Booking 房源的网页应用。它结合公开的房源内容和相关市场背景，识别优先事项并提供实用建议。",
+      facts: ["面向房东和物业管理者", "输入：公开的 Airbnb 或 Booking 房源链接", "分析：房源内容、定位、信任信号和市场背景", "输出：按优先级排列的发现和实用建议", "Norixo 不会自动修改房源", "免费预览：仅市场。完整审计：针对具体房源。"],
+      outcomeBoundary: "建议用于支持决策；不保证预订、收入或转化结果。",
+    },
     proofStats: {
       marketsLabel: "已映射城市市场",
       countriesLabel: "覆盖国家",
@@ -1942,6 +1996,12 @@ export const homeI18n = {
       whyText: "Norixo 보고서는 막연한 직감을 명확하고 구체적이며 바로 실행 가능한 우선순위로 바꿔줍니다.",
       quickLine: "숙소 링크 붙여넣기 → 즉시 권장사항 받기",
     },
+    productFacts: {
+      heading: "Norixo가 하는 일",
+      body: "Norixo는 Airbnb 및 Booking 숙소를 분석하고 최적화하기 위한 웹 애플리케이션입니다. 공개 숙소 콘텐츠와 관련 시장 맥락을 결합하여 우선순위를 파악하고 실용적인 추천을 제공합니다.",
+      facts: ["호스트와 숙소 관리자를 위한 서비스", "입력: 공개된 Airbnb 또는 Booking 숙소 URL", "분석: 숙소 콘텐츠, 포지셔닝, 신뢰 신호 및 시장 맥락", "출력: 우선순위가 지정된 발견 사항과 실용적인 추천", "Norixo는 숙소를 자동으로 수정하지 않습니다", "무료 미리보기: 시장 정보만. 전체 감사: 숙소별 분석."],
+      outcomeBoundary: "추천은 의사결정을 지원하며 예약, 수익 또는 전환 결과를 보장하지 않습니다.",
+    },
     proofStats: {
       marketsLabel: "도시 시장 커버리지",
       countriesLabel: "포함 국가 수",
@@ -2153,6 +2213,12 @@ export const homeI18n = {
       whyTitle: "لماذا تعتمد الفرق هذه الأداة",
       whyText: "يحوّل تقرير Norixo الانطباعات الغامضة إلى أولويات واضحة وملموسة وقابلة للتنفيذ مباشرة.",
       quickLine: "الصق إعلانك → احصل على توصياتك فورًا",
+    },
+    productFacts: {
+      heading: "ما الذي يفعله Norixo",
+      body: "Norixo هو تطبيق ويب لتحليل إعلانات Airbnb وBooking وتحسينها. يجمع بين محتوى الإعلان العام وسياق السوق المناسب لتحديد الأولويات وتقديم توصيات عملية.",
+      facts: ["للمضيفين ومديري العقارات", "المدخلات: رابط عام لإعلان Airbnb أو Booking", "التحليل: محتوى الإعلان والتموضع وإشارات الثقة وسياق السوق", "المخرجات: نتائج مرتبة حسب الأولوية وتوصيات عملية", "لا يعدّل Norixo الإعلان تلقائيًا", "المعاينة المجانية: السوق فقط. التدقيق الكامل: خاص بالإعلان."],
+      outcomeBoundary: "تدعم التوصيات اتخاذ القرار، لكنها لا تضمن الحجوزات أو الإيرادات أو نتائج التحويل.",
     },
     proofStats: {
       marketsLabel: "أسواق مدن مغطاة",
