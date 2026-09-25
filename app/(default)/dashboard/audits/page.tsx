@@ -495,7 +495,7 @@ function getAuditsCopy(locale: Locale) {
       ctaBuyAuditsHelper: "Choose a pack or per-audit payment on the Billing page.",
       relaunchAuditLastCredit: "Relaunch audit (last credit)",
       relaunchAuditTwoLeft: "Relaunch audit (2 left)",
-      ctaHelper: "Identify the actions that increase bookings.",
+      ctaHelper: "Identify actions that may strengthen booking potential.",
       reportsTitle: "Available reports",
       linkedListingColumn: "Linked listing",
       linkedListingHint: "Performance report for this listing",

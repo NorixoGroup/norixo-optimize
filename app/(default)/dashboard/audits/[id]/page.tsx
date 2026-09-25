@@ -560,7 +560,7 @@ const auditDetailCopy = {
     lqiNoteConversionNativeHigh:
       "The conversion potential is already strong on this listing.",
     lqiNoteConversionNativeModerate:
-      "Several optimizations can still improve conversion.",
+      "Several optimization opportunities remain across conversion factors.",
     lqiNoteConversionNativeLow:
       "Visible friction points still limit booking potential.",
     lqiNoteConversionLocalFallback:
@@ -573,7 +573,7 @@ const auditDetailCopy = {
     lqiSummaryIndicativeScore: "The main /100 score is indicative: derived from the overall /10 score because no native /100 composite index is available in the report.",
     lqiSummaryOverview: "Quality / market / conversion overview: under each card — “Report component” = structured field provided; “Local synthesis” = aggregate of the /10 values already on the page; “Report complement” = another field from the report (for example booking potential), not an isolated conversion measure.",
     lqiSummaryPending: "This indicator will appear once the useful signals are available.",
-    lqiSummaryCompetitiveButOptimizable: "The listing is competitive, but some visible levers can still improve conversion and positioning, notably by making the value promise more explicit from the first screen.",
+    lqiSummaryCompetitiveButOptimizable: "The listing is competitive, but some visible levers can still strengthen conversion signals and positioning, notably by making the value promise more explicit from the first screen.",
     listingConversion: "Listing conversion",
   },
   fr: {

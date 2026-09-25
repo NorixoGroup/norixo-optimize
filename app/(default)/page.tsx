@@ -7,7 +7,7 @@ const siteUrl = (
 ).replace(/\/$/, "");
 const pageTitle = "Norixo – Airbnb & Booking listing audit to improve conversion";
 const pageDescription =
-  "Analyze your Airbnb and Booking listings with Norixo: conversion audit, optimization priorities, and practical recommendations to increase bookings.";
+  "Analyze your Airbnb and Booking listings with Norixo: conversion audit, optimization priorities, and practical recommendations to strengthen booking potential.";
 const alternates = buildHreflangAlternates("/");
 const socialImage = "/og-cover.png";
 

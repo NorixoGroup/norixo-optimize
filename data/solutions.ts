@@ -131,11 +131,11 @@ export const solutions: Solution[] = [
     faq: [
       {
         question: "What is Airbnb listing optimization?",
-        answer: "It is the process of improving every element of a listing to increase visibility and bookings."
+        answer: "It is the process of improving listing elements that can influence visibility and booking decisions."
       },
       {
         question: "Does listing quality affect bookings?",
-        answer: "Yes. Better listings generally create more trust and improve conversion."
+        answer: "Listing quality can influence guest trust and conversion signals, depending on the property and market context."
       },
       {
         question: "How does Norixo help?",
@@ -339,7 +339,7 @@ export const solutions: Solution[] = [
       "Reduce friction and improve booking confidence.",
     intro:
       "Targeted improvements across a listing can help address potential conversion blockers.",
-    cta: "Improve conversion",
+    cta: "Review conversion opportunities",
 
     sections: [
       {
@@ -372,7 +372,7 @@ export const solutions: Solution[] = [
       },
       {
         title: "Continuous testing",
-        body: "Regular improvements help maintain strong conversion."
+        body: "Regular improvements can help address conversion factors over time."
       }
     ],
 
@@ -383,11 +383,11 @@ export const solutions: Solution[] = [
       },
       {
         question: "Can better photos improve conversion?",
-        answer: "Yes. Strong visuals increase confidence and engagement."
+        answer: "Strong visuals can support guest confidence and engagement."
       },
       {
-        question: "How does Norixo improve conversion?",
-        answer: "It identifies trust, pricing and content issues that reduce bookings."
+        question: "How does Norixo analyze conversion opportunities?",
+        answer: "It identifies trust, pricing and content signals that may affect booking decisions."
       }
     ],
   },

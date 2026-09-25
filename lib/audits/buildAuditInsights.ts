@@ -312,11 +312,11 @@ export function buildAuditInsights({
             "At this level, a few well-chosen refinements can still create measurable business upside.",
         },
         diagnosticShort:
-          "The listing already does many things well, but a stronger first impression and more visible proof points can still improve conversion.",
+          "The listing already does many things well, but a stronger first impression and more visible proof points can still strengthen conversion signals.",
         businessPotential: {
           title: "Additional revenue is still within reach",
           text:
-            "A clearer presentation of your differentiators can still unlock more value and more bookings.",
+            "A clearer presentation of your differentiators may strengthen perceived value and booking potential.",
           estimate: buildEstimateLine(impactLine, locale),
         },
         projectionLine: projection,

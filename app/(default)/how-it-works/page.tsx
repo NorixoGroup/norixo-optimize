@@ -9,7 +9,7 @@ const siteUrl = (
 const pageTitle =
   "How Norixo works – Airbnb & Booking listing audit";
 const pageDescription =
-  "Discover how Norixo analyzes your Airbnb and Booking listings, evaluates your market position and generates practical recommendations to improve conversion.";
+  "Discover how Norixo analyzes your Airbnb and Booking listings, evaluates your market position and generates practical recommendations to address conversion factors.";
 const alternates = buildHreflangAlternates("/how-it-works");
 const socialImage = "/og-cover.png";
 

@@ -17,14 +17,14 @@ type Props = {
 const pageTitle =
   "How Norixo works – Airbnb & Booking listing audit";
 const pageDescription =
-  "Discover how Norixo analyzes your Airbnb and Booking listings, evaluates your market position and generates practical recommendations to improve conversion.";
+  "Discover how Norixo analyzes your Airbnb and Booking listings, evaluates your market position and generates practical recommendations to address conversion factors.";
 const socialImage = "/og-cover.png";
 
 const localizedMetadata: Partial<Record<Locale, { title: string; description: string }>> = {
   fr: {
     title: "Comment fonctionne Norixo – Audit d'annonce Airbnb & Booking",
     description:
-      "Découvrez comment Norixo analyse vos annonces Airbnb et Booking, évalue votre position sur le marché et génère des recommandations concrètes pour améliorer la conversion.",
+      "Découvrez comment Norixo analyse vos annonces Airbnb et Booking, évalue votre position sur le marché et génère des recommandations concrètes sur les facteurs de conversion.",
   },
   es: {
     title: "Cómo funciona Norixo – Auditoría de anuncios Airbnb y Booking",
