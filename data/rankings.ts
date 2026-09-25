@@ -94,7 +94,7 @@ export const rankings: Ranking[] = [
     heroSubtitle:
       "Compare short-term rental markets where smart pricing, better photos, and stronger listing copy can improve performance.",
     intro:
-      "The best Airbnb markets are places where guest demand exists but competition is strong enough that listing optimization matters. In these markets, better presentation and pricing can directly influence booking performance.",
+      "The best Airbnb markets are places where guest demand exists but competition is strong enough that listing optimization matters. In these markets, presentation and pricing are among the factors that may influence booking performance.",
     items: [
       {
         citySlug: "nice",

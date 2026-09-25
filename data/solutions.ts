@@ -42,7 +42,7 @@ export const solutions: Solution[] = [
       },
       {
         title: "Improve photos",
-        body: "Professional, well-ordered photos increase click-through rate and reinforce trust before guests read the description."
+        body: "Professional, well-ordered photos can strengthen first impressions and guest trust before they read the description."
       },
       {
         title: "Strengthen descriptions",
@@ -73,7 +73,7 @@ export const solutions: Solution[] = [
       },
       {
         question: "Does Airbnb SEO improve bookings?",
-        answer: "Better optimization can improve visibility, guest confidence and conversion, which may increase bookings."
+        answer: "Listing optimization can help address visibility, guest-confidence, and conversion factors, while booking outcomes also depend on demand, pricing, competition, availability, and other conditions."
       },
       {
         question: "How does Norixo help?",
@@ -271,13 +271,13 @@ export const solutions: Solution[] = [
     slug: "airbnb-revenue-optimization",
     title: "Airbnb Revenue Optimization",
     description:
-      "Increase revenue through pricing, positioning and conversion improvements.",
+      "Identify pricing, positioning, and conversion opportunities that may support revenue optimization.",
     heroTitle: "Airbnb Revenue Optimization",
     heroSubtitle:
       "Grow revenue without guessing.",
     intro:
       "Revenue is driven by occupancy, pricing, guest confidence and market positioning.",
-    cta: "Increase revenue",
+    cta: "Explore revenue opportunities",
 
     sections: [
       {
@@ -324,7 +324,7 @@ export const solutions: Solution[] = [
         answer: "Not always. Listing quality may need improvement first."
       },
       {
-        question: "How does Norixo increase revenue?",
+        question: "How can Norixo support revenue optimization?",
         answer: "It identifies the changes most likely to improve booking performance."
       }
     ],
@@ -338,7 +338,7 @@ export const solutions: Solution[] = [
     heroSubtitle:
       "Reduce friction and improve booking confidence.",
     intro:
-      "Small improvements across your listing can significantly improve conversion.",
+      "Targeted improvements across a listing can help address potential conversion blockers.",
     cta: "Improve conversion",
 
     sections: [

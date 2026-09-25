@@ -673,7 +673,7 @@ export const articles: Article[] = [
     relatedRankings:["best-airbnb-markets"],
     faq:[
       {question:"What is Airbnb dynamic pricing?",answer:"Dynamic pricing adjusts nightly rates based on demand and market conditions."},
-      {question:"Does dynamic pricing increase revenue?",answer:"It can improve both occupancy and revenue when used carefully."}
+      {question:"Can dynamic pricing increase revenue?",answer:"Dynamic pricing can support rate decisions, but it does not guarantee higher occupancy or revenue. Outcomes depend on demand, availability, competition, property context, and how pricing changes are applied."}
     ],
   },
 
