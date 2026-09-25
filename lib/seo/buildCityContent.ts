@@ -68,7 +68,7 @@ export function buildCityContent(city: CitySeoInput): CitySeoContent {
     `Align your pricing strategy with similar properties in ${name}: if you sit above the market, your photos and copy must clearly justify the premium; if you are below, emphasize the value guests receive.`,
   ];
 
-  const exampleAuditIntro = `An example audit for a listing in ${name} will show how your photos, copy, amenities and positioning compare to other homes in the area, and where small changes can unlock more bookings.`;
+  const exampleAuditIntro = `An example audit for a listing in ${name} will show how your photos, copy, amenities and positioning compare to other homes in the area, and where small changes may strengthen booking potential.`;
 
   const closingCTA = `Paste your listing URL and see how it compares to other Airbnb listings in ${name}. You will get a clear conversion score and a prioritized list of improvements.`;
 

@@ -3,7 +3,7 @@ import type { Solution } from "@/data/solutions";
 
 const solutionMetaDescriptions: Record<string, string> = {
   "airbnb-seo":
-    "Airbnb SEO software for hosts who want stronger visibility, clearer ranking signals, and more bookings through listing, pricing, and content improvements.",
+    "Airbnb SEO software for hosts who want stronger visibility, clearer ranking signals, and stronger booking potential through listing, pricing, and content improvements.",
   "airbnb-listing-optimization":
     "Optimize Airbnb titles, photos, descriptions, amenities, pricing, and trust signals with Norixo's listing optimization software for higher conversion.",
   "airbnb-pricing-optimization":

@@ -449,7 +449,7 @@ function getAuditsCopy(locale: Locale) {
       kicker: "Performance",
       heading: "Performance audits",
       subtitle:
-        "Analyze your listings and identify high-impact actions to increase bookings.",
+        "Analyze your listings and identify high-impact actions that may strengthen booking potential.",
       headerDescription:
         "Track the quality of your listings over time, compare results, and prioritize the next optimization moves.",
       identity: "Workspace identity",
@@ -1882,7 +1882,7 @@ export default function AuditsPage() {
     locale === "es"
       ? "Tu anuncio ya funciona bien, pero puede generar más ingresos."
       : locale === "en"
-        ? "Your listing already performs well, but it can generate more revenue."
+        ? "Your listing already performs well, but it may support stronger revenue potential."
         : "Votre annonce fonctionne deja bien, mais elle peut generer davantage de revenus.";
   const heroTitle =
     latestScore !== null && latestScore >= 7
