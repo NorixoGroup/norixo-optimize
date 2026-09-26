@@ -1,6 +1,6 @@
 # Norixo
 
-> Norixo is a listing analysis and optimization platform for short-term rental listings.
+> Norixo is a listing analysis and optimization platform for short-term rental hosts, property managers, and conciergeries, with listing-specific analysis for platforms including Airbnb and Booking.com.
 
 Norixo helps hosts and property managers analyze listing presentation, positioning, pricing context, visibility factors, conversion factors, and revenue optimization opportunities.
 

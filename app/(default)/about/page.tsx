@@ -99,7 +99,7 @@ export default function AboutPage() {
           About Norixo
         </h1>
         <p className="mt-6 max-w-3xl text-lg leading-8 text-[#3F514B]">
-          Norixo is a platform for analyzing and optimizing short-term-rental
+          Norixo is a listing analysis and optimization platform for short-term-rental
           listings. It evaluates Airbnb and Booking listing and market signals,
           then returns prioritized recommendations.
         </p>
