@@ -337,7 +337,7 @@ const LIST_SUBMIT_CONTROLS_EXPRESSION = String.raw`((ordinal) => {
       hidden,
     };
   });
-})(arguments[0])`;
+})`;
 
 
 const OBSERVE_SUBMISSION_CONFIRMATION_EXPRESSION = String.raw`((selectedFormOrdinal) => {
@@ -385,7 +385,7 @@ const OBSERVE_SUBMISSION_CONFIRMATION_EXPRESSION = String.raw`((selectedFormOrdi
         role: null,
         textLength: 0,
       };
-})(arguments[0])`;
+})`;
 
 function adaptPlaywrightPage(page: Page): ContactFormBrowserPage {
   const controlLocator = (locator: ContactFormFieldLocator) => page.locator("form").nth(locator.formOrdinal).locator("input, textarea, select, button").nth(locator.controlOrdinal);
@@ -484,8 +484,7 @@ function adaptPlaywrightPage(page: Page): ContactFormBrowserPage {
     listSubmitControls: async (formOrdinal) => {
       type SubmitControlRaw = Omit<ContactFormSubmitControl, "fingerprint">;
       const controls = await page.evaluate(
-        LIST_SUBMIT_CONTROLS_EXPRESSION,
-        formOrdinal,
+        `${LIST_SUBMIT_CONTROLS_EXPRESSION}(${JSON.stringify(formOrdinal)})`,
       ) as SubmitControlRaw[];
       return controls.map((control) => ({
         ...control,
@@ -523,8 +522,7 @@ function adaptPlaywrightPage(page: Page): ContactFormBrowserPage {
         return { confirmed: false, reason: "final_url_invalid", finalUrl };
       }
       const marker = await page.evaluate(
-        OBSERVE_SUBMISSION_CONFIRMATION_EXPRESSION,
-        input.selectedFormOrdinal,
+        `${OBSERVE_SUBMISSION_CONFIRMATION_EXPRESSION}(${JSON.stringify(input.selectedFormOrdinal)})`,
       ) as {
         replacement: boolean;
         id: string | null;
