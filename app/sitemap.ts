@@ -22,6 +22,7 @@ const publicSiteUrl = (
 
 const staticPaths = [
   "/",
+  "/about",
   "/pricing",
   "/demo",
   "/how-it-works",
