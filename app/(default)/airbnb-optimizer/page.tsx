@@ -100,10 +100,11 @@ export default function AirbnbOptimizerHubPage() {
         </h1>
 
         <p className="mt-6 max-w-3xl text-lg leading-8 text-[#4C5C55]">
-          Audit and improve Airbnb listings by market, city, pricing, content,
-          photos, and conversion signals. Explore city-specific optimization
-          pages to understand local competition, guest expectations, and the
-          changes that can improve booking performance.
+          Norixo is an Airbnb listing optimization tool that helps hosts and property
+          managers audit and improve listings by market, city, pricing, content,
+          photos, and conversion signals. Explore city-specific optimization pages
+          to understand local competition, guest expectations, and the changes that
+          can improve booking performance.
         </p>
 
         <div className="mt-8 flex flex-wrap gap-3">

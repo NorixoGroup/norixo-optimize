@@ -54,8 +54,9 @@ export default function BookingOptimizationPage() {
             Optimize your Booking.com listing for more qualified bookings
           </h1>
           <p className="mt-4 max-w-2xl text-[15px] leading-7 text-slate-600">
-            Guests decide in seconds. Norixo audits how your property reads on Booking.com—photos,
-            copy, amenities, and trust—and ranks what to fix first.
+            Norixo is a Booking.com listing optimization tool for hosts and property managers.
+            It audits how your property reads on Booking.com—photos, copy, amenities,
+            and trust—and ranks what to fix first.
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <Link
