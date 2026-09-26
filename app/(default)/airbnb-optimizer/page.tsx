@@ -58,9 +58,10 @@ export default function AirbnbOptimizerHubPage() {
       url: "https://norixo.io/airbnb-optimizer",
       inLanguage: "en",
       isPartOf: {
-        "@type": "WebSite",
-        name: "Norixo",
-        url: "https://norixo.io",
+        "@id": "https://norixo.io/#website",
+      },
+      mentions: {
+        "@id": "https://norixo.io/#software",
       },
     },
     {

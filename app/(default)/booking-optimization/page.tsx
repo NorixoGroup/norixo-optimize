@@ -42,8 +42,29 @@ export const metadata: Metadata = {
 };
 
 export default function BookingOptimizationPage() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: pageTitle,
+    description: pageDescription,
+    url: `${siteUrl}/booking-optimization`,
+    inLanguage: "en",
+    isPartOf: {
+      "@id": `${siteUrl}/#website`,
+    },
+    mentions: {
+      "@id": `${siteUrl}/#software`,
+    },
+  };
+
   return (
     <MarketingPageShell>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
+        }}
+      />
       <main className="nk-section space-y-12 md:space-y-14">
         {/* Hero */}
         <section className="relative overflow-hidden rounded-[28px] nk-border bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.10),transparent_58%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.10),transparent_56%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.98)_100%)] p-6 shadow-[0_18px_52px_rgba(15,23,42,0.12)] md:p-8">

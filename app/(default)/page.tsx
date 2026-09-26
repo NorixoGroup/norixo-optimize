@@ -46,6 +46,12 @@ const homeJsonLd = {
   name: "Norixo",
   url: siteUrl,
   description: pageDescription,
+  applicationCategory: "BusinessApplication",
+  applicationSubCategory: "Short-term rental listing analysis and optimization",
+  audience: {
+    "@type": "BusinessAudience",
+    audienceType: "Short-term rental hosts, property managers, and conciergeries",
+  },
   provider: {
     "@id": `${siteUrl}/#organization`,
   },
