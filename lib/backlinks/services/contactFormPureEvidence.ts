@@ -1,6 +1,6 @@
 type TriState = boolean | null;
 
-type PageControl = {
+type PageControl = Readonly<{
   ordinal: number;
   tag: "input" | "textarea" | "select" | "button";
   type: string | null;
@@ -17,17 +17,17 @@ type PageControl = {
   hidden: boolean;
   visible: boolean;
   valuePresent: boolean;
-};
+}>;
 
-type PageForm = {
+type PageForm = Readonly<{
   ordinal: number;
   action: string | null;
   method: string | null;
   labelText: string | null;
   legendText: string | null;
   buttonText: string | null;
-  controls: PageControl[];
-};
+  controls: readonly PageControl[];
+}>;
 
 type Mapping = {
   result: "mapped" | string;
@@ -63,6 +63,130 @@ export type ContactFormPureEvidenceInput = {
   supportSignal: TriState;
   salesDemoOnlySignal: TriState;
 };
+
+
+export type ContactFormSemanticSignals = {
+  supportOnly: boolean | null;
+  salesDemoOnly: boolean | null;
+};
+
+function normalizeSemanticText(value: unknown): string {
+  if (typeof value !== "string") return "";
+
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function collectObservedFormSemanticText(form: PageForm): string {
+  const parts: string[] = [
+    form.labelText ?? "",
+    form.legendText ?? "",
+    form.buttonText ?? "",
+  ];
+
+  for (const control of form.controls ?? []) {
+    parts.push(
+      control.labelText ?? "",
+      control.ariaLabel ?? "",
+      control.ariaLabelledbyText ?? "",
+      control.placeholder ?? "",
+      control.name ?? "",
+      control.id ?? "",
+    );
+  }
+
+  return normalizeSemanticText(parts.join(" "));
+}
+
+function containsAnyPhrase(text: string, phrases: readonly string[]): boolean {
+  return phrases.some((phrase) => {
+    const normalized = normalizeSemanticText(phrase);
+    return normalized.length > 0 && (` ${text} `).includes(` ${normalized} `);
+  });
+}
+
+/**
+ * Conservative tri-state semantic classification.
+ *
+ * true  = positive evidence that the observed form is purpose-restricted.
+ * false = positive evidence of a general-contact form that conflicts with
+ *         the restricted-only interpretation.
+ * null  = insufficient or ambiguous evidence.
+ *
+ * Absence of a support/sales/demo keyword is never enough to manufacture
+ * false. UNKNOWN stays UNKNOWN.
+ */
+export function deriveContactFormSemanticSignals(
+  form: PageForm,
+): ContactFormSemanticSignals {
+  const text = collectObservedFormSemanticText(form);
+
+  if (!text) {
+    return {
+      supportOnly: null,
+      salesDemoOnly: null,
+    };
+  }
+
+  const supportEvidence = containsAnyPhrase(text, [
+    "customer support",
+    "customer service",
+    "technical support",
+    "tech support",
+    "support request",
+    "support ticket",
+    "help desk",
+    "help center",
+    "help centre",
+    "contact support",
+  ]);
+
+  const salesDemoEvidence = containsAnyPhrase(text, [
+    "book a demo",
+    "request a demo",
+    "schedule a demo",
+    "get a demo",
+    "talk to sales",
+    "speak to sales",
+    "contact sales",
+    "sales inquiry",
+    "sales enquiry",
+    "sales team",
+  ]);
+
+  const generalContactEvidence = containsAnyPhrase(text, [
+    "contact us",
+    "get in touch",
+    "send us a message",
+    "send a message",
+    "write to us",
+    "general inquiry",
+    "general enquiry",
+  ]);
+
+  return {
+    supportOnly: supportEvidence
+      ? generalContactEvidence
+        ? null
+        : true
+      : generalContactEvidence
+        ? false
+        : null,
+
+    salesDemoOnly: salesDemoEvidence
+      ? generalContactEvidence
+        ? null
+        : true
+      : generalContactEvidence
+        ? false
+        : null,
+  };
+}
 
 export type ContactFormPureEvidence = {
   form_present: boolean;
