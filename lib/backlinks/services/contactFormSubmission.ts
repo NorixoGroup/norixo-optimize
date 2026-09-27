@@ -732,60 +732,55 @@ function approvedContentForMapping(
 
 async function revalidateSelectBeforeMutation(
   page: ContactFormSubmissionPage,
-  context: ContactFormRunExecutionContext,
-  expectedMapping: ContactFormMappingPreview,
+  _context: ContactFormRunExecutionContext,
+  _expectedMapping: ContactFormMappingPreview,
   field: ContactFormMappedFieldPreview,
 ): Promise<SubmissionFailure | null> {
   const observedPage = await page.inspectForms();
+  const expectedOption = field.selectOption;
 
-  const currentMapping = buildContactFormMappingPreview({
-    page: observedPage,
-    approvedContent: approvedContentForMapping(context),
-  });
-
-  if (currentMapping.result !== "mapped") {
+  if (
+    field.assignmentType !== "select_option" ||
+    field.controlType !== "select" ||
+    expectedOption == null
+  ) {
     return failure(
-      "manual_review",
-      "CONTACT_FORM_SELECT_OPTION_DRIFT",
-      "select_option_revalidation_failed",
-      contactFormMappingPreviewToSafeMetadata(currentMapping),
+      "blocked_policy",
+      "CONTACT_FORM_SELECT_OPTION_INVALID",
+      "select_option_invalid",
+      {
+        semantic_field: field.semanticField,
+        control_fingerprint: field.fieldFingerprint,
+      },
     );
   }
 
-  const mappingFailure =
-    compareMapping(expectedMapping, currentMapping);
+  const form = observedPage.forms.find(
+    (candidate) => candidate.ordinal === field.locator.formOrdinal,
+  );
 
-  if (mappingFailure != null) return mappingFailure;
+  const control = form?.controls.find(
+    (candidate) => candidate.ordinal === field.locator.controlOrdinal,
+  );
 
-  const expectedOption = field.selectOption;
-
-  const currentField = currentMapping.mappedFields.find(
-    (candidate) =>
-      candidate.semanticField === field.semanticField &&
-      candidate.locator.formOrdinal ===
-        field.locator.formOrdinal &&
-      candidate.locator.controlOrdinal ===
-        field.locator.controlOrdinal,
+  const currentOption = control?.options?.find(
+    (candidate) => candidate.ordinal === expectedOption.ordinal,
   );
 
   if (
-    expectedOption == null ||
-    currentField == null ||
-    currentField.assignmentType !== "select_option" ||
-    currentField.controlType !== "select" ||
-    currentField.selectOption == null ||
-    currentField.selectOption.ordinal !==
-      expectedOption.ordinal ||
-    currentField.selectOption.labelText !==
-      expectedOption.labelText ||
-    currentField.selectOption.normalizedLabel !==
-      expectedOption.normalizedLabel ||
-    currentField.selectOption.valuePresent !== true ||
-    currentField.selectOption.disabled ||
-    currentField.selectOption.selected !==
-      expectedOption.selected ||
-    currentField.selectOption.optionFingerprint !==
-      expectedOption.optionFingerprint
+    control == null ||
+    control.tag !== "select" ||
+    control.disabled ||
+    control.readOnly ||
+    control.hidden ||
+    !control.visible ||
+    currentOption == null ||
+    currentOption.labelText !== expectedOption.labelText ||
+    (currentOption.normalizedLabel ?? "") !== expectedOption.normalizedLabel ||
+    currentOption.valuePresent !== expectedOption.valuePresent ||
+    !currentOption.valuePresent ||
+    currentOption.disabled !== expectedOption.disabled ||
+    currentOption.disabled
   ) {
     return failure(
       "manual_review",
@@ -794,10 +789,8 @@ async function revalidateSelectBeforeMutation(
       {
         semantic_field: field.semanticField,
         control_fingerprint: field.fieldFingerprint,
-        expected_option_fingerprint:
-          expectedOption?.optionFingerprint ?? null,
-        current_option_fingerprint:
-          currentField?.selectOption?.optionFingerprint ?? null,
+        expected_option_fingerprint: expectedOption.optionFingerprint,
+        current_option_ordinal: currentOption?.ordinal ?? null,
       },
     );
   }
