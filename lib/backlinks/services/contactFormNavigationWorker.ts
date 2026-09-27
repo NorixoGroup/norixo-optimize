@@ -121,6 +121,7 @@ export type ContactFormNavigationMetadata = Readonly<{
   popupBlockedCount: number;
   downloadBlockedCount: number;
   networkMutationBlockedCount: number;
+  crossAuthorityResourceBlockedCount: number;
   navigationRequestCount: number;
 }>;
 type UrlValidationOk = Readonly<{
@@ -740,6 +741,7 @@ async function executeClaimedContactFormNavigationWorkerOnce(
     let popupBlockedCount = 0;
     let downloadBlockedCount = 0;
     let networkMutationBlockedCount = 0;
+    let crossAuthorityResourceBlockedCount = 0;
     let navigationRequestCount = 0;
     const networkPolicy: { violation: UrlValidationFailure | null } = { violation: null };
     const submitAllowance = createSubmitAllowanceState();
@@ -797,7 +799,16 @@ async function executeClaimedContactFormNavigationWorkerOnce(
         return "abort";
       }
       if (!matchesPinnedAuthority(requestTarget, target)) {
-        networkPolicy.violation ??= validationFailure("CONTACT_FORM_PINNED_TARGET_MISMATCH", "pinned_target_mismatch", {});
+        if (!request.isNavigationRequest) {
+          crossAuthorityResourceBlockedCount += 1;
+          return "abort";
+        }
+
+        networkPolicy.violation ??= validationFailure(
+          "CONTACT_FORM_PINNED_TARGET_MISMATCH",
+          "pinned_target_mismatch",
+          {},
+        );
         return "abort";
       }
       return "continue";
@@ -832,6 +843,7 @@ async function executeClaimedContactFormNavigationWorkerOnce(
       popupBlockedCount,
       downloadBlockedCount,
       networkMutationBlockedCount,
+      crossAuthorityResourceBlockedCount,
       navigationRequestCount,
     });
     const signals = await session.page.evaluatePageSignals();
@@ -1055,6 +1067,7 @@ function toSafeMetadata(metadata: ContactFormNavigationMetadata): Json {
     popup_blocked_count: metadata.popupBlockedCount,
     download_blocked_count: metadata.downloadBlockedCount,
     network_mutation_blocked_count: metadata.networkMutationBlockedCount,
+    cross_authority_resource_blocked_count: metadata.crossAuthorityResourceBlockedCount,
     navigation_request_count: metadata.navigationRequestCount,
     full_html_persisted: false,
   };

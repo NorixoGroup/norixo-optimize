@@ -235,8 +235,12 @@ class FakePage implements ContactFormBrowserPage {
     const requests = this.requests.length ? this.requests : [{ url, method: "GET", resourceType: "document", isNavigationRequest: true }];
     for (const request of requests) {
       const decision = await this.dispatch(request);
-      if (decision === "abort") throw new Error("blockedbyclient");
-      if (request.isNavigationRequest) this.currentUrl = request.url;
+      if (decision === "abort" && request.isNavigationRequest) {
+        throw new Error("blockedbyclient");
+      }
+      if (decision === "continue" && request.isNavigationRequest) {
+        this.currentUrl = request.url;
+      }
     }
   }
   url() {
@@ -556,6 +560,107 @@ test("safe redirect", async () => {
   }
   assert.equal(d.transitions.find((transition) => transition.state === "discovered")?.finalUrl, "https://forms.example/contact-us");
 });
+test("cross-authority background GET does not poison the navigation run", async () => {
+  const page = new FakePage();
+
+  page.requests = [
+    {
+      url: "https://forms.example/contact",
+      method: "GET",
+      resourceType: "document",
+      isNavigationRequest: true,
+    },
+    {
+      url: "https://cdn.example/asset.js",
+      method: "GET",
+      resourceType: "script",
+      isNavigationRequest: false,
+    },
+  ];
+
+  const d = deps({ page });
+
+  const result =
+    await executeContactFormNavigationWorkerOnceWithDependencies(
+      d,
+      workerId,
+    );
+
+  assert.equal(result.kind, "blocked");
+
+  if (result.kind === "blocked") {
+    assert.equal(result.state, "manual_review");
+    assert.equal(
+      result.safeErrorCode,
+      "CONTACT_FORM_REAL_SUBMISSION_DISABLED",
+    );
+  }
+
+  assert.equal(
+    d.transitions.some(
+      (transition) =>
+        transition.safeErrorCode ===
+        "CONTACT_FORM_PINNED_TARGET_MISMATCH",
+    ),
+    false,
+  );
+
+  const discovered = d.transitions.find(
+    (transition) => transition.state === "discovered",
+  );
+
+  assert.equal(
+    discovered?.metadata?.cross_authority_resource_blocked_count,
+    1,
+  );
+});
+
+test("cross-authority navigation remains policy blocked", async () => {
+  const page = new FakePage();
+
+  page.requests = [
+    {
+      url: "https://forms.example/contact",
+      method: "GET",
+      resourceType: "document",
+      isNavigationRequest: true,
+    },
+    {
+      url: "https://other.example/contact",
+      method: "GET",
+      resourceType: "document",
+      isNavigationRequest: true,
+    },
+  ];
+
+  const d = deps({ page });
+
+  const result =
+    await executeContactFormNavigationWorkerOnceWithDependencies(
+      d,
+      workerId,
+    );
+
+  assert.equal(result.kind, "blocked");
+
+  if (result.kind === "blocked") {
+    assert.equal(result.state, "blocked_policy");
+    assert.equal(
+      result.safeErrorCode,
+      "CONTACT_FORM_PINNED_TARGET_MISMATCH",
+    );
+  }
+
+  assert.equal(
+    d.transitions.some(
+      (transition) =>
+        transition.safeErrorCode ===
+        "CONTACT_FORM_PINNED_TARGET_MISMATCH",
+    ),
+    true,
+  );
+});
+
 test("private redirect rejection", async () => {
   const page = new FakePage();
   page.requests = [
