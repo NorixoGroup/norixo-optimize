@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 export type ContactFormDashboardView = {
   channel: "contact_form";
   approval_state: string;
@@ -40,11 +42,24 @@ export type ContactFormAutomationResult = {
   finalAttemptStatus: string | null;
 };
 
+export type ContactFormApprovalInput = {
+  senderName: string;
+  senderEmail: string;
+  senderCompany: string;
+  senderWebsite: string;
+  senderFirstName: string | null;
+  senderLastName: string | null;
+};
+
 type Props = {
   outreachKey: string;
   loading: boolean;
   error: string | null;
   result: ContactFormAutomationResult | null;
+  approvalSubmitting: boolean;
+  approvalError: string | null;
+  approvalSuccess: string | null;
+  onApprove: (input: ContactFormApprovalInput) => void;
   onClose: () => void;
 };
 
@@ -77,9 +92,29 @@ export default function OutreachContactFormAutomationDialog({
   loading,
   error,
   result,
+  approvalSubmitting,
+  approvalError,
+  approvalSuccess,
+  onApprove,
   onClose,
 }: Props) {
   const dashboard = result?.dashboard ?? null;
+  const [senderName, setSenderName] = useState("");
+  const [senderFirstName, setSenderFirstName] = useState("");
+  const [senderLastName, setSenderLastName] = useState("");
+  const [senderEmail, setSenderEmail] = useState("");
+  const [senderCompany, setSenderCompany] = useState("");
+  const [senderWebsite, setSenderWebsite] = useState("");
+
+  const approvalAvailable =
+    dashboard?.next_action === "approve" &&
+    dashboard.approval_state !== "approved";
+
+  const approvalReady =
+    senderName.trim().length > 0 &&
+    senderEmail.trim().length > 0 &&
+    senderCompany.trim().length > 0 &&
+    senderWebsite.trim().length > 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
@@ -112,8 +147,8 @@ export default function OutreachContactFormAutomationDialog({
         </div>
 
         <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
-          Vue d’observabilité uniquement. Cette fenêtre n’approuve, ne met en
-          file d’attente et n’envoie aucun formulaire.
+          L’approbation ci-dessous enregistre uniquement l’identité d’expéditeur
+          confirmée par un administrateur. Elle ne soumet aucun formulaire externe.
         </div>
 
         {loading ? (
@@ -209,6 +244,121 @@ export default function OutreachContactFormAutomationDialog({
                 </p>
               ) : null}
             </div>
+
+            {approvalAvailable ? (
+              <div className="mt-5 rounded-xl border border-slate-200 p-4">
+                <h3 className="font-medium text-slate-950">
+                  Approbation humaine
+                </h3>
+
+                <p className="mt-1 text-sm text-slate-600">
+                  Vérifiez l’identité utilisée pour remplir le formulaire avant
+                  d’autoriser l’automatisation.
+                </p>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <label className="text-sm text-slate-700">
+                    Nom complet *
+                    <input
+                      type="text"
+                      value={senderName}
+                      onChange={(event) => setSenderName(event.target.value)}
+                      disabled={approvalSubmitting}
+                      className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                    />
+                  </label>
+
+                  <label className="text-sm text-slate-700">
+                    E-mail *
+                    <input
+                      type="email"
+                      value={senderEmail}
+                      onChange={(event) => setSenderEmail(event.target.value)}
+                      disabled={approvalSubmitting}
+                      className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                    />
+                  </label>
+
+                  <label className="text-sm text-slate-700">
+                    Prénom
+                    <input
+                      type="text"
+                      value={senderFirstName}
+                      onChange={(event) => setSenderFirstName(event.target.value)}
+                      disabled={approvalSubmitting}
+                      className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                    />
+                  </label>
+
+                  <label className="text-sm text-slate-700">
+                    Nom
+                    <input
+                      type="text"
+                      value={senderLastName}
+                      onChange={(event) => setSenderLastName(event.target.value)}
+                      disabled={approvalSubmitting}
+                      className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                    />
+                  </label>
+
+                  <label className="text-sm text-slate-700">
+                    Société *
+                    <input
+                      type="text"
+                      value={senderCompany}
+                      onChange={(event) => setSenderCompany(event.target.value)}
+                      disabled={approvalSubmitting}
+                      className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                    />
+                  </label>
+
+                  <label className="text-sm text-slate-700">
+                    Site web *
+                    <input
+                      type="url"
+                      value={senderWebsite}
+                      onChange={(event) => setSenderWebsite(event.target.value)}
+                      disabled={approvalSubmitting}
+                      className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                    />
+                  </label>
+                </div>
+
+                {approvalError ? (
+                  <p role="alert" className="mt-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-800">
+                    {approvalError}
+                  </p>
+                ) : null}
+
+                {approvalSuccess ? (
+                  <p className="mt-3 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">
+                    {approvalSuccess}
+                  </p>
+                ) : null}
+
+                <div className="mt-4 flex justify-end">
+                  <button
+                    type="button"
+                    disabled={!approvalReady || approvalSubmitting}
+                    onClick={() =>
+                      onApprove({
+                        senderName: senderName.trim(),
+                        senderEmail: senderEmail.trim(),
+                        senderCompany: senderCompany.trim(),
+                        senderWebsite: senderWebsite.trim(),
+                        senderFirstName: senderFirstName.trim() || null,
+                        senderLastName: senderLastName.trim() || null,
+                      })
+                    }
+                    className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {approvalSubmitting
+                      ? "Approbation…"
+                      : "Approuver cette identité"}
+                  </button>
+                </div>
+              </div>
+            ) : null}
 
             <div className="mt-5">
               <h3 className="font-medium text-slate-950">

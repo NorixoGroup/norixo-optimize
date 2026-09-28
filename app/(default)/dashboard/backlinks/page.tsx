@@ -571,6 +571,9 @@ export default function BacklinksPage() {
   const [outreachContactFormLoading, setOutreachContactFormLoading] = useState(false);
   const [outreachContactFormError, setOutreachContactFormError] = useState<string | null>(null);
   const [outreachContactFormResult, setOutreachContactFormResult] = useState<ContactFormAutomationResult | null>(null);
+  const [outreachContactFormApprovalSubmitting, setOutreachContactFormApprovalSubmitting] = useState(false);
+  const [outreachContactFormApprovalError, setOutreachContactFormApprovalError] = useState<string | null>(null);
+  const [outreachContactFormApprovalSuccess, setOutreachContactFormApprovalSuccess] = useState<string | null>(null);
   const [contactFormCampaignReportDialog, setContactFormCampaignReportDialog] = useState<ApiRow | null>(null);
   const [contactFormCampaignReportLoading, setContactFormCampaignReportLoading] = useState(false);
   const [contactFormCampaignReportError, setContactFormCampaignReportError] = useState<string | null>(null);
@@ -1731,6 +1734,9 @@ export default function BacklinksPage() {
     setOutreachContactFormLoading(true);
     setOutreachContactFormError(null);
     setOutreachContactFormResult(null);
+    setOutreachContactFormApprovalSubmitting(false);
+    setOutreachContactFormApprovalError(null);
+    setOutreachContactFormApprovalSuccess(null);
     try {
       const response = await apiRequest<{ ok: true; result: ContactFormAutomationResult }>(
         `/api/backlinks/outreach/${outreach.id}/contact-form`,
@@ -1747,11 +1753,60 @@ export default function BacklinksPage() {
     }
   };
 
+  const handleApproveOutreachContactForm = async (input: {
+    senderName: string;
+    senderEmail: string;
+    senderCompany: string;
+    senderWebsite: string;
+    senderFirstName: string | null;
+    senderLastName: string | null;
+  }) => {
+    const outreach = outreachContactFormDialog;
+    if (!outreach || outreachContactFormApprovalSubmitting) return;
+
+    setOutreachContactFormApprovalSubmitting(true);
+    setOutreachContactFormApprovalError(null);
+    setOutreachContactFormApprovalSuccess(null);
+
+    try {
+      await apiRequest(
+        `/api/backlinks/outreach/${outreach.id}/contact-form/approval`,
+        {
+          method: "POST",
+          body: JSON.stringify(input),
+        },
+      );
+
+      setOutreachContactFormApprovalSuccess(
+        "Identité approuvée. L’état du formulaire a été rechargé.",
+      );
+
+      const response = await apiRequest<{
+        ok: true;
+        result: ContactFormAutomationResult;
+      }>(`/api/backlinks/outreach/${outreach.id}/contact-form`);
+
+      setOutreachContactFormResult(response.result);
+      await loadDashboard();
+    } catch (approvalError) {
+      setOutreachContactFormApprovalError(
+        approvalError instanceof Error
+          ? approvalError.message
+          : "Impossible d’approuver cette identité.",
+      );
+    } finally {
+      setOutreachContactFormApprovalSubmitting(false);
+    }
+  };
+
   const closeOutreachContactFormAutomation = () => {
+    if (outreachContactFormApprovalSubmitting) return;
     setOutreachContactFormDialog(null);
     setOutreachContactFormLoading(false);
     setOutreachContactFormError(null);
     setOutreachContactFormResult(null);
+    setOutreachContactFormApprovalError(null);
+    setOutreachContactFormApprovalSuccess(null);
   };
 
   const openOutreachAttemptHistory = async (outreach: ApiRow) => { setOutreachAttemptHistoryDialog(outreach); setOutreachAttemptHistoryAttempts([]); setOutreachAttemptHistoryDeliveryEvents([]); await reloadOutreachAttemptHistory(String(outreach.id)); };
@@ -2485,7 +2540,7 @@ export default function BacklinksPage() {
           onClose={closeContactFormCampaignReport}
         />
       ) : null}
-      {outreachContactFormDialog ? <OutreachContactFormAutomationDialog outreachKey={String(outreachContactFormDialog.outreach_key ?? outreachContactFormDialog.id)} loading={outreachContactFormLoading} error={outreachContactFormError} result={outreachContactFormResult} onClose={closeOutreachContactFormAutomation} /> : null}
+      {outreachContactFormDialog ? <OutreachContactFormAutomationDialog outreachKey={String(outreachContactFormDialog.outreach_key ?? outreachContactFormDialog.id)} loading={outreachContactFormLoading} error={outreachContactFormError} result={outreachContactFormResult} approvalSubmitting={outreachContactFormApprovalSubmitting} approvalError={outreachContactFormApprovalError} approvalSuccess={outreachContactFormApprovalSuccess} onApprove={(input) => void handleApproveOutreachContactForm(input)} onClose={closeOutreachContactFormAutomation} /> : null}
       {outreachReapproveDialog ? <div role="dialog" aria-modal="true" aria-labelledby="outreach-reapprove-title" className="fixed inset-0 z-50 bg-slate-950/40 p-4"><div className="mx-auto mt-12 max-w-xl rounded-3xl bg-white p-6"><h2 id="outreach-reapprove-title">Réapprouver l’outreach</h2><p className="mt-1 text-sm text-slate-600">{contactLabel(pages.contacts.items, outreachReapproveDialog.contact_id)} · {String(outreachReapproveDialog.channel)}</p><p className="mt-3 text-sm text-slate-600">Cette action reconstruit l’approbation d’un outreach déjà prêt, sans envoyer d’email.</p><p className="mt-4 text-sm font-semibold text-slate-700">Sujet</p><p>{typeof outreachReapproveDialog.subject === "string" ? outreachReapproveDialog.subject : "Sans objet"}</p><p className="mt-4 text-sm font-semibold text-slate-700">Contenu</p><pre className="whitespace-pre-wrap">{typeof outreachReapproveDialog.body === "string" ? outreachReapproveDialog.body : ""}</pre>{outreachReapproveError ? <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{outreachReapproveError}</p> : null}{outreachReapproveSuccess ? <p className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">{outreachReapproveSuccess}</p> : null}<div className="mt-6 flex justify-end gap-3"><button type="button" onClick={() => { if (!outreachReapproveSubmitting) setOutreachReapproveDialog(null); }} disabled={outreachReapproveSubmitting} className="rounded-full px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">Annuler</button><button type="button" onClick={() => void handleReapproveOutreach()} disabled={outreachReapproveSubmitting} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{outreachReapproveSubmitting ? "Validation…" : "Réapprouver"}</button></div></div></div> : null}
       {outreachFinalNoResponseDialog ? <OutreachFinalNoResponseDialog outreachLabel={String(outreachFinalNoResponseDialog.outreach_key ?? outreachFinalNoResponseDialog.id)} responseDeadlineAt={typeof outreachFinalNoResponseDialog.response_deadline_at === "string" ? outreachFinalNoResponseDialog.response_deadline_at : null} currentAttempt={typeof outreachFinalNoResponseDialog.current_attempt === "number" ? outreachFinalNoResponseDialog.current_attempt : 0} maxAttempts={typeof outreachFinalNoResponseDialog.max_attempts === "number" ? outreachFinalNoResponseDialog.max_attempts : 0} submitting={outreachFinalNoResponseSubmitting} error={outreachFinalNoResponseError} success={outreachFinalNoResponseSuccess} onClose={closeOutreachFinalNoResponseDialog} onConfirm={() => void handleOutreachFinalNoResponse()} /> : null}
       {outreachDraftEditDialog ? <OutreachDraftEditDialog contacts={getOutreachDraftEditContacts()} contactId={outreachDraftEditContactId} channel={outreachDraftEditChannel} subject={outreachDraftEditSubject || null} body={outreachDraftEditBody || null} submitting={outreachDraftEditSubmitting} error={outreachDraftEditError} onClose={closeOutreachDraftEditDialog} onContactChange={handleOutreachDraftEditContactChange} onChannelChange={setOutreachDraftEditChannel} onSubjectChange={setOutreachDraftEditSubject} onBodyChange={setOutreachDraftEditBody} onSave={() => void handleSaveOutreachDraftEdit()} /> : null}
