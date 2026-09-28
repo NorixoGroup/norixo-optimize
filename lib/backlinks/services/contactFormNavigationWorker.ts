@@ -204,6 +204,11 @@ export async function createPlaywrightChromiumBrowserRuntime(): Promise<ContactF
   };
 }
 
+
+export const contactFormNavigationWorkerTestHooks = {
+  adaptPlaywrightPage,
+} as const;
+
 async function createPlaywrightBrowserSession(browser: Browser): Promise<ContactFormBrowserSession> {
   const context: BrowserContext = await browser.newContext({
     acceptDownloads: false,
