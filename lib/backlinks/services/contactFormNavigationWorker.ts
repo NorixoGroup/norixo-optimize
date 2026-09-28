@@ -9,6 +9,7 @@ import {
   confirmContactFormSubmission,
   getContactFormRunExecutionContext,
   heartbeatContactFormRun,
+  persistVerifiedContactFormEvidence,
   transitionContactFormRun,
   type ContactFormRun,
   type ContactFormRunExecutionContext,
@@ -21,6 +22,7 @@ import {
   type ContactFormDiscoveredPage,
   type ContactFormMappingPreview,
 } from "@/lib/backlinks/services/contactFormMappingPreview";
+import { buildContactFormVerificationEvidenceFromRuntime } from "@/lib/backlinks/services/contactFormVerificationRuntimeAdapter";
 import {
   contactFormSafeFingerprint,
   executeContactFormControlledSubmission,
@@ -97,6 +99,12 @@ export type ContactFormNavigationDependencies = Readonly<{
   transitionRun: (input: { runId: string; workerId: string; nextState: ContactFormRunState; eventType: string; safeMetadata?: Json; safeErrorCode?: string; evidenceReference?: string; finalUrl?: string }) => Promise<ContactFormRun>;
   confirmSubmission: (input: { runId: string; workerId: string; evidenceReference: string; finalUrl?: string }) => Promise<{ run_id: string; attempt_id: string; disposition: string }>;
   loadExecutionContext: (run: ContactFormRun) => Promise<ContactFormRunExecutionContext>;
+  persistVerificationEvidence: typeof persistVerifiedContactFormEvidence extends (
+    client: BacklinkRepositoryClient,
+    input: infer T,
+  ) => infer R
+    ? (input: T) => R
+    : never;
   resolveHostname: ContactFormDnsResolver;
   browserRuntime: ContactFormBrowserRuntime;
   nowMs?: () => number;
@@ -151,6 +159,8 @@ export function createContactFormNavigationDependencies(client: BacklinkReposito
     transitionRun: (input) => transitionContactFormRun(client, input),
     confirmSubmission: (input) => confirmContactFormSubmission(client, input),
     loadExecutionContext: (run) => getContactFormRunExecutionContext(client, run),
+    persistVerificationEvidence: (input) =>
+      persistVerifiedContactFormEvidence(client, input),
     resolveHostname: resolveHostnamePublicAddresses,
     browserRuntime,
   };
@@ -865,8 +875,9 @@ async function executeClaimedContactFormNavigationWorkerOnce(
       safeMetadata: toSafeMetadata(metadata),
     });
     await keepLease();
+    const discoveredPage = await session.page.inspectForms();
     const mapping = buildContactFormMappingPreview({
-      page: await session.page.inspectForms(),
+      page: discoveredPage,
       approvedContent: {
         senderName: context.approval.sender_name,
         senderFirstName: context.approval.sender_first_name,
@@ -880,6 +891,31 @@ async function executeClaimedContactFormNavigationWorkerOnce(
       pageSignals: signals,
     });
     const mappingMetadata = contactFormMappingPreviewToSafeMetadata(mapping);
+    const verificationEvidence =
+      mapping.selectedFormOrdinal == null
+        ? null
+        : buildContactFormVerificationEvidenceFromRuntime({
+            page: discoveredPage,
+            mapping,
+            pageSignals: {
+              hasLoginWall: signals.hasLoginWall,
+              hasPasswordField: signals.hasPasswordField,
+            },
+            submitControls: await session.page.listSubmitControls(
+              mapping.selectedFormOrdinal,
+            ),
+          });
+    if (verificationEvidence?.ok === true) {
+      await deps.persistVerificationEvidence({
+        workspaceId: context.run.workspace_id,
+        contactId: context.contact.id,
+        formUrl: context.contact.contact_form_url ?? "",
+        verifiedAt: new Date(nowMs()).toISOString(),
+        evidenceVersion: verificationEvidence.evidenceVersion,
+        formFingerprint: mapping.selectedFormFingerprint,
+        safeEvidence: verificationEvidence.safeEvidence,
+      });
+    }
     if (mapping.result === "mapped") {
       const mapped = await deps.transitionRun({
         runId: discovered.id,

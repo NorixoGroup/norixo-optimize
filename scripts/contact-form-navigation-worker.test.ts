@@ -358,7 +358,7 @@ function deps(input: {
   closeFailure?: boolean;
   claimNextRunResult?: ContactFormRun | null;
   claimRunByIdResult?: ContactFormRun | null;
-} = {}): ContactFormNavigationDependencies & { transitions: Array<{ state: ContactFormRunState; eventType: string; safeErrorCode: string | null; metadata: Json | undefined; finalUrl: string | null }>; runtime: ReturnType<typeof runtime>; heartbeats: number; claims: number; targetClaims: number; targetClaimRunIds: string[]; loadedRunIds: string[]; confirmations: number } {
+} = {}): ContactFormNavigationDependencies & { transitions: Array<{ state: ContactFormRunState; eventType: string; safeErrorCode: string | null; metadata: Json | undefined; finalUrl: string | null }>; runtime: ReturnType<typeof runtime>; heartbeats: number; claims: number; targetClaims: number; targetClaimRunIds: string[]; loadedRunIds: string[]; confirmations: number; verificationPersistCalls: Array<Parameters<ContactFormNavigationDependencies["persistVerificationEvidence"]>[0]> } {
   const ctx = input.ctx ?? context();
   const fakeRuntime = runtime(input.page, input.closeFailure);
   const transitions: Array<{ state: ContactFormRunState; eventType: string; safeErrorCode: string | null; metadata: Json | undefined; finalUrl: string | null }> = [];
@@ -368,6 +368,7 @@ function deps(input: {
   const targetClaimRunIds: string[] = [];
   const loadedRunIds: string[] = [];
   let confirmations = 0;
+  const verificationPersistCalls: Array<Parameters<ContactFormNavigationDependencies["persistVerificationEvidence"]>[0]> = [];
   return {
     get heartbeats() {
       return heartbeats;
@@ -383,6 +384,7 @@ function deps(input: {
     get confirmations() {
       return confirmations;
     },
+    verificationPersistCalls,
     runtime: fakeRuntime,
     transitions,
     async claimNextRun() {
@@ -411,6 +413,10 @@ function deps(input: {
     async loadExecutionContext(run) {
       loadedRunIds.push(run.id);
       return { ...ctx, run };
+    },
+    async persistVerificationEvidence(input) {
+      verificationPersistCalls.push(input);
+      return {} as Awaited<ReturnType<ContactFormNavigationDependencies["persistVerificationEvidence"]>>;
     },
     resolveHostname: input.dns ?? (async (hostname) => publicDns(hostname)),
     browserRuntime: fakeRuntime,
@@ -443,6 +449,24 @@ async function expectRealSubmissionDisabled(options?: { allowRealSubmission?: bo
   assert.equal(page.clickCount, 0);
   assert.equal(page.submitDecisions.length, 0);
   assert.equal(d.confirmations, 0);
+  assert.equal(d.verificationPersistCalls.length, 1);
+  assert.equal(d.verificationPersistCalls[0]?.workspaceId, context().run.workspace_id);
+  assert.equal(d.verificationPersistCalls[0]?.contactId, context().contact.id);
+  assert.equal(d.verificationPersistCalls[0]?.formUrl, context().contact.contact_form_url);
+  assert.equal(d.verificationPersistCalls[0]?.verifiedAt, now);
+  assert.equal(d.verificationPersistCalls[0]?.evidenceVersion, "cfv1");
+  assert.equal(typeof d.verificationPersistCalls[0]?.formFingerprint, "string");
+  assert.deepEqual(d.verificationPersistCalls[0]?.safeEvidence, {
+    actual_form_observed: true,
+    form_count: 1,
+    message_field_present: true,
+    submit_control_present: true,
+    contact_intent: true,
+    newsletter_only: false,
+    login_only: false,
+    support_only: false,
+    sales_demo_only: false,
+  });
   if (options?.targetRunId != null) {
     assert.equal(d.claims, 0);
     assert.equal(d.targetClaims, 1);
@@ -609,8 +633,15 @@ test("cross-authority background GET does not poison the navigation run", async 
     (transition) => transition.state === "discovered",
   );
 
+  const discoveredMetadata =
+    discovered?.metadata != null &&
+    typeof discovered.metadata === "object" &&
+    !Array.isArray(discovered.metadata)
+      ? discovered.metadata
+      : null;
+
   assert.equal(
-    discovered?.metadata?.cross_authority_resource_blocked_count,
+    discoveredMetadata?.cross_authority_resource_blocked_count,
     1,
   );
 });
@@ -785,6 +816,7 @@ test("CAPTCHA classification only", async () => {
   const result = await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId);
   assert.equal(result.kind, "blocked");
   assert.equal(result.state, "blocked_captcha");
+  assert.equal(d.verificationPersistCalls.length, 0);
 });
 test("login wall to manual review", async () => {
   const page = new FakePage();
@@ -793,6 +825,7 @@ test("login wall to manual review", async () => {
   const result = await executeContactFormNavigationWorkerOnceWithDependencies(d, workerId);
   assert.equal(result.kind, "blocked");
   assert.equal(result.state, "manual_review");
+  assert.equal(d.verificationPersistCalls.length, 0);
 });
 test("navigation timeout", async () => {
   const page = new FakePage();
@@ -802,6 +835,7 @@ test("navigation timeout", async () => {
   assert.equal(result.kind, "blocked");
   assert.equal(result.state, "failed_pre_submit");
   assert.equal(result.safeErrorCode, "CONTACT_FORM_NAVIGATION_TIMEOUT");
+  assert.equal(d.verificationPersistCalls.length, 0);
 });
 test("lease loss", async () => {
   const page = new FakePage();

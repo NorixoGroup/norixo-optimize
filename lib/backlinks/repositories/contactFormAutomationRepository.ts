@@ -56,6 +56,79 @@ export function isValidContactFormVerificationEvidence(value: Json): boolean {
   );
 }
 
+export async function persistVerifiedContactFormEvidence(
+  client: BacklinkRepositoryClient,
+  input: {
+    workspaceId: string;
+    contactId: string;
+    formUrl: string;
+    verifiedAt: string;
+    evidenceVersion: string;
+    formFingerprint?: string | null;
+    safeEvidence: Json;
+  },
+): Promise<ContactFormVerification> {
+  const workspaceId = required(input.workspaceId, "workspaceId");
+  const contactId = required(input.contactId, "contactId");
+  const formUrl = normalizeContactFormVerificationUrl(input.formUrl);
+  const verifiedAt = required(input.verifiedAt, "verifiedAt");
+  const evidenceVersion = required(input.evidenceVersion, "evidenceVersion");
+  const formFingerprint = input.formFingerprint?.trim() || null;
+
+  if (formUrl == null) {
+    throw new BacklinkRepositoryError({
+      code: "VALIDATION",
+      operation: "persistVerifiedContactFormEvidence",
+      message: "formUrl must be a normalized HTTPS URL.",
+    });
+  }
+
+  if (!Number.isFinite(Date.parse(verifiedAt))) {
+    throw new BacklinkRepositoryError({
+      code: "VALIDATION",
+      operation: "persistVerifiedContactFormEvidence",
+      message: "verifiedAt must be a valid timestamp.",
+    });
+  }
+
+  if (!isValidContactFormVerificationEvidence(input.safeEvidence)) {
+    throw new BacklinkRepositoryError({
+      code: "VALIDATION",
+      operation: "persistVerifiedContactFormEvidence",
+      message: "safeEvidence is not valid verified contact-form evidence.",
+    });
+  }
+
+  const { data, error } = await client
+    .from("backlink_contact_form_verifications")
+    .upsert(
+      {
+        workspace_id: workspaceId,
+        contact_id: contactId,
+        form_url: formUrl,
+        verification_state: "verified",
+        verified_at: verifiedAt,
+        evidence_version: evidenceVersion,
+        form_fingerprint: formFingerprint,
+        safe_evidence: input.safeEvidence,
+      },
+      {
+        onConflict: "workspace_id,contact_id,form_url",
+      },
+    )
+    .select("*")
+    .single();
+
+  if (error != null || data == null) {
+    throw rpcError(
+      "persistVerifiedContactFormEvidence",
+      error ?? new Error("Missing persisted verification."),
+    );
+  }
+
+  return data;
+}
+
 export function hasCurrentVerifiedContactFormEvidence(
   contact: ContactFormVerificationContact,
   verification: ContactFormVerification | null | undefined,
