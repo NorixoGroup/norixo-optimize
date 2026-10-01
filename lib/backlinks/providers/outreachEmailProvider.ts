@@ -1,11 +1,19 @@
 import { Resend } from "resend";
 
+import { appendOutreachComplianceFooter, buildListUnsubscribeHeaders } from "../services/outreachEmailCompliance";
+import { getBacklinkOutreachReplyTokenKeyring } from "../services/outreachReplyCorrelationIdentity";
+import { buildBacklinkUnsubscribeUrl, createBacklinkUnsubscribeToken } from "../services/outreachUnsubscribeToken";
+
+export type OutreachEmailSendContext = { workspaceId: string; outreachId: string };
+
 export type OutreachEmailSendInput = {
   to: string;
   subject: string;
   body: string;
   replyTo: string;
   idempotencyKey: string;
+  /** Required whenever the provider is configured with an unsubscribe resolver. */
+  context?: OutreachEmailSendContext;
 };
 
 export type OutreachEmailSendResult = {
@@ -25,9 +33,15 @@ export type OutreachEmailProviderDependencies = {
   apiKey: string | undefined;
   from: string | undefined;
   send?: (
-    payload: { from: string; replyTo: string; to: string; subject: string; text: string },
+    payload: { from: string; replyTo: string; to: string; subject: string; text: string; headers?: Record<string, string> },
     options: { idempotencyKey: string },
   ) => Promise<ResendEmailResponse>;
+  /**
+   * When provided, every message must carry the Norixo identity, an opt-out
+   * instruction and List-Unsubscribe headers. If the URL cannot be produced the
+   * message is NOT sent (fail closed).
+   */
+  unsubscribeUrlFor?: (context: OutreachEmailSendContext) => string;
 };
 
 function result(
@@ -87,13 +101,30 @@ export function createOutreachEmailProvider(
       );
     }
 
+    let text = body;
+    let headers: Record<string, string> | undefined;
+    if (dependencies.unsubscribeUrlFor) {
+      try {
+        if (!input.context) throw new Error("OUTREACH_EMAIL_CONTEXT_MISSING");
+        const unsubscribeUrl = dependencies.unsubscribeUrlFor(input.context);
+        headers = buildListUnsubscribeHeaders(unsubscribeUrl);
+        text = appendOutreachComplianceFooter(body, unsubscribeUrl);
+      } catch {
+        return result(
+          "failed",
+          "OUTREACH_EMAIL_UNSUBSCRIBE_UNAVAILABLE",
+          "The unsubscribe mechanism is unavailable, so the message was not sent.",
+        );
+      }
+    }
+
     const send =
       dependencies.send ??
       ((payload, options) => new Resend(apiKey).emails.send(payload, options));
 
     try {
       const response = await send(
-        { from, replyTo, to, subject, text: body },
+        { from, replyTo, to, subject, text, ...(headers ? { headers } : {}) },
         { idempotencyKey },
       );
       if (response.error != null) {
@@ -121,5 +152,10 @@ export function createEnvironmentOutreachEmailProvider() {
   return createOutreachEmailProvider({
     apiKey: process.env.RESEND_API_KEY,
     from: process.env.OUTREACH_EMAIL_FROM,
+    unsubscribeUrlFor: (context) =>
+      buildBacklinkUnsubscribeUrl(
+        process.env.NEXT_PUBLIC_SITE_URL ?? "https://norixo.io",
+        createBacklinkUnsubscribeToken(context, getBacklinkOutreachReplyTokenKeyring()),
+      ),
   });
 }

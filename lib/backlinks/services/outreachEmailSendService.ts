@@ -74,7 +74,7 @@ export type BacklinkOutreachEmailSendDependencies = {
   markAttemptAccepted: (input: { workspaceId: string; attemptId: string; providerMessageId: string | null }) => Promise<unknown>;
   markAttemptFailed: (input: { workspaceId: string; attemptId: string; errorCode: string; errorMessage: string }) => Promise<unknown>;
   markAttemptUnknown: (input: { workspaceId: string; attemptId: string; errorCode: string | null; errorMessage: string | null }) => Promise<unknown>;
-  sendEmail: (input: { to: string; subject: string; body: string; replyTo: string; idempotencyKey: string }) => Promise<OutreachEmailSendResult>;
+  sendEmail: (input: { to: string; subject: string; body: string; replyTo: string; idempotencyKey: string; context?: { workspaceId: string; outreachId: string } }) => Promise<OutreachEmailSendResult>;
   activateOutreach: (workspaceId: string, outreachId: string, input: { status: "active"; currentAttempt: number; firstContactAt: string; lastAttemptAt: string }) => Promise<Outreach>;
   inboundReplyDomain: string | undefined;
   replyTokenKeyring: BacklinkOutreachReplyTokenKeyring;
@@ -302,7 +302,7 @@ export function sendBacklinkOutreachEmail(
       }
       throw error;
     }
-    const provider = await dependencies.sendEmail({ to: recipient, subject, body, replyTo, idempotencyKey });
+    const provider = await dependencies.sendEmail({ to: recipient, subject, body, replyTo, idempotencyKey, context: { workspaceId: input.workspaceId, outreachId: input.outreachId } });
     if (provider.status === "failed") {
       await dependencies.markAttemptFailed({ workspaceId: input.workspaceId, attemptId: reservation.attempt.id, errorCode: provider.errorCode ?? "OUTREACH_EMAIL_PROVIDER_FAILED", errorMessage: provider.errorMessage ?? "The email provider rejected the message." });
       return { ...result(outreach, { ...reservation.attempt, status: "failed", error_code: provider.errorCode, error_message: provider.errorMessage }, "failed", provider.errorCode), providerMessageId: null };

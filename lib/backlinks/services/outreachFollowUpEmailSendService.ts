@@ -24,7 +24,7 @@ export type BacklinkOutreachFollowUpEmailSendDependencies = {
   reconcileSchedule: (input: { workspaceId: string; outreachId: string }) => Promise<unknown>;
   markFailed: (input: { workspaceId: string; attemptId: string; errorCode: string; errorMessage: string }) => Promise<unknown>;
   markUnknown: (input: { workspaceId: string; attemptId: string; errorCode: string | null; errorMessage: string | null }) => Promise<unknown>;
-  sendEmail: (input: { to: string; subject: string; body: string; replyTo: string; idempotencyKey: string }) => Promise<OutreachEmailSendResult>;
+  sendEmail: (input: { to: string; subject: string; body: string; replyTo: string; idempotencyKey: string; context?: { workspaceId: string; outreachId: string } }) => Promise<OutreachEmailSendResult>;
   inboundReplyDomain: string | undefined;
   replyTokenKeyring: BacklinkOutreachReplyTokenKeyring;
   now?: () => string;
@@ -129,6 +129,7 @@ export function sendBacklinkOutreachFollowUpEmail(
         body: snapshot.body,
         replyTo,
         idempotencyKey: snapshot.attemptId,
+        context: { workspaceId: input.workspaceId, outreachId: input.outreachId },
       });
     } catch {
       await dependencies.markUnknown({

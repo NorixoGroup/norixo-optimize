@@ -79,6 +79,7 @@ export type BacklinkOutreachApprovedAutoSendDependencies = {
     body: string;
     replyTo: string;
     idempotencyKey: string;
+    context?: { workspaceId: string; outreachId: string };
   }) => Promise<OutreachEmailSendResult>;
   activateOutreach: (
     workspaceId: string,
@@ -269,6 +270,7 @@ export function sendApprovedBacklinkOutreachEmail(
       body,
       replyTo,
       idempotencyKey,
+      context: { workspaceId: input.workspaceId, outreachId: input.outreachId },
     });
 
     if (provider.status === "failed") {
