@@ -30,6 +30,8 @@ create or replace function pg_temp.expect(p_name text, p_ok boolean, p_detail te
 insert into auth.users(id,email) values ('00000000-0000-0000-0000-0000000000aa','admin@norixo.test');
 insert into public.workspaces(id,name) values ('11111111-1111-1111-1111-111111111111','W1'),('22222222-2222-2222-2222-222222222222','W2');
 insert into public.workspace_members(workspace_id,user_id,role) values ('11111111-1111-1111-1111-111111111111','00000000-0000-0000-0000-0000000000aa','owner'),('22222222-2222-2222-2222-222222222222','00000000-0000-0000-0000-0000000000aa','owner');
+-- A2 reservation gates require an explicit live-enabled workspace control row (these checks exercise suppression, not the gates).
+insert into automation_workspace_controls(workspace_id,backlinks_enabled,dry_run_only) values ('11111111-1111-1111-1111-111111111111',true,false),('22222222-2222-2222-2222-222222222222',true,false);
 insert into backlink_assets(id,workspace_id,asset_key,display_name,asset_type) values
  ('aaaaaaaa-0000-0000-0000-000000000001','11111111-1111-1111-1111-111111111111','asset-w1','Asset','calculator'),
  ('aaaaaaaa-0000-0000-0000-000000000002','22222222-2222-2222-2222-222222222222','asset-w2','Asset','calculator');
@@ -41,10 +43,10 @@ insert into backlink_opportunities(id,workspace_id,opportunity_key,domain_id,ass
  ('a0000000-0000-0000-0000-000000000001','11111111-1111-1111-1111-111111111111','OP-000001','d0000000-0000-0000-0000-000000000001','aaaaaaaa-0000-0000-0000-000000000001','resource','https://one.example/a','A','Blog Article','e'),
  ('a0000000-0000-0000-0000-000000000002','11111111-1111-1111-1111-111111111111','OP-000002','d0000000-0000-0000-0000-000000000002','aaaaaaaa-0000-0000-0000-000000000001','resource','https://two.example/a','A','Blog Article','e'),
  ('a0000000-0000-0000-0000-000000000003','22222222-2222-2222-2222-222222222222','OP-000001','d0000000-0000-0000-0000-000000000003','aaaaaaaa-0000-0000-0000-000000000002','resource','https://three.example/a','A','Blog Article','e');
-insert into backlink_campaigns(id,workspace_id,campaign_key,name,objective,owner_id) values
- ('c0000000-0000-0000-0000-000000000001','11111111-1111-1111-1111-111111111111','BL-CAM-2026-001','C1','o','00000000-0000-0000-0000-0000000000aa'),
- ('c0000000-0000-0000-0000-000000000002','11111111-1111-1111-1111-111111111111','BL-CAM-2026-002','C2','o','00000000-0000-0000-0000-0000000000aa'),
- ('c0000000-0000-0000-0000-000000000003','22222222-2222-2222-2222-222222222222','BL-CAM-2026-001','C3','o','00000000-0000-0000-0000-0000000000aa');
+insert into backlink_campaigns(id,workspace_id,campaign_key,name,objective,owner_id,status,live_initial_send_enabled) values
+ ('c0000000-0000-0000-0000-000000000001','11111111-1111-1111-1111-111111111111','BL-CAM-2026-001','C1','o','00000000-0000-0000-0000-0000000000aa','active',true),
+ ('c0000000-0000-0000-0000-000000000002','11111111-1111-1111-1111-111111111111','BL-CAM-2026-002','C2','o','00000000-0000-0000-0000-0000000000aa','active',true),
+ ('c0000000-0000-0000-0000-000000000003','22222222-2222-2222-2222-222222222222','BL-CAM-2026-001','C3','o','00000000-0000-0000-0000-0000000000aa','active',true);
 -- contacts: same address a@x.test under two domains of W1 (different campaigns) and once in W2
 insert into backlink_contacts(id,workspace_id,domain_id,contact_key,email_normalized,contact_status,source_type,source_reference) values
  ('b0000000-0000-0000-0000-000000000001','11111111-1111-1111-1111-111111111111','d0000000-0000-0000-0000-000000000001','CT-000001','a@x.test','verified','site','https://one.example/contact'),

@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
     }
 
     const sendBacklinkOutreach = sendApprovedBacklinkOutreachEmail({
-      getWorkspaceControl: async () => ({ dryRunOnly: control.dry_run_only }),
+      getWorkspaceControl: async () => ({ backlinksEnabled: control.backlinks_enabled, dryRunOnly: control.dry_run_only }),
       getOutreach: (workspaceId, outreachId) =>
         getBacklinkOutreachById(adminClient, workspaceId, outreachId),
       reserveApprovedInitialAttempt: (input) =>

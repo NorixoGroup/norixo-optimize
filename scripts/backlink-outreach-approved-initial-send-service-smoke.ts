@@ -41,7 +41,7 @@ async function main(): Promise<void> {
   let activated = false;
   let disposition: "created" | "existing" | "not_approved" | "approval_stale" | "campaign_disabled" | "rate_limited" = "created";
   const service = sendApprovedBacklinkOutreachEmail({
-    getWorkspaceControl: async () => null,
+    getWorkspaceControl: async () => ({ backlinksEnabled: true, dryRunOnly: false }),
     getOutreach: async () => ({
       id: "outreach", campaign_id: "campaign", opportunity_id: "opportunity", contact_id: "contact", channel: "email",
       status: activated ? "active" : "ready", subject: "Mutable subject", body: "Mutable body", current_attempt: 0,

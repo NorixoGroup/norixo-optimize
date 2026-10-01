@@ -32,6 +32,7 @@ type Outreach = {
 };
 
 export type BacklinkOutreachApprovedAutoSendWorkspaceControl = {
+  backlinksEnabled: boolean;
   dryRunOnly: boolean;
 };
 
@@ -170,8 +171,18 @@ export function sendApprovedBacklinkOutreachEmail(
     outreachId: string;
     idempotencyKey: string;
   }): Promise<BacklinkOutreachApprovedAutoSendResult> => {
+    // G03: fail closed. A real send needs an explicit control row with backlinks enabled
+    // and dry-run explicitly off. (backlink_outreach_schedule_apply_enabled is a
+    // scheduling capability, not a send gate, and is not required here.) The same gates
+    // are enforced again inside the reservation transaction by the database.
     const workspaceControl = await dependencies.getWorkspaceControl(input.workspaceId);
-    if (workspaceControl?.dryRunOnly === true) {
+    if (workspaceControl == null) {
+      throw new BacklinkOutreachEmailSendError("OUTREACH_SEND_WORKSPACE_CONTROL_MISSING");
+    }
+    if (workspaceControl.backlinksEnabled !== true) {
+      throw new BacklinkOutreachEmailSendError("OUTREACH_SEND_BACKLINKS_DISABLED");
+    }
+    if (workspaceControl.dryRunOnly !== false) {
       throw new BacklinkOutreachEmailSendError("OUTREACH_SEND_DISABLED_BY_DRY_RUN");
     }
 
@@ -211,6 +222,18 @@ export function sendApprovedBacklinkOutreachEmail(
 
     if (reservation.disposition === "rate_limited") {
       throw new BacklinkOutreachEmailSendError("OUTREACH_SEND_RATE_LIMIT_EXCEEDED");
+    }
+    if (reservation.disposition === "workspace_controls_missing") {
+      throw new BacklinkOutreachEmailSendError("OUTREACH_SEND_WORKSPACE_CONTROL_MISSING");
+    }
+    if (reservation.disposition === "workspace_backlinks_disabled") {
+      throw new BacklinkOutreachEmailSendError("OUTREACH_SEND_BACKLINKS_DISABLED");
+    }
+    if (reservation.disposition === "workspace_dry_run") {
+      throw new BacklinkOutreachEmailSendError("OUTREACH_SEND_DISABLED_BY_DRY_RUN");
+    }
+    if (reservation.disposition === "campaign_not_active") {
+      throw new BacklinkOutreachEmailSendError("OUTREACH_CAMPAIGN_NOT_ACTIVE");
     }
     if (
       reservation.disposition === "not_approved" ||

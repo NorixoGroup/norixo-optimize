@@ -1,5 +1,7 @@
 import { Resend } from "resend";
 
+import { createSupabaseAdminClient } from "../../supabase-admin";
+import { isBacklinkEmailSuppressed, type BacklinkEmailSuppressionReadClient } from "../repositories/emailSuppressionsRepository";
 import { appendOutreachComplianceFooter, buildListUnsubscribeHeaders } from "../services/outreachEmailCompliance";
 import { getBacklinkOutreachReplyTokenKeyring } from "../services/outreachReplyCorrelationIdentity";
 import { buildBacklinkUnsubscribeUrl, createBacklinkUnsubscribeToken } from "../services/outreachUnsubscribeToken";
@@ -42,6 +44,13 @@ export type OutreachEmailProviderDependencies = {
    * message is NOT sent (fail closed).
    */
   unsubscribeUrlFor?: (context: OutreachEmailSendContext) => string;
+  /**
+   * Final recipient-suppression recheck, executed immediately before the external call.
+   * When provided it is mandatory: a suppressed recipient, a missing context or ANY lookup
+   * failure prevents the send (fail closed). It narrows, but cannot remove, the window
+   * between reservation and provider acceptance.
+   */
+  isEmailSuppressed?: (workspaceId: string, email: string) => Promise<boolean>;
 };
 
 function result(
@@ -118,6 +127,27 @@ export function createOutreachEmailProvider(
       }
     }
 
+    if (dependencies.isEmailSuppressed) {
+      let suppressed: boolean;
+      try {
+        if (!input.context) throw new Error("OUTREACH_EMAIL_CONTEXT_MISSING");
+        suppressed = await dependencies.isEmailSuppressed(input.context.workspaceId, to);
+      } catch {
+        return result(
+          "failed",
+          "OUTREACH_EMAIL_SUPPRESSION_CHECK_UNAVAILABLE",
+          "The recipient suppression check could not be completed, so the message was not sent.",
+        );
+      }
+      if (suppressed) {
+        return result(
+          "failed",
+          "BACKLINK_EMAIL_SUPPRESSED",
+          "The recipient is suppressed, so the message was not sent.",
+        );
+      }
+    }
+
     const send =
       dependencies.send ??
       ((payload, options) => new Resend(apiKey).emails.send(payload, options));
@@ -152,6 +182,12 @@ export function createEnvironmentOutreachEmailProvider() {
   return createOutreachEmailProvider({
     apiKey: process.env.RESEND_API_KEY,
     from: process.env.OUTREACH_EMAIL_FROM,
+    isEmailSuppressed: (workspaceId, email) =>
+      isBacklinkEmailSuppressed(
+        createSupabaseAdminClient() as unknown as BacklinkEmailSuppressionReadClient,
+        workspaceId,
+        email,
+      ),
     unsubscribeUrlFor: (context) =>
       buildBacklinkUnsubscribeUrl(
         process.env.NEXT_PUBLIC_SITE_URL ?? "https://norixo.io",

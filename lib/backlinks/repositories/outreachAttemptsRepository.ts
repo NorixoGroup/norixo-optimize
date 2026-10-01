@@ -57,7 +57,11 @@ export type BacklinkOutreachApprovedInitialAttemptResult =
         | "not_ready"
         | "invalid_recipient"
         | "missing_approved_content"
-        | "ineligible";
+        | "ineligible"
+        | "workspace_controls_missing"
+        | "workspace_backlinks_disabled"
+        | "workspace_dry_run"
+        | "campaign_not_active";
       rateLimitReason: null;
     }
   | {
@@ -259,6 +263,26 @@ export async function getBacklinkOutreachInitialAttemptSnapshotByAttemptId(
   return data;
 }
 
+/**
+ * Deterministic refusals raised by the reservation-side gate trigger
+ * (migration 20261001150000). They are returned as dispositions, not thrown, so the
+ * caller reports the exact reason. Anything else remains a hard error.
+ */
+const INITIAL_SEND_GATE_REFUSALS = {
+  BACKLINK_SEND_WORKSPACE_CONTROL_MISSING: "workspace_controls_missing",
+  BACKLINK_SEND_BACKLINKS_DISABLED: "workspace_backlinks_disabled",
+  BACKLINK_SEND_DRY_RUN: "workspace_dry_run",
+  BACKLINK_SEND_CAMPAIGN_NOT_ACTIVE: "campaign_not_active",
+  BACKLINK_SEND_CAMPAIGN_LIVE_DISABLED: "campaign_disabled",
+} as const;
+
+function initialSendGateRefusal(error: unknown) {
+  const message = typeof error === "object" && error != null && "message" in error ? (error as { message: unknown }).message : null;
+  return typeof message === "string" && Object.prototype.hasOwnProperty.call(INITIAL_SEND_GATE_REFUSALS, message)
+    ? INITIAL_SEND_GATE_REFUSALS[message as keyof typeof INITIAL_SEND_GATE_REFUSALS]
+    : null;
+}
+
 export async function reserveBacklinkOutreachApprovedInitialAttempt(
   client: ReserveBacklinkOutreachInitialAttemptRpcClient,
   input: {
@@ -289,6 +313,10 @@ export async function reserveBacklinkOutreachApprovedInitialAttempt(
   );
 
   if (error != null) {
+    const gateRefusal = initialSendGateRefusal(error);
+    if (gateRefusal != null) {
+      return { attempt: null, snapshot: null, disposition: gateRefusal, rateLimitReason: null };
+    }
     const diagnostic = typeof error === "object" && error != null ? error as unknown as Record<string, unknown> : null;
     const diagnosticString = (key: string) => typeof diagnostic?.[key] === "string" ? diagnostic[key] : null;
     console.error("[backlinks-approved-initial-reservation-error]", {

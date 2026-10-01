@@ -69,6 +69,15 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     return NextResponse.json({ ok: true, result });
   } catch (error) {
     if (error instanceof BacklinkOutreachEmailSendError && error.code === "OUTREACH_SEND_DISABLED_BY_DRY_RUN") return NextResponse.json({ error: { code: error.code, message: error.message === "OUTREACH_SEND_DISABLED_BY_DRY_RUN" ? "External email sending is disabled while Backlinks is in dry-run mode." : error.message } }, { status: 409 });
+    if (
+      error instanceof BacklinkOutreachEmailSendError &&
+      (error.code === "OUTREACH_SEND_WORKSPACE_CONTROL_MISSING" ||
+        error.code === "OUTREACH_SEND_BACKLINKS_DISABLED" ||
+        error.code === "OUTREACH_CAMPAIGN_NOT_ACTIVE" ||
+        error.code === "OUTREACH_CAMPAIGN_DISABLED")
+    ) {
+      return NextResponse.json({ error: { code: error.code, message: "External email sending is not permitted for this workspace or campaign." } }, { status: 409 });
+    }
     if (error instanceof BacklinkOutreachEmailSendError && error.code === "OUTREACH_SEND_ATTEMPT_IN_PROGRESS") return NextResponse.json({ error: "An outreach send attempt is already in progress." }, { status: 409 });
     if (error instanceof BacklinkOutreachEmailSendError && error.code === "OUTREACH_SEND_ATTEMPT_UNRESOLVED") return NextResponse.json({ error: "Resolve the uncertain outreach attempt before sending again." }, { status: 409 });
     const safeError = extractSafeError(error);
