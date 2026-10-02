@@ -165,6 +165,7 @@ function TopNavbar({
             { href: "/dashboard/admin", label: copy.nav.admin },
             { href: "/dashboard/backlinks", label: "Backlinks" },
             { href: "/dashboard/admin/marketing-studio", label: "Norixo AI" },
+            { href: "/dashboard/nomad-studio", label: "🎬 Nomad Studio" },
           ]
         : []),
     ],
