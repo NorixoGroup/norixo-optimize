@@ -208,6 +208,5 @@ export type OverviewResponse =
   | {
       connected: true;
       diagnostics: DiagnosticReport;
-      channel_id: string;
       sections: { [K in BridgeView]: SectionResult<ViewDataMap[K]> };
     };

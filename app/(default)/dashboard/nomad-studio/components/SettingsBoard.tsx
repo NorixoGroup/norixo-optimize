@@ -35,7 +35,7 @@ export function SettingsBoard({ data }: { data: SettingsData }) {
         <Group
           title={S.groups.channel}
           rows={[
-            { label: S.rows.channel, value: data.channel.id, note: data.project?.name },
+            { label: S.rows.channel, value: data.project?.name ?? S.notDefined },
             { label: S.rows.language, value: language },
             { label: S.rows.style, value: S.notDefined },
           ]}

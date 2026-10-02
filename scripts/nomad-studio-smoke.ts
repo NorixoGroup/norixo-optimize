@@ -164,8 +164,11 @@ async function main() {
     const f = healthy(calls);
     const call = (view: string, qs = "") => handleStudioRequest({ view, params: new URLSearchParams(qs), env: ENV, fetchImpl: f, now: NOW });
     assert.equal((await call("nimporte")).status, 404);
-    assert.equal((await call("overview", "channel=../x")).status, 400);
-    assert.equal((await call("overview", "channel=BAD")).status, 400);
+    for (const q of ["channel=nomade", "channel=../x", "channel=BAD", "channel="]) {
+      const r = await call("overview", q);
+      assert.equal(r.status, 400, q);
+      assert.deepEqual(r.body, { error: "unsupported_parameter" });
+    }
     assert.equal((await call("pipeline", "production_id=../../x")).status, 400);
     assert.equal((await call("journal", "limit=9999")).status, 400);
     assert.equal(calls.length, 0, "appel réseau avant validation");
@@ -177,15 +180,18 @@ async function main() {
 
     const calls: Call[] = [];
     const partial = healthy(calls, { comments: () => json(500, { error: "internal_error" }) });
-    const res = await handleStudioRequest({ view: "overview", params: new URLSearchParams("channel=nomade&include_tests=1"), env: ENV, fetchImpl: partial, now: NOW });
+    const res = await handleStudioRequest({ view: "overview", params: new URLSearchParams("include_tests=1"), env: ENV, fetchImpl: partial, now: NOW });
     const body = res.body as { connected: boolean; sections: Record<string, { ok: boolean }> };
     assert.equal(body.connected, true);
     assert.deepEqual(Object.keys(body.sections).sort(), [...BRIDGE_VIEWS].sort());
     assert.equal(body.sections.comments.ok, false);
     assert.equal(body.sections.productions.ok, true);
     const productionsCall = calls.find((c) => c.url.includes("/api/v1/productions"));
-    assert.ok(productionsCall && productionsCall.url.includes("include_tests=1") && productionsCall.url.includes("channel=nomade"));
-    for (const c of calls) assert.equal(new URL(c.url).hostname, "127.0.0.1");
+    assert.ok(productionsCall && productionsCall.url.includes("include_tests=1"));
+    for (const c of calls) {
+      assert.equal(new URL(c.url).hostname, "127.0.0.1");
+      assert.ok(!c.url.includes("channel"), "paramètre de chaîne transmis au pont");
+    }
 
     const single = await handleStudioRequest({ view: "planner", params: new URLSearchParams(), env: ENV, fetchImpl: healthy(), now: NOW });
     assert.equal((single.body as { result: { ok: boolean } }).result.ok, true);
@@ -359,7 +365,6 @@ async function main() {
     return {
       connected: true,
       diagnostics: diag,
-      channel_id: "nomade",
       sections: {
         system: { ok: true, data: SYSTEM },
         productions: { ok: true, data: { items: [prodItem({}), prodItem({ id: "prod-2026-05-02T10-00-00-000Z-bbbbbb", title: "Essai technique", linked: false, type: "test", bucket: "planned", workflow_state: "idea", progress_percent: 0 })], counts: { planned: 1, in_progress: 1, published: 0, archived: 0 }, totals: { in_pipeline: 524, shown: 2, hidden_tests: 3, truncated: true }, thumbnails: "not_available" } },
@@ -388,6 +393,7 @@ async function main() {
       assert.ok(!ENGLISH.test(text), `anglais détecté : ${text.match(ENGLISH)?.[0]}`);
       assert.ok(!/127\.0\.0\.1|localhost|https?:\/\/|:\d{4}\b/.test(text), `URL interne : ${text.match(/127\.0\.0\.1|localhost|https?:\/\/\S*|:\d{4}\b/)?.[0]}`);
       assert.ok(!/undefined|NaN|\[object Object\]|FR brut du bridge/.test(text), "valeur parasite ou texte brut du bridge");
+      assert.ok(!/\bnomade\b/.test(text), "identifiant interne de chaîne affiché à l'utilisateur");
       for (const must of ["Nomad Studio", "Votre usine de production vidéo par IA", "État du système", "Épisode en cours", "Activité en cours", "Utilisation des ressources", "En attente de connexion", "Contrôle qualité", "Évolution des prompts", "Fin estimée", "Validations restantes", "Afficher les productions techniques", "Valider", "Modifier", "Ignorer", "Lecture seule", "Transition : Idée → En production", "Vidéo liée à une production"]) {
         assert.ok(text.includes(must), `texte absent : ${must}`);
       }

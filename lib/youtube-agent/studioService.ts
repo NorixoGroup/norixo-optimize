@@ -17,9 +17,7 @@ type Env = Record<string, string | undefined>;
 export const STUDIO_VIEWS = ["overview", "diagnostics", ...BRIDGE_VIEWS] as const;
 export type StudioView = (typeof STUDIO_VIEWS)[number];
 
-const CHANNEL_PATTERN = /^[a-z0-9][a-z0-9-]{0,39}$/;
 const PRODUCTION_PATTERN = /^prod-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z-[0-9a-f]{6}$/;
-const DEFAULT_CHANNEL = "nomade";
 
 export type StudioResult = { status: number; body: unknown };
 
@@ -27,12 +25,11 @@ export function isStudioView(value: string): value is StudioView {
   return (STUDIO_VIEWS as readonly string[]).includes(value);
 }
 
-function parseParams(params: URLSearchParams): { ok: true; query: Record<string, string>; channel: string } | { ok: false; error: string } {
-  const channel = params.get("channel") ?? DEFAULT_CHANNEL;
+function parseParams(params: URLSearchParams): { ok: true; query: Record<string, string> } | { ok: false; error: string } {
+  // Une seule chaîne : aucun paramètre de chaîne n'est accepté.
+  if (params.has("channel")) return { ok: false, error: "unsupported_parameter" };
 
-  if (!CHANNEL_PATTERN.test(channel)) return { ok: false, error: "invalid_channel" };
-
-  const query: Record<string, string> = { channel };
+  const query: Record<string, string> = {};
   const productionId = params.get("production_id");
 
   if (productionId !== null) {
@@ -53,7 +50,7 @@ function parseParams(params: URLSearchParams): { ok: true; query: Record<string,
     query.limit = String(n);
   }
 
-  return { ok: true, query, channel };
+  return { ok: true, query };
 }
 
 export async function handleStudioRequest(input: {
@@ -87,11 +84,11 @@ export async function handleStudioRequest(input: {
   };
 
   if (input.view !== "overview") {
-    return { status: 200, body: { connected: true, channel_id: parsed.channel, result: await load(input.view) } };
+    return { status: 200, body: { connected: true, result: await load(input.view) } };
   }
 
   const entries = await Promise.all(BRIDGE_VIEWS.map(async (view) => [view, await load(view)] as const));
   const sections = Object.fromEntries(entries) as Extract<OverviewResponse, { connected: true }>["sections"];
 
-  return { status: 200, body: { connected: true, diagnostics: diag.report, channel_id: parsed.channel, sections } satisfies OverviewResponse };
+  return { status: 200, body: { connected: true, diagnostics: diag.report, sections } satisfies OverviewResponse };
 }
