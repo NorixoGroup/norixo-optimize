@@ -1,4 +1,31 @@
 import { readFile } from "node:fs/promises";
-function assert(v: unknown, m: string): asserts v { if (!v) throw new Error(m); }
-async function main() { const [page, dialog] = await Promise.all([readFile("app/(default)/dashboard/backlinks/page.tsx", "utf8"), readFile("app/(default)/dashboard/backlinks/_components/OutreachReadyDialog.tsx", "utf8")]); const start = page.indexOf("const handleMarkOutreachReady"); const readyHandler = page.slice(start, page.indexOf("const closeOutreachResponseDialog", start)); for (const value of ["OutreachReadyDialog", "Marquer comme prêt", 'outreach.status === "draft"', "outreachReadySubmitting", "handleMarkOutreachReady", "JSON.stringify({ confirm: true })", "await loadDashboard()", "setOutreachReadyDialog(null)"]) assert(page.includes(value), `Missing ${value}`); assert(readyHandler.includes("JSON.stringify({ confirm: true })"), "Ready payload must only confirm."); for (const forbidden of ["idempotencyKey", "subject", "recipient", "provider", "channel", "status", "workspaceId", "actorUserId"]) assert(!readyHandler.includes(forbidden), `Forbidden Ready payload field: ${forbidden}`); for (const value of ["outreach.contact", "Aucun message ne sera envoyé", "Annuler", "Marquer comme prêt", "outreach.subject", "outreach.body"]) assert(dialog.includes(value), `Missing dialog content ${value}`); for (const forbidden of ["Envoyer", "provider", "follow-up", "scheduler", "apiRequest"]) assert(!dialog.includes(forbidden), `Forbidden ${forbidden}`); console.log("PASS — Backlink outreach ready UI smoke"); }
+
+function assert(value: unknown, message: string): asserts value {
+  if (!value) throw new Error(message);
+}
+
+async function main() {
+  const [page, dialog] = await Promise.all([
+    readFile("app/(default)/dashboard/backlinks/page.tsx", "utf8"),
+    readFile("app/(default)/dashboard/backlinks/_components/OutreachReadyDialog.tsx", "utf8"),
+  ]);
+  const start = page.indexOf("const handleMarkOutreachReady");
+  const readyHandler = page.slice(start, page.indexOf("const closeOutreachResponseDialog", start));
+  for (const value of [
+    "OutreachReadyDialog",
+    "Marquer comme prêt",
+    'row.status === "draft" && row.channel === "email"',
+    "outreachReadySubmitting",
+    "handleMarkOutreachReady",
+    "JSON.stringify({ confirm: true })",
+    "await loadDashboard()",
+    "setOutreachReadyDialog(null)",
+  ]) assert(page.includes(value), `Missing ${value}`);
+  assert(readyHandler.includes("JSON.stringify({ confirm: true })"), "Ready payload must only confirm.");
+  for (const forbidden of ["idempotencyKey", "subject", "recipient", "provider", "channel", "status", "workspaceId", "actorUserId"]) assert(!readyHandler.includes(forbidden), `Forbidden Ready payload field: ${forbidden}`);
+  for (const value of ["outreach.contact", "Aucun message ne sera envoyé", "Annuler", "Marquer comme prêt", "outreach.subject", "outreach.body"]) assert(dialog.includes(value), `Missing dialog content ${value}`);
+  for (const forbidden of ["Envoyer", "provider", "follow-up", "scheduler", "apiRequest"]) assert(!dialog.includes(forbidden), `Forbidden ${forbidden}`);
+  console.log("PASS — Backlink outreach ready UI smoke");
+}
+
 void main();
