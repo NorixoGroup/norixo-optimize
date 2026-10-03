@@ -33,6 +33,7 @@ export function NomadStudioView({
   showTechnical,
   onToggleTechnical,
   onReload,
+  onConnectGoogle,
 }: {
   overview: OverviewResponse | null;
   loading: boolean;
@@ -40,6 +41,7 @@ export function NomadStudioView({
   showTechnical: boolean;
   onToggleTechnical: (value: boolean) => void;
   onReload: () => void;
+  onConnectGoogle: () => void;
 }) {
   const raw = overview?.connected === true ? overview : null;
   const filtered = raw ? applyTechnicalFilter(raw, showTechnical) : null;
@@ -97,7 +99,7 @@ export function NomadStudioView({
           <Section title={COPY.learning.title} result={connected.sections.learning}>{(data) => <LearningBoard data={data} />}</Section>
           <div className="grid gap-6 xl:grid-cols-[1fr_1.2fr]">
             <Section title={COPY.journal.title} result={connected.sections.journal}>{(data) => <JournalBoard data={data} />}</Section>
-            <Section title={COPY.settings.title} result={connected.sections.settings}>{(data) => <SettingsBoard data={data} />}</Section>
+            <Section title={COPY.settings.title} result={connected.sections.settings}>{(data) => <SettingsBoard data={data} onConnectGoogle={onConnectGoogle} />}</Section>
           </div>
         </>
       ) : null}

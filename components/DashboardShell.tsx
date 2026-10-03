@@ -211,13 +211,12 @@ function TopNavbar({
                 NORIXO
               </div>
               <div className="nk-dashboard-topbar-brand text-base leading-none tracking-tight md:text-lg">
-                <span className="font-semibold">Norixo</span>{" "}
-                <span className="nk-dashboard-topbar-brand-muted font-normal">Optimize</span>
+                <span className="font-semibold">Norixo</span>
               </div>
             </div>
           </div>
 
-          <nav className="nk-dashboard-topbar-nav hidden min-w-0 flex-1 items-center justify-center gap-1.5 overflow-x-auto text-[13px] font-bold uppercase tracking-[0.16em] whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden md:flex">
+          <nav className="nk-dashboard-topbar-nav hidden min-w-0 flex-1 items-center justify-center gap-1 overflow-x-auto text-xs font-bold uppercase tracking-[0.16em] whitespace-nowrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden md:flex">
             {visibleNavItems.map((item) => {
               const active =
                 item.href === "/dashboard"
@@ -276,7 +275,7 @@ function TopNavbar({
               <WorkspaceSwitcher />
             </div>
 
-            <div className="hidden min-w-[150px] md:block">
+            <div className="hidden min-w-[104px] md:block">
               <LanguageSwitcher />
             </div>
 

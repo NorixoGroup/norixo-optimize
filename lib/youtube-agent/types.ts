@@ -151,7 +151,43 @@ export type SettingsData = {
   workflow: { transitions: number; approval_required_on: string[] };
   comments: { human_validation_required: true; auto_reply: false; ingestion: string };
   publication: { status: string; approval_required: boolean };
+  youtube_channel: YoutubeChannelState;
+  // Absent ou null avec un agent antérieur à R20.2.
+  youtube_videos?: YoutubeVideosState | null;
 };
+
+// Vidéos de la chaîne lues par l'agent (R20.2), 50 au plus.
+export type YoutubeVideo = {
+  video_id: string;
+  title: string;
+  description: string;
+  published_at: string | null;
+  thumbnail_url: string | null;
+  privacy_status: string | null;
+};
+
+export type YoutubeVideosState =
+  | { status: "not_loaded" }
+  | { status: "ok"; fetched_at: string; items: YoutubeVideo[]; has_more: boolean }
+  | { status: "error"; fetched_at: string; reason: string };
+
+// Identité de la chaîne lue par l'agent sur YouTube (R20.1).
+export type YoutubeChannel = {
+  channel_id: string;
+  title: string;
+  description: string;
+  thumbnail_url: string | null;
+  country: string | null;
+  subscriber_count: number | null;
+  video_count: number;
+  view_count: number;
+  related_playlists: Record<string, string>;
+};
+
+export type YoutubeChannelState =
+  | { status: "not_loaded" }
+  | { status: "ok"; fetched_at: string; channel: YoutubeChannel }
+  | { status: "error"; fetched_at: string; reason: string };
 
 export type SystemData = {
   agent: { name: string; phase: string };

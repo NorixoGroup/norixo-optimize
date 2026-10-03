@@ -197,6 +197,33 @@ async function main() {
     assert.equal((single.body as { result: { ok: boolean } }).result.ok, true);
   });
 
+  await ok("connexion Google : URL de l'agent relayée telle quelle, jamais chargée avec la vue d'ensemble", async () => {
+    const AUTHORIZE = "https://example.test/o/oauth2/v2/auth?client_id=x&state=abc&prompt=consent";
+    const calls: Call[] = [];
+    const f = healthy(calls, { youtube_login: () => json(200, envelope("youtube_login", { authorizeUrl: AUTHORIZE })) });
+    const res = await handleStudioRequest({ view: "youtube_login", params: new URLSearchParams(), env: ENV, fetchImpl: f, now: NOW });
+    const body = res.body as { connected: boolean; result: { ok: boolean; data: { authorizeUrl: string } } };
+    assert.equal(res.status, 200);
+    assert.equal(body.connected, true);
+    assert.equal(body.result.ok, true);
+    assert.equal(body.result.data.authorizeUrl, AUTHORIZE);
+    const login = calls.find((c) => c.url.includes("/api/v1/youtube_login"));
+    assert.ok(login && (login.init.headers as Record<string, string>)["x-agent-bridge-token"] === TOKEN && login.init.method === "GET");
+
+    const failed = await handleStudioRequest({ view: "youtube_login", params: new URLSearchParams(), env: ENV, fetchImpl: healthy([], { youtube_login: () => json(500, { schema: BRIDGE_CONTRACT, ok: false, error: "internal_error" }) }), now: NOW });
+    assert.equal((failed.body as { result: { ok: boolean } }).result.ok, false);
+
+    const overviewCalls: Call[] = [];
+    await handleStudioRequest({ view: "overview", params: new URLSearchParams(), env: ENV, fetchImpl: healthy(overviewCalls), now: NOW });
+    assert.ok(!overviewCalls.some((c) => c.url.includes("youtube_login")), "connexion déclenchée par la vue d'ensemble");
+
+    const hook = await fs.readFile(path.join(process.cwd(), "app/(default)/dashboard/nomad-studio/useNomadStudio.ts"), "utf8");
+    assert.match(hook, /\/youtube_login`/);
+    assert.match(hook, /window\.location\.assign\(url\)/);
+    const board = await fs.readFile(path.join(process.cwd(), "app/(default)/dashboard/nomad-studio/components/SettingsBoard.tsx"), "utf8");
+    assert.match(board, /onClick=\{onConnectGoogle\}/);
+  });
+
   const read = (p: string) => fs.readFile(path.join(process.cwd(), p), "utf8");
   const walk = async (dir: string): Promise<string[]> => (await fs.readdir(path.join(process.cwd(), dir), { withFileTypes: true }).then((es) => Promise.all(es.map(async (e) => (e.isDirectory() ? walk(`${dir}/${e.name}`) : [`${dir}/${e.name}`]))))).flat();
 
@@ -232,7 +259,7 @@ async function main() {
       const fetches = src.match(/\bfetch\s*\(/g)?.length ?? 0;
       if (file.endsWith("lib/youtube-agent/bridgeClient.ts")) continue;
       if (file.endsWith("nomad-studio/useNomadStudio.ts")) {
-        assert.equal(fetches, 2);
+        assert.equal(fetches, 3);
         assert.ok(/\/api\/admin\/youtube-agent/.test(src) && /\/api\/admin\/me/.test(src));
         continue;
       }
@@ -356,7 +383,8 @@ async function main() {
   const TEXT_OF = (html: string) => html.replace(/<style[\s\S]*?<\/style>/g, "").replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/&#x27;|&#39;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/\s+/g, " ");
   const ENGLISH = /\b(Waiting|connection|Pending|Priority|Planner|Settings|Learning|Analytics|Comments|Current|Resource|Usage|Overall|Last|Next|Refresh|Retry|Read-only|available|Run|Done|Validated|Applied|Evidence|Episode|Thumbnail|Duration|Target|Unavailable|Connected|Disabled|Running|Failed|Estimated|Remaining|Blockers|Queue|Details?|Cause probable ?:? ?the)\b/;
   const noop = () => undefined;
-  const view = (overview: OverviewResponse | null, showTechnical = false) => TEXT_OF(renderToStaticMarkup(React.createElement(NomadStudioView, { overview, loading: false, error: null, showTechnical, onToggleTechnical: noop, onReload: noop })));
+  const CHANNEL_OK = { status: "ok", fetched_at: NOW.toISOString(), channel: { channel_id: "UCabcdefghijklmnopqrstuv", title: "Les Découvertes du Nomade", description: "", thumbnail_url: "https://yt3.example.test/photo.jpg", country: "FR", subscriber_count: 12, video_count: 0, view_count: 0, related_playlists: { uploads: "UUabcdefghijklmnopqrstuv" } } };
+  const view = (overview: OverviewResponse | null, showTechnical = false) => TEXT_OF(renderToStaticMarkup(React.createElement(NomadStudioView, { overview, loading: false, error: null, showTechnical, onToggleTechnical: noop, onReload: noop, onConnectGoogle: noop })));
 
   const stage = (key: string, status: string) => ({ key, label: key, engine: key, status, tone: "grey", percent: status === "done" ? 100 : null });
   const connectedFixture = async (): Promise<OverviewResponse> => {
@@ -379,10 +407,69 @@ async function main() {
           { ts: NOW.toISOString(), type: "workflow_refused", action: "to:published", engine: "workflow", subject_id: null, outcome: "approval_missing", actor: "agent_recorded", validation: "none" },
           { ts: NOW.toISOString(), type: "execute_refused", action: "execute", engine: "research", subject_id: null, outcome: "not_executable_in_r18_2", actor: "agent_recorded", validation: "none" },
         ] } },
-        settings: { ok: true, data: { read_only: true, channel: { id: "nomade" }, language: "fr", project: { name: "Les Découvertes du Nomade" }, writing_style: { status: "not_defined" }, narration_voice: { kind: "elevenlabs", model_id: "eleven_multilingual_v2", voice_id: "voiceXYZ" }, workflow: { transitions: 15, approval_required_on: ["idea→in_production", "ready_to_publish→published"] }, comments: { human_validation_required: true, auto_reply: false, ingestion: "not_connected" }, publication: { status: "not_connected", approval_required: true } } },
+        settings: { ok: true, data: { read_only: true, channel: { id: "nomade" }, language: "fr", project: { name: "Les Découvertes du Nomade" }, writing_style: { status: "not_defined" }, narration_voice: { kind: "elevenlabs", model_id: "eleven_multilingual_v2", voice_id: "voiceXYZ" }, workflow: { transitions: 15, approval_required_on: ["idea→in_production", "ready_to_publish→published"] }, comments: { human_validation_required: true, auto_reply: false, ingestion: "not_connected" }, publication: { status: "not_connected", approval_required: true }, youtube_channel: CHANNEL_OK, youtube_videos: { status: "ok", fetched_at: NOW.toISOString(), items: [], has_more: false } } },
       },
     } as unknown as OverviewResponse;
   };
+
+  await ok("chaîne YouTube (R20.1) : photo, nom, Channel ID, pays, abonnés, vidéos (0 nominal), vues ; erreurs lisibles", async () => {
+    const ov = await connectedFixture();
+    const html = renderToStaticMarkup(React.createElement(NomadStudioView, { overview: ov, loading: false, error: null, showTechnical: false, onToggleTechnical: noop, onReload: noop, onConnectGoogle: noop }));
+    const text = TEXT_OF(html);
+    for (const expected of ["Les Découvertes du Nomade", "UCabcdefghijklmnopqrstuv", "FR", "Abonnés", "12", "Vidéos", "Vues"]) assert.ok(text.includes(expected), expected);
+    assert.match(html, /<img[^>]+src="https:\/\/yt3\.example\.test\/photo\.jpg"/);
+    assert.ok(!/Lecture de la chaîne impossible|erreur/i.test(text.slice(text.indexOf("Chaîne YouTube"), text.indexOf("Chaîne YouTube") + 200)), "chaîne vide traitée comme une erreur");
+    const settings = (ov as Extract<OverviewResponse, { connected: true }>).sections.settings as { ok: true; data: SettingsData };
+    for (const [state, expected] of [
+      [{ status: "not_loaded" }, "non encore lue"],
+      [{ status: "error", fetched_at: NOW.toISOString(), reason: "quota_exceeded" }, "Quota YouTube dépassé"],
+      [{ status: "error", fetched_at: NOW.toISOString(), reason: "inconnu" }, "Lecture de la chaîne impossible"],
+    ] as const) {
+      settings.data = { ...settings.data, youtube_channel: state as SettingsData["youtube_channel"] };
+      const t = TEXT_OF(renderToStaticMarkup(React.createElement(NomadStudioView, { overview: ov, loading: false, error: null, showTechnical: false, onToggleTechnical: noop, onReload: noop, onConnectGoogle: noop })));
+      assert.ok(t.includes(expected), expected);
+    }
+  });
+
+  await ok("vidéos YouTube (R20.2) : chaîne vide « Aucune vidéo publiée. », liste avec confidentialité, erreurs lisibles", async () => {
+    const ov = await connectedFixture();
+    const settings = (ov as Extract<OverviewResponse, { connected: true }>).sections.settings as { ok: true; data: SettingsData };
+    const render = () => renderToStaticMarkup(React.createElement(NomadStudioView, { overview: ov, loading: false, error: null, showTechnical: false, onToggleTechnical: noop, onReload: noop, onConnectGoogle: noop }));
+    assert.ok(TEXT_OF(render()).includes("Aucune vidéo publiée."), "chaîne vide");
+    const video = (id: string, privacy: string) => ({ video_id: id, title: `Titre ${id}`, description: "", published_at: "2026-09-02T10:00:00Z", thumbnail_url: `https://i.example.test/${id}.jpg`, privacy_status: privacy });
+    settings.data = { ...settings.data, youtube_videos: { status: "ok", fetched_at: NOW.toISOString(), items: [video("aaaaaaaaaaa", "public"), video("bbbbbbbbbbb", "private"), video("ccccccccccc", "unlisted")], has_more: true } };
+    const html = render();
+    const text = TEXT_OF(html);
+    for (const expected of ["Titre aaaaaaaaaaa", "Titre bbbbbbbbbbb", "Publique", "Privée", "Non répertoriée", "aaaaaaaaaaa", "Seules les 50 premières vidéos sont affichées."]) assert.ok(text.includes(expected), expected);
+    assert.ok(!text.includes("Aucune vidéo publiée."));
+    assert.match(html, /<img[^>]+src="https:\/\/i\.example\.test\/aaaaaaaaaaa\.jpg"/);
+    for (const [state, expected] of [
+      [{ status: "not_loaded" }, "Vidéos non encore lues"],
+      [{ status: "error", fetched_at: NOW.toISOString(), reason: "quota_exceeded" }, "Quota YouTube dépassé"],
+      [{ status: "error", fetched_at: NOW.toISOString(), reason: "inconnu" }, "Lecture des vidéos impossible"],
+    ] as const) {
+      settings.data = { ...settings.data, youtube_videos: state as SettingsData["youtube_videos"] };
+      assert.ok(TEXT_OF(render()).includes(expected), expected);
+    }
+  });
+
+  await ok("vidéos YouTube (R20.2A) : youtube_videos absent, null ou undefined → état neutre, aucun crash", async () => {
+    const ov = await connectedFixture();
+    const settings = (ov as Extract<OverviewResponse, { connected: true }>).sections.settings as { ok: true; data: SettingsData };
+    const render = () => TEXT_OF(renderToStaticMarkup(React.createElement(NomadStudioView, { overview: ov, loading: false, error: null, showTechnical: false, onToggleTechnical: noop, onReload: noop, onConnectGoogle: noop })));
+    const withoutVideos: Partial<SettingsData> = { ...settings.data };
+    delete withoutVideos.youtube_videos;
+    for (const data of [withoutVideos, { ...settings.data, youtube_videos: null }, { ...settings.data, youtube_videos: undefined }] as SettingsData[]) {
+      settings.data = data;
+      const text = render();
+      assert.ok(text.includes("Aucune donnée vidéo disponible"), "état neutre absent");
+      assert.ok(text.includes("UCabcdefghijklmnopqrstuv"), "le reste de la carte doit s'afficher");
+      assert.ok(!text.includes("Aucune vidéo publiée."), "absence confondue avec une chaîne vide");
+    }
+    const board = await fs.readFile(path.join(process.cwd(), "app/(default)/dashboard/nomad-studio/components/SettingsBoard.tsx"), "utf8");
+    const list = board.slice(board.indexOf("function VideoList"), board.indexOf("export function SettingsBoard"));
+    assert.ok(list.indexOf("if (!state)") !== -1 && list.indexOf("if (!state)") < list.indexOf("state.status"), "state.status lu avant de vérifier state");
+  });
 
   await ok("rendu connecté : 100 % français, aucune URL interne, aucun port, aucune valeur parasite", async () => {
     const ov = await connectedFixture();

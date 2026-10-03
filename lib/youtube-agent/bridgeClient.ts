@@ -4,7 +4,7 @@
 import type { BridgeConfigOk } from "./bridgeConfig";
 import { BRIDGE_CONTRACT, BRIDGE_VIEWS, type BridgeFailure, type BridgeView } from "./types";
 
-export type BridgeRoute = BridgeView | "health";
+export type BridgeRoute = BridgeView | "health" | "youtube_login";
 
 export type BridgeSuccess<T> = { ok: true; data: T; generatedAt: string; channelId: string | null; latencyMs: number };
 export type BridgeResult<T> = BridgeSuccess<T> | { ok: false; failure: BridgeFailure };
@@ -13,7 +13,7 @@ export type FetchLike = (input: string, init: RequestInit) => Promise<Response>;
 
 export const BRIDGE_TIMEOUT_MS = 3000;
 
-const ALLOWED_ROUTES: ReadonlySet<string> = new Set<string>([...BRIDGE_VIEWS, "health"]);
+const ALLOWED_ROUTES: ReadonlySet<string> = new Set<string>([...BRIDGE_VIEWS, "health", "youtube_login"]);
 
 function failure(kind: BridgeFailure["kind"], message: string, extra: Partial<BridgeFailure> = {}): { ok: false; failure: BridgeFailure } {
   return { ok: false, failure: { kind, message, ...extra } };

@@ -89,5 +89,27 @@ export function useNomadStudio() {
     [load],
   );
 
-  return { granted, overview, loading, error, showTechnical, setShowTechnical, reload: () => load(showTechnical) };
+  // Connexion Google : l'agent construit l'URL, le navigateur y est envoyé tel quel.
+  const connectGoogle = useCallback(async () => {
+    if (!tokenRef.current) return;
+
+    setError(null);
+
+    try {
+      const res = await fetch(`${API_BASE}/youtube_login`, {
+        headers: { Authorization: `Bearer ${tokenRef.current}` },
+        cache: "no-store",
+      });
+      const body = res.ok ? ((await res.json()) as { result?: { ok: boolean; data?: { authorizeUrl?: string } } }) : null;
+      const url = body?.result?.ok ? body.result.data?.authorizeUrl : undefined;
+
+      if (!url) throw new Error(COPY.settings.googleFailed);
+
+      window.location.assign(url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : COPY.errors.unexpected);
+    }
+  }, []);
+
+  return { granted, overview, loading, error, showTechnical, setShowTechnical, reload: () => load(showTechnical), connectGoogle };
 }

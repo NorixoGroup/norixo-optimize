@@ -76,7 +76,7 @@ export default function LanguageSwitcher() {
       <select
         value={currentLocale}
         onChange={(event) => changeLocale(event.target.value)}
-        className="h-9 min-w-[132px] rounded-full border border-cyan-300/35 bg-[var(--nk-gradient-main)] px-4 text-xs font-semibold uppercase tracking-[0.14em] text-slate-50 shadow-[0_10px_24px_rgba(30,64,175,0.28)] outline-none transition hover:border-cyan-200/60 focus:ring-2 focus:ring-cyan-400/30"
+        className="h-9 min-w-[96px] rounded-full border border-cyan-300/35 bg-[var(--nk-gradient-main)] px-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-slate-50 shadow-[0_10px_24px_rgba(30,64,175,0.28)] outline-none transition hover:border-cyan-200/60 focus:ring-2 focus:ring-cyan-400/30"
       >
         {locales.map((locale) => (
           <option key={locale.code} value={locale.code}>

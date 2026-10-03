@@ -14,7 +14,7 @@ import {
 
 type Env = Record<string, string | undefined>;
 
-export const STUDIO_VIEWS = ["overview", "diagnostics", ...BRIDGE_VIEWS] as const;
+export const STUDIO_VIEWS = ["overview", "diagnostics", "youtube_login", ...BRIDGE_VIEWS] as const;
 export type StudioView = (typeof STUDIO_VIEWS)[number];
 
 const PRODUCTION_PATTERN = /^prod-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z-[0-9a-f]{6}$/;
@@ -76,6 +76,13 @@ export async function handleStudioRequest(input: {
 
   const config = diag.config;
   const fetchImpl = input.fetchImpl;
+
+  // Connexion Google : l'URL construite par l'agent est relayée telle quelle.
+  if (input.view === "youtube_login") {
+    const result = await bridgeRequest<{ authorizeUrl: string }>(config, "youtube_login", { fetchImpl });
+
+    return { status: 200, body: { connected: true, result: result.ok ? { ok: true, data: result.data } : { ok: false, failure: result.failure } } };
+  }
 
   const load = async <V extends BridgeView>(view: V): Promise<SectionResult<ViewDataMap[V]>> => {
     const result = await bridgeRequest<ViewDataMap[V]>(config, view, { query: parsed.query, fetchImpl });
