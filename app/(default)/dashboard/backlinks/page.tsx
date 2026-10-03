@@ -450,6 +450,8 @@ export default function BacklinksPage() {
   const [assetLifecycleStatus, setAssetLifecycleStatus] = useState<BacklinkAssetLifecycleStatus>("draft");
   const [verifyingLinkId, setVerifyingLinkId] = useState<string | null>(null);
   const [verificationMessage, setVerificationMessage] = useState<string | null>(null);
+  const [mailboxVerificationId, setMailboxVerificationId] = useState<string | null>(null);
+  const [mailboxVerificationStates, setMailboxVerificationStates] = useState<Record<string, "verified" | "risky" | "undeliverable" | "unknown" | "provider_error" | "running" | "indeterminate" | "exhausted" | "unverified">>({});
   const [automationControl, setAutomationControl] = useState<AutomationWorkspaceControlView | null>(null);
   const [automationControlLoading, setAutomationControlLoading] = useState(false);
   const [automationSaving, setAutomationSaving] = useState(false);
@@ -743,10 +745,11 @@ export default function BacklinksPage() {
         apiRequest<ApiPage>(sections.links.endpoint),
         apiRequest<ApiPage>(sections.assets.endpoint),
         loadAllBacklinkDomainPages((page, pageSize) => apiRequest<PaginatedApiPage>(`${sections.domains.endpoint}?page=${page}&pageSize=${pageSize}`)),
-        apiRequest<ApiPage>(sections.contacts.endpoint),
+        apiRequest<ApiPage & { mailboxVerificationStates?: Record<string, "verified" | "risky" | "undeliverable" | "unknown" | "provider_error" | "running" | "indeterminate" | "exhausted" | "unverified"> }>(sections.contacts.endpoint),
       ]);
       if (workspaceRequestVersion !== workspaceRequestVersionRef.current) return;
       setPages({ opportunities, campaigns, outreach, links, assets, domains, contacts });
+      setMailboxVerificationStates(contacts.mailboxVerificationStates ?? {});
     } catch (loadError) {
       if (workspaceRequestVersion !== workspaceRequestVersionRef.current) return;
       setError(loadError instanceof Error ? loadError.message : "Impossible de charger le cockpit Backlinks.");
@@ -972,6 +975,18 @@ export default function BacklinksPage() {
     } finally {
       setVerifyingLinkId(null);
     }
+  };
+
+  const handleVerifyMailbox = async (contactId: string): Promise<void> => {
+    if (mailboxVerificationId != null) return;
+    setMailboxVerificationId(contactId);
+    try {
+      const result = await apiRequest<{ state: "verified" | "risky" | "undeliverable" | "unknown" | "provider_error" | "running" }>(`/api/backlinks/contacts/${contactId}/mailbox-verification`, { method: "POST", body: JSON.stringify({}) });
+      setMailboxVerificationStates((current) => ({ ...current, [contactId]: result.state }));
+      await loadDashboard();
+    } catch (mailboxError) {
+      setVerificationMessage(mailboxError instanceof Error ? mailboxError.message : "Vérification d’email indisponible.");
+    } finally { setMailboxVerificationId(null); }
   };
 
   const handleToggleAutomation = async (): Promise<void> => {
@@ -2523,6 +2538,7 @@ export default function BacklinksPage() {
         </div>
       </section>
 
+      {activeSection === "contacts" ? <div className="mt-3 flex flex-wrap gap-2">{pages.contacts.items.filter((contact) => contact.contact_status === "unverified" && typeof contact.email_normalized === "string" && contact.email_normalized.trim() !== "" && contact.archived_at == null && contact.do_not_contact_at == null).map((contact) => <button key={`mailbox-verify-${contact.id}`} type="button" onClick={() => void handleVerifyMailbox(String(contact.id))} disabled={mailboxVerificationId != null || (mailboxVerificationStates[contact.id] != null && mailboxVerificationStates[contact.id] !== "unverified" && mailboxVerificationStates[contact.id] !== "provider_error")} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700 disabled:opacity-50">{mailboxVerificationId === contact.id || mailboxVerificationStates[contact.id] === "running" ? "Vérification en cours" : mailboxVerificationStates[contact.id] === "indeterminate" ? "Vérification indéterminée" : mailboxVerificationStates[contact.id] === "exhausted" ? "Vérification indisponible" : mailboxVerificationStates[contact.id] === "risky" ? "Risqué" : mailboxVerificationStates[contact.id] === "undeliverable" ? "Non distribuable" : mailboxVerificationStates[contact.id] === "unknown" ? "Résultat inconnu" : mailboxVerificationStates[contact.id] === "provider_error" ? "Vérification indisponible — réessayer" : `Vérifier l’email : ${contactLabel(pages.contacts.items, contact.id)}`}</button>)}</div> : null}
       {activeSection === "outreach" ? <div className="mt-3 flex flex-wrap gap-2">{pages.outreach.items.map((outreach) => { const contact = pages.contacts.items.find((item) => item.id === outreach.contact_id) as OutreachContactRow | undefined ?? null; const action = outreachSendAction(outreach, contact); if (action === "send_in_progress") return <span key={`send-progress-${outreach.id}`} className="rounded-full border border-slate-200 px-3 py-1 text-sm font-semibold text-slate-600">Envoi en cours</span>; if (action === "resolution_required") return <span key={`send-resolution-${outreach.id}`} className="rounded-full border border-amber-200 px-3 py-1 text-sm font-semibold text-amber-800">Résolution requise</span>; if (action !== "initial_send") return null; return <button key={`send-${outreach.id}`} type="button" onClick={() => { setOutreachSendDialog(outreach); setOutreachSendMode(action); setOutreachSendIdempotencyKey(crypto.randomUUID()); setOutreachSendError(null); setOutreachSendResult(null); }} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Envoyer</button>; })}</div> : null}
       {activeSection === "outreach" ? <div className="mt-3 flex flex-wrap gap-2">{pages.outreach.items.map((outreach) => { const summary = inboundReplySummary(outreach); if (summary.correlatedCount === 0) return null; const pendingLabel = summary.unclassifiedCount > 0 ? outreach.status === "active" ? `${summary.unclassifiedCount} à classer` : `${summary.unclassifiedCount} non classifiée${summary.unclassifiedCount > 1 ? "s" : ""}` : `${summary.correlatedCount} réponse${summary.correlatedCount > 1 ? "s" : ""}`; return <div key={`inbound-${outreach.id}`} className="flex items-center gap-2"><button type="button" onClick={() => void handleOpenInboundReplies(outreach)} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Réponses reçues</button><span className="text-sm text-slate-600">{pendingLabel}</span></div>; })}</div> : null}
       {outreachReadyDialog ? <OutreachReadyDialog outreach={{ contact: contactLabel(pages.contacts.items, outreachReadyDialog.contact_id), channel: String(outreachReadyDialog.channel), subject: typeof outreachReadyDialog.subject === "string" ? outreachReadyDialog.subject : null, body: typeof outreachReadyDialog.body === "string" ? outreachReadyDialog.body : null }} submitting={outreachReadySubmitting} error={outreachReadyError} success={outreachReadySuccess} onClose={() => { if (!outreachReadySubmitting) setOutreachReadyDialog(null); }} onConfirm={() => void handleMarkOutreachReady()} /> : null}

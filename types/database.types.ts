@@ -1018,6 +1018,15 @@ export type Database = {
           { foreignKeyName: "backlink_contact_mailbox_verifications_workspace_id_fkey"; columns: ["workspace_id"]; isOneToOne: false; referencedRelation: "workspaces"; referencedColumns: ["id"] },
         ]
       }
+      backlink_contact_mailbox_verification_requests: {
+        Row: { attempt_count: number; completed_at: string | null; contact_id: string; created_at: string; email_fingerprint: string; id: string; last_reason: string | null; last_result: string | null; started_at: string; status: string; updated_at: string; workspace_id: string }
+        Insert: { attempt_count?: number; completed_at?: string | null; contact_id: string; created_at?: string; email_fingerprint: string; id?: string; last_reason?: string | null; last_result?: string | null; started_at?: string; status?: string; updated_at?: string; workspace_id: string }
+        Update: { attempt_count?: number; completed_at?: string | null; contact_id?: string; created_at?: string; email_fingerprint?: string; id?: string; last_reason?: string | null; last_result?: string | null; started_at?: string; status?: string; updated_at?: string; workspace_id?: string }
+        Relationships: [
+          { foreignKeyName: "backlink_contact_mailbox_verification_requests_contact_id_fkey"; columns: ["contact_id"]; isOneToOne: false; referencedRelation: "backlink_contacts"; referencedColumns: ["id"] },
+          { foreignKeyName: "backlink_contact_mailbox_verification_requests_workspace_id_fkey"; columns: ["workspace_id"]; isOneToOne: false; referencedRelation: "workspaces"; referencedColumns: ["id"] },
+        ]
+      }
       backlink_domain_tags: {
         Row: {
           added_at: string
@@ -5369,6 +5378,14 @@ export type Database = {
         Returns: Database["public"]["Tables"]["automation_runs"]["Row"][]
       }
       complete_automation_task: { Args: { p_completed_at: string; p_output: Json | null; p_task_id: string; p_worker_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
+      claim_backlink_contact_mailbox_verification_request: {
+        Args: { p_contact_id: string; p_email_fingerprint: string; p_started_at: string; p_workspace_id: string }
+        Returns: { request_attempt_count: number; request_id: string; request_last_result: string | null; request_status: string; reservation_held: boolean }[]
+      }
+      complete_backlink_contact_mailbox_verification_request: {
+        Args: { p_completed_at: string; p_reason: string; p_request_id: string; p_result: string | null; p_status: string; p_workspace_id: string }
+        Returns: Database["public"]["Tables"]["backlink_contact_mailbox_verification_requests"]["Row"]
+      }
       fail_backlink_verification_job: {
         Args: { p_error_code: string; p_error_message: string; p_failed_at: string; p_job_id: string; p_worker_id: string }
         Returns: Database["public"]["Tables"]["backlink_verification_jobs"]["Row"][]
