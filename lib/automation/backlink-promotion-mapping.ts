@@ -132,7 +132,7 @@ export function buildBacklinkPromotionEvidenceSummary(
   if (reasonCodes.length > 0) {
     parts.push(`Reasons: ${reasonCodes.join("; ")}.`);
   }
-  return parts.join(" ").slice(0, BACKLINK_PROMOTION_MAX_EVIDENCE_LENGTH);
+  return parts.join(" ").slice(0, BACKLINK_PROMOTION_MAX_EVIDENCE_LENGTH).trim();
 }
 
 export function evaluateBacklinkPromotionEligibility(

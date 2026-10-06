@@ -111,7 +111,21 @@ function main(): void {
   assert(asset.skippedItems[0]?.skipCode === "MISSING_ASSET_SUGGESTION", "Asset policy skip");
   const evidence = output.proposals[0]?.evidenceSummary ?? "";
   assert(evidence.length <= 500 && !evidence.includes("https://") && !evidence.includes("candidate-a"), "Evidence must be bounded and safe");
+  assert(evidence === "Qualified at 85/100 for Resource Page. Discovery evidence: Relevant host resource evidence. Reasons: TOPICAL_RELEVANCE_STRONG.", "Short evidence summary must retain its semantic content");
   assert(output.summary.proposed + output.summary.skipped === output.summary.qualificationResults && output.summary.duplicates <= output.summary.skipped, "Summary invariants");
+
+  const boundary = executeBacklinkPromotionPreview({
+    input: input(
+      [candidate("candidate-boundary", "https://boundary.example/resources", { evidenceSummary: `${"x".repeat(440)} y` })],
+      [qualification("candidate-boundary", { reasons: [] })],
+    ),
+    policy: DEFAULT_BACKLINK_PROMOTION_POLICY_V1,
+  });
+  const boundaryEvidence = boundary.proposals[0]?.evidenceSummary ?? "";
+  const preFixBoundaryValue = `Qualified at 85/100 for Resource Page. Discovery evidence: ${"x".repeat(440)} y.`.slice(0, 500);
+  assert(preFixBoundaryValue.endsWith(" "), "Fixture must reproduce the prior trailing-whitespace boundary");
+  assert(boundaryEvidence.length <= 500 && boundaryEvidence === boundaryEvidence.trim(), "Boundary evidence must remain bounded and clean after truncation");
+  assert(boundaryEvidence.length === 499 && boundaryEvidence.endsWith("x"), "Boundary whitespace must be removed without changing preceding evidence");
 
   try {
     executeBacklinkPromotionPreview({ input: nominalInput, policy: { ...DEFAULT_BACKLINK_PROMOTION_POLICY_V1, tierAThreshold: 70 } });
