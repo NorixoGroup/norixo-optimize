@@ -1027,6 +1027,15 @@ export type Database = {
           { foreignKeyName: "backlink_contact_mailbox_verification_requests_workspace_id_fkey"; columns: ["workspace_id"]; isOneToOne: false; referencedRelation: "workspaces"; referencedColumns: ["id"] },
         ]
       }
+      backlink_contact_form_verification_preflights: {
+        Row: { attempt_count: number; completed_at: string | null; contact_id: string; cooldown_until: string | null; created_at: string; form_url: string; id: string; idempotency_key: string; requested_at: string; requested_by: string; safe_error_code: string | null; started_at: string | null; status: string; updated_at: string; worker_id: string | null; workspace_id: string }
+        Insert: { attempt_count?: number; completed_at?: string | null; contact_id: string; cooldown_until?: string | null; created_at?: string; form_url: string; id?: string; idempotency_key: string; requested_at?: string; requested_by: string; safe_error_code?: string | null; started_at?: string | null; status?: string; updated_at?: string; worker_id?: string | null; workspace_id: string }
+        Update: { attempt_count?: number; completed_at?: string | null; contact_id?: string; cooldown_until?: string | null; created_at?: string; form_url?: string; id?: string; idempotency_key?: string; requested_at?: string; requested_by?: string; safe_error_code?: string | null; started_at?: string | null; status?: string; updated_at?: string; worker_id?: string | null; workspace_id?: string }
+        Relationships: [
+          { foreignKeyName: "backlink_contact_form_verification_preflights_contact_id_fkey"; columns: ["contact_id"]; isOneToOne: false; referencedRelation: "backlink_contacts"; referencedColumns: ["id"] },
+          { foreignKeyName: "backlink_contact_form_verification_preflights_workspace_id_fkey"; columns: ["workspace_id"]; isOneToOne: false; referencedRelation: "workspaces"; referencedColumns: ["id"] },
+        ]
+      }
       backlink_domain_tags: {
         Row: {
           added_at: string
@@ -5385,6 +5394,14 @@ export type Database = {
       complete_backlink_contact_mailbox_verification_request: {
         Args: { p_completed_at: string; p_reason: string; p_request_id: string; p_result: string | null; p_status: string; p_workspace_id: string }
         Returns: Database["public"]["Tables"]["backlink_contact_mailbox_verification_requests"]["Row"]
+      }
+      claim_backlink_contact_form_verification_preflight: {
+        Args: { p_preflight_id: string; p_started_at: string; p_worker_id: string; p_workspace_id: string }
+        Returns: Database["public"]["Tables"]["backlink_contact_form_verification_preflights"]["Row"]
+      }
+      complete_backlink_contact_form_verification_preflight: {
+        Args: { p_completed_at: string; p_preflight_id: string; p_safe_error_code: string; p_status: string; p_worker_id: string; p_workspace_id: string }
+        Returns: Database["public"]["Tables"]["backlink_contact_form_verification_preflights"]["Row"]
       }
       fail_backlink_verification_job: {
         Args: { p_error_code: string; p_error_message: string; p_failed_at: string; p_job_id: string; p_worker_id: string }
