@@ -530,6 +530,9 @@ export default function BacklinksPage() {
   const [discoveryLanguageCode, setDiscoveryLanguageCode] = useState("en");
   const [discoveryMaxResults, setDiscoveryMaxResults] = useState(10);
   const [discoveryMaxCandidates, setDiscoveryMaxCandidates] = useState(20);
+  const [querySuggestions, setQuerySuggestions] = useState<readonly { query: string; rationale: string }[]>([]);
+  const [querySuggestionsLoading, setQuerySuggestionsLoading] = useState(false);
+  const [querySuggestionsError, setQuerySuggestionsError] = useState<string | null>(null);
   const [outreachSearchQuery, setOutreachSearchQuery] = useState("");
   const [outreachCampaignFilter, setOutreachCampaignFilter] = useState("");
   const [outreachStatusFilter, setOutreachStatusFilter] = useState("");
@@ -1394,6 +1397,33 @@ export default function BacklinksPage() {
     } finally {
       if (requestVersion !== workspaceRequestVersionRef.current) return;
       setCampaignMembershipApplySubmitting(false);
+    }
+  };
+
+  const handleSuggestQueries = async (): Promise<void> => {
+    if (!workspaceResolved || !activeWorkspaceId?.trim() || automationRunning || querySuggestionsLoading) return;
+    const requestVersion = workspaceRequestVersionRef.current;
+    setQuerySuggestionsLoading(true);
+    setQuerySuggestionsError(null);
+    try {
+      const response = await apiRequest<{ ok: boolean; suggestions?: readonly { query: string; rationale: string }[] }>(
+        "/api/internal/automation/backlinks/query-suggestions",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            countryCode: discoveryCountryCode.trim().toUpperCase(),
+            languageCode: discoveryLanguageCode.trim().toLowerCase(),
+            excludeQueries: [discoveryQuery, ...querySuggestions.map((suggestion) => suggestion.query)].filter((value) => value.trim().length > 0),
+          }),
+        },
+      );
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setQuerySuggestions(response.suggestions ?? []);
+    } catch (cause) {
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setQuerySuggestionsError(cause instanceof Error ? cause.message : "Les suggestions de recherche sont indisponibles.");
+    } finally {
+      if (requestVersion === workspaceRequestVersionRef.current) setQuerySuggestionsLoading(false);
     }
   };
 
@@ -2422,10 +2452,15 @@ export default function BacklinksPage() {
           onRunAutomationNow={() => void handleRunAutomationNow()}
           onDiscoveryProviderChange={(value) => { const provider = value; if (isDiscoveryProviderOption(provider)) setDiscoveryProvider(provider); }}
           onDiscoveryQueryChange={(value) => setDiscoveryQuery(value)}
-          onDiscoveryCountryCodeChange={(value) => setDiscoveryCountryCode(value)}
-          onDiscoveryLanguageChange={(value) => setDiscoveryLanguageCode(value)}
+          onDiscoveryCountryCodeChange={(value) => { setDiscoveryCountryCode(value); setQuerySuggestions([]); }}
+          onDiscoveryLanguageChange={(value) => { setDiscoveryLanguageCode(value); setQuerySuggestions([]); }}
           onDiscoveryMaxResultsChange={(value) => setDiscoveryMaxResults(value)}
           onDiscoveryMaxCandidatesChange={(value) => setDiscoveryMaxCandidates(value)}
+          querySuggestions={querySuggestions}
+          querySuggestionsLoading={querySuggestionsLoading}
+          querySuggestionsError={querySuggestionsError}
+          onSuggestQueries={() => void handleSuggestQueries()}
+          onSelectQuerySuggestion={(query) => setDiscoveryQuery(query)}
         />
         {automationLastResult ? (
           <div aria-live="polite" className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
