@@ -30,6 +30,11 @@ type Props = {
   onDiscoveryLanguageChange: (value: string) => void;
   onDiscoveryMaxResultsChange: (value: number) => void;
   onDiscoveryMaxCandidatesChange: (value: number) => void;
+  querySuggestions: readonly { query: string; rationale: string }[];
+  querySuggestionsLoading: boolean;
+  querySuggestionsError: string | null;
+  onSuggestQueries: () => void;
+  onSelectQuerySuggestion: (query: string) => void;
 };
 
 export default function AutomationControl({
@@ -62,7 +67,13 @@ export default function AutomationControl({
   onDiscoveryLanguageChange,
   onDiscoveryMaxResultsChange,
   onDiscoveryMaxCandidatesChange,
+  querySuggestions,
+  querySuggestionsLoading,
+  querySuggestionsError,
+  onSuggestQueries,
+  onSelectQuerySuggestion,
 }: Props) {
+  const suggestDisabled = !workspaceResolved || !activeWorkspaceId?.trim() || automationRunning || querySuggestionsLoading || !/^[A-Z]{2}$/.test(discoveryCountryCode.trim()) || !/^[a-z]{2,3}(?:-[a-z0-9]{2,8})?$/.test(discoveryLanguageCode.trim());
   const toggleDisabled = !workspaceResolved || !activeWorkspaceId?.trim() || automationControlLoading || automationSaving || automationRunning || !automationControlPresent;
   const dryRunDisabled = !workspaceResolved || !activeWorkspaceId?.trim() || automationControlLoading || automationSaving || automationDryRunSaving || automationRunning || !automationControlPresent;
   const runDisabled = !workspaceResolved || !activeWorkspaceId?.trim() || !automationControlPresent || !automationControlBacklinksEnabled || automationControlLoading || automationSaving || automationRunning || discoveryConfigurationError !== null;
@@ -160,6 +171,18 @@ export default function AutomationControl({
         <div className="md:col-span-2">
           <label htmlFor="automation-discovery-query" className="block text-xs font-semibold text-slate-700">Requête Discovery</label>
           <input id="automation-discovery-query" name="automation-discovery-query" type="text" autoComplete="off" value={discoveryQuery} onChange={(event) => onDiscoveryQueryChange(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900" />
+          <button type="button" onClick={onSuggestQueries} disabled={suggestDisabled} className="mt-2 rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50">{querySuggestionsLoading ? "Recherche de suggestions…" : "Suggérer des recherches"}</button>
+          {querySuggestionsError ? <p role="alert" className="mt-2 text-xs text-rose-700">{querySuggestionsError}</p> : null}
+          {querySuggestions.length > 0 ? (
+            <ul aria-label="Suggestions de recherche" className="mt-2 space-y-1">
+              {querySuggestions.map((suggestion) => (
+                <li key={suggestion.query}>
+                  <button type="button" onClick={() => onSelectQuerySuggestion(suggestion.query)} disabled={automationRunning} title={suggestion.rationale} className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-left text-xs text-slate-800 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50">{suggestion.query}</button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {querySuggestions.length > 0 ? <p className="mt-1 text-xs text-slate-500">Aperçu uniquement — aucune recherche n’est lancée tant que vous ne cliquez pas sur l’exécution.</p> : null}
         </div>
         <div>
           <label htmlFor="automation-discovery-country" className="block text-xs font-semibold text-slate-700">Pays</label>
