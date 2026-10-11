@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 import { isAdminPrivateEmail } from "@/lib/auth/isAdminEmail";
 import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -6,7 +7,6 @@ import { getBacklinkContactById } from "@/lib/backlinks/repositories/contactsRep
 import { createOrGetContactFormVerificationPreflight, getContactFormVerificationPreflight } from "@/lib/backlinks/repositories/contactFormVerificationPreflightRepository";
 import { normalizeContactFormVerificationUrl } from "@/lib/backlinks/repositories/contactFormAutomationRepository";
 import { executeContactFormVerificationPreflight } from "@/lib/backlinks/services/contactFormVerificationPreflightWorker";
-import { resolveHostnamePublicAddresses } from "@/lib/backlinks/services/contactFormNavigationWorker";
 
 async function context(request: NextRequest) {
   const auth = await getRequestUserAndWorkspace(request);
@@ -35,8 +35,7 @@ export async function POST(request: NextRequest, value: { params: Promise<{ id: 
       client: adminClient,
       workspaceId: auth.workspace.id,
       preflightId: result.preflight.id,
-      workerId: `contact-form-preflight:${auth.user.id}`,
-      resolveHostname: resolveHostnamePublicAddresses,
+      workerId: `contact-form-preflight:${auth.user.id}:${randomUUID()}`,
     });
     return NextResponse.json({ ok: true, result: { ...result, preflight } }, { status: result.disposition === "created" ? 201 : 200 });
   } catch { return NextResponse.json({ error: "Verification preflight unavailable." }, { status: 409 }); }

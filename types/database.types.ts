@@ -1036,6 +1036,15 @@ export type Database = {
           { foreignKeyName: "backlink_contact_form_verification_preflights_workspace_id_fkey"; columns: ["workspace_id"]; isOneToOne: false; referencedRelation: "workspaces"; referencedColumns: ["id"] },
         ]
       }
+      backlink_contact_form_preflight_reconciliations: {
+        Row: { id: string; next_status: string; preflight_id: string; previous_status: string; reconciled_at: string; reconciled_by: string; safe_reason_code: string; workspace_id: string }
+        Insert: { id?: string; next_status: string; preflight_id: string; previous_status: string; reconciled_at?: string; reconciled_by: string; safe_reason_code: string; workspace_id: string }
+        Update: { id?: string; next_status?: string; preflight_id?: string; previous_status?: string; reconciled_at?: string; reconciled_by?: string; safe_reason_code?: string; workspace_id?: string }
+        Relationships: [
+          { foreignKeyName: "backlink_contact_form_preflight_reconciliations_preflight_id_fkey"; columns: ["preflight_id"]; isOneToOne: true; referencedRelation: "backlink_contact_form_verification_preflights"; referencedColumns: ["id"] },
+          { foreignKeyName: "backlink_contact_form_preflight_reconciliations_workspace_id_fkey"; columns: ["workspace_id"]; isOneToOne: false; referencedRelation: "workspaces"; referencedColumns: ["id"] },
+        ]
+      }
       backlink_domain_tags: {
         Row: {
           added_at: string
@@ -5397,10 +5406,18 @@ export type Database = {
       }
       claim_backlink_contact_form_verification_preflight: {
         Args: { p_preflight_id: string; p_started_at: string; p_worker_id: string; p_workspace_id: string }
-        Returns: Database["public"]["Tables"]["backlink_contact_form_verification_preflights"]["Row"]
+        Returns: Json
       }
       complete_backlink_contact_form_verification_preflight: {
         Args: { p_completed_at: string; p_preflight_id: string; p_safe_error_code: string; p_status: string; p_worker_id: string; p_workspace_id: string }
+        Returns: Database["public"]["Tables"]["backlink_contact_form_verification_preflights"]["Row"]
+      }
+      complete_verified_backlink_contact_form_preflight_atomic: {
+        Args: { p_completed_at: string; p_contact_id: string; p_evidence_version: string; p_form_fingerprint: string; p_form_url: string; p_preflight_id: string; p_safe_evidence: Json; p_verified_at: string; p_worker_id: string; p_workspace_id: string }
+        Returns: Database["public"]["Tables"]["backlink_contact_form_verification_preflights"]["Row"]
+      }
+      reconcile_abandoned_backlink_contact_form_preflight: {
+        Args: { p_preflight_id: string; p_reconciled_by: string; p_workspace_id: string }
         Returns: Database["public"]["Tables"]["backlink_contact_form_verification_preflights"]["Row"]
       }
       fail_backlink_verification_job: {
