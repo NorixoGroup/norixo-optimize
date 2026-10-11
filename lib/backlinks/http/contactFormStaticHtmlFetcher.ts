@@ -4,7 +4,7 @@ import https from "node:https";
 import { isIP } from "node:net";
 import tls from "node:tls";
 
-import { isPublicIpAddress } from "@/lib/backlinks/services/contactFormNavigationWorker";
+import { isUnsafeIpAddress } from "./url-safety";
 
 const MAX_REDIRECTS = 3;
 const MAX_RESPONSE_BYTES = 1024 * 1024;
@@ -97,7 +97,7 @@ async function resolveTarget(rawUrl: string, resolveHostname: NonNullable<FetchD
   try { addresses = await resolveHostname(hostname); } catch { throw new FetcherError("CONTACT_FORM_STATIC_DNS_FAILED"); }
   if (!addresses.length) throw new FetcherError("CONTACT_FORM_STATIC_DNS_FAILED");
   const normalized = addresses.map((entry) => ({ address: entry.address.trim().replace(/^\[|\]$/g, ""), family: entry.family }));
-  if (normalized.some((entry) => (entry.family !== 4 && entry.family !== 6) || isIP(entry.address) !== entry.family || !isPublicIpAddress(entry.address))) throw new FetcherError("CONTACT_FORM_STATIC_DNS_UNSAFE");
+  if (normalized.some((entry) => (entry.family !== 4 && entry.family !== 6) || isIP(entry.address) !== entry.family || isUnsafeIpAddress(entry.address))) throw new FetcherError("CONTACT_FORM_STATIC_DNS_UNSAFE");
   normalized.sort((a, b) => a.family - b.family || a.address.localeCompare(b.address));
   return { url, hostname, address: normalized[0]! };
 }

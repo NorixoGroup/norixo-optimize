@@ -11,6 +11,7 @@ export type ContactFormExecutionOutreach = Pick<Database["public"]["Tables"]["ba
 export type ContactFormExecutionContact = Pick<Database["public"]["Tables"]["backlink_contacts"]["Row"], "archived_at" | "contact_form_url" | "contact_status" | "do_not_contact_at" | "id" | "workspace_id">;
 export type ContactFormExecutionOpportunity = Pick<Database["public"]["Tables"]["backlink_opportunities"]["Row"], "id" | "target_page_url" | "workspace_id">;
 export type ContactFormVerificationContact = Pick<Database["public"]["Tables"]["backlink_contacts"]["Row"], "contact_form_url" | "id">;
+export const CONTACT_FORM_VERIFICATION_EVIDENCE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 export type ContactFormRunExecutionContext = {
   run: ContactFormRun;
   approval: ContactFormApproval;
@@ -54,6 +55,20 @@ export function isValidContactFormVerificationEvidence(value: Json): boolean {
     evidence.support_only === false &&
     evidence.sales_demo_only === false
   );
+}
+
+/** Mirrors the PostgreSQL current-evidence gate: seven days old at most, never future-dated. */
+export function isCurrentContactFormVerificationTimestamp(verifiedAt: string | null | undefined, now: Date = new Date()): boolean {
+  if (typeof verifiedAt !== "string" || !Number.isFinite(now.getTime())) return false;
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/.exec(verifiedAt);
+  if (match == null) return false;
+  const [, year, month, day, hour, minute, second] = match;
+  const monthNumber = Number(month);
+  const dayNumber = Number(day);
+  if (monthNumber < 1 || monthNumber > 12 || dayNumber < 1 || dayNumber > new Date(Date.UTC(Number(year), monthNumber, 0)).getUTCDate() || Number(hour) > 23 || Number(minute) > 59 || Number(second) > 59) return false;
+  const verifiedAtMs = Date.parse(verifiedAt);
+  const nowMs = now.getTime();
+  return Number.isFinite(verifiedAtMs) && verifiedAtMs <= nowMs && verifiedAtMs >= nowMs - CONTACT_FORM_VERIFICATION_EVIDENCE_TTL_MS;
 }
 
 export async function persistVerifiedContactFormEvidence(
@@ -139,7 +154,7 @@ export function hasCurrentVerifiedContactFormEvidence(
     verification?.contact_id === contact.id &&
     verification.form_url === formUrl &&
     verification.verification_state === "verified" &&
-    verification.verified_at != null &&
+    isCurrentContactFormVerificationTimestamp(verification.verified_at) &&
     isValidContactFormVerificationEvidence(verification.safe_evidence)
   );
 }

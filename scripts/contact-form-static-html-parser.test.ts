@@ -5,6 +5,8 @@ import { parseStaticContactFormHtml } from "../lib/backlinks/services/contactFor
 const URL = "https://example.com/contact";
 const parse = (html: string) => parseStaticContactFormHtml({ finalUrl: URL, html, contentType: "text/html; charset=utf-8" });
 const contact = (extra = "") => `<!doctype html><html><title>Contact us</title><body><form action="/send" method="post" aria-label="Contact us"><label for="name">Name</label><input id="name" name="name" required><label for="email">Email</label><input id="email" name="email" type="email" required><label for="message">Message</label><textarea id="message" name="message" required></textarea>${extra}<button type="submit">Send message</button></form></body></html>`;
+const associated = (control: string) => contact().replace("<form action=", '<form id="contact" action=').replace("</body>", `${control}</body>`);
+const withBase = (base: string, html = contact()) => html.replace("<body>", `<head>${base}</head><body>`);
 
 function manual(html: string, reason?: string) {
   const result = parse(html); assert.equal(result.status, "manual_review"); if (reason != null) assert.equal(result.safeReasonCode, reason); return result;
@@ -41,6 +43,32 @@ assert.equal(select.status, "verified");
 assert.equal(select.page?.forms[0]?.controls.some((control) => control.tag === "select"), true);
 manual(contact().replace('<button type="submit">Send message</button>', ""));
 manual(`${contact()}<style>form { display: none; }</style>`, "CONTACT_FORM_STATIC_VISIBILITY_AMBIGUOUS");
+
+for (const control of [
+  '<input form="contact" name="company" required>',
+  '<button form="contact" type="submit">External submit</button>',
+  '<textarea form="contact" name="other" required></textarea>',
+  '<select form="contact" name="topic"><option>General</option></select>',
+  '<input form="contact" type="hidden" name="token" value="x">',
+  '<input form="unknown" name="unknown">',
+]) manual(associated(control), "CONTACT_FORM_STATIC_FORM_ASSOCIATION_AMBIGUOUS");
+manual(associated("").replace('<form id="contact" action=', '<form id="duplicate" action=').replace("</body>", '<form id="duplicate"></form></body>'), "CONTACT_FORM_STATIC_FORM_ASSOCIATION_AMBIGUOUS");
+
+manual(withBase('<base href="https://third-party.example/forms/">'), "CONTACT_FORM_STATIC_BASE_AMBIGUOUS");
+const sameOriginBase = parse(withBase('<base href="/forms/">', contact().replace('action="/send"', 'action="send"')));
+assert.equal(sameOriginBase.status, "verified");
+assert.equal(sameOriginBase.page?.forms[0]?.action, "https://example.com/forms/send");
+manual(withBase('<base href="https://third-party.example/forms/">', contact().replace('action="/send"', 'action="https://forms.example/submit"')), "CONTACT_FORM_STATIC_BASE_AMBIGUOUS");
+const emptyAction = parse(withBase('<base href="/forms/">', contact().replace('action="/send"', 'action=""')));
+assert.equal(emptyAction.status, "verified");
+assert.equal(emptyAction.page?.forms[0]?.action, URL);
+const missingAction = parse(withBase('<base href="/forms/">', contact().replace(' action="/send"', "")));
+assert.equal(missingAction.status, "verified");
+assert.equal(missingAction.page?.forms[0]?.action, URL);
+manual(withBase('<base href="/forms/"><base href="/other/">'), "CONTACT_FORM_STATIC_BASE_AMBIGUOUS");
+manual(withBase('<base href="https://[bad">'), "CONTACT_FORM_STATIC_BASE_AMBIGUOUS");
+manual(withBase('<base href="//third-party.example/forms/">'), "CONTACT_FORM_STATIC_BASE_AMBIGUOUS");
+manual(withBase('<base href="javascript:alert(1)">'), "CONTACT_FORM_STATIC_BASE_AMBIGUOUS");
 
 const malformed = parse("not an HTML document");
 assert.deepEqual({ status: malformed.status, code: malformed.safeReasonCode }, { status: "failed", code: "CONTACT_FORM_STATIC_HTML_INVALID" });

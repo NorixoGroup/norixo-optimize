@@ -10,7 +10,7 @@ export type ContactFormStaticHtmlParseResult = Readonly<{
   safeReasonCode: string | null;
   page: ContactFormDiscoveredPage | null;
   submitControls: readonly StaticSubmitControl[];
-  indicators: Readonly<{ hasCaptcha: boolean; hasLoginWall: boolean; hasPasswordField: boolean; dynamicForm: boolean; visibilityAmbiguous: boolean }>;
+  indicators: Readonly<{ hasCaptcha: boolean; hasLoginWall: boolean; hasPasswordField: boolean; dynamicForm: boolean; visibilityAmbiguous: boolean; formAssociationAmbiguous: boolean; baseAmbiguous: boolean }>;
   mapping: ReturnType<typeof buildContactFormMappingPreview> | null;
   evidence: ReturnType<typeof buildContactFormVerificationEvidenceFromRuntime> | null;
 }>;
@@ -43,8 +43,12 @@ function ariaLabelledBy($: ReturnType<typeof load>, ids: string | null): string 
   return text(ids.split(/\s+/).map((id) => $("[id]").filter((_, element) => $(element).attr("id") === id).text()).join(" "));
 }
 
-function actionFor(formAction: string | null, pageUrl: string): string | null {
-  try { return new URL(formAction?.trim() || pageUrl, pageUrl).toString(); } catch { return null; }
+function actionFor(formAction: string | null, pageUrl: string, baseUrl: string): string | null {
+  try {
+    // Missing and empty actions submit to the document URL, not to <base href>.
+    const action = formAction?.trim();
+    return new URL(action || pageUrl, action ? baseUrl : pageUrl).toString();
+  } catch { return null; }
 }
 
 function staticControl($: ReturnType<typeof load>, $form: ReturnType<ReturnType<typeof load>>, element: unknown, ordinal: number): ContactFormDiscoveredControl {
@@ -72,13 +76,30 @@ function extract(pageUrl: string, html: string): { page: ContactFormDiscoveredPa
   const hasCaptcha = /(captcha|recaptcha|hcaptcha|turnstile|verify you are human|human verification)/.test(bodyText) || $("[class*='captcha' i], [id*='captcha' i], [name='g-recaptcha-response'], [name='h-captcha-response'], [name='cf-turnstile-response']").length > 0;
   const hasPasswordField = $("input[type='password']").length > 0;
   const hasLoginWall = hasPasswordField || /\b(sign in|log in|login|required login|members only|authentication)\b/.test(bodyText);
-  const forms = $("form").toArray().slice(0, 5).map((form, formOrdinal) => {
+  const baseElements = $("base[href]").toArray();
+  let baseUrl = pageUrl;
+  let baseAmbiguous = baseElements.length > 1;
+  if (baseElements.length > 0) {
+    try {
+      baseUrl = new URL($(baseElements[0]!).attr("href") ?? "", pageUrl).toString();
+      const parsedBase = new URL(baseUrl);
+      const documentOrigin = new URL(pageUrl).origin;
+      if (parsedBase.protocol !== "https:" || parsedBase.origin !== documentOrigin || parsedBase.username || parsedBase.password) baseAmbiguous = true;
+    } catch { baseAmbiguous = true; }
+  }
+  const allFormElements = $("form").toArray();
+  const forms = allFormElements.slice(0, 5).map((form, formOrdinal) => {
     const $form = $(form);
     const controls = $form.find("input, textarea, select, button").toArray().slice(0, 30).map((element, ordinal) => staticControl($, $form, element, ordinal));
-    const action = actionFor(text($form.attr("action")), pageUrl);
+    const action = actionFor(text($form.attr("action")), pageUrl, baseUrl);
     const buttonText = text($form.find("button, input[type='submit'], input[type='image']").first().text() || $form.find("input[type='submit'], input[type='image']").first().attr("value"));
     return { ordinal: formOrdinal, action, method: text($form.attr("method"))?.toUpperCase() ?? "GET", labelText: text($form.attr("aria-label")) ?? text($form.find("h1,h2,h3,h4,h5,h6").first().text()), legendText: text($form.find("legend").first().text()), buttonText, controls } satisfies ContactFormDiscoveredForm;
   });
+  const formIds = allFormElements.map((form) => text($(form).attr("id"))).filter((id): id is string => id != null);
+  const duplicateFormIds = new Set(formIds).size !== formIds.length;
+  // Form-associated controls may be outside a <form>.  Do not silently omit them:
+  // their target can be unknown, duplicated, or semantically required at submission.
+  const externalFormAssociatedControls = $("input[form], textarea[form], select[form], button[form]").length > 0;
   const submitControls = forms.flatMap((form) => form.controls.flatMap((control) => {
     const submit = (control.tag === "button" && (control.type === "" || control.type === "submit")) || (control.tag === "input" && (control.type === "submit" || control.type === "image"));
     return !submit ? [] : [{ formOrdinal: form.ordinal, controlOrdinal: control.ordinal, tag: control.tag, type: control.type, name: control.name, id: control.id, visible: control.visible, enabled: !control.disabled, disabled: control.disabled, hidden: control.hidden, fingerprint: fingerprint({ form: form.ordinal, control: control.ordinal, tag: control.tag, type: control.type, name: control.name, id: control.id }) }];
@@ -90,17 +111,19 @@ function extract(pageUrl: string, html: string): { page: ContactFormDiscoveredPa
   const page = { pageUrl, pageTitle: text($("title").first().text()) ?? "", forms } satisfies ContactFormDiscoveredPage;
   const origin = new URL(pageUrl).origin;
   const externalAction = forms.some((form) => form.action != null && new URL(form.action).origin !== origin);
-  return { page, submitControls, indicators: { hasCaptcha, hasLoginWall, hasPasswordField, dynamicForm, visibilityAmbiguous }, externalAction };
+  return { page, submitControls, indicators: { hasCaptcha, hasLoginWall, hasPasswordField, dynamicForm, visibilityAmbiguous, formAssociationAmbiguous: externalFormAssociatedControls || duplicateFormIds, baseAmbiguous }, externalAction };
 }
 
 export function parseStaticContactFormHtml(input: Readonly<{ finalUrl: string; html: string; contentType: string }>): ContactFormStaticHtmlParseResult {
-  if (!input.html.trim() || !/^\s*(?:<!doctype[^>]*>|<html\b|<head\b|<body\b|<form\b)/i.test(input.html) || !/^(text\/html|application\/xhtml\+xml)(?:\s*;|$)/i.test(input.contentType)) return { status: "failed", safeReasonCode: "CONTACT_FORM_STATIC_HTML_INVALID", page: null, submitControls: [], indicators: { hasCaptcha: false, hasLoginWall: false, hasPasswordField: false, dynamicForm: false, visibilityAmbiguous: false }, mapping: null, evidence: null };
+  if (!input.html.trim() || !/^\s*(?:<!doctype[^>]*>|<html\b|<head\b|<body\b|<form\b)/i.test(input.html) || !/^(text\/html|application\/xhtml\+xml)(?:\s*;|$)/i.test(input.contentType)) return { status: "failed", safeReasonCode: "CONTACT_FORM_STATIC_HTML_INVALID", page: null, submitControls: [], indicators: { hasCaptcha: false, hasLoginWall: false, hasPasswordField: false, dynamicForm: false, visibilityAmbiguous: false, formAssociationAmbiguous: false, baseAmbiguous: false }, mapping: null, evidence: null };
   try {
     const extracted = extract(input.finalUrl, input.html);
     if (extracted.indicators.hasCaptcha) return { status: "manual_review", safeReasonCode: "CONTACT_FORM_CAPTCHA_DETECTED", ...extracted, mapping: null, evidence: null };
     if (extracted.indicators.hasLoginWall) return { status: "manual_review", safeReasonCode: "CONTACT_FORM_LOGIN_WALL_DETECTED", ...extracted, mapping: null, evidence: null };
     if (extracted.indicators.dynamicForm) return { status: "manual_review", safeReasonCode: "CONTACT_FORM_STATIC_DYNAMIC_FORM", ...extracted, mapping: null, evidence: null };
     if (extracted.indicators.visibilityAmbiguous) return { status: "manual_review", safeReasonCode: "CONTACT_FORM_STATIC_VISIBILITY_AMBIGUOUS", ...extracted, mapping: null, evidence: null };
+    if (extracted.indicators.formAssociationAmbiguous) return { status: "manual_review", safeReasonCode: "CONTACT_FORM_STATIC_FORM_ASSOCIATION_AMBIGUOUS", ...extracted, mapping: null, evidence: null };
+    if (extracted.indicators.baseAmbiguous) return { status: "manual_review", safeReasonCode: "CONTACT_FORM_STATIC_BASE_AMBIGUOUS", ...extracted, mapping: null, evidence: null };
     if (extracted.externalAction) return { status: "manual_review", safeReasonCode: "CONTACT_FORM_STATIC_EXTERNAL_ACTION", ...extracted, mapping: null, evidence: null };
     const mapping = buildContactFormMappingPreview({ page: extracted.page, approvedContent: APPROVED_CONTENT, pageSignals: extracted.indicators });
     if (mapping.result !== "mapped" || mapping.selectedFormOrdinal == null) return { status: "manual_review", safeReasonCode: "CONTACT_FORM_STATIC_NOT_UNAMBIGUOUS", ...extracted, mapping, evidence: null };
@@ -108,6 +131,6 @@ export function parseStaticContactFormHtml(input: Readonly<{ finalUrl: string; h
     if (!evidence.ok) return { status: "manual_review", safeReasonCode: `CONTACT_FORM_STATIC_EVIDENCE_${evidence.reason.toUpperCase()}`, ...extracted, mapping, evidence };
     return { status: "verified", safeReasonCode: null, ...extracted, mapping, evidence };
   } catch {
-    return { status: "failed", safeReasonCode: "CONTACT_FORM_STATIC_HTML_PARSE_FAILED", page: null, submitControls: [], indicators: { hasCaptcha: false, hasLoginWall: false, hasPasswordField: false, dynamicForm: false, visibilityAmbiguous: false }, mapping: null, evidence: null };
+    return { status: "failed", safeReasonCode: "CONTACT_FORM_STATIC_HTML_PARSE_FAILED", page: null, submitControls: [], indicators: { hasCaptcha: false, hasLoginWall: false, hasPasswordField: false, dynamicForm: false, visibilityAmbiguous: false, formAssociationAmbiguous: false, baseAmbiguous: false }, mapping: null, evidence: null };
   }
 }

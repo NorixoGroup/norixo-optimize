@@ -5,32 +5,21 @@ import { inspectContactFormVerificationPreflight, type ContactFormVerificationPr
 
 const root = process.cwd();
 const worker = readFileSync(join(root, "lib/backlinks/services/contactFormVerificationPreflightWorker.ts"), "utf8");
-const navigationWorker = readFileSync(join(root, "lib/backlinks/services/contactFormNavigationWorker.ts"), "utf8");
 const service = readFileSync(join(root, "lib/backlinks/services/contactFormVerificationPreflightService.ts"), "utf8");
 const route = readFileSync(join(root, "app/api/backlinks/contacts/[id]/contact-form-verification-preflight/route.ts"), "utf8");
 const migration = readFileSync(join(root, "supabase/migrations/20261009120000_add_backlink_contact_form_verification_preflights.sql"), "utf8");
 assert(!service.includes("clickSubmitControl") && !service.includes("fillField") && !service.includes("selectFieldOption"), "preflight must not expose submission capabilities");
 assert(!worker.includes("executeContactFormControlledSubmission"), "preflight worker must not import submission execution");
 for (const token of [
-  "createPlaywrightChromiumBrowserRuntime",
-  "buildContactFormPinnedConnectionTarget",
-  'method !== "GET" && method !== "HEAD"',
-  "CONTACT_FORM_PREFLIGHT_NON_READ_METHOD_BLOCKED",
-  "CONTACT_FORM_PREFLIGHT_REDIRECT_LIMIT_EXCEEDED",
-  "CONTACT_FORM_PREFLIGHT_PINNED_TARGET_MISMATCH",
-  "CONTACT_FORM_PREFLIGHT_POPUP_BLOCKED",
-  "CONTACT_FORM_PREFLIGHT_DOWNLOAD_BLOCKED",
-  "CONTACT_FORM_PREFLIGHT_RUNTIME_TIMEOUT",
-  "CONTACT_FORM_PREFLIGHT_WEBSOCKET_BLOCKED",
-  "CONTACT_FORM_PREFLIGHT_WEBSOCKET_POLICY_UNAVAILABLE",
+  "fetchContactFormStaticHtml",
+  "parseStaticContactFormHtml",
+  "CONTACT_FORM_STATIC_PARSE_UNVERIFIED",
+  "CONTACT_FORM_PREFLIGHT_FORM_MISMATCH",
 ]) assert(worker.includes(token), `missing read-only transport protection ${token}`);
 assert(!worker.includes("allowRealSubmission"), "preflight must not opt into real submission");
-assert.match(worker, /serviceWorkers:\s*"block"/, "preflight must block service workers");
-assert.match(worker, /blockDirectWebRtc:\s*true/, "preflight must block direct WebRTC");
-assert.match(navigationWorker, /serviceWorkers,/, "runtime must apply the requested service-worker policy");
-assert.match(navigationWorker, /--force-webrtc-ip-handling-policy=disable_non_proxied_udp/, "runtime must apply WebRTC direct-egress policy");
-assert.match(navigationWorker, /routeWebSocket/, "runtime must use Playwright WebSocket routing");
-for (const token of ["getRequestUserAndWorkspace", "isAdminPrivateEmail", "executeContactFormVerificationPreflight", "resolveHostnamePublicAddresses"]) assert(route.includes(token), `missing authenticated worker integration ${token}`);
+for (const forbidden of ["playwright", "chromium", "BrowserContext", "routeWebSocket", "createPlaywrightChromiumBrowserRuntime"]) assert(!worker.toLowerCase().includes(forbidden.toLowerCase()), `preflight must not import ${forbidden}`);
+for (const token of ["getRequestUserAndWorkspace", "isAdminPrivateEmail", "executeContactFormVerificationPreflight"]) assert(route.includes(token), `missing authenticated worker integration ${token}`);
+assert(route.includes("randomUUID") && route.includes("contact-form-preflight:${auth.user.id}:${randomUUID()}"), "each server-side preflight invocation must receive a unique worker identifier");
 for (const token of ["unique (workspace_id, contact_id, form_url)", "unique (workspace_id, idempotency_key)", "CONTACT_FORM_PREFLIGHT_FORM_MISMATCH", "grant execute on function public.claim_backlink_contact_form_verification_preflight"]) assert(migration.includes(token), `missing ${token}`);
 const page: ContactFormVerificationPreflightPage = {
   goto: async () => undefined,

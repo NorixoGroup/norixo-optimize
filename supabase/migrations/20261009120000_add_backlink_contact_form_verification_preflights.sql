@@ -74,11 +74,16 @@ create or replace function public.complete_backlink_contact_form_verification_pr
   p_workspace_id uuid, p_preflight_id uuid, p_worker_id text, p_status text, p_safe_error_code text, p_completed_at timestamptz
 ) returns public.backlink_contact_form_verification_preflights
 language plpgsql security definer set search_path = public as $$
-declare r public.backlink_contact_form_verification_preflights;
+declare r public.backlink_contact_form_verification_preflights; completed_time timestamptz;
 begin
-  if p_status not in ('verified','manual_review','failed','blocked') then raise exception 'CONTACT_FORM_PREFLIGHT_INVALID_COMPLETION'; end if;
+  if p_status not in ('manual_review','failed','blocked') then raise exception 'CONTACT_FORM_PREFLIGHT_LEGACY_VERIFIED_FORBIDDEN'; end if;
+  select * into r from public.backlink_contact_form_verification_preflights
+    where id=p_preflight_id and workspace_id=p_workspace_id for update;
+  if not found or r.status<>'running' or r.worker_id<>trim(p_worker_id) then raise exception 'CONTACT_FORM_PREFLIGHT_NOT_RUNNING'; end if;
+  -- Retained only for RPC compatibility: p_completed_at is never timing-authoritative.
+  completed_time := clock_timestamp();
   update public.backlink_contact_form_verification_preflights set status=p_status, safe_error_code=nullif(trim(coalesce(p_safe_error_code,'')),''),
-    completed_at=p_completed_at, cooldown_until=case when p_status in ('failed','blocked') then p_completed_at + interval '15 minutes' else null end
+    completed_at=completed_time, cooldown_until=case when p_status in ('failed','blocked') then completed_time + interval '15 minutes' else null end
     where id=p_preflight_id and workspace_id=p_workspace_id and status='running' and worker_id=trim(p_worker_id)
     returning * into r;
   if not found then raise exception 'CONTACT_FORM_PREFLIGHT_NOT_RUNNING'; end if;
