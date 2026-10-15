@@ -1,3 +1,4 @@
+import { normalizeDiscoveryCandidateText } from "./backlink-text-normalization";
 import type {
   BacklinkDiscoveryPreviewCandidate,
   BacklinkDiscoveryPreviewOutputV1,
@@ -172,7 +173,7 @@ export async function buildBacklinkPromotionInputFromDependencies(
     version: BACKLINK_PROMOTION_INPUT_VERSION,
     source: "automation_qualification",
     policyVersion: BACKLINK_PROMOTION_POLICY_VERSION,
-    candidates: discoveryTask.output.candidates,
+    candidates: discoveryTask.output.candidates.map(normalizeDiscoveryCandidateText),
     qualificationResults: qualificationTask.output.results,
     includeDecisions: ["qualified"],
     maxProposals: Math.max(1, Math.min(50, qualificationTask.output.results.length)),
