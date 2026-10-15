@@ -11,6 +11,10 @@
     {
       "path": "/api/internal/cron/backlinks/autonomy",
       "schedule": "15 6 * * *"
+    },
+    {
+      "path": "/api/internal/cron/backlinks/discovery",
+      "schedule": "30 7 * * 1,3,5"
     }
   ]
 }
