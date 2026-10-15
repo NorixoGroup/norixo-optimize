@@ -1,7 +1,10 @@
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
-import { cancelAutomationTask, claimNextAutomationTask, completeAutomationTask, createOrGetAutomationTask, failAutomationTask, getAutomationTaskByIdInRun, heartbeatAutomationTask, reclaimExpiredAutomationTasks } from "./repositories/automationTasksRepository";
-import { cancelAutomationRun, completeAutomationRun, createOrGetAutomationRun, failAutomationRun, getAutomationWorkspaceControl, startAutomationRun } from "./repositories/automationRunsRepository";
+import { cancelAutomationTask, claimBacklinkDiscoveryTaskById, claimNextAutomationTask, completeAutomationTask, createOrGetAutomationTask, deadLetterAutomationTask, failAutomationTask, getAutomationTaskByIdInRun, heartbeatAutomationTask, reclaimExpiredAutomationTasks } from "./repositories/automationTasksRepository";
+import { cancelAutomationRun, completeAutomationRun, createOrGetAutomationRun, failAutomationRun, getAutomationRunById, getAutomationWorkspaceControl, startAutomationRun } from "./repositories/automationRunsRepository";
+import { listAutomationTasksForRun } from "./repositories/automationRunResumeRepository";
+import { resumeBacklinksDryRun as resumeBacklinksDryRunService, type ResumeBacklinksDryRunInput, type ResumeBacklinksDryRunResult } from "./run-resume";
+import { resumeDiscovery, type ResumeDiscoveryInput, type ResumeDiscoveryResult } from "./discovery-resume";
 import { createDryRunAutomationTaskHandlers } from "./dry-run-handlers";
 import { createBraveBacklinkDiscoveryProvider } from "./brave-backlink-discovery-provider";
 import { readBraveBacklinkDiscoveryRuntimeConfig } from "./brave-backlink-discovery-config";
@@ -9,6 +12,8 @@ import { createMockBacklinkDiscoveryProvider } from "./mock-backlink-discovery-p
 import type { BacklinkDiscoveryProviderRegistry } from "./backlink-discovery-provider-types";
 import { demoBacklinkDiscoveryFixtures } from "./demo-backlink-discovery-fixtures";
 import { isBacklinkDiscoveryDemoProviderEnabled } from "./backlink-discovery-feature-flags";
+import { createBudgetedBacklinkDiscoveryProvider } from "./brave-request-budget";
+import { reserveBacklinkBraveRequest } from "./repositories/braveRequestBudgetRepository";
 import { DEFAULT_BACKLINK_QUALIFICATION_POLICY_V1 } from "./backlink-qualification-policy";
 import { DEFAULT_BACKLINK_PROMOTION_POLICY_V1 } from "./backlink-promotion-policy";
 import { DEFAULT_BACKLINK_CAMPAIGN_ENGINE_POLICY_V1 } from "./backlink-campaign-engine-policy";
@@ -35,8 +40,8 @@ import { createAutomationRun } from "./run-service";
 import { completeAutomationRun as completeRunService, failAutomationRun as failRunService, startAutomationRun as startRunService } from "./transition-service";
 import { executeBacklinksDryRunOrchestrator } from "./orchestrator";
 import { runBacklinksAutomationSchedulerTick } from "./scheduler-tick";
-import type { AutomationTaskDependencies, CreateAutomationRunDependencies } from "./types";
-import { executeAutomationWorkerOnce } from "./worker";
+import type { AutomationTaskDependencies, CreateAutomationRunDependencies, DeadLetterAutomationTaskDependencies } from "./types";
+import { executeAutomationWorkerOnce, executeClaimedDiscoveryTask } from "./worker";
 import type { ExecuteAutomationWorkerOnceInput, ExecuteAutomationWorkerOnceResult } from "./worker-types";
 import type { ExecuteAutomationTaskHandlerInput, ExecuteAutomationTaskHandlerResult } from "./handler-types";
 import type { ExecuteBacklinksDryRunOrchestratorInput, ExecuteBacklinksDryRunOrchestratorResult } from "./orchestrator-types";
@@ -150,6 +155,8 @@ export function createAutomationProductionComposition(): {
   prepareBacklinkCampaignPreviewRun: (input: PrepareBacklinkCampaignPreviewRunInput) => Promise<PrepareBacklinkCampaignPreviewRunResult>;
   executeBacklinkCampaignPreviewRun: (input: ExecuteBacklinkCampaignPreviewRunInput) => Promise<ExecuteBacklinkCampaignPreviewRunResult>;
   runBacklinksSchedulerTick: (input: RunBacklinksAutomationSchedulerTickInput) => Promise<RunBacklinksAutomationSchedulerTickResult>;
+  resumeBacklinksDryRun: (input: ResumeBacklinksDryRunInput) => Promise<ResumeBacklinksDryRunResult>;
+  resumeDiscovery: (input: ResumeDiscoveryInput) => Promise<ResumeDiscoveryResult>;
 } {
   const braveConfig = readBraveBacklinkDiscoveryRuntimeConfig();
   const client = createSupabaseAdminClient();
@@ -159,10 +166,14 @@ export function createAutomationProductionComposition(): {
       : {}),
     ...(braveConfig.enabled
       ? {
-          brave_search: createBraveBacklinkDiscoveryProvider({
-            subscriptionToken: braveConfig.subscriptionToken,
-            fetchImplementation: fetch,
-          }),
+          // Every Brave request needs a new reservation against the shared database budget first.
+          brave_search: createBudgetedBacklinkDiscoveryProvider(
+            createBraveBacklinkDiscoveryProvider({
+              subscriptionToken: braveConfig.subscriptionToken,
+              fetchImplementation: fetch,
+            }),
+            (reservation) => reserveBacklinkBraveRequest(client, reservation),
+          ),
         }
       : {}),
   });
@@ -413,11 +424,12 @@ export function createAutomationProductionComposition(): {
       );
     },
   });
-  const taskDependencies: AutomationTaskDependencies = {
+  const taskDependencies: AutomationTaskDependencies & DeadLetterAutomationTaskDependencies = {
     createOrGetTask: (input) => createOrGetAutomationTask(client, input),
     claimNextTask: (input) => claimNextAutomationTask(client, input),
     heartbeatTask: (input) => heartbeatAutomationTask(client, input),
     completeTask: (input) => completeAutomationTask(client, input),
+    deadLetterTask: (input) => deadLetterAutomationTask(client, input),
     failTask: (input) => failAutomationTask(client, input),
     reclaimExpiredTasks: (input) => reclaimExpiredAutomationTasks(client, input),
     cancelTask: (input) => cancelAutomationTask(client, input),
@@ -452,6 +464,61 @@ export function createAutomationProductionComposition(): {
       { ...taskDependencies, executeHandler },
       input,
     );
+  // Resume executes only qualification / promotion PREVIEW tasks whose dependency is complete. Discovery (the
+  // only task kind that can reach Brave) and every other kind are refused, in addition to the service's checks.
+  const resumeExecuteHandler = async (
+    handlerInput: ExecuteAutomationTaskHandlerInput,
+  ): Promise<ExecuteAutomationTaskHandlerResult> => {
+    if (
+      handlerInput.taskKind !== "backlinks.qualification.preview" &&
+      handlerInput.taskKind !== "backlinks.promotion.preview"
+    ) {
+      throw new Error("BACKLINK_RESUME_TASK_KIND_FORBIDDEN");
+    }
+    const dependencyId = handlerInput.task?.dependsOnTaskId ?? null;
+    const dependency =
+      dependencyId === null
+        ? null
+        : await getAutomationTaskByIdInRun(client, {
+            workspaceId: handlerInput.workspaceId,
+            runId: handlerInput.runId,
+            taskId: dependencyId,
+          });
+    if (dependency === null || dependency.status !== "completed") {
+      throw new Error("BACKLINK_RESUME_DEPENDENCY_NOT_COMPLETED");
+    }
+    return dryRunHandlers.execute(handlerInput);
+  };
+  const resumeWorkerOnce = (input: ExecuteAutomationWorkerOnceInput) =>
+    executeAutomationWorkerOnce(
+      { ...taskDependencies, executeHandler: resumeExecuteHandler },
+      input,
+    );
+  const runTransitionDependencies = {
+    startRun: (transitionInput: Parameters<typeof startAutomationRun>[1]) => startAutomationRun(client, transitionInput),
+    completeRun: (transitionInput: Parameters<typeof completeAutomationRun>[1]) => completeAutomationRun(client, transitionInput),
+    failRun: (transitionInput: Parameters<typeof failAutomationRun>[1]) => failAutomationRun(client, transitionInput),
+    cancelRun: (transitionInput: Parameters<typeof cancelAutomationRun>[1]) => cancelAutomationRun(client, transitionInput),
+  };
+  const resumeBacklinksDryRun = (input: ResumeBacklinksDryRunInput) =>
+    resumeBacklinksDryRunService(
+      {
+        getRun: (scope) => getAutomationRunById(client, scope),
+        listTasks: (scope) => listAutomationTasksForRun(client, scope),
+        reclaimExpiredTasks: (reclaimInput) => reclaimExpiredAutomationTasks(client, reclaimInput),
+        executeWorkerOnce: resumeWorkerOnce,
+        completeRun: (runInput) => completeRunService(runTransitionDependencies, runInput),
+        failRun: (runInput) => failRunService(runTransitionDependencies, runInput),
+      },
+      input,
+    );
+  const resumeDiscoveryTask = (input: ResumeDiscoveryInput) => resumeDiscovery({
+    getRun: (scope) => getAutomationRunById(client, scope),
+    getTask: (scope) => getAutomationTaskByIdInRun(client, scope),
+    claimBacklinkDiscoveryTaskById: (claimInput) => claimBacklinkDiscoveryTaskById(client, claimInput),
+    executeClaimed: (claimedInput) => executeClaimedDiscoveryTask({ ...taskDependencies, executeHandler }, claimedInput),
+    failRun: (runInput) => failRunService(runTransitionDependencies, runInput),
+  }, input);
   const prepareBacklinksDryRun = (input: PrepareBacklinksAutomationRunInput) =>
     prepareBacklinksAutomationRun(
       {
@@ -503,5 +570,7 @@ export function createAutomationProductionComposition(): {
         { prepareBacklinksDryRun, executeBacklinksDryRun },
         input,
       ),
+    resumeBacklinksDryRun,
+    resumeDiscovery: resumeDiscoveryTask,
   };
 }

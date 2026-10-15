@@ -154,6 +154,12 @@ const deadLetterTask: AutomationTask = {
   errorCode: "BACKLINK_QUALIFICATION_DEPENDENCY_NOT_FOUND",
   errorMessage: "Qualification dependency was not found",
 };
+const terminalDiscoveryTask: AutomationTask = {
+  ...task,
+  taskKind: "backlinks.discovery.preview",
+  errorCode: "PROVIDER_CONFIGURATION_ERROR",
+  errorMessage: "Discovery provider configuration is invalid.",
+};
 
 function dependencies(
   results: ExecuteAutomationWorkerOnceResult[],
@@ -252,6 +258,15 @@ async function main(): Promise<void> {
   assert(
     failed.kind === "failed" && failed.discoveryPreview === discoveryPreview && failed.discoveryPreviewTaskId === discoveryTask.id && failed.qualificationPreview === qualificationPreview && failed.qualificationPreviewTaskId === qualificationTask.id && failed.promotionPreview === promotionPreview && failed.lastIssue?.code === "BACKLINK_QUALIFICATION_DEPENDENCY_NOT_FOUND",
     "failed retains previews",
+  );
+
+  const terminalDiscovery = await executeBacklinksDryRunOrchestrator(
+    dependencies([{ kind: "dead_letter", task: terminalDiscoveryTask }]),
+    input,
+  );
+  assert(
+    terminalDiscovery.kind === "failed" && terminalDiscovery.lastIssue?.taskKind === "backlinks.discovery.preview" && terminalDiscovery.lastIssue.code === "PROVIDER_CONFIGURATION_ERROR",
+    "terminal discovery fails its parent run",
   );
 
   const noDiscovery = await executeBacklinksDryRunOrchestrator(
