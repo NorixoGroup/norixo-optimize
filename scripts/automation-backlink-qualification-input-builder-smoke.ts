@@ -175,6 +175,30 @@ async function main(): Promise<void> {
     "provider-only output fields must not be copied",
   );
 
+  const historicalOutput = {
+    ...discoveryOutput,
+    candidates: discoveryOutput.candidates.map((candidate, index) =>
+      index === 1
+        ? { ...candidate, evidenceSummary: `${"x".repeat(499)} ` }
+        : candidate,
+    ),
+  };
+  const historicalSnapshot = JSON.stringify(historicalOutput);
+  const historicalDiscovery = task({ output: historicalOutput });
+  const historical = await buildBacklinkQualificationInputFromDependency(
+    { qualificationTask },
+    { getTaskByIdInRun: async () => historicalDiscovery },
+  );
+  assert(
+    historical.qualificationInput.candidates[1]?.evidenceSummary === "x".repeat(499),
+    "Historical trailing evidence whitespace must be normalized before qualification validation",
+  );
+  assert(
+    JSON.stringify(historicalOutput) === historicalSnapshot &&
+      historicalOutput.candidates[1]?.evidenceSummary.endsWith(" ") === true,
+    "Historical discovery output must remain unchanged",
+  );
+
   const emptyDiscovery = task({
     output: { ...discoveryOutput, candidates: [] },
   });
