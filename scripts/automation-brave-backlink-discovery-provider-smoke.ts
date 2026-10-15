@@ -300,6 +300,168 @@ async function main(): Promise<void> {
     false,
   );
 
+  // --- Timeout (no network, no real Brave call) ---
+  const baseTimeoutConfig = {
+    subscriptionToken: "test-subscription-token",
+    endpoint: "https://brave.test/search",
+  };
+
+  // Out-of-range or invalid timeouts are refused at creation.
+  for (const requestTimeoutMs of [999, 30_001, 0, -1, 1500.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+    assertThrows(
+      () =>
+        createBraveBacklinkDiscoveryProvider({
+          ...baseTimeoutConfig,
+          fetchImplementation: responseFetch({}, []),
+          requestTimeoutMs,
+        }),
+      "PROVIDER_CONFIGURATION_ERROR",
+    );
+  }
+  for (const requestTimeoutMs of [1_000, 30_000]) {
+    createBraveBacklinkDiscoveryProvider({
+      ...baseTimeoutConfig,
+      fetchImplementation: responseFetch({}, []),
+      requestTimeoutMs,
+    });
+  }
+
+  // Observe the delay handed to AbortSignal.timeout and the signal handed to fetch.
+  const originalTimeout = AbortSignal.timeout.bind(AbortSignal);
+  const timeoutDelays: number[] = [];
+  AbortSignal.timeout = (ms: number) => {
+    timeoutDelays.push(ms);
+    return originalTimeout(ms);
+  };
+  try {
+    const signalRecords: RecordedFetch[] = [];
+    const defaultTimeoutProvider = createBraveBacklinkDiscoveryProvider({
+      ...baseTimeoutConfig,
+      fetchImplementation: responseFetch({ web: {} }, signalRecords),
+    });
+    await defaultTimeoutProvider.search(input);
+    const defaultSignal = signalRecords[0]?.init?.signal;
+    assert(
+      timeoutDelays.length === 1 && timeoutDelays[0] === 8_000,
+      "Default timeout is 8000 ms",
+    );
+    assert(
+      defaultSignal instanceof AbortSignal && !defaultSignal.aborted,
+      "Signal passed to fetch and not aborted on success",
+    );
+
+    const customRecords: RecordedFetch[] = [];
+    await createBraveBacklinkDiscoveryProvider({
+      ...baseTimeoutConfig,
+      fetchImplementation: responseFetch({ web: {} }, customRecords),
+      requestTimeoutMs: 12_345,
+    }).search(input);
+    assert(timeoutDelays[1] === 12_345, "Custom timeout forwarded");
+    assert(
+      customRecords[0]?.init?.signal instanceof AbortSignal,
+      "Custom signal passed to fetch",
+    );
+  } finally {
+    AbortSignal.timeout = originalTimeout;
+  }
+
+  // AbortError thrown by fetch is a transient error.
+  const abortErrorRecords: RecordedFetch[] = [];
+  await assertProviderError(
+    () =>
+      createBraveBacklinkDiscoveryProvider({
+        ...baseTimeoutConfig,
+        fetchImplementation: async (resource, init) => {
+          abortErrorRecords.push({ url: toUrl(resource).toString(), init });
+          throw new DOMException("The operation was aborted", "AbortError");
+        },
+      }).search(input),
+    "PROVIDER_TRANSIENT_ERROR",
+    true,
+  );
+  assert(abortErrorRecords.length === 1, "No second HTTP call after AbortError");
+
+  // AbortSignal.timeout timers are unref'd: keep the event loop alive while waiting.
+  const keepAlive = setInterval(() => undefined, 100);
+  try {
+    // 1) Fetch that observes the signal and rejects when it aborts.
+    const observingRecords: RecordedFetch[] = [];
+    let observedAbort = false;
+    const observing = assertProviderError(
+      () =>
+        createBraveBacklinkDiscoveryProvider({
+          ...baseTimeoutConfig,
+          requestTimeoutMs: 1_000,
+          fetchImplementation: (resource, init) =>
+            new Promise<Response>((_, reject) => {
+              observingRecords.push({ url: toUrl(resource).toString(), init });
+              init?.signal?.addEventListener("abort", () => {
+                observedAbort = true;
+                reject(init.signal?.reason);
+              });
+            }),
+        }).search(input),
+      "PROVIDER_TRANSIENT_ERROR",
+      true,
+    );
+
+    // 2) Fetch that ignores the signal and never resolves: the timeout is still enforced.
+    const ignoringRecords: RecordedFetch[] = [];
+    const ignoring = assertProviderError(
+      () =>
+        createBraveBacklinkDiscoveryProvider({
+          ...baseTimeoutConfig,
+          requestTimeoutMs: 1_000,
+          fetchImplementation: (resource, init) => {
+            ignoringRecords.push({ url: toUrl(resource).toString(), init });
+            return new Promise<Response>(() => undefined);
+          },
+        }).search(input),
+      "PROVIDER_TRANSIENT_ERROR",
+      true,
+    );
+
+    // 3) Headers arrive, then the body read stalls: the same signal covers it.
+    const bodyRecords: RecordedFetch[] = [];
+    let bodyObservedAbort = false;
+    const bodyStall = assertProviderError(
+      () =>
+        createBraveBacklinkDiscoveryProvider({
+          ...baseTimeoutConfig,
+          requestTimeoutMs: 1_000,
+          fetchImplementation: async (resource, init) => {
+            bodyRecords.push({ url: toUrl(resource).toString(), init });
+            const response = new Response("{}", { status: 200 });
+            response.json = () =>
+              new Promise<unknown>((_, reject) => {
+                init?.signal?.addEventListener("abort", () => {
+                  bodyObservedAbort = true;
+                  reject(init.signal?.reason);
+                });
+              });
+            return response;
+          },
+        }).search(input),
+      "PROVIDER_TRANSIENT_ERROR",
+      true,
+    );
+
+    await Promise.all([observing, ignoring, bodyStall]);
+    assert(observedAbort, "Abort signal observed by fetch");
+    assert(bodyObservedAbort, "Abort signal observed during body read");
+    assert(
+      observingRecords.length === 1 && ignoringRecords.length === 1 && bodyRecords.length === 1,
+      "No second HTTP call after timeout",
+    );
+    assert(
+      observingRecords[0]?.init?.signal?.aborted === true &&
+        ignoringRecords[0]?.init?.signal?.aborted === true,
+      "Signal aborted after timeout",
+    );
+  } finally {
+    clearInterval(keepAlive);
+  }
+
   console.log("PASS — Automation Brave backlink discovery provider smoke");
 }
 

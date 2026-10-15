@@ -90,7 +90,12 @@ async function main(): Promise<void> {
   const toggleHandler = between(
     source,
     "const handleToggleAutomation",
-    "const handleRunAutomationNow",
+    "const handleToggleDryRunOnly",
+  );
+  const dryRunToggleHandler = between(
+    source,
+    "const handleToggleDryRunOnly",
+    "const handleToggleOutreachScheduleApply",
   );
   const runHandler = between(
     source,
@@ -179,6 +184,24 @@ async function main(): Promise<void> {
   assert(
     toggleHandler.indexOf("const response = await") < toggleHandler.indexOf("setAutomationControl(response.control)"),
     "Toggle must not update optimistically",
+  );
+
+  for (const required of [
+    "const nextDryRunOnly = !automationControl.dryRunOnly",
+    "window.confirm(",
+    "Passer ce workspace en LIVE",
+    'method: "PATCH"',
+    "dryRunOnly: nextDryRunOnly",
+    "apiRequest<AutomationWorkspaceControlPatchResponse>",
+    "setAutomationControl(response.control)",
+    "Impossible de modifier le mode d’envoi des emails.",
+  ]) {
+    assert(dryRunToggleHandler.includes(required), `Dry-run toggle handler missing ${required}`);
+  }
+  assert(!dryRunToggleHandler.includes("workspaceId:"), "Dry-run toggle must not send workspaceId");
+  assert(
+    dryRunToggleHandler.indexOf("const response = await") < dryRunToggleHandler.indexOf("setAutomationControl(response.control)"),
+    "Dry-run toggle must not update optimistically",
   );
 
   for (const required of [
@@ -319,6 +342,18 @@ async function main(): Promise<void> {
     "Candidats retenus",
     "Candidats rejetés",
     "Tronqué",
+    "searchesExecuted?: number",
+    'stoppedReason?: "budget_exhausted"',
+    "const isBudgetExhausted",
+    'summary.stoppedReason === "budget_exhausted"',
+    "Number.isInteger(searchesExecuted)",
+    "searchesExecuted >= 0",
+    "Number.isInteger(searchesRequested)",
+    "searchesRequested > 0",
+    "searchesExecuted < searchesRequested",
+    "Découverte interrompue : budget Brave épuisé",
+    "Les candidats déjà trouvés ont été conservés.",
+    "isBudgetExhausted ? null",
     'target="_blank"',
     'rel="noreferrer"',
     "Rang :",
@@ -434,6 +469,18 @@ async function main(): Promise<void> {
   assert(
     !source.includes("Brave Search n’est pas configuré ou disponible côté serveur."),
     "Brave message must not be generic",
+  );
+  assert(
+    source.indexOf('summary.stoppedReason === "budget_exhausted"') < source.indexOf("Découverte interrompue : budget Brave épuisé"),
+    "Budget interruption message must be guarded by its full validation",
+  );
+  assert(
+    source.indexOf("isBudgetExhausted ? null") < source.indexOf("Aucun candidat Discovery trouvé."),
+    "Budget exhaustion with no candidates must not use the complete-empty message",
+  );
+  assert(
+    !source.includes("BRAVE_API_KEY") && !source.includes("braveApiKey") && !source.includes("reservationRegistry"),
+    "Discovery UI must not expose Brave secrets or reservation registry data",
   );
   assert(
     (source.match(/handleApplyPromotion\(\)/g) ?? []).length === 1,

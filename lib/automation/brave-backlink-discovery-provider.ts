@@ -8,11 +8,15 @@ import {
 
 const DEFAULT_BRAVE_SEARCH_ENDPOINT = "https://api.search.brave.com/res/v1/web/search";
 const MAX_SUBSCRIPTION_TOKEN_LENGTH = 4096;
+const DEFAULT_REQUEST_TIMEOUT_MS = 8_000;
+const MIN_REQUEST_TIMEOUT_MS = 1_000;
+const MAX_REQUEST_TIMEOUT_MS = 30_000;
 
 export type CreateBraveBacklinkDiscoveryProviderInput = {
   subscriptionToken: string;
   fetchImplementation: typeof fetch;
   endpoint?: string;
+  requestTimeoutMs?: number;
 };
 
 function configurationError(): BacklinkDiscoveryProviderError {
@@ -100,7 +104,7 @@ function parseEndpoint(endpoint: string): string {
 
 function validateConfiguration(
   input: CreateBraveBacklinkDiscoveryProviderInput,
-): { subscriptionToken: string; endpoint: string } {
+): { subscriptionToken: string; endpoint: string; requestTimeoutMs: number } {
   if (
     typeof input.subscriptionToken !== "string" ||
     input.subscriptionToken.trim().length === 0 ||
@@ -110,9 +114,19 @@ function validateConfiguration(
     throw configurationError();
   }
 
+  const requestTimeoutMs = input.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
+  if (
+    !Number.isInteger(requestTimeoutMs) ||
+    requestTimeoutMs < MIN_REQUEST_TIMEOUT_MS ||
+    requestTimeoutMs > MAX_REQUEST_TIMEOUT_MS
+  ) {
+    throw configurationError();
+  }
+
   return {
     subscriptionToken: input.subscriptionToken.trim(),
     endpoint: parseEndpoint(input.endpoint ?? DEFAULT_BRAVE_SEARCH_ENDPOINT),
+    requestTimeoutMs,
   };
 }
 
@@ -207,33 +221,47 @@ export function createBraveBacklinkDiscoveryProvider(
     ): Promise<BacklinkDiscoveryProviderSearchResult> {
       assertSearchInput(searchInput);
 
-      let response: Response;
-      try {
-        response = await input.fetchImplementation(
-          buildSearchUrl(configuration.endpoint, searchInput),
-          {
-            method: "GET",
-            cache: "no-store",
-            headers: {
-              Accept: "application/json",
-              "X-Subscription-Token": configuration.subscriptionToken,
+      // One signal covers the fetch and the body read. The race below makes the timeout
+      // deterministic even if a fetch implementation ignores the signal. There is no HTTP retry:
+      // the request may already have reached Brave, so the reservation stays consumed.
+      const signal = AbortSignal.timeout(configuration.requestTimeoutMs);
+      const timedOut = new Promise<never>((_, reject) => {
+        signal.addEventListener("abort", () => reject(transientError()), { once: true });
+      });
+      timedOut.catch(() => undefined);
+
+      const request = (async (): Promise<unknown> => {
+        let response: Response;
+        try {
+          response = await input.fetchImplementation(
+            buildSearchUrl(configuration.endpoint, searchInput),
+            {
+              method: "GET",
+              cache: "no-store",
+              signal,
+              headers: {
+                Accept: "application/json",
+                "X-Subscription-Token": configuration.subscriptionToken,
+              },
             },
-          },
-        );
-      } catch {
-        throw transientError();
-      }
+          );
+        } catch {
+          throw transientError();
+        }
 
-      if (!response.ok) {
-        throw classifyHttpError(response.status);
-      }
+        if (!response.ok) {
+          throw classifyHttpError(response.status);
+        }
 
-      let payload: unknown;
-      try {
-        payload = await response.json();
-      } catch {
-        throw invalidResponseError();
-      }
+        try {
+          return await response.json();
+        } catch {
+          throw signal.aborted ? transientError() : invalidResponseError();
+        }
+      })();
+      request.catch(() => undefined);
+
+      const payload = await Promise.race([request, timedOut]);
 
       return {
         query: searchInput.query,
