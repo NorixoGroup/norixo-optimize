@@ -11,6 +11,19 @@ type Props = {
 export default function DiscoveryPreview({ discoveryPreview, onRequestIntake }: Props) {
   if (!discoveryPreview) return null;
 
+  const { summary } = discoveryPreview;
+  const searchesExecuted = summary.searchesExecuted;
+  const searchesRequested = summary.searchesRequested;
+  const isBudgetExhausted =
+    summary.truncated === true &&
+    summary.stoppedReason === "budget_exhausted" &&
+    Number.isInteger(searchesExecuted) &&
+    typeof searchesExecuted === "number" &&
+    searchesExecuted >= 0 &&
+    Number.isInteger(searchesRequested) &&
+    searchesRequested > 0 &&
+    searchesExecuted < searchesRequested;
+
   return (
     <section className="mt-5 rounded-xl border border-slate-200 bg-white p-4" aria-label="Candidats Discovery">
       <h3 className="font-semibold text-slate-900">Candidats Discovery</h3>
@@ -40,10 +53,19 @@ export default function DiscoveryPreview({ discoveryPreview, onRequestIntake }: 
           <dd className="font-semibold">{discoveryPreview.summary.truncated ? "Oui" : "Non"}</dd>
         </div>
       </dl>
+      {isBudgetExhausted ? (
+        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+          <p className="font-semibold">Découverte interrompue : budget Brave épuisé</p>
+          <p className="mt-1">{searchesExecuted} recherche{searchesExecuted === 1 ? "" : "s"} exécutée{searchesExecuted === 1 ? "" : "s"} sur {searchesRequested} demandée{searchesRequested === 1 ? "" : "s"}.</p>
+          {discoveryPreview.candidates.length > 0 ? (
+            <p className="mt-1">Les candidats déjà trouvés ont été conservés.</p>
+          ) : null}
+        </div>
+      ) : null}
       {discoveryPreview.skipped === "no_searches" ? (
         <p className="mt-3 text-slate-600">Aucune recherche Discovery n’a été demandée.</p>
       ) : discoveryPreview.candidates.length === 0 ? (
-        <p className="mt-3 text-slate-600">Aucun candidat Discovery trouvé.</p>
+        isBudgetExhausted ? null : <p className="mt-3 text-slate-600">Aucun candidat Discovery trouvé.</p>
       ) : (
         <div className="mt-3 space-y-3">
           {discoveryPreview.candidates.slice(0, 10).map((candidate) => (

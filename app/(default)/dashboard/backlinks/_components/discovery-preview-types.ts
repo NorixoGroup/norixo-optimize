@@ -12,6 +12,8 @@ export type AutomationDiscoveryPreviewView = {
     candidatesAccepted: number;
     candidatesRejected: number;
     truncated: boolean;
+    searchesExecuted?: number;
+    stoppedReason?: "budget_exhausted";
   };
   candidates: readonly {
     candidateKey: string;

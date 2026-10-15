@@ -7,7 +7,11 @@ import {
   mapQualificationOpportunityTypeToPromotion,
   mapQualificationPageTypeToPromotion,
 } from "./backlink-promotion-mapping";
-import type { BacklinkDiscoveryProviderItem } from "./backlink-discovery-provider-types";
+import {
+  BacklinkDiscoveryProviderError,
+  type BacklinkDiscoveryProviderItem,
+  type BacklinkDiscoveryProviderSearchResult,
+} from "./backlink-discovery-provider-types";
 import type {
   BacklinkDiscoveryPreviewCandidate,
   BacklinkDiscoveryPreviewOutputV1,
@@ -15,6 +19,7 @@ import type {
   ExecuteBacklinkDiscoveryPreviewDependencies,
 } from "./backlink-discovery-handler-types";
 import { normalizeBacklinkDiscoveryUrl } from "./backlink-discovery-normalization";
+import { truncateCleanText } from "./backlink-text-normalization";
 import { validateBacklinkDiscoveryRequest } from "./backlink-discovery-validation";
 import type { ExecuteAutomationTaskHandlerInput, ExecuteAutomationTaskHandlerResult } from "./handler-types";
 
@@ -42,8 +47,9 @@ function cleanText(value: string | null, maxLength: number): string | null {
     return null;
   }
 
-  const cleaned = value.trim();
-  return cleaned.length === 0 ? null : cleaned.slice(0, maxLength);
+  // Truncate THEN trim (and never split a surrogate pair): downstream validators require trimmed text.
+  const cleaned = truncateCleanText(value, maxLength);
+  return cleaned.length === 0 ? null : cleaned;
 }
 
 function buildCandidateKey(sourceUrl: string): string {
@@ -59,8 +65,8 @@ function buildEvidenceSummary(
   const title = pageTitle === null ? "Untitled result" : pageTitle;
   const snippetPart = snippet === null ? "" : ` — ${snippet}`;
 
-  return `SERP rank ${rank} for query "${query}": ${title}${snippetPart}`.slice(
-    0,
+  return truncateCleanText(
+    `SERP rank ${rank} for query "${query}": ${title}${snippetPart}`,
     MAX_EVIDENCE_SUMMARY_LENGTH,
   );
 }
@@ -197,15 +203,42 @@ export async function executeBacklinkDiscoveryPreview(
   let resultsReceived = 0;
   let outputCandidateBytes = 0;
   let truncated = false;
+  let searchesExecuted = 0;
+  let budgetExhausted = false;
 
   for (const [queryIndex, search] of request.searches.entries()) {
-    const result = await provider.search({
-      query: search.query,
-      queryIndex,
-      countryCode: search.countryCode ?? null,
-      languageCode: search.languageCode ?? null,
-      maxResults: request.maxResultsPerSearch,
-    });
+    let result: BacklinkDiscoveryProviderSearchResult;
+    try {
+      result = await provider.search({
+        query: search.query,
+        queryIndex,
+        countryCode: search.countryCode ?? null,
+        languageCode: search.languageCode ?? null,
+        maxResults: request.maxResultsPerSearch,
+        ...(input.task === undefined
+          ? {}
+          : {
+              requestContext: {
+                workspaceId: input.workspaceId,
+                runId: input.runId,
+                taskId: input.taskId,
+                taskAttempt: input.task.attemptCount,
+              },
+            }),
+      });
+    } catch (error) {
+      // Only the internal budget refusal ends the run early; every other error still propagates.
+      if (
+        error instanceof BacklinkDiscoveryProviderError &&
+        error.code === "PROVIDER_BUDGET_EXHAUSTED"
+      ) {
+        budgetExhausted = true;
+        truncated = true;
+        break;
+      }
+      throw error;
+    }
+    searchesExecuted += 1;
 
     for (const item of result.items) {
       resultsReceived += 1;
@@ -260,6 +293,7 @@ export async function executeBacklinkDiscoveryPreview(
       candidatesAccepted: candidates.length,
       candidatesRejected,
       truncated,
+      ...(budgetExhausted ? { searchesExecuted, stoppedReason: "budget_exhausted" as const } : {}),
     },
     candidates,
     rejections,

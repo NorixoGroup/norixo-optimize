@@ -290,6 +290,31 @@ async function main(): Promise<void> {
   );
 
   const longText = "x".repeat(1000);
+  const boundaryQuery = "boundary";
+  const boundaryPrefix = `SERP rank 1 for query "${boundaryQuery}": Untitled result — `;
+  const boundarySnippet = `${"x".repeat(500 - boundaryPrefix.length - 1)} y`;
+  const boundaryProvider = createMockBacklinkDiscoveryProvider([
+    {
+      query: boundaryQuery,
+      items: [
+        {
+          url: "https://boundary.example/truncated-evidence",
+          title: null,
+          snippet: boundarySnippet,
+          rank: 1,
+        },
+      ],
+    },
+  ]);
+  const boundaryOutput = await executePreview(boundaryProvider, {
+    ...nominalRequest,
+    searches: [{ query: boundaryQuery }],
+  });
+  assert(
+    boundaryOutput.candidates[0]?.evidenceSummary.length === 499 &&
+      boundaryOutput.candidates[0]?.evidenceSummary.trim() === boundaryOutput.candidates[0]?.evidenceSummary,
+    "Evidence truncated immediately after a space must remain trimmed and qualification-safe",
+  );
   const budgetSearches = Array.from({ length: 5 }, (_, queryIndex) => ({
     query: `budget candidates ${queryIndex + 1}`,
   }));
@@ -350,6 +375,76 @@ async function main(): Promise<void> {
     throw new Error("Expected provider error");
   } catch (error) {
     assert(error === providerError && followingSearches === 1, "Provider errors must propagate by identity");
+  }
+
+  // Internal budget exhaustion ends the run with a normal, explicitly incomplete result.
+  {
+    const makeProvider = (exhaustAt: number, counter: { calls: number }): BacklinkDiscoveryProvider => ({
+      name: "mock",
+      async search(searchInput) {
+        counter.calls += 1;
+        if (searchInput.queryIndex >= exhaustAt) {
+          throw new BacklinkDiscoveryProviderError("PROVIDER_BUDGET_EXHAUSTED", "Brave Search request budget is exhausted", false);
+        }
+        return {
+          query: searchInput.query,
+          queryIndex: searchInput.queryIndex,
+          countryCode: searchInput.countryCode,
+          languageCode: searchInput.languageCode,
+          items: [
+            { url: "https://partial.example/shared", title: "Shared", snippet: null, rank: 1 },
+            { url: `https://partial.example/only-${searchInput.queryIndex}`, title: "Only", snippet: null, rank: 2 },
+          ],
+        };
+      },
+    });
+    const threeSearches = {
+      ...nominalRequest,
+      searches: [{ query: "one" }, { query: "two" }, { query: "three" }],
+    };
+    for (const [exhaustAt, kept] of [[0, 0], [1, 2], [2, 3]] as const) {
+      const counter = { calls: 0 };
+      const output = await executePreview(makeProvider(exhaustAt, counter), threeSearches);
+      assert(counter.calls === exhaustAt + 1, `Exhaustion at ${exhaustAt}: no search after the refusal`);
+      assert(
+        output.summary.truncated === true &&
+          output.summary.stoppedReason === "budget_exhausted" &&
+          output.summary.searchesExecuted === exhaustAt &&
+          output.summary.searchesRequested === 3 &&
+          output.candidates.length === kept &&
+          output.summary.candidatesAccepted === kept,
+        `Exhaustion at ${exhaustAt}: partial, explicit, deduplicated result`,
+      );
+    }
+    const completeCounter = { calls: 0 };
+    const complete = await executePreview(makeProvider(99, completeCounter), threeSearches);
+    assert(
+      complete.summary.truncated === false &&
+        complete.summary.searchesExecuted === undefined &&
+        complete.summary.stoppedReason === undefined &&
+        completeCounter.calls === 3 &&
+        Object.keys(complete.summary).length === 5,
+      "Complete run keeps the five-field summary",
+    );
+
+    // Other provider errors, including Brave's HTTP 429 code, still propagate by identity.
+    for (const code of ["PROVIDER_QUOTA_EXCEEDED", "PROVIDER_TRANSIENT_ERROR", "PROVIDER_CONFIGURATION_ERROR", "PROVIDER_INVALID_RESPONSE"] as const) {
+      const error = new BacklinkDiscoveryProviderError(code, "deterministic", code !== "PROVIDER_INVALID_RESPONSE");
+      let calls = 0;
+      const failing: BacklinkDiscoveryProvider = {
+        name: "mock",
+        async search() {
+          calls += 1;
+          throw error;
+        },
+      };
+      try {
+        await executePreview(failing, threeSearches);
+        throw new Error(`Expected ${code}`);
+      } catch (thrown) {
+        assert(thrown === error && calls === 1, `${code} must still propagate`);
+      }
+    }
   }
 
   const invalidInputs: readonly [ExecuteAutomationTaskHandlerInput["input"], string][] = [
