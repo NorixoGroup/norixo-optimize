@@ -6,6 +6,38 @@ function assert(condition: boolean, message: string): asserts condition {
   }
 }
 
+/**
+ * The public surface is the FINAL `return { ... }` of createAutomationProductionComposition(), anchored on its
+ * first property. An earlier `return {` in the file (for example a helper's) must never be mistaken for it.
+ */
+function finalReturnBlock(source: string): string {
+  const start = source.lastIndexOf("\n  return {\n    prepareBacklinksDryRun,");
+  assert(start !== -1, "Public composition surface not found");
+  const end = source.indexOf("\n  };\n}", start);
+  assert(end !== -1, "Public composition surface is not terminated");
+  return source.slice(start, end);
+}
+
+function exposedPropertyNamesOf(block: string): string[] {
+  return Array.from(block.matchAll(/^\s{4}([A-Za-z_$][\w$]*)(?=[:,])/gm), (match) => match[1]);
+}
+
+/**
+ * The only environment read allowed in the composition is the live follow-up inbound reply domain
+ * (wired in commit 60ad125). Any other process.env access, including Brave or scheduling flags, must fail.
+ */
+function assertOnlyAllowedEnvironmentRead(source: string): void {
+  const reads = source.match(/process\.env(?:\.[A-Za-z0-9_]+|\[[^\]]*\])?/g) ?? [];
+  assert(
+    reads.length === 1 && reads[0] === "process.env.OUTREACH_INBOUND_REPLY_DOMAIN",
+    `Composition may only read process.env.OUTREACH_INBOUND_REPLY_DOMAIN (found: ${reads.join(", ") || "none"})`,
+  );
+  assert(
+    source.includes("inboundReplyDomain: process.env.OUTREACH_INBOUND_REPLY_DOMAIN,"),
+    "The allowed environment read must stay the live follow-up inboundReplyDomain",
+  );
+}
+
 async function main(): Promise<void> {
   const source = await readFile("lib/automation/production-composition.ts", "utf8");
   const requiredFragments = [
@@ -16,7 +48,9 @@ async function main(): Promise<void> {
     "mock: createMockBacklinkDiscoveryProvider(demoBacklinkDiscoveryFixtures)",
     "readBraveBacklinkDiscoveryRuntimeConfig()",
     "braveConfig.enabled",
-    "brave_search: createBraveBacklinkDiscoveryProvider({",
+    "brave_search: createBudgetedBacklinkDiscoveryProvider(",
+    "createBraveBacklinkDiscoveryProvider({",
+    "reserveBacklinkBraveRequest(client, reservation)",
     "fetchImplementation: fetch",
     "BACKLINK_DISCOVERY_BRAVE_LIMIT_EXCEEDED",
     "createDryRunAutomationTaskHandlers({",
@@ -40,8 +74,7 @@ async function main(): Promise<void> {
     assert(source.includes(fragment), fragment);
   }
 
-  const surface = source.match(/return \{([\s\S]*?)\n  \};/);
-  assert(surface !== null, "Public composition surface not found");
+  const surface = finalReturnBlock(source);
   const publicProperties = [
     "prepareBacklinksDryRun",
     "executeWorkerOnce",
@@ -49,19 +82,17 @@ async function main(): Promise<void> {
     "runBacklinksSchedulerTick",
     "prepareBacklinkCampaignPreviewRun",
     "executeBacklinkCampaignPreviewRun",
+    "resumeBacklinksDryRun",
   ];
 
   for (const property of publicProperties) {
-    assert(surface[1].includes(property), `Missing public function ${property}`);
+    assert(surface.includes(property), `Missing public function ${property}`);
   }
-  const exposedPropertyNames = Array.from(
-    surface[1].matchAll(/^\s{4}([A-Za-z_$][\w$]*)(?=[:,])/gm),
-    (match) => match[1],
-  );
+  const exposedPropertyNames = exposedPropertyNamesOf(surface);
 
   assert(
-    exposedPropertyNames.length === 6,
-    "Composition must expose exactly six public functions",
+    exposedPropertyNames.length === 7,
+    `Composition must expose exactly seven public functions (found: ${exposedPropertyNames.join(", ")})`,
   );
 
   for (const property of publicProperties) {
@@ -84,15 +115,30 @@ async function main(): Promise<void> {
   for (const forbidden of [
     "dryRunAutomationTaskHandlers",
     "dataforseo_serp",
-    "process.env",
     "setInterval",
     "setTimeout",
     "fetch(",
-    "try {",
     "process.env.BACKLINK_PROMOTION",
   ]) {
     assert(!source.includes(forbidden), `Forbidden ${forbidden}`);
   }
+
+  // Environment reads: exactly one is allowed (previously a blanket ban that no longer matched the code).
+  assertOnlyAllowedEnvironmentRead(source);
+
+  // `try {`: exactly one is allowed, inside the live follow-up task handler that precedes the composition.
+  const compositionStart = source.indexOf("export function createAutomationProductionComposition");
+  assert(compositionStart !== -1, "Composition function not found");
+  const tryBlocks = Array.from(source.matchAll(/\btry \{/g));
+  assert(tryBlocks.length === 1, `Exactly one try block is allowed (found ${tryBlocks.length})`);
+  const tryIndex = tryBlocks[0].index ?? -1;
+  assert(
+    tryIndex !== -1 &&
+      tryIndex < compositionStart &&
+      source.lastIndexOf("export function createBacklinkOutreachLiveFollowUpTaskHandler", tryIndex) !== -1 &&
+      source.slice(tryIndex, tryIndex + 800).includes("LIVE_FOLLOW_UP_NOT_ENABLED"),
+    "The only try block must be the live follow-up handler's LIVE_FOLLOW_UP_NOT_ENABLED guard, outside the composition body",
+  );
 
   const runtimeDynamicImports = source
     .split("\n")

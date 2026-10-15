@@ -5378,6 +5378,7 @@ export type Database = {
         Returns: Database["public"]["Tables"]["backlink_verification_jobs"]["Row"][]
       }
       claim_next_automation_task: { Args: { p_claimed_at: string; p_lease_duration_seconds: number; p_run_id: string; p_worker_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
+      claim_backlink_discovery_task_by_id: { Args: { p_claimed_at: string; p_lease_duration_seconds: number; p_run_id: string; p_task_id: string; p_worker_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
       claim_next_backlink_autonomy_task: { Args: { p_claimed_at: string; p_lease_duration_seconds: number; p_run_id: string; p_worker_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
       heartbeat_backlink_verification_job: {
         Args: { p_heartbeat_at: string; p_job_id: string; p_lease_duration_seconds: number; p_worker_id: string }
@@ -5428,6 +5429,7 @@ export type Database = {
         Args: { p_error_code: string; p_error_message: string; p_failed_at: string; p_run_id: string; p_workspace_id: string }
         Returns: Database["public"]["Tables"]["automation_runs"]["Row"][]
       }
+      dead_letter_automation_task: { Args: { p_error_code: string; p_error_message: string; p_failed_at: string; p_task_id: string; p_worker_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
       fail_automation_task: { Args: { p_error_code: string; p_error_message: string; p_failed_at: string; p_task_id: string; p_worker_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
       heartbeat_automation_task: { Args: { p_heartbeat_at: string; p_lease_duration_seconds: number; p_task_id: string; p_worker_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
       reclaim_expired_automation_tasks: { Args: { p_limit: number; p_reclaimed_at: string; p_run_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
