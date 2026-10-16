@@ -50,6 +50,8 @@ import {
 } from "@/lib/marketMemory/lookupMarketSnapshot";
 import { saveMarketSnapshot } from "@/lib/marketMemory/saveMarketSnapshot";
 
+const GUEST_AUDIT_DISABLED = true;
+
 const guestAuditRateByKey = new Map<string, number>();
 const GUEST_AUDIT_RATE_WINDOW_MS = Number.parseInt(
   process.env.GUEST_AUDIT_RATE_LIMIT_MS ?? "8000",
@@ -1104,6 +1106,13 @@ function buildGuestAuditResponse(
 }
 
 export async function POST(request: NextRequest) {
+  if (GUEST_AUDIT_DISABLED) {
+    return NextResponse.json(
+      { error: "Gone" },
+      { status: 410, headers: { "Cache-Control": "no-store" } }
+    );
+  }
+
   try {
     if (!allowGuestAuditRequest(getGuestAuditRateKey(request))) {
       const retryAfterSeconds = Math.max(1, Math.ceil(GUEST_AUDIT_RATE_WINDOW_MS / 1000));
