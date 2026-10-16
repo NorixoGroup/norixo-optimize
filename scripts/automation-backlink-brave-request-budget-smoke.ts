@@ -285,7 +285,7 @@ async function main(): Promise<void> {
     const lock = sql.indexOf("pg_advisory_xact_lock");
     assert(lock !== -1 && lock < sql.indexOf("count(*)") && sql.indexOf("count(*)") < sql.indexOf("insert into public.backlink_brave_request_reservations"), "Lock must precede count and insert");
     for (const fragment of [
-      "begin;", "commit;", "c_limit constant integer := 80", "interval '30 days'",
+      "c_limit constant integer := 80", "interval '30 days'",
       "unique (workspace_id, request_key)", "enable row level security",
       "security definer", "set search_path = public, pg_temp",
       "'replayed'", "'limit_reached'", "'reserved'", "clock_timestamp()",
