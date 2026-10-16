@@ -58,10 +58,10 @@ test("static: the corrective migration is ordered after the nine pending migrati
 });
 
 test("static: the corrective migration only replaces the evidence function body", () => {
-  assert.match(code, /^\s*begin;/i);
-  assert.match(code, /commit;\s*$/i);
+  assert.doesNotMatch(code, /^\s*begin;/i);
+  assert.doesNotMatch(code, /commit;\s*$/i);
   const statements = code.split(";").map((s) => s.trim()).filter(Boolean);
-  assert.deepEqual(statements.map((s) => s.split(/\s+/).slice(0, 2).join(" ").toLowerCase()), ["begin", "create or", "commit"]);
+  assert.deepEqual(statements.map((s) => s.split(/\s+/).slice(0, 2).join(" ").toLowerCase()), ["create or"]);
   assert.equal(code.match(/create or replace function/gi)?.length, 1);
   assert.ok(code.includes(`create or replace function ${FN}(p_safe_evidence jsonb)`));
   assert.doesNotMatch(code, /\b(drop|alter|grant|revoke|insert|update|delete|truncate|create\s+(table|index|trigger|policy|extension|role))\b/i, "no object other than the function may change");

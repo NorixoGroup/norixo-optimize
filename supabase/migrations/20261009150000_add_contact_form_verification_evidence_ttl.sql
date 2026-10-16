@@ -1,4 +1,3 @@
-begin;
 
 create or replace function public.has_current_backlink_contact_form_verification(p_workspace_id uuid, p_contact_id uuid, p_form_url text)
 returns boolean
@@ -33,5 +32,3 @@ $$;
 revoke all on function public.has_current_backlink_contact_form_verification(uuid,uuid,text) from public, anon, authenticated;
 grant execute on function public.has_current_backlink_contact_form_verification(uuid,uuid,text) to service_role;
 comment on function public.has_current_backlink_contact_form_verification(uuid,uuid,text) is 'Fail-closed current-contact-form verification gate. Requires exact current URL, valid structural evidence, and verified_at between PostgreSQL server now minus seven days and now.';
-
-commit;

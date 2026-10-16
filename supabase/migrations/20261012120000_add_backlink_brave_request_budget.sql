@@ -1,4 +1,3 @@
-begin;
 
 -- Brave Search request budget.
 --
@@ -122,5 +121,3 @@ revoke all on function public.reserve_backlink_brave_request(uuid, uuid, text)
   from public, anon, authenticated;
 grant execute on function public.reserve_backlink_brave_request(uuid, uuid, text)
   to service_role;
-
-commit;

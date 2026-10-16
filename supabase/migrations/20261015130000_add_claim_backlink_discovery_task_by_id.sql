@@ -1,4 +1,3 @@
-begin;
 
 create function public.claim_backlink_discovery_task_by_id(
   p_workspace_id uuid,
@@ -80,5 +79,3 @@ revoke all on function public.claim_backlink_discovery_task_by_id(uuid, uuid, uu
   from public, anon, authenticated, service_role;
 grant execute on function public.claim_backlink_discovery_task_by_id(uuid, uuid, uuid, text, timestamptz, integer)
   to service_role;
-
-commit;

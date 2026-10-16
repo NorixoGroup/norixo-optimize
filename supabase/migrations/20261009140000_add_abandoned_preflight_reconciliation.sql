@@ -1,4 +1,3 @@
-begin;
 
 create table public.backlink_contact_form_preflight_reconciliations (
   id uuid primary key default gen_random_uuid(), preflight_id uuid not null unique references public.backlink_contact_form_verification_preflights(id) on delete cascade,
@@ -34,4 +33,3 @@ end; $$;
 revoke all on function public.reconcile_abandoned_backlink_contact_form_preflight(uuid,uuid,uuid,timestamptz) from public, anon, authenticated;
 grant execute on function public.reconcile_abandoned_backlink_contact_form_preflight(uuid,uuid,uuid,timestamptz) to service_role;
 comment on function public.reconcile_abandoned_backlink_contact_form_preflight(uuid,uuid,uuid,timestamptz) is 'Service-role-only, explicit administrative reconciliation of a running preflight older than ten minutes; never creates evidence or retries network work.';
-commit;
