@@ -1,4 +1,3 @@
-begin;
 
 revoke all on function public.reconcile_abandoned_backlink_contact_form_preflight(uuid,uuid,uuid,timestamptz) from public, anon, authenticated, service_role;
 drop function public.reconcile_abandoned_backlink_contact_form_preflight(uuid,uuid,uuid,timestamptz);
@@ -29,5 +28,3 @@ end; $$;
 revoke all on function public.reconcile_abandoned_backlink_contact_form_preflight(uuid,uuid,uuid) from public, anon, authenticated;
 grant execute on function public.reconcile_abandoned_backlink_contact_form_preflight(uuid,uuid,uuid) to service_role;
 comment on function public.reconcile_abandoned_backlink_contact_form_preflight(uuid,uuid,uuid) is 'Service-role-only, explicit administrative reconciliation of a running preflight older than ten minutes; PostgreSQL derives the authoritative reconciliation time after locking the row.';
-
-commit;

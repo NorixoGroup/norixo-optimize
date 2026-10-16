@@ -1,4 +1,3 @@
-begin;
 
 create or replace function public.complete_verified_backlink_contact_form_preflight_atomic(
   p_workspace_id uuid, p_preflight_id uuid, p_worker_id text, p_contact_id uuid, p_form_url text,
@@ -31,5 +30,3 @@ end; $$;
 revoke all on function public.complete_verified_backlink_contact_form_preflight_atomic(uuid,uuid,text,uuid,text,timestamptz,text,text,jsonb,timestamptz) from public, anon, authenticated;
 grant execute on function public.complete_verified_backlink_contact_form_preflight_atomic(uuid,uuid,text,uuid,text,timestamptz,text,text,jsonb,timestamptz) to service_role;
 comment on function public.complete_verified_backlink_contact_form_preflight_atomic(uuid,uuid,text,uuid,text,timestamptz,text,text,jsonb,timestamptz) is 'Service-role-only atomic evidence upsert and verified preflight completion; locks claim ownership and rolls back both writes on failure.';
-
-commit;

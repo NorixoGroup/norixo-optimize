@@ -1,4 +1,3 @@
-begin;
 
 alter table public.automation_tasks drop constraint automation_tasks_state;
 
@@ -44,5 +43,3 @@ $$;
 
 revoke all on function public.dead_letter_automation_task(uuid,uuid,text,timestamptz,text,text) from public,anon,authenticated,service_role;
 grant execute on function public.dead_letter_automation_task(uuid,uuid,text,timestamptz,text,text) to service_role;
-
-commit;

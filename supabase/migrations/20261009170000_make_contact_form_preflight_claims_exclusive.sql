@@ -1,4 +1,3 @@
-begin;
 
 revoke all on function public.claim_backlink_contact_form_verification_preflight(uuid,uuid,text,timestamptz) from public, anon, authenticated, service_role;
 drop function public.claim_backlink_contact_form_verification_preflight(uuid,uuid,text,timestamptz);
@@ -27,5 +26,3 @@ end; $$;
 revoke all on function public.claim_backlink_contact_form_verification_preflight(uuid,uuid,text,timestamptz) from public, anon, authenticated;
 grant execute on function public.claim_backlink_contact_form_verification_preflight(uuid,uuid,text,timestamptz) to service_role;
 comment on function public.claim_backlink_contact_form_verification_preflight(uuid,uuid,text,timestamptz) is 'Service-role-only exclusive claim. claimed=true is returned only for the invocation that atomically transitions the preflight to its owned running state.';
-
-commit;

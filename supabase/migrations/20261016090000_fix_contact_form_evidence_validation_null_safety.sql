@@ -1,4 +1,3 @@
-begin;
 
 -- backlink_contact_form_verification_evidence_valid(jsonb) returned NULL, not false, when a required
 -- key was missing or JSON null: `NULL = 'true'` is NULL and `NULL AND ...` stays NULL. Its callers use
@@ -45,5 +44,3 @@ as $$
     false
   )
 $$;
-
-commit;
