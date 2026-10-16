@@ -200,9 +200,10 @@ async function main(): Promise<void> {
   // 9. Cron handler: authentication and flag gate.
   {
     let constructed: number = 0;
-    const handler = (enabled: boolean, secret = "s3cret") =>
+    const handler = (enabled: boolean, secrets: { dedicated?: string; legacy?: string } = { dedicated: "ded-s3cret", legacy: "old-s3cret" }) =>
       createScheduledDiscoveryCronHandler({
-        cronSecret: () => secret,
+        dedicatedCronSecret: () => secrets.dedicated ?? "",
+        legacyCronSecret: () => secrets.legacy ?? "",
         isEnabled: () => enabled,
         createProductionDependencies: () => { constructed += 1; return makeDeps().deps; },
         run: runScheduledBacklinkDiscovery,
@@ -210,18 +211,29 @@ async function main(): Promise<void> {
       });
     const request = (authorization?: string) => new NextRequest("http://localhost/api/internal/cron/backlinks/discovery", { headers: authorization === undefined ? {} : { authorization } });
     assert((await handler(true)(request())).status === 401, "Missing authorization");
-    assert((await handler(true)(request("Bearer wrong"))).status === 401, "Wrong secret");
-    assert((await handler(true, "")(request("Bearer "))).status === 401, "Empty configured secret never authorizes");
-    const disabled = await handler(false)(request("Bearer s3cret"));
-    assert(disabled.status === 200 && (await disabled.json()).disposition === "disabled" && constructed === 0, "Flag OFF: no dependencies are even constructed");
-    const enabledResponse = await handler(true)(request("Bearer s3cret"));
+    assert((await handler(true)(request("Bearer wrong"))).status === 401, "Invalid secret");
+    assert((await handler(true)(request("ded-s3cret"))).status === 401, "Bearer scheme is required");
+    assert((await handler(true)(request("Bearer ded-s3cret-extra"))).status === 401, "Near-miss secret");
+    assert((await handler(true, {})(request("Bearer "))).status === 401, "No configured secret never authorizes (empty bearer)");
+    assert((await handler(true, {})(request("Bearer wrong"))).status === 401, "No configured secret never authorizes");
+    assert((await handler(true, {})(request())).status === 401, "No configured secret and no header");
+    assert(constructed === 0, "Rejected requests never construct dependencies");
+    const dedicatedOk = await handler(false)(request("Bearer ded-s3cret"));
+    assert(dedicatedOk.status === 200 && (await dedicatedOk.json()).disposition === "disabled", "Dedicated secret accepted");
+    const legacyOk = await handler(false)(request("Bearer old-s3cret"));
+    assert(legacyOk.status === 200 && (await legacyOk.json()).disposition === "disabled", "Legacy CRON_SECRET accepted as fallback");
+    assert((await handler(false, { legacy: "old-s3cret" })(request("Bearer old-s3cret"))).status === 200, "Legacy-only configuration accepted");
+    assert((await handler(false, { dedicated: "ded-s3cret" })(request("Bearer ded-s3cret"))).status === 200, "Dedicated-only configuration accepted");
+    assert((await handler(false, { dedicated: "ded-s3cret" })(request("Bearer old-s3cret"))).status === 401, "Legacy secret rejected when only the dedicated one is configured");
+    assert(constructed === 0, "Flag OFF: no dependencies are even constructed");
+    const enabledResponse = await handler(true)(request("Bearer ded-s3cret"));
     assert(enabledResponse.status === 200 && Number(constructed) === 1, "Authorized and enabled runs");
-    const failing = createScheduledDiscoveryCronHandler({ cronSecret: () => "s3cret", isEnabled: () => true, createProductionDependencies: () => { throw new Error("db password leak"); }, run: runScheduledBacklinkDiscovery, now: () => MONDAY });
-    const failed = await failing(request("Bearer s3cret"));
+    const failing = createScheduledDiscoveryCronHandler({ dedicatedCronSecret: () => "ded-s3cret", legacyCronSecret: () => "", isEnabled: () => true, createProductionDependencies: () => { throw new Error("db password leak"); }, run: runScheduledBacklinkDiscovery, now: () => MONDAY });
+    const failed = await failing(request("Bearer ded-s3cret"));
     assert(failed.status === 500 && !JSON.stringify(await failed.json()).includes("leak"), "Failures are generic");
   }
 
-  // 10. Scope: preview-only, no promotion/outreach/contact/ZeroBounce, no cron registered.
+  // 10. Scope: preview-only, no promotion/outreach/contact/ZeroBounce, not scheduled from vercel.json.
   {
     const files = await Promise.all([
       "lib/automation/backlink-scheduled-discovery.ts",
@@ -233,8 +245,15 @@ async function main(): Promise<void> {
     assert(!/resend|zerobounce|outreach|sendTransactionalEmail|contactResolution|contactForm|mailbox|promotions\/apply|applyBacklinkPromotion|campaigns\/apply|createCampaign|intakeBacklinkDiscoveryOpportunity/i.test(code), "Scheduled discovery must not reach outreach, contacts, ZeroBounce, promotion or campaigns");
     assert(code.includes('requestedScope: "preview"') && !code.includes('requestedScope: "apply"'), "Qualification and promotion stay preview");
     assert(!/\.(insert|update|delete|upsert|rpc)\(/.test(code), "No direct writes from the scheduled discovery layer");
-    const vercel = await readFile("vercel.json", "utf8");
-    assert(!vercel.includes("backlinks/discovery"), "No cron is registered by this change");
+    const vercel = JSON.parse(await readFile("vercel.json", "utf8")) as { crons: { path: string; schedule: string }[] };
+    assert(
+      JSON.stringify(vercel.crons) === JSON.stringify([
+        { path: "/api/internal/cron/backlinks/outreach/schedule", schedule: "0 6 * * *" },
+        { path: "/api/internal/cron/backlinks/reverification", schedule: "0 5 * * *" },
+        { path: "/api/internal/cron/backlinks/autonomy", schedule: "15 6 * * *" },
+      ]),
+      "vercel.json keeps exactly the three other crons and no Discovery cron (scheduled by Supabase pg_cron)",
+    );
   }
 
   console.log("PASS — Automation backlink scheduled discovery smoke");

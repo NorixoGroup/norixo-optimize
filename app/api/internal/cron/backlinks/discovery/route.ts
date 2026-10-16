@@ -1,3 +1,5 @@
+import { timingSafeEqual } from "node:crypto";
+
 import { NextRequest, NextResponse } from "next/server";
 
 import {
@@ -10,25 +12,39 @@ import { createScheduledDiscoveryProductionDependencies } from "@/lib/automation
 /**
  * Scheduled AI-assisted Brave discovery (Monday, Wednesday, Friday, UTC).
  *
- * NOT registered in vercel.json: scheduling is not activated by this file.
- * To activate later, add a cron entry such as `30 7 * * 1,3,5` (UTC) after
- * confirming the Vercel plan's cron limits, and set
+ * Invoked by Supabase pg_cron + pg_net, not by vercel.json. Authenticated with a
+ * Bearer token equal to BACKLINK_DISCOVERY_CRON_SECRET; CRON_SECRET is still
+ * accepted as a temporary fallback. Activation also requires
  * BACKLINK_SCHEDULED_DISCOVERY_ENABLED=true. Invocations on other days, or a
  * second invocation for the same UTC date, do nothing.
  */
 
 type CronDependencies = {
-  cronSecret: () => string;
+  dedicatedCronSecret: () => string;
+  legacyCronSecret: () => string;
   isEnabled: () => boolean;
   createProductionDependencies: () => ScheduledDiscoveryDependencies;
   run: typeof runScheduledBacklinkDiscovery;
   now: () => Date;
 };
 
+async function digest(value: string): Promise<Buffer> {
+  return Buffer.from(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value)));
+}
+
+/** Hashing first gives equal-length buffers, so the comparison leaks neither content nor length. */
+async function matchesSecret(authorization: string | null, secret: string): Promise<boolean> {
+  if (authorization === null || secret.length === 0) return false;
+  return timingSafeEqual(await digest(authorization), await digest(`Bearer ${secret}`));
+}
+
 export function createScheduledDiscoveryCronHandler(deps: CronDependencies) {
   return async function GET(request: NextRequest) {
-    const secret = deps.cronSecret();
-    if (secret.length === 0 || request.headers.get("authorization") !== `Bearer ${secret}`) {
+    const authorization = request.headers.get("authorization");
+    // Both secrets are always compared (no short-circuit between them).
+    const dedicatedMatch = await matchesSecret(authorization, deps.dedicatedCronSecret());
+    const legacyMatch = await matchesSecret(authorization, deps.legacyCronSecret());
+    if (!dedicatedMatch && !legacyMatch) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -48,7 +64,8 @@ export function createScheduledDiscoveryCronHandler(deps: CronDependencies) {
 }
 
 export const GET = createScheduledDiscoveryCronHandler({
-  cronSecret: () => process.env.CRON_SECRET ?? "",
+  dedicatedCronSecret: () => process.env.BACKLINK_DISCOVERY_CRON_SECRET ?? "",
+  legacyCronSecret: () => process.env.CRON_SECRET ?? "",
   isEnabled: () => isScheduledDiscoveryEnabled(),
   createProductionDependencies: createScheduledDiscoveryProductionDependencies,
   run: runScheduledBacklinkDiscovery,
