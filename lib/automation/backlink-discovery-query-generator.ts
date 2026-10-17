@@ -69,6 +69,13 @@ export type BacklinkDiscoveryQuerySuggestionDependencies = {
   ) => Promise<MarketingAiExecutionResult>;
 };
 
+/** Bounds the worst case well under the 300 s function limit: about 2 x 30 s instead of 3 x 10 min. */
+export const BACKLINK_DISCOVERY_AI_LIMITS = Object.freeze({
+  timeoutMs: 30_000,
+  maxRetries: 1,
+  maxOutputTokens: 600,
+});
+
 const defaultDependencies: BacklinkDiscoveryQuerySuggestionDependencies = {
   executeAiRequest: executeMarketingAiRequest,
 };
@@ -292,6 +299,7 @@ export async function generateBacklinkDiscoveryQuerySuggestions(
         feature: "backlink-discovery-query-suggestions",
         previewOnly: true,
       },
+      limits: BACKLINK_DISCOVERY_AI_LIMITS,
     });
   } catch {
     throw new BacklinkDiscoveryQuerySuggestionError("AI_EXECUTION_FAILED");

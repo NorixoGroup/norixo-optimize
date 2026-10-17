@@ -66,21 +66,37 @@ export class OpenAiAdapter implements MarketingAiProviderAdapter {
     }
 
     try {
-      const completion = await getOpenAIClient().chat.completions.create({
-        model,
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are Norixo Marketing AI. Return concise, safe, production-ready marketing assistance.",
-          },
-          {
-            role: "user",
-            content: input,
-          },
-        ],
-        temperature: 0.2,
-      });
+      const limits = request.limits;
+      const completion = await getOpenAIClient().chat.completions.create(
+        {
+          model,
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are Norixo Marketing AI. Return concise, safe, production-ready marketing assistance.",
+            },
+            {
+              role: "user",
+              content: input,
+            },
+          ],
+          temperature: 0.2,
+          ...(limits?.maxOutputTokens === undefined
+            ? {}
+            : { max_completion_tokens: limits.maxOutputTokens }),
+        },
+        limits?.timeoutMs === undefined && limits?.maxRetries === undefined
+          ? undefined
+          : {
+              ...(limits.timeoutMs === undefined
+                ? {}
+                : { timeout: limits.timeoutMs }),
+              ...(limits.maxRetries === undefined
+                ? {}
+                : { maxRetries: limits.maxRetries }),
+            },
+      );
 
       return {
         providerId: request.providerId,
