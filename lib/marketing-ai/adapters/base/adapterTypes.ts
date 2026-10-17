@@ -8,6 +8,15 @@ export type MarketingAiExecutionRequest = {
   input: string;
   capabilities: ProviderCapability[];
   metadata?: Record<string, unknown>;
+  /** Optional bounds for providers that call a remote API. Absent = the provider's own defaults. */
+  limits?: MarketingAiExecutionLimits;
+};
+
+export type MarketingAiExecutionLimits = {
+  /** Per-attempt timeout in milliseconds. */
+  timeoutMs?: number;
+  maxRetries?: number;
+  maxOutputTokens?: number;
 };
 
 export type MarketingAiExecutionResult = {
