@@ -53,6 +53,7 @@ export type ContactFormBrowserRequest = Readonly<{ url: string; method: string; 
 export type ContactFormBrowserRequestDecision = "continue" | "abort";
 export type ContactFormBrowserPage = {
   routeRequests: (handler: (request: ContactFormBrowserRequest) => Promise<ContactFormBrowserRequestDecision>) => Promise<void>;
+  routeWebSockets?: (handler: (url: string) => void) => Promise<void>;
   goto: (url: string, options: { timeoutMs: number }) => Promise<void>;
   url: () => string;
   title: () => Promise<string>;
@@ -166,7 +167,7 @@ export function createContactFormNavigationDependencies(client: BacklinkReposito
   };
 }
 
-export async function createPlaywrightChromiumBrowserRuntime(): Promise<ContactFormBrowserRuntime> {
+export async function createPlaywrightChromiumBrowserRuntime(options: Readonly<{ serviceWorkers?: "allow" | "block"; blockDirectWebRtc?: boolean }> = {}): Promise<ContactFormBrowserRuntime> {
   const { chromium } = await import("playwright-core");
   let activeClose: (() => Promise<void>) | null = null;
   return {
@@ -182,10 +183,11 @@ export async function createPlaywrightChromiumBrowserRuntime(): Promise<ContactF
             `--proxy-server=http://${proxy.host}:${proxy.port}`,
             "--proxy-bypass-list=<-loopback>",
             "--disable-quic",
+            ...(options.blockDirectWebRtc === true ? ["--force-webrtc-ip-handling-policy=disable_non_proxied_udp"] : []),
           ],
         });
         browser = launchedBrowser;
-        const session = await createPlaywrightBrowserSession(launchedBrowser);
+        const session = await createPlaywrightBrowserSession(launchedBrowser, options.serviceWorkers ?? "allow");
         let closePromise: Promise<void> | null = null;
         activeClose = () => {
           closePromise ??= Promise.allSettled([session.close(), launchedBrowser.close(), proxy.close()]).then(() => undefined);
@@ -209,9 +211,10 @@ export const contactFormNavigationWorkerTestHooks = {
   adaptPlaywrightPage,
 } as const;
 
-async function createPlaywrightBrowserSession(browser: Browser): Promise<ContactFormBrowserSession> {
+async function createPlaywrightBrowserSession(browser: Browser, serviceWorkers: "allow" | "block" = "allow"): Promise<ContactFormBrowserSession> {
   const context: BrowserContext = await browser.newContext({
     acceptDownloads: false,
+    serviceWorkers,
     permissions: [],
     storageState: { cookies: [], origins: [] },
   });
@@ -417,6 +420,13 @@ function adaptPlaywrightPage(page: Page): ContactFormBrowserPage {
         });
         if (decision === "continue") await route.continue();
         else await route.abort("blockedbyclient");
+      });
+    },
+    routeWebSockets: async (handler) => {
+      await page.routeWebSocket("**/*", (route) => {
+        handler(route.url());
+        // Intentionally do not call connectToServer(): Playwright keeps this socket mocked
+        // and no network connection is established.
       });
     },
     goto: async (url, options) => {

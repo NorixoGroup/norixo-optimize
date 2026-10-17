@@ -64,6 +64,9 @@ export type BacklinkDiscoveryPreviewOutputV1 = Record<string, Json> & {
     candidatesAccepted: number;
     candidatesRejected: number;
     truncated: boolean;
+    /** Present only when the run stopped early. */
+    searchesExecuted?: number;
+    stoppedReason?: "budget_exhausted";
   };
   candidates: BacklinkDiscoveryPreviewCandidate[];
   rejections: BacklinkDiscoveryRejectionSummary[];

@@ -7,6 +7,7 @@ import {
 } from "../lib/backlinks/services/outreachDraftEligibilityService";
 import {
   hasCurrentVerifiedContactFormEvidence,
+  isCurrentContactFormVerificationTimestamp,
   isValidContactFormVerificationEvidence,
   normalizeContactFormVerificationUrl,
   type ContactFormVerification,
@@ -91,12 +92,21 @@ async function main() {
   assert.equal(isValidContactFormVerificationEvidence({ ...validEvidence, sales_demo_only: true }), false, "sales/demo-only evidence must fail");
 
   const contact = { id: "contact", contact_form_url: "https://example.com/contact" };
+  const clock = new Date("2026-09-10T00:00:00.000Z");
+  assert.equal(isCurrentContactFormVerificationTimestamp("2026-09-10T00:00:00.000Z", clock), true, "fresh timestamp must pass");
+  assert.equal(isCurrentContactFormVerificationTimestamp("2026-09-03T00:00:00.000Z", clock), true, "exact seven-day boundary must pass");
+  assert.equal(isCurrentContactFormVerificationTimestamp("2026-09-02T23:59:59.999Z", clock), false, "expired timestamp must fail");
+  assert.equal(isCurrentContactFormVerificationTimestamp(null, clock), false, "missing timestamp must fail");
+  assert.equal(isCurrentContactFormVerificationTimestamp("not-a-timestamp", clock), false, "malformed timestamp must fail");
+  assert.equal(isCurrentContactFormVerificationTimestamp("2026-02-30T00:00:00.000Z", clock), false, "calendar-invalid timestamp must fail");
+  assert.equal(isCurrentContactFormVerificationTimestamp("2026-09-10T00:00:00.001Z", clock), false, "future timestamp must fail");
   assert.equal(hasCurrentVerifiedContactFormEvidence(contact, null), false, "missing verification must fail");
   assert.equal(hasCurrentVerifiedContactFormEvidence(contact, verification({ verification_state: "rejected", verified_at: null, safe_evidence: {} })), false, "rejected verification must fail");
   assert.equal(hasCurrentVerifiedContactFormEvidence(contact, verification({ form_url: "https://example.com/other" })), false, "URL mismatch must fail");
   assert.equal(hasCurrentVerifiedContactFormEvidence(contact, verification({ verified_at: null })), false, "verified_at is required");
   assert.equal(hasCurrentVerifiedContactFormEvidence(contact, verification({ safe_evidence: { ...validEvidence, form_count: 0 } })), false, "malformed evidence must fail");
-  assert.equal(hasCurrentVerifiedContactFormEvidence(contact, baseVerification), true, "valid exact verified evidence must pass");
+  assert.equal(hasCurrentVerifiedContactFormEvidence(contact, baseVerification), false, "historical evidence must not remain eligible");
+  assert.equal(hasCurrentVerifiedContactFormEvidence(contact, verification({ verified_at: new Date().toISOString() })), true, "fresh exact verified evidence must pass");
 
   assert.deepEqual(
     resolveBacklinkOutreachChannels({ contact_status: "verified", email_normalized: "editor@example.com", linkedin_url: "https://www.linkedin.com/in/editor", contact_form_url: "https://example.com/contact" }),
@@ -130,6 +140,7 @@ async function main() {
   assert.ok(withEvidence.contacts[0].eligibleChannels.includes("contact_form"), "eligibility must allow exact current verification");
 
   const migration = readFileSync(join(process.cwd(), "supabase/migrations/20260905130000_add_contact_form_verification_gate.sql"), "utf8");
+  const ttlMigration = readFileSync(join(process.cwd(), "supabase/migrations/20261009150000_add_contact_form_verification_evidence_ttl.sql"), "utf8");
   for (const clause of [
     "create table public.backlink_contact_form_verifications",
     "verification_state text not null check (verification_state in ('verified','rejected'))",
@@ -147,6 +158,7 @@ async function main() {
 
   assert.match(migration, /v\.workspace_id\s*=\s*c\.workspace_id[\s\S]*v\.contact_id\s*=\s*c\.id[\s\S]*v\.form_url\s*=\s*trim\(c\.contact_form_url\)/, "verification helper must be workspace/contact/exact-current-URL bound");
   assert.match(migration, /v\.verification_state\s*=\s*'verified'[\s\S]*v\.verified_at\s+is\s+not\s+null[\s\S]*backlink_contact_form_verification_evidence_valid\(v\.safe_evidence\)/, "verification helper must require verified state, verified_at, and valid evidence");
+  assert.match(ttlMigration, /v\.verified_at\s*<=\s*now\(\)[\s\S]*v\.verified_at\s*>=\s*now\(\)\s*-\s*interval '7 days'/, "TTL migration must use PostgreSQL server time with the seven-day inclusive boundary");
   assertMigrationContainsInOrder(migration, [
     "create or replace function public.approve_backlink_contact_form_initial_v1",
     "CONTACT_FORM_VERIFICATION_REQUIRED",

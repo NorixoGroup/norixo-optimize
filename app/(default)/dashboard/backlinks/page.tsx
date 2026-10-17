@@ -452,6 +452,8 @@ export default function BacklinksPage() {
   const [verificationMessage, setVerificationMessage] = useState<string | null>(null);
   const [mailboxVerificationId, setMailboxVerificationId] = useState<string | null>(null);
   const [mailboxVerificationStates, setMailboxVerificationStates] = useState<Record<string, "verified" | "risky" | "undeliverable" | "unknown" | "provider_error" | "running" | "indeterminate" | "exhausted" | "unverified">>({});
+  const [contactFormPreflightId, setContactFormPreflightId] = useState<string | null>(null);
+  const [contactFormPreflightStates, setContactFormPreflightStates] = useState<Record<string, "pending" | "running" | "verified" | "manual_review" | "failed" | "blocked">>({});
   const [automationControl, setAutomationControl] = useState<AutomationWorkspaceControlView | null>(null);
   const [automationControlLoading, setAutomationControlLoading] = useState(false);
   const [automationSaving, setAutomationSaving] = useState(false);
@@ -528,6 +530,9 @@ export default function BacklinksPage() {
   const [discoveryLanguageCode, setDiscoveryLanguageCode] = useState("en");
   const [discoveryMaxResults, setDiscoveryMaxResults] = useState(10);
   const [discoveryMaxCandidates, setDiscoveryMaxCandidates] = useState(20);
+  const [querySuggestions, setQuerySuggestions] = useState<readonly { query: string; rationale: string }[]>([]);
+  const [querySuggestionsLoading, setQuerySuggestionsLoading] = useState(false);
+  const [querySuggestionsError, setQuerySuggestionsError] = useState<string | null>(null);
   const [outreachSearchQuery, setOutreachSearchQuery] = useState("");
   const [outreachCampaignFilter, setOutreachCampaignFilter] = useState("");
   const [outreachStatusFilter, setOutreachStatusFilter] = useState("");
@@ -745,11 +750,12 @@ export default function BacklinksPage() {
         apiRequest<ApiPage>(sections.links.endpoint),
         apiRequest<ApiPage>(sections.assets.endpoint),
         loadAllBacklinkDomainPages((page, pageSize) => apiRequest<PaginatedApiPage>(`${sections.domains.endpoint}?page=${page}&pageSize=${pageSize}`)),
-        apiRequest<ApiPage & { mailboxVerificationStates?: Record<string, "verified" | "risky" | "undeliverable" | "unknown" | "provider_error" | "running" | "indeterminate" | "exhausted" | "unverified"> }>(sections.contacts.endpoint),
+        apiRequest<ApiPage & { mailboxVerificationStates?: Record<string, "verified" | "risky" | "undeliverable" | "unknown" | "provider_error" | "running" | "indeterminate" | "exhausted" | "unverified">; contactFormVerificationPreflightStates?: Record<string, "pending" | "running" | "verified" | "manual_review" | "failed" | "blocked"> }>(sections.contacts.endpoint),
       ]);
       if (workspaceRequestVersion !== workspaceRequestVersionRef.current) return;
       setPages({ opportunities, campaigns, outreach, links, assets, domains, contacts });
       setMailboxVerificationStates(contacts.mailboxVerificationStates ?? {});
+      setContactFormPreflightStates(contacts.contactFormVerificationPreflightStates ?? {});
     } catch (loadError) {
       if (workspaceRequestVersion !== workspaceRequestVersionRef.current) return;
       setError(loadError instanceof Error ? loadError.message : "Impossible de charger le cockpit Backlinks.");
@@ -987,6 +993,21 @@ export default function BacklinksPage() {
     } catch (mailboxError) {
       setVerificationMessage(mailboxError instanceof Error ? mailboxError.message : "Vérification d’email indisponible.");
     } finally { setMailboxVerificationId(null); }
+  };
+
+  const handleRequestContactFormPreflight = async (contactId: string): Promise<void> => {
+    if (contactFormPreflightId != null) return;
+    setContactFormPreflightId(contactId);
+    try {
+      const result = await apiRequest<{ result: { preflight: { status: "pending" | "running" | "verified" | "manual_review" | "failed" | "blocked" } } }>(
+        `/api/backlinks/contacts/${contactId}/contact-form-verification-preflight`,
+        { method: "POST", body: JSON.stringify({ idempotencyKey: crypto.randomUUID() }) },
+      );
+      setContactFormPreflightStates((current) => ({ ...current, [contactId]: result.result.preflight.status }));
+      setVerificationMessage("Pré-vérification du formulaire terminée.");
+    } catch (preflightError) {
+      setVerificationMessage(preflightError instanceof Error ? preflightError.message : "Pré-vérification du formulaire indisponible.");
+    } finally { setContactFormPreflightId(null); }
   };
 
   const handleToggleAutomation = async (): Promise<void> => {
@@ -1376,6 +1397,33 @@ export default function BacklinksPage() {
     } finally {
       if (requestVersion !== workspaceRequestVersionRef.current) return;
       setCampaignMembershipApplySubmitting(false);
+    }
+  };
+
+  const handleSuggestQueries = async (): Promise<void> => {
+    if (!workspaceResolved || !activeWorkspaceId?.trim() || automationRunning || querySuggestionsLoading) return;
+    const requestVersion = workspaceRequestVersionRef.current;
+    setQuerySuggestionsLoading(true);
+    setQuerySuggestionsError(null);
+    try {
+      const response = await apiRequest<{ ok: boolean; suggestions?: readonly { query: string; rationale: string }[] }>(
+        "/api/internal/automation/backlinks/query-suggestions",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            countryCode: discoveryCountryCode.trim().toUpperCase(),
+            languageCode: discoveryLanguageCode.trim().toLowerCase(),
+            excludeQueries: [discoveryQuery, ...querySuggestions.map((suggestion) => suggestion.query)].filter((value) => value.trim().length > 0),
+          }),
+        },
+      );
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setQuerySuggestions(response.suggestions ?? []);
+    } catch (cause) {
+      if (requestVersion !== workspaceRequestVersionRef.current) return;
+      setQuerySuggestionsError(cause instanceof Error ? cause.message : "Les suggestions de recherche sont indisponibles.");
+    } finally {
+      if (requestVersion === workspaceRequestVersionRef.current) setQuerySuggestionsLoading(false);
     }
   };
 
@@ -2404,10 +2452,15 @@ export default function BacklinksPage() {
           onRunAutomationNow={() => void handleRunAutomationNow()}
           onDiscoveryProviderChange={(value) => { const provider = value; if (isDiscoveryProviderOption(provider)) setDiscoveryProvider(provider); }}
           onDiscoveryQueryChange={(value) => setDiscoveryQuery(value)}
-          onDiscoveryCountryCodeChange={(value) => setDiscoveryCountryCode(value)}
-          onDiscoveryLanguageChange={(value) => setDiscoveryLanguageCode(value)}
+          onDiscoveryCountryCodeChange={(value) => { setDiscoveryCountryCode(value); setQuerySuggestions([]); }}
+          onDiscoveryLanguageChange={(value) => { setDiscoveryLanguageCode(value); setQuerySuggestions([]); }}
           onDiscoveryMaxResultsChange={(value) => setDiscoveryMaxResults(value)}
           onDiscoveryMaxCandidatesChange={(value) => setDiscoveryMaxCandidates(value)}
+          querySuggestions={querySuggestions}
+          querySuggestionsLoading={querySuggestionsLoading}
+          querySuggestionsError={querySuggestionsError}
+          onSuggestQueries={() => void handleSuggestQueries()}
+          onSelectQuerySuggestion={(query) => setDiscoveryQuery(query)}
         />
         {automationLastResult ? (
           <div aria-live="polite" className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
@@ -2538,7 +2591,7 @@ export default function BacklinksPage() {
         </div>
       </section>
 
-      {activeSection === "contacts" ? <div className="mt-3 flex flex-wrap gap-2">{pages.contacts.items.filter((contact) => contact.contact_status === "unverified" && typeof contact.email_normalized === "string" && contact.email_normalized.trim() !== "" && contact.archived_at == null && contact.do_not_contact_at == null).map((contact) => <button key={`mailbox-verify-${contact.id}`} type="button" onClick={() => void handleVerifyMailbox(String(contact.id))} disabled={mailboxVerificationId != null || (mailboxVerificationStates[contact.id] != null && mailboxVerificationStates[contact.id] !== "unverified" && mailboxVerificationStates[contact.id] !== "provider_error")} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700 disabled:opacity-50">{mailboxVerificationId === contact.id || mailboxVerificationStates[contact.id] === "running" ? "Vérification en cours" : mailboxVerificationStates[contact.id] === "indeterminate" ? "Vérification indéterminée" : mailboxVerificationStates[contact.id] === "exhausted" ? "Vérification indisponible" : mailboxVerificationStates[contact.id] === "risky" ? "Risqué" : mailboxVerificationStates[contact.id] === "undeliverable" ? "Non distribuable" : mailboxVerificationStates[contact.id] === "unknown" ? "Résultat inconnu" : mailboxVerificationStates[contact.id] === "provider_error" ? "Vérification indisponible — réessayer" : `Vérifier l’email : ${contactLabel(pages.contacts.items, contact.id)}`}</button>)}</div> : null}
+      {activeSection === "contacts" ? <div className="mt-3 flex flex-wrap gap-2">{pages.contacts.items.filter((contact) => contact.contact_status === "unverified" && typeof contact.email_normalized === "string" && contact.email_normalized.trim() !== "" && contact.archived_at == null && contact.do_not_contact_at == null).map((contact) => <button key={`mailbox-verify-${contact.id}`} type="button" onClick={() => void handleVerifyMailbox(String(contact.id))} disabled={mailboxVerificationId != null || (mailboxVerificationStates[contact.id] != null && mailboxVerificationStates[contact.id] !== "unverified" && mailboxVerificationStates[contact.id] !== "provider_error")} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700 disabled:opacity-50">{mailboxVerificationId === contact.id || mailboxVerificationStates[contact.id] === "running" ? "Vérification en cours" : mailboxVerificationStates[contact.id] === "indeterminate" ? "Vérification indéterminée" : mailboxVerificationStates[contact.id] === "exhausted" ? "Vérification indisponible" : mailboxVerificationStates[contact.id] === "risky" ? "Risqué" : mailboxVerificationStates[contact.id] === "undeliverable" ? "Non distribuable" : mailboxVerificationStates[contact.id] === "unknown" ? "Résultat inconnu" : mailboxVerificationStates[contact.id] === "provider_error" ? "Vérification indisponible — réessayer" : `Vérifier l’email : ${contactLabel(pages.contacts.items, contact.id)}`}</button>)}{pages.contacts.items.filter((contact) => typeof contact.contact_form_url === "string" && contact.contact_form_url.trim() !== "" && contact.archived_at == null && contact.do_not_contact_at == null).map((contact) => { const state = contactFormPreflightStates[contact.id]; const terminal = state === "verified" || state === "manual_review" || state === "blocked"; const label = contactFormPreflightId === contact.id || state === "running" ? "Vérification du formulaire en cours" : state === "pending" ? "Vérification du formulaire en attente" : state === "verified" ? "Formulaire vérifié" : state === "manual_review" ? "Formulaire à examiner" : state === "blocked" ? "Formulaire indisponible" : state === "failed" ? "Réessayer la vérification du formulaire" : "Vérifier le formulaire"; return <button key={`contact-form-preflight-${contact.id}`} type="button" onClick={() => void handleRequestContactFormPreflight(String(contact.id))} disabled={contactFormPreflightId != null || terminal} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700 disabled:opacity-50">{label}</button>; })}</div> : null}
       {activeSection === "outreach" ? <div className="mt-3 flex flex-wrap gap-2">{pages.outreach.items.map((outreach) => { const contact = pages.contacts.items.find((item) => item.id === outreach.contact_id) as OutreachContactRow | undefined ?? null; const action = outreachSendAction(outreach, contact); if (action === "send_in_progress") return <span key={`send-progress-${outreach.id}`} className="rounded-full border border-slate-200 px-3 py-1 text-sm font-semibold text-slate-600">Envoi en cours</span>; if (action === "resolution_required") return <span key={`send-resolution-${outreach.id}`} className="rounded-full border border-amber-200 px-3 py-1 text-sm font-semibold text-amber-800">Résolution requise</span>; if (action !== "initial_send") return null; return <button key={`send-${outreach.id}`} type="button" onClick={() => { setOutreachSendDialog(outreach); setOutreachSendMode(action); setOutreachSendIdempotencyKey(crypto.randomUUID()); setOutreachSendError(null); setOutreachSendResult(null); }} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Envoyer</button>; })}</div> : null}
       {activeSection === "outreach" ? <div className="mt-3 flex flex-wrap gap-2">{pages.outreach.items.map((outreach) => { const summary = inboundReplySummary(outreach); if (summary.correlatedCount === 0) return null; const pendingLabel = summary.unclassifiedCount > 0 ? outreach.status === "active" ? `${summary.unclassifiedCount} à classer` : `${summary.unclassifiedCount} non classifiée${summary.unclassifiedCount > 1 ? "s" : ""}` : `${summary.correlatedCount} réponse${summary.correlatedCount > 1 ? "s" : ""}`; return <div key={`inbound-${outreach.id}`} className="flex items-center gap-2"><button type="button" onClick={() => void handleOpenInboundReplies(outreach)} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Réponses reçues</button><span className="text-sm text-slate-600">{pendingLabel}</span></div>; })}</div> : null}
       {outreachReadyDialog ? <OutreachReadyDialog outreach={{ contact: contactLabel(pages.contacts.items, outreachReadyDialog.contact_id), channel: String(outreachReadyDialog.channel), subject: typeof outreachReadyDialog.subject === "string" ? outreachReadyDialog.subject : null, body: typeof outreachReadyDialog.body === "string" ? outreachReadyDialog.body : null }} submitting={outreachReadySubmitting} error={outreachReadyError} success={outreachReadySuccess} onClose={() => { if (!outreachReadySubmitting) setOutreachReadyDialog(null); }} onConfirm={() => void handleMarkOutreachReady()} /> : null}

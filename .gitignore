@@ -48,3 +48,7 @@ qa-*.log
 # Supabase CLI temporary files
 supabase/.temp/
 norixo_prod_crawl.json
+
+# Locally exported production schema metadata (operator-provided; never stage by glob).
+/diagnostics/supabase/a4-d8-31b-production-metadata.json
+/diagnostics/supabase/a4-d8-32-production-migrations.csv

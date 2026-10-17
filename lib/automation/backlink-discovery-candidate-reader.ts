@@ -1,3 +1,4 @@
+import { normalizeDiscoveryCandidateText } from "./backlink-text-normalization";
 import type {
   BacklinkDiscoveryPreviewCandidate,
   BacklinkDiscoveryPreviewOutputV1,
@@ -145,5 +146,5 @@ export async function readBacklinkDiscoveryCandidate(
     return fail("CANDIDATE_NOT_FOUND");
   }
 
-  return { run, task, candidate };
+  return { run, task, candidate: normalizeDiscoveryCandidateText(candidate) };
 }

@@ -1,3 +1,4 @@
+import { normalizeDiscoveryCandidateText } from "./backlink-text-normalization";
 import { validateBacklinkDiscoveryRequest } from "./backlink-discovery-validation";
 import type {
   BacklinkDiscoveryPreviewCandidate,
@@ -78,7 +79,7 @@ export async function buildBacklinkQualificationInputFromDependency(input: Build
     source: "automation_discovery",
     policyVersion: BACKLINK_QUALIFICATION_POLICY_VERSION,
     queries: discoveryInput.searches.map((search) => ({ query: search.query, countryCode: search.countryCode ?? null, languageCode: search.languageCode ?? null })),
-    candidates: discoveryTask.output.candidates.map((candidate) => ({ candidateKey: candidate.candidateKey, hostname: candidate.hostname, sourceUrl: candidate.sourceUrl, pageTitle: candidate.pageTitle, snippet: candidate.snippet, queryIndex: candidate.queryIndex, rank: candidate.rank, countryCode: candidate.countryCode, languageCode: candidate.languageCode, suggestedAssetKey: candidate.suggestedAssetKey, evidenceSummary: candidate.evidenceSummary, discoveryScore: candidate.discoveryScore })),
+    candidates: discoveryTask.output.candidates.map(normalizeDiscoveryCandidateText).map((candidate) => ({ candidateKey: candidate.candidateKey, hostname: candidate.hostname, sourceUrl: candidate.sourceUrl, pageTitle: candidate.pageTitle, snippet: candidate.snippet, queryIndex: candidate.queryIndex, rank: candidate.rank, countryCode: candidate.countryCode, languageCode: candidate.languageCode, suggestedAssetKey: candidate.suggestedAssetKey, evidenceSummary: candidate.evidenceSummary, discoveryScore: candidate.discoveryScore })),
     maxCandidates: Math.max(1, discoveryTask.output.candidates.length),
   };
   let validated;
