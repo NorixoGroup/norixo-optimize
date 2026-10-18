@@ -57,104 +57,207 @@ export type Guide = {
 export const guides: Guide[] = [
   {
     slug: "airbnb-seo",
-    title: "Airbnb SEO Guide",
+    title: "Airbnb SEO Guide: Improve Your Listing Visibility",
     description:
-      "The complete Airbnb SEO guide for hosts and property managers who want to improve listing visibility, ranking signals, click-through rate, guest trust, and booking conversion.",
-    heroTitle: "Airbnb SEO: the complete guide to ranking, clicks, and bookings",
+      "A practical Airbnb SEO guide for hosts: improve your title, photos, amenities, pricing and guest trust, measure each change, and avoid common mistakes.",
+    heroTitle: "Airbnb SEO: how to improve your listing, step by step",
     heroSubtitle:
-      "Learn how Airbnb SEO really works, what signals influence listing performance, and how to optimize your title, photos, pricing, description, amenities, and guest trust.",
+      "A practical method for hosts and property managers: what to fix first in your title, photos, amenities, price and trust signals, how to measure the effect, and which mistakes to avoid.",
     intro:
-      "Airbnb SEO is not only about adding keywords to a title. It is the full process of making your listing easier to understand, more relevant to guest searches, more trustworthy than nearby competitors, and more likely to convert views into bookings.",
+      "This guide is about doing the work: improving a real listing so that the right guests can find it, understand it quickly and trust it enough to book. It does not promise a ranking, because Airbnb decides the order of results and does not publish a formula or the weight of each factor. If you first want to understand how listing visibility works, read the article How Airbnb SEO Works; here the focus is on what to change, in which order, and how to check that it helped.",
+    answerFirst: {
+      title: "The short answer",
+      body: "Make the listing accurate and complete, make it easy to understand from the first photo and the title, make the price and the offer coherent, remove the reasons guests might doubt, then change one thing at a time and measure. Airbnb documents parts of this in its host guidance, listed at the end of this guide. The order of priorities, the checklist and the examples are Norixo editorial advice, not Airbnb rules.",
+    },
+    auditFramework: {
+      title: "Listing review framework: what to check and why",
+      rows: [
+        {
+          dimension: "Title",
+          evidenceLabel: "Airbnb first-party guidance",
+          review: "Check that the title is short (Airbnb suggests fewer than 50 characters), starts with the most important information, avoids emojis and symbols, and adds a distinguishing detail instead of repeating your city or number of beds.",
+          whyItMatters: "Airbnb notes that the title is often the first thing people read when searching, and that longer titles are shortened in search results.",
+        },
+        {
+          dimension: "Photos and their order",
+          evidenceLabel: "Airbnb first-party guidance",
+          review: "Check that the first photo shows what the place is, that every space guests will use appears, and that the photos match the real property today.",
+          whyItMatters: "Photos are how guests judge the space before they read anything else.",
+        },
+        {
+          dimension: "Description",
+          evidenceLabel: "Airbnb first-party guidance",
+          review: "Airbnb advises leading with what matters most, keeping the description brief and specific, not duplicating other sections such as the amenities list, being realistic and upfront about possible challenges, and using the other sections for the property, guest access and other details. Norixo adds, as editorial advice, that the sleeping setup, check-in and house rules should be clear somewhere guests will see them.",
+          whyItMatters: "Airbnb says a thorough description helps set expectations and attract bookings, and that overselling can lead to disappointment and negative reviews.",
+        },
+        {
+          dimension: "Amenities and listing details",
+          evidenceLabel: "Observable listing input",
+          review: "Check that property type, capacity, bedrooms, beds and amenities are complete and correct, and that every amenity ticked really exists.",
+          whyItMatters: "Guests filter and compare on these details, and a gap between listing and reality leads to disappointment.",
+        },
+        {
+          dimension: "Availability and responsiveness",
+          evidenceLabel: "Airbnb first-party guidance",
+          review: "Check how many dates you leave open, how quickly you answer requests (Airbnb suggests within 24 hours), how often you decline, whether Instant Book suits how you host, and whether minimum or maximum stay rules are really needed.",
+          whyItMatters: "Airbnb says its algorithm factors in availability, response times and how often you accept reservations. These are options to weigh against how you actually host, not obligations.",
+        },
+        {
+          dimension: "Price and the offer",
+          evidenceLabel: "Observable listing input",
+          review: "Compare your price with genuinely similar listings for the same dates, and check that photos, amenities and reviews support the price you ask.",
+          whyItMatters: "Guests judge price against what they can see, not in isolation.",
+        },
+        {
+          dimension: "Trust and guest experience",
+          evidenceLabel: "Host-side observable evidence",
+          review: "Read recent reviews for repeated remarks, check how quickly and clearly you answer enquiries, and check that house rules and location details are honest.",
+          whyItMatters: "Reviews and clear communication reduce the risk guests feel when choosing between listings.",
+        },
+        {
+          dimension: "Measurement and priorities",
+          evidenceLabel: "Norixo heuristic / comparison",
+          review: "Keep a dated log of every change and compare the same statistics from your own account, such as views, saves, enquiries and bookings, over comparable periods.",
+          whyItMatters: "Without a baseline and a change log, you cannot tell which change helped, or whether seasonality did.",
+        },
+      ],
+    },
     sections: [
       {
-        title: "What Airbnb SEO really means",
-        body: "Airbnb SEO is the practice of improving a listing so it can perform better inside Airbnb search and comparison flows. It includes relevance, listing quality, guest trust, pricing, availability, reviews, photo quality, title clarity, amenities, and conversion behavior. A strong Airbnb SEO strategy helps guests quickly understand why your property is a good match for their trip.",
+        title: "What Airbnb SEO covers",
+        body: "Airbnb SEO is the practice of improving a listing so it can perform better inside Airbnb search and comparison flows. Unlike Google SEO, which ranks web pages, it is about a marketplace: relevance to what a guest searched for, listing quality, price, availability, reviews and the way guests react to the listing. It starts with clarity, not with keywords.",
       },
       {
-        title: "Airbnb SEO is different from Google SEO",
-        body: "Google SEO is mostly about ranking web pages in search engines. Airbnb SEO is about helping a marketplace understand which listing is most relevant and attractive for a guest. On Airbnb, guest behavior matters: clicks, saves, inquiries, bookings, reviews, price competitiveness, and listing completeness can all influence how a listing performs.",
+        title: "Before you change anything: record where you stand",
+        body: "Write down the current title, the first photo, the price and the statistics your Airbnb account shows for a recent, comparable period, such as views, saves, enquiries and bookings. Note the few listings that really compete with yours for the same guests and dates. This baseline is what lets you tell later whether a change helped.",
       },
       {
-        title: "The most important Airbnb ranking signals",
-        body: "No host can control every ranking factor, but hosts can improve the signals that usually matter most: clear photos, competitive pricing, strong reviews, complete amenities, accurate availability, fast trust-building, location relevance, cancellation confidence, and a listing description that answers guest objections before they hesitate.",
+        title: "Step 1: Make the listing accurate and complete",
+        body: "Start with the facts. Property type, capacity, bedrooms, beds, location and amenities should be complete and correct. Amenities are more than comfort signals: Airbnb says many guests filter by amenity and that a complete list helps a listing stand out in search. Tick only what exists, and add what you have forgotten, such as a workspace, parking, a washer or self check-in. Then review your availability and booking settings. Airbnb says its algorithm factors in availability, your response times and how often you accept reservations, and that more open dates make a listing likelier to match guests' search criteria. Its guidance suggests responding to requests within 24 hours, avoiding frequent declines, using Instant Book (which guests can filter for) and reducing restrictions such as minimum and maximum stay. These are options to weigh against how you really host, not obligations, and none of them guarantees a position.",
       },
       {
-        title: "Why photos are an Airbnb SEO factor",
-        body: "Photos influence click-through rate, perceived value, trust, and conversion. If the first image is weak, guests may never open the listing. If the gallery is incomplete, guests may not feel confident enough to book. A good Airbnb SEO strategy starts with visual clarity because photos shape the first decision.",
+        title: "Step 2: Write a title that states what the place is",
+        body: "A good title is not stuffed with keywords. Airbnb's title guidance advises starting with the most important information, using fewer than 50 characters because longer titles are shortened in search results, avoiding emojis and symbols, and not repeating what search results already show, such as your city or total number of beds. Use the space for a detail that sets the place apart, such as location context or a key amenity. Weak: 'Nice apartment'. Clearer: 'Sunny flat with balcony near old town' (an example only: use details that are true for your property). Keeping the title truthful is Norixo advice, not an Airbnb rule.",
       },
       {
-        title: "How the title affects Airbnb SEO",
-        body: "A good Airbnb title is not stuffed with keywords. It communicates the strongest reason to click: location, view, pool, beach access, parking, design, family suitability, workspace, or a unique experience. Weak titles like 'nice apartment' or 'beautiful place' fail because they do not explain why the listing is relevant.",
+        title: "Step 3: Choose and order your photos",
+        body: "Photos shape the first decision, so give the first one a job: show what the place is, in its best honest light. Then follow the way a guest imagines the stay: main living space, bedrooms, bathroom, kitchen, outdoor areas, the view, and distinguishing details. Show every space guests will use, keep the gallery consistent with the real property today, and replace dark, cluttered or misleading images. If the first photo is weak, many guests may never open the listing.",
       },
       {
-        title: "Pricing and Airbnb SEO are connected",
-        body: "Pricing affects guest behavior. A listing that looks expensive compared with similar nearby options may receive fewer clicks and bookings. A listing that looks underpriced but low quality may create doubt. Airbnb SEO requires price alignment with the market, property quality, photos, reviews, and guest expectations.",
+        title: "Step 4: Rewrite the description to answer questions",
+        body: "Treat the description as the place where doubts disappear. Airbnb advises leading with what matters most, keeping it brief and easy to scan, being specific about the experience, avoiding duplicating information that appears elsewhere in the listing, such as the full amenities list, and being realistic: overselling or exaggerating can lead to disappointment and negative reviews. It also asks hosts to be upfront about aspects that could be a challenge for some guests, and to use the other sections for the property, guest access and anything else guests should know. As Norixo editorial advice, make sure the sleeping setup, check-in and house rules are clear somewhere guests will see them, and say who the stay suits and who it does not. Avoid copying competitors: their text answers their guests' questions, not yours.",
       },
       {
-        title: "Descriptions should reduce booking friction",
-        body: "The listing description should help guests make a decision. It should explain the space, sleeping setup, location, amenities, check-in process, house rules, ideal guest type, and what makes the stay valuable. A vague description creates uncertainty, and uncertainty reduces conversion.",
+        title: "Step 5: Check that price and offer make sense together",
+        body: "A listing that looks expensive compared with similar nearby options may receive fewer clicks, and one that looks cheap but poorly presented may raise doubt. Compare your price with genuinely similar listings for the same dates, then ask whether your photos, amenities, reviews and description justify it. If the offer is unclear, fix the presentation before cutting the price. Airbnb's own pricing guidance is listed in the sources below; the comparison method here is editorial advice.",
       },
       {
-        title: "Amenities improve relevance and filtering",
-        body: "Amenities are not just comfort signals. They also help listings appear in filtered searches and match guest intent. Wi-Fi, parking, air conditioning, pool, workspace, kitchen, washer, family features, and self check-in can all change how guests compare a property.",
+        title: "Step 6: Build trust and a good stay",
+        body: "Guests compare risk. Reviews, accurate photos, clear rules, honest location details and a reliable host all reduce it. Read your recent reviews for repeated remarks and fix what you can, answer enquiries clearly and promptly, and make sure the listing sets expectations the stay will meet. Airbnb notes that setting expectations accurately in the listing and communicating clearly can lead to higher ratings and reviews. Even with a competitive price, weak trust signals can stop a booking.",
       },
       {
-        title: "Reviews and trust signals matter",
-        body: "Airbnb guests compare risk. Strong reviews, accurate photos, clear rules, transparent location details, and host reliability reduce perceived risk. Even when pricing is competitive, weak trust signals can stop guests from booking.",
+        title: "Step 7: Measure one change at a time",
+        body: "Change one element, note the date and the reason in a simple log, then compare the same statistics over a comparable period. Seasonality, events and calendar changes can move results on their own, so avoid concluding from a few days, and avoid changing title, photos and price together. If a change brings no improvement, restore the earlier version or try a different one, and keep what the evidence supports.",
       },
       {
-        title: "Common Airbnb SEO mistakes",
-        body: "The most common mistakes are generic titles, poor first photos, unclear location context, missing amenities, weak descriptions, overpricing, incomplete galleries, poor review management, and copying competitors without understanding guest intent.",
+        title: "Common Airbnb SEO mistakes to avoid",
+        body: "Generic titles, keyword lists in place of a clear sentence, a weak or misleading first photo, galleries that skip rooms, amenities ticked but not available, vague descriptions, unclear location context, copying competitors, cutting the price to compensate for unclear value, ignoring repeated review remarks, changing everything at once, and believing anyone who promises a guaranteed ranking.",
       },
       {
-        title: "How to improve Airbnb SEO step by step",
-        body: "Start with the first photo and title, then review pricing against local competitors, improve the gallery, rewrite the description, complete amenities, clarify location and check-in, strengthen trust signals, and monitor whether views and bookings improve after changes.",
+        title: "Operational checklist",
+        body: "(1) Record title, first photo, price and your own statistics. (2) Verify property type, capacity, bedrooms, beds and amenities. (3) Rewrite the title around what the place really is. (4) Put the best honest photo first and show every space. (5) Rewrite the description around guests' questions. (6) Compare price with similar listings for the same dates. (7) Read recent reviews and fix repeated issues. (8) Check how you answer enquiries. (9) Change one thing at a time and log it. (10) Review again before high season, after a drop in bookings, and after guest feedback.",
       },
       {
         title: "How Norixo helps Airbnb SEO",
         body: "Norixo audits listing quality, pricing signals, photo presentation, title clarity, description strength, amenities, market positioning, and conversion blockers. Instead of guessing, hosts can see which parts of the listing are likely weakening performance.",
       },
     ],
+    evidenceSources: {
+      title: "Airbnb guidance behind this guide",
+      note: "These official Airbnb pages are the public sources for the platform-specific points in this guide. They do not prove that any change improves ranking, clicks or bookings, and the order of steps, the checklist and the examples are Norixo editorial advice.",
+      sources: [
+        {
+          title: "How search works on Airbnb",
+          href: "https://www.airbnb.com/resources/hosting-homes/a/how-search-works-on-airbnb-460",
+          role: "Search and relevance context",
+        },
+        {
+          title: "Guidelines for writing your listing title",
+          href: "https://www.airbnb.com/resources/hosting-homes/a/guidelines-for-writing-your-listing-title-533",
+          role: "Title guidance",
+        },
+        {
+          title: "How to take great photos for your listing",
+          href: "https://www.airbnb.com/resources/hosting-homes/a/how-to-take-great-photos-for-your-listing-687",
+          role: "Photo guidance",
+        },
+        {
+          title: "Writing an effective listing description",
+          href: "https://www.airbnb.com/resources/hosting-homes/a/writing-an-effective-listing-description-13",
+          role: "Description guidance",
+        },
+        {
+          title: "Help your listing stand out",
+          href: "https://www.airbnb.com/resources/hosting-homes/a/help-your-listing-stand-out-658",
+          role: "Amenities and listing completeness",
+        },
+        {
+          title: "Setting your initial price",
+          href: "https://www.airbnb.com/resources/hosting-homes/a/setting-your-initial-price-731",
+          role: "Price context",
+        },
+        {
+          title: "Why reviews matter",
+          href: "https://www.airbnb.com/resources/hosting-homes/a/why-reviews-matter-41",
+          role: "Reviews and trust",
+        },
+      ],
+    },
     faq: [
       {
         question: "What is Airbnb SEO?",
         answer:
-          "Airbnb SEO is the process of improving a listing so it can become more relevant, trustworthy, clickable, and bookable inside Airbnb search and comparison results.",
+          "Airbnb SEO is the process of improving a listing so it becomes more relevant, easier to understand, more trustworthy and easier to book inside Airbnb search and comparison results. It is not the same as Google SEO.",
       },
       {
-        question: "Do keywords matter on Airbnb?",
+        question: "What should I fix first on my Airbnb listing?",
         answer:
-          "Yes, but keywords are only one part of Airbnb SEO. Photos, pricing, reviews, amenities, location relevance, availability, and guest behavior also matter.",
+          "Start with accuracy: property details and amenities. Then the first photo and the title, because they shape the first decision, then the description, then the price compared with similar listings. Change one thing at a time so you can see what helped.",
       },
       {
-        question: "How can I improve my Airbnb ranking?",
+        question: "In what order should I show my photos?",
         answer:
-          "Improve the listing title, first photo, gallery, pricing, description, amenities, availability, reviews, and trust signals. Focus on what makes guests click and book.",
+          "Open with the photo that best shows what the place is, then follow a guest's imagined stay: main living space, bedrooms, bathroom, kitchen, outdoor areas, view and details. Show every space guests will use and keep photos true to the property today.",
       },
       {
-        question: "Does Airbnb SEO increase bookings?",
+        question: "Should I lower my price to get more visibility?",
         answer:
-          "Better Airbnb SEO can improve visibility, click-through rate, guest confidence, and conversion, which can lead to more bookings when there is market demand.",
+          "Not as a first move. Airbnb does not publish a rule that price alone decides the order, and a low price on an unclear listing can raise doubt. Compare with genuinely similar listings, fix how the listing presents its value, then adjust the price if the comparison still supports it.",
       },
       {
-        question: "Is Airbnb SEO the same as Google SEO?",
+        question: "How long should I wait before judging a change?",
         answer:
-          "No. Google SEO ranks web pages. Airbnb SEO is marketplace optimization based on relevance, listing quality, guest behavior, pricing, trust, and conversion.",
+          "There is no fixed rule. Compare the same statistics from your account over a comparable period, allow for seasonality and events, and avoid concluding from a few days. Changing several elements at once makes the result impossible to read.",
       },
       {
-        question: "What is the biggest Airbnb SEO mistake?",
+        question: "Is it a good idea to copy a competitor's listing?",
         answer:
-          "The biggest mistake is treating Airbnb SEO as keywords only. A listing also needs strong photos, clear pricing, trust signals, complete amenities, and a persuasive description.",
+          "No. Their wording answers their guests' questions and may not describe your property truthfully. Use competitors to learn which questions guests expect answered, then answer them in your own words.",
       },
       {
-        question: "How often should I optimize my Airbnb listing?",
+        question: "Do reviews affect my visibility?",
         answer:
-          "You should review your listing before high season, after market changes, after a drop in bookings, after receiving guest feedback, and whenever competitors improve their listings.",
+          "Guests read reviews and ratings when they decide, and Airbnb says better reviews and ratings can lead to more bookings. Airbnb's search guidance names guest reviews among the characteristics that help determine a listing's quality, which it says heavily influences search results, but it does not publish how much reviews weigh. Treat reviews as a trust and quality signal you can improve, not a lever you can measure precisely.",
+      },
+      {
+        question: "How often should I review my listing?",
+        answer:
+          "Before high season, after a drop in bookings, after guest feedback, and when competitors change their listings. Use the baseline and change log from this guide to compare before and after.",
       },
       {
         question: "Can Norixo help with Airbnb SEO?",
         answer:
-          "Yes. Norixo helps identify weak titles, poor photo presentation, pricing issues, unclear descriptions, missing trust signals, and other conversion blockers.",
+          "Yes. Norixo helps identify weak titles, poor photo presentation, pricing issues, unclear descriptions, missing trust signals, and other conversion blockers, so you know what to fix first. It cannot guarantee a ranking or a number of bookings.",
       },
     ],
   },
