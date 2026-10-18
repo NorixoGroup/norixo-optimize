@@ -1,10 +1,11 @@
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
-import { cancelAutomationTask, claimBacklinkDiscoveryTaskById, claimNextAutomationTask, completeAutomationTask, createOrGetAutomationTask, deadLetterAutomationTask, failAutomationTask, getAutomationTaskByIdInRun, heartbeatAutomationTask, reclaimExpiredAutomationTasks } from "./repositories/automationTasksRepository";
+import { cancelAutomationTask, claimBacklinkDiscoveryTaskById, claimNextAutomationTask, completeAutomationTask, createAndClaimManualBacklinkDiscoveryTest, createOrGetAutomationTask, deadLetterAutomationTask, failAutomationTask, getAutomationTaskByIdInRun, heartbeatAutomationTask, reclaimExpiredAutomationTasks } from "./repositories/automationTasksRepository";
 import { cancelAutomationRun, completeAutomationRun, createOrGetAutomationRun, failAutomationRun, getAutomationRunById, getAutomationWorkspaceControl, startAutomationRun } from "./repositories/automationRunsRepository";
 import { listAutomationTasksForRun } from "./repositories/automationRunResumeRepository";
 import { resumeBacklinksDryRun as resumeBacklinksDryRunService, type ResumeBacklinksDryRunInput, type ResumeBacklinksDryRunResult } from "./run-resume";
 import { resumeDiscovery, type ResumeDiscoveryInput, type ResumeDiscoveryResult } from "./discovery-resume";
+import { runManualDiscoveryTest, type ManualDiscoveryTestInput, type ManualDiscoveryTestResult } from "./manual-discovery-test";
 import { createDryRunAutomationTaskHandlers } from "./dry-run-handlers";
 import { createBraveBacklinkDiscoveryProvider } from "./brave-backlink-discovery-provider";
 import { readBraveBacklinkDiscoveryRuntimeConfig } from "./brave-backlink-discovery-config";
@@ -157,6 +158,7 @@ export function createAutomationProductionComposition(): {
   runBacklinksSchedulerTick: (input: RunBacklinksAutomationSchedulerTickInput) => Promise<RunBacklinksAutomationSchedulerTickResult>;
   resumeBacklinksDryRun: (input: ResumeBacklinksDryRunInput) => Promise<ResumeBacklinksDryRunResult>;
   resumeDiscovery: (input: ResumeDiscoveryInput) => Promise<ResumeDiscoveryResult>;
+  runManualDiscoveryTest: (input: ManualDiscoveryTestInput) => Promise<ManualDiscoveryTestResult>;
 } {
   const braveConfig = readBraveBacklinkDiscoveryRuntimeConfig();
   const client = createSupabaseAdminClient();
@@ -519,6 +521,11 @@ export function createAutomationProductionComposition(): {
     executeClaimed: (claimedInput) => executeClaimedDiscoveryTask({ ...taskDependencies, executeHandler }, claimedInput),
     failRun: (runInput) => failRunService(runTransitionDependencies, runInput),
   }, input);
+  const manualDiscoveryTest = (input: ManualDiscoveryTestInput) => runManualDiscoveryTest({
+    createAndClaim: (claimInput) => createAndClaimManualBacklinkDiscoveryTest(client, claimInput),
+    executeClaimed: (claimedInput) => executeClaimedDiscoveryTask({ ...taskDependencies, executeHandler }, claimedInput),
+    failRun: (runInput) => failRunService(runTransitionDependencies, runInput),
+  }, input);
   const prepareBacklinksDryRun = (input: PrepareBacklinksAutomationRunInput) =>
     prepareBacklinksAutomationRun(
       {
@@ -572,5 +579,6 @@ export function createAutomationProductionComposition(): {
       ),
     resumeBacklinksDryRun,
     resumeDiscovery: resumeDiscoveryTask,
+    runManualDiscoveryTest: manualDiscoveryTest,
   };
 }
