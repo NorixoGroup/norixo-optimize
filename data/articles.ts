@@ -23,35 +23,39 @@ export type Article = {
 export const articles: Article[] = [
   {
     slug: "how-airbnb-seo-works",
-    title: "How Airbnb SEO Works",
+    title: "How Airbnb SEO Works: What Hosts Can Control",
     description:
-      "Learn how Airbnb SEO works, including relevance, guest behavior, pricing, photos, reviews, amenities, and conversion signals.",
+      "Understand how Airbnb search visibility works, what is publicly documented, and how hosts can improve listing photos, descriptions, amenities, and guest experience.",
     cluster: "Airbnb SEO",
     heroTitle: "How Airbnb SEO works",
     heroSubtitle:
-      "Understand the signals that can influence Airbnb visibility, clicks, trust, and booking conversion.",
+      "A plain-language explanation of how Airbnb search shows listings, what is known, what is only assumed, and what a host can realistically improve.",
     intro:
-      "Airbnb SEO is not the same as traditional Google SEO. Airbnb is a marketplace where guests search, compare, filter, click, save, message, and book. The listings that perform well are usually the ones that match guest intent, build trust quickly, and convert attention into bookings.",
+      "Airbnb SEO is not Google SEO. A guest chooses a place, dates and a number of guests, applies filters, and compares listings inside Airbnb. Visibility depends on whether your listing fits what that guest asked for, and whether guests who see it choose it. This article explains the mechanics and separates what Airbnb documents from what it does not publish. For the full method, continue with the Airbnb SEO guide linked below.",
     sections: [
       {
-        title: "Airbnb SEO is marketplace optimization",
-        body: "Airbnb SEO is about improving how a listing performs inside Airbnb search and comparison flows. It combines relevance, price, photos, reviews, amenities, availability, location, and guest behavior.",
+        title: "How a guest search turns into a list of listings",
+        body: "A search starts with criteria the guest chooses: destination, dates, number of guests, and often filters such as price, property type or amenities. A listing that does not match, or is not available on those dates, will generally not appear. Among the listings that do match, Airbnb decides the order. It names the main factors, described below, but does not publish a formula, so the exact order cannot be predicted from the outside.",
       },
       {
-        title: "Relevance comes first",
-        body: "A listing needs to match what guests are searching for: location, dates, number of guests, property type, amenities, price range, and trip intent.",
+        title: "What Airbnb documents and what it does not publish",
+        body: "Airbnb's search guidance says its algorithm uses many factors that are not weighed equally, and that price, quality and popularity heavily influence how a listing shows up. It names the total price before taxes, including fees and discounts, compared with similar listings in the area; quality, to which photos, guest reviews and other characteristics contribute; popularity, such as how often guests book, visit and save a listing; availability, response times and how often reservations are accepted; and Superhost status or progress towards it. What Airbnb does not publish is a ranking formula or how much each factor weighs, so nobody outside Airbnb can say how much any one of them counts. Anything beyond these named categories, including claims in blogs and tools, is interpretation. Airbnb notes that its host resources may have changed since they were written, so check them directly.",
       },
       {
-        title: "Guest behavior matters",
-        body: "Clicks, saves, messages, booking requests, and completed bookings can all indicate whether guests find a listing attractive and relevant.",
+        title: "What a host can influence directly",
+        body: "Start with accuracy: location, property type, capacity and amenities ticked correctly, so the listing matches the filters it should match. Then presentation: photos of the spaces guests ask about, a title that says what the place is, a description that answers practical questions. Then price against similar listings and open availability, how quickly you answer enquiries and how rarely you decline requests, and the stay itself, which produces reviews. None of this guarantees a better position; it improves the chance that a guest who sees the listing understands it and chooses it.",
       },
       {
-        title: "Listing quality supports visibility",
-        body: "Photos, titles, descriptions, reviews, amenities, and pricing all shape how guests react to a listing. Better quality can improve trust and conversion.",
+        title: "What a host cannot control",
+        body: "Competing listings, local demand and seasonality, each guest's filters, and Airbnb's own ranking decisions. The same improvement can show different results in different markets or seasons, and no one can promise a ranking.",
       },
       {
-        title: "Optimization is continuous",
-        body: "Airbnb SEO should be reviewed regularly because demand, competitors, seasonality, and guest expectations change over time.",
+        title: "A worked example, without figures",
+        body: "Imagine a two-bedroom apartment with a real kitchen and desk, but an amenities list that mentions neither, a hallway as the first photo, and the title \"Lovely apartment\". A guest who filters for a kitchen may never be shown it, and a guest who is shown it has little reason to open it. The host ticks the true amenities, puts the living area first, renames the listing with its real attributes and answers the usual sleeping and check-in questions. This is an illustration, not a real listing, and it promises no result: it removes two obstacles the host can check.",
+      },
+      {
+        title: "Measure before you conclude",
+        body: "Change one element at a time and compare the same statistics from your own Airbnb account, such as views, saves, enquiries and bookings, over comparable periods. Seasonality can move results on its own, so one week rarely proves anything. Review regularly as demand and competitors change.",
       },
     ],
     relatedGuides: ["airbnb-seo", "airbnb-ranking", "airbnb-listing-optimization"],
@@ -60,12 +64,27 @@ export const articles: Article[] = [
       {
         question: "Is Airbnb SEO the same as Google SEO?",
         answer:
-          "No. Google SEO ranks web pages. Airbnb SEO is marketplace optimization based on guest intent, listing quality, pricing, availability, trust, and conversion.",
+          "No. Google SEO ranks web pages for typed queries. Airbnb search shows listings for a guest's destination, dates, group size and filters, so visibility depends on matching those criteria and on how guests respond to the listing.",
       },
       {
         question: "What affects Airbnb SEO the most?",
         answer:
-          "Important factors include relevance, photos, pricing, reviews, amenities, availability, guest behavior, and conversion.",
+          "Airbnb says its search uses many factors that are not weighed equally, and names price, quality and popularity as heavily influential, alongside availability, responsiveness and Superhost status. It does not publish how much each one counts, so nobody outside Airbnb can rank them precisely. Start with what a host controls: an accurate and complete listing, clear photos, a sensible total price, open availability, prompt replies, and a stay that earns good reviews.",
+      },
+      {
+        question: "Do keywords matter on Airbnb?",
+        answer:
+          "The search factors Airbnb publishes do not mention keyword counts, and its title guidance asks for short, descriptive titles. Guests read the title and description, so use clear, accurate words about the place instead of lists of terms.",
+      },
+      {
+        question: "Can I guarantee a higher position on Airbnb?",
+        answer:
+          "No. Airbnb controls the order, and competitors and demand change. You can remove obvious obstacles in your listing and measure the effect, but nobody can promise a ranking.",
+      },
+      {
+        question: "How do I know whether a change worked?",
+        answer:
+          "Compare the same statistics from your Airbnb account over comparable periods, change one element at a time, and allow for seasonality before drawing a conclusion.",
       },
     ],
   },
