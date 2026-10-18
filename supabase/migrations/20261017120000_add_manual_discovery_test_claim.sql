@@ -1,5 +1,13 @@
 begin;
 
+create role norixo_manual_discovery_owner
+  nologin nosuperuser nobypassrls noinherit nocreatedb nocreaterole;
+
+grant usage on schema public to norixo_manual_discovery_owner;
+grant select on table public.workspaces, public.workspace_members to norixo_manual_discovery_owner;
+grant select, update on table public.automation_workspace_controls to norixo_manual_discovery_owner;
+grant select, insert on table public.automation_runs, public.automation_tasks to norixo_manual_discovery_owner;
+
 create table public.manual_backlink_discovery_tests (
   test_id uuid primary key,
   workspace_id uuid not null references public.workspaces(id) on delete cascade,
@@ -9,6 +17,65 @@ create table public.manual_backlink_discovery_tests (
 );
 
 alter table public.manual_backlink_discovery_tests enable row level security;
+
+grant insert on table public.manual_backlink_discovery_tests to norixo_manual_discovery_owner;
+
+create policy "manual_discovery_owner_insert"
+on public.manual_backlink_discovery_tests
+for insert
+to norixo_manual_discovery_owner
+with check (true);
+
+create policy "manual_discovery_owner_select_controls"
+on public.automation_workspace_controls
+for select
+to norixo_manual_discovery_owner
+using (true);
+
+create policy "manual_discovery_owner_update_controls"
+on public.automation_workspace_controls
+for update
+to norixo_manual_discovery_owner
+using (true)
+with check (true);
+
+create policy "manual_discovery_owner_select_workspaces"
+on public.workspaces
+for select
+to norixo_manual_discovery_owner
+using (true);
+
+create policy "manual_discovery_owner_select_members"
+on public.workspace_members
+for select
+to norixo_manual_discovery_owner
+using (true);
+
+create policy "manual_discovery_owner_select_runs"
+on public.automation_runs
+for select
+to norixo_manual_discovery_owner
+using (true);
+
+create policy "manual_discovery_owner_insert_runs"
+on public.automation_runs
+for insert
+to norixo_manual_discovery_owner
+with check (true);
+
+create policy "manual_discovery_owner_select_tasks"
+on public.automation_tasks
+for select
+to norixo_manual_discovery_owner
+using (true);
+
+create policy "manual_discovery_owner_insert_tasks"
+on public.automation_tasks
+for insert
+to norixo_manual_discovery_owner
+with check (true);
+
+grant create on schema public to norixo_manual_discovery_owner;
 
 create function public.create_and_claim_manual_backlink_discovery_test(
   p_workspace_id uuid,
@@ -151,6 +218,12 @@ begin
   return next created_task;
 end;
 $$;
+
+grant norixo_manual_discovery_owner to current_user;
+alter function public.create_and_claim_manual_backlink_discovery_test(uuid, uuid, text, text, timestamptz, integer, uuid)
+  owner to norixo_manual_discovery_owner;
+revoke norixo_manual_discovery_owner from current_user;
+revoke create on schema public from norixo_manual_discovery_owner;
 
 revoke all on table public.manual_backlink_discovery_tests from public, anon, authenticated, service_role;
 revoke all on function public.create_and_claim_manual_backlink_discovery_test(uuid, uuid, text, text, timestamptz, integer, uuid)
