@@ -5378,6 +5378,7 @@ export type Database = {
         Returns: Database["public"]["Tables"]["backlink_verification_jobs"]["Row"][]
       }
       claim_next_automation_task: { Args: { p_claimed_at: string; p_lease_duration_seconds: number; p_run_id: string; p_worker_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
+      create_and_claim_manual_backlink_discovery_test: { Args: { p_claimed_at: string; p_lease_duration_seconds: number; p_query: string; p_requested_by: string; p_test_id: string; p_worker_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
       claim_backlink_discovery_task_by_id: { Args: { p_claimed_at: string; p_lease_duration_seconds: number; p_run_id: string; p_task_id: string; p_worker_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
       claim_next_backlink_autonomy_task: { Args: { p_claimed_at: string; p_lease_duration_seconds: number; p_run_id: string; p_worker_id: string; p_workspace_id: string }; Returns: Database["public"]["Tables"]["automation_tasks"]["Row"][] }
       heartbeat_backlink_verification_job: {
