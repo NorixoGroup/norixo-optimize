@@ -219,16 +219,20 @@ begin
 end;
 $$;
 
-grant norixo_manual_discovery_owner to current_user;
+grant norixo_manual_discovery_owner to current_user
+  with admin false, inherit false, set true
+  granted by current_user;
 alter function public.create_and_claim_manual_backlink_discovery_test(uuid, uuid, text, text, timestamptz, integer, uuid)
   owner to norixo_manual_discovery_owner;
-revoke norixo_manual_discovery_owner from current_user;
-revoke create on schema public from norixo_manual_discovery_owner;
-
-revoke all on table public.manual_backlink_discovery_tests from public, anon, authenticated, service_role;
+set role norixo_manual_discovery_owner;
 revoke all on function public.create_and_claim_manual_backlink_discovery_test(uuid, uuid, text, text, timestamptz, integer, uuid)
   from public, anon, authenticated, service_role;
 grant execute on function public.create_and_claim_manual_backlink_discovery_test(uuid, uuid, text, text, timestamptz, integer, uuid)
   to service_role;
+reset role;
+revoke norixo_manual_discovery_owner from current_user granted by current_user;
+revoke create on schema public from norixo_manual_discovery_owner;
+
+revoke all on table public.manual_backlink_discovery_tests from public, anon, authenticated, service_role;
 
 commit;
