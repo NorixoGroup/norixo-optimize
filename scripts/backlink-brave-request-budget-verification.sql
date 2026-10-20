@@ -1,9 +1,10 @@
--- Manual verification for migration 20261012120000_add_backlink_brave_request_budget.sql
+-- Manual verification for migrations 20261012120000_add_backlink_brave_request_budget.sql and
+-- 20261020120000_increase_backlink_brave_request_budget_to_100.sql.
 --
 -- NOT executed by the repository's test suite and NOT run as part of writing it.
 --
 -- Run it ONLY against an isolated, local, disposable PostgreSQL database that:
---   * has the migration applied,
+--   * has both migrations applied in chronological order,
 --   * has the Supabase roles anon, authenticated and service_role,
 --   * had the migration applied by a NON-superuser owner (part 1 refuses a superuser or
 --     RLS-bypassing owner of the reservation function),
@@ -73,8 +74,8 @@
 --     '00000000-0000-0000-0000-0000000000aa'::uuid, null, 'cap:' || gen_random_uuid()::text);
 --   SQL
 --   pgbench "$LOCAL_DB_URL" -n -c 20 -j 4 -t 10 -f /tmp/brave_budget_cap.sql
---   expect "select count(*) filter (where outcome = 'reserved') || '/' || count(*) filter (where outcome = 'limit_reached') from public.brave_budget_verify_outcomes" "80/120" "cap: 80 reserved, 120 refused"
---   expect "select count(*) from public.backlink_brave_request_reservations" "80" "cap: ledger holds exactly 80 rows"
+--   expect "select count(*) filter (where outcome = 'reserved') || '/' || count(*) filter (where outcome = 'limit_reached') from public.brave_budget_verify_outcomes" "100/100" "cap: 100 reserved, 100 refused"
+--   expect "select count(*) from public.backlink_brave_request_reservations" "100" "cap: ledger holds exactly 100 rows"
 --
 --   # 2.2 the same key raced by 20 sessions x 5 transactions: exactly one may be reserved
 --   guard
@@ -119,7 +120,7 @@ begin
 
   if to_regclass('public.backlink_brave_request_reservations') is null
      or to_regprocedure('public.reserve_backlink_brave_request(uuid, uuid, text)') is null then
-    raise exception 'Migration 20261012120000 is not applied in this database';
+    raise exception 'Brave request budget migrations are not applied in this database';
   end if;
 
   -- Empty-ledger precondition: old rows inside the 30-day window would change every count below.
@@ -295,26 +296,26 @@ begin
   select count(*) into v_count from public.backlink_brave_request_reservations;
   if v_count <> 1 then raise exception 'expected 1 fixture row, found %', v_count; end if;
 
-  -- 79 more succeed across two workspaces: the budget is global, not per workspace.
-  for i in 1..79 loop
+  -- 99 more succeed across two workspaces: the budget is global, not per workspace.
+  for i in 1..99 loop
     select * into r from public.reserve_backlink_brave_request(case when i % 2 = 0 then c_ws1 else c_ws2 end, null, 'verify:' || i);
     if r.reservation_outcome <> 'reserved' then raise exception 'expected reserved at %, got %', i, r.reservation_outcome; end if;
   end loop;
-  if r.window_used <> 80 then raise exception 'expected window_used 80 on the 80th reservation, got %', r.window_used; end if;
+  if r.window_used <> 100 then raise exception 'expected window_used 100 on the 100th reservation, got %', r.window_used; end if;
 
-  -- The 81st and 82nd are refused, from either workspace, and add no row.
-  select * into r from public.reserve_backlink_brave_request(c_ws1, null, 'verify:81');
+  -- The 101st and 102nd are refused, from either workspace, and add no row.
+  select * into r from public.reserve_backlink_brave_request(c_ws1, null, 'verify:101');
   if r.reservation_outcome <> 'limit_reached' or r.reservation_id is not null then raise exception 'expected limit_reached, got %', r.reservation_outcome; end if;
-  select * into r from public.reserve_backlink_brave_request(c_ws2, null, 'verify:82');
+  select * into r from public.reserve_backlink_brave_request(c_ws2, null, 'verify:102');
   if r.reservation_outcome <> 'limit_reached' then raise exception 'expected limit_reached (other workspace), got %', r.reservation_outcome; end if;
   select count(*) into v_count from public.backlink_brave_request_reservations;
-  if v_count <> 80 then raise exception 'ledger must hold exactly 80 rows, found %', v_count; end if;
+  if v_count <> 100 then raise exception 'ledger must hold exactly 100 rows, found %', v_count; end if;
 
   -- An idempotent replay is 'replayed' (never 'reserved'), even when the budget is full, and adds no row.
   select * into r from public.reserve_backlink_brave_request(c_ws2, null, 'verify:1');
   if r.reservation_outcome <> 'replayed' or r.reservation_id is null then raise exception 'expected replayed, got %', r.reservation_outcome; end if;
   select count(*) into v_count from public.backlink_brave_request_reservations;
-  if v_count <> 80 then raise exception 'replay must not add a row (found %)', v_count; end if;
+  if v_count <> 100 then raise exception 'replay must not add a row (found %)', v_count; end if;
 
   -- The same key in another workspace is a different reservation (and the budget is full).
   select * into r from public.reserve_backlink_brave_request(c_ws1, null, 'verify:1');
