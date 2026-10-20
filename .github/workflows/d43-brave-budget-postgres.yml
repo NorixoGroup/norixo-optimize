@@ -1,0 +1,73 @@
+name: D43 PostgreSQL 17 Brave budget
+
+on:
+  push:
+    branches: [test/d43-brave-budget-100]
+    paths:
+      - "lib/automation/brave-request-budget.ts"
+      - "scripts/automation-backlink-brave-request-budget-smoke.ts"
+      - "scripts/backlink-brave-request-budget-postgres-harness.sh"
+      - "scripts/backlink-brave-request-budget-verification.sql"
+      - "supabase/migrations/20261020120000_increase_backlink_brave_request_budget_to_100.sql"
+      - ".github/workflows/d43-brave-budget-postgres.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "lib/automation/brave-request-budget.ts"
+      - "scripts/automation-backlink-brave-request-budget-smoke.ts"
+      - "scripts/backlink-brave-request-budget-postgres-harness.sh"
+      - "scripts/backlink-brave-request-budget-verification.sql"
+      - "supabase/migrations/20261020120000_increase_backlink_brave_request_budget_to_100.sql"
+      - ".github/workflows/d43-brave-budget-postgres.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  brave-budget-postgres:
+    # The pull-request event is intentionally limited to this D43 test branch.
+    if: github.event_name == 'push' || github.head_ref == 'test/d43-brave-budget-100'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install PostgreSQL 17 from the signed PGDG repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends ca-certificates curl
+          sudo install -d -m 0755 /usr/share/postgresql-common/pgdg
+          sudo curl --fail --silent --show-error --location \
+            --output /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          . /etc/os-release
+          printf 'Types: deb\nURIs: https://apt.postgresql.org/pub/repos/apt\nSuites: %s-pgdg\nComponents: main\nArchitectures: %s\nSigned-By: /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc\n' \
+            "$VERSION_CODENAME" "$(dpkg --print-architecture)" | \
+            sudo tee /etc/apt/sources.list.d/pgdg.sources >/dev/null
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+            postgresql-17 postgresql-client-17 postgresql-contrib-17
+
+      - name: Verify PostgreSQL 17 toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PG_BIN=/usr/lib/postgresql/17/bin
+          test "$(id -u)" -ne 0
+          for binary in initdb pg_ctl pg_controldata postgres psql pgbench; do
+            test -x "$PG_BIN/$binary"
+          done
+          "$PG_BIN/postgres" --version
+
+      - name: Run isolated Brave-budget PostgreSQL harness
+        shell: bash
+        env:
+          PG_BIN: /usr/lib/postgresql/17/bin
+        run: |
+          set -euo pipefail
+          bash -n scripts/backlink-brave-request-budget-postgres-harness.sh
+          bash scripts/backlink-brave-request-budget-postgres-harness.sh
