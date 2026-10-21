@@ -125,22 +125,22 @@ async function main(): Promise<void> {
     const ledger = createLedgerModel({ now: () => clock });
     const inner = countingProvider();
     const provider = createBudgetedBacklinkDiscoveryProvider(inner.provider, ledger.reserve);
-    for (let index = 0; index < 79; index += 1) {
+    for (let index = 0; index < BACKLINK_BRAVE_REQUEST_BUDGET_LIMIT - 1; index += 1) {
       await provider.search(searchInput(index, { workspaceId: index % 2 === 0 ? "ws-1" : "ws-2", runId: null, taskId: `manual-${index}`, taskAttempt: 1 }));
     }
-    await provider.search(searchInput(0, { workspaceId: "ws-2", runId: "run-m", taskId: "manual-last", taskAttempt: 1 })); // 80th: manual
-    assert(inner.calls() === 80, "80 requests are allowed");
+    await provider.search(searchInput(0, { workspaceId: "ws-2", runId: "run-m", taskId: "manual-last", taskAttempt: 1 })); // 100th: manual
+    assert(inner.calls() === BACKLINK_BRAVE_REQUEST_BUDGET_LIMIT, "100 requests are allowed");
     await expectRejection(
       () => provider.search(searchInput(0, { workspaceId: "ws-1", runId: "run-s", taskId: "scheduled-1", taskAttempt: 1 })),
       "PROVIDER_BUDGET_EXHAUSTED",
-      "81st (scheduled)",
+      "101st (scheduled)",
     );
-    assert(inner.calls() === 80, "The 81st request must not be sent, even from another workspace or caller type");
+    assert(inner.calls() === BACKLINK_BRAVE_REQUEST_BUDGET_LIMIT, "The 101st request must not be sent, even from another workspace or caller type");
     clock += WINDOW_MS - 1000;
     await expectRejection(() => provider.search(searchInput(1, context("scheduled-2"))), "PROVIDER_BUDGET_EXHAUSTED", "still inside window");
     clock += 2000; // all reservations are now older than 30 days
     await provider.search(searchInput(0, context("scheduled-3")));
-    assert(inner.calls() === 81, "Budget frees only when reservations leave the rolling window");
+    assert(inner.calls() === BACKLINK_BRAVE_REQUEST_BUDGET_LIMIT + 1, "Budget frees only when reservations leave the rolling window");
   }
 
   // 4. Concurrent callers never exceed the cap (contract model; see header comment).
@@ -149,10 +149,10 @@ async function main(): Promise<void> {
     const inner = countingProvider();
     const provider = createBudgetedBacklinkDiscoveryProvider(inner.provider, ledger.reserve);
     const results = await Promise.allSettled(
-      Array.from({ length: 150 }, (_, index) => provider.search(searchInput(0, { workspaceId: `ws-${index % 3}`, runId: null, taskId: `c-${index}`, taskAttempt: 1 }))),
+      Array.from({ length: BACKLINK_BRAVE_REQUEST_BUDGET_LIMIT + 50 }, (_, index) => provider.search(searchInput(0, { workspaceId: `ws-${index % 3}`, runId: null, taskId: `c-${index}`, taskAttempt: 1 }))),
     );
-    assert(results.filter((result) => result.status === "fulfilled").length === 80, "Exactly 80 concurrent requests may succeed");
-    assert(inner.calls() === 80 && ledger.rows.length === 80, "HTTP requests must equal reservations");
+    assert(results.filter((result) => result.status === "fulfilled").length === BACKLINK_BRAVE_REQUEST_BUDGET_LIMIT, "Exactly 100 concurrent requests may succeed");
+    assert(inner.calls() === BACKLINK_BRAVE_REQUEST_BUDGET_LIMIT && ledger.rows.length === BACKLINK_BRAVE_REQUEST_BUDGET_LIMIT, "HTTP requests must equal reservations");
     // Same key raced from two workers: only one may send.
     const raceLedger = createLedgerModel();
     const raceInner = countingProvider();
@@ -276,12 +276,13 @@ async function main(): Promise<void> {
     assert(!(new BacklinkDiscoveryProviderError("PROVIDER_BUDGET_EXHAUSTED", "x", false).code === ("PROVIDER_QUOTA_EXCEEDED" as string)), "Budget and 429 codes differ");
     const capLedger = createLedgerModel();
     await run(capLedger.reserve, "cap-check", 2);
-    assert(capLedger.rows.length === 2 && BACKLINK_BRAVE_REQUEST_BUDGET_LIMIT === 80, "Reservations unchanged: one per search, cap still 80");
+    assert(capLedger.rows.length === 2 && BACKLINK_BRAVE_REQUEST_BUDGET_LIMIT === 100, "Reservations unchanged: one per search, cap is 100");
   }
 
   // 6. Migration and wiring are statically what the design requires.
   {
     const sql = await readFile("supabase/migrations/20261012120000_add_backlink_brave_request_budget.sql", "utf8");
+    const upgradeSql = await readFile("supabase/migrations/20261020120000_increase_backlink_brave_request_budget_to_100.sql", "utf8");
     const lock = sql.indexOf("pg_advisory_xact_lock");
     assert(lock !== -1 && lock < sql.indexOf("count(*)") && sql.indexOf("count(*)") < sql.indexOf("insert into public.backlink_brave_request_reservations"), "Lock must precede count and insert");
     for (const fragment of [
@@ -343,6 +344,16 @@ async function main(): Promise<void> {
     assert(/v_now timestamptz;/.test(sql) && !/v_now timestamptz\s*:=/.test(sql), "v_now must not be initialised before the lock");
     assert(!/p_limit|p_window/i.test(sql), "The limit must not be caller-controlled");
     assert(!/api[_-]?key|subscription/i.test(sql), "No secrets in the ledger");
+
+    assert(sql.includes("c_limit constant integer := 80"), "Historical migration must remain at 80");
+    for (const fragment of [
+      "c_limit constant integer := 100", "interval '30 days'", "security definer", "set search_path = public, pg_temp",
+      "pg_advisory_xact_lock", "'replayed'", "'limit_reached'", "'reserved'", "clock_timestamp()",
+    ]) {
+      assert(upgradeSql.includes(fragment), `Additive migration missing ${fragment}`);
+    }
+    assert(!/\b(?:create\s+table|alter\s+table|create\s+policy|grant\b|revoke\b|drop\b)\b/i.test(upgradeSql), "Additive migration must not change the ledger, RLS, or ACL");
+    assert(!/c_limit constant integer := 80|p_limit|p_window|api[_-]?key|subscription/i.test(upgradeSql), "Additive migration must expose neither the old cap nor caller-controlled limits or secrets");
 
     const composition = await readFile("lib/automation/production-composition.ts", "utf8");
     assert(

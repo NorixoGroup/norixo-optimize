@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# Gate PostgreSQL 1 — P1b Brave request budget (migration 20261012120000).
+# Gate PostgreSQL 1 — P1b Brave request budget (migrations 20261012120000 + 20261020120000).
 #
 # Builds a throwaway PostgreSQL 17 cluster in a unique /tmp directory, reachable only through a
-# private unix socket (no TCP listener), applies the P1b migration as a dedicated NON-superuser owner
+# private unix socket (no TCP listener), applies the base and additive migrations as a dedicated NON-superuser owner
 # (the bootstrap superuser `postgres` only administers the cluster), and verifies:
 #   - the migration role and function owner are not superusers (rolsuper = false);
 #   - Supabase-like roles and default privileges, then the migration's revokes/grants
 #     (service_role keeps SELECT only: no INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER/MAINTAIN);
-#   - the 80-request cap, the rolling 30-day window and idempotent replay
+#   - the 100-request cap, the rolling 30-day window and idempotent replay
 #     (reuses PART 1 of scripts/backlink-brave-request-budget-verification.sql, read-only);
-#   - real concurrency (pgbench: 200 distinct keys -> 80 reserved; 100 same-key calls -> 1 reserved);
-#   - a deterministic lock-boundary race (the 80th/81st reservation in two live sessions);
+#   - real concurrency (pgbench: 200 distinct keys -> 100 reserved; 100 same-key calls -> 1 reserved);
+#   - a deterministic lock-boundary race (the 100th/101st reservation in two live sessions);
 #   - negative controls: four weakened copies of the migration (no lock, off-by-one cap, no service_role
 #     revoke, partial service_role revoke) must each be detected.
 # Never touches any other PostgreSQL server (e.g. the PostgreSQL 16 service): every connection goes
@@ -55,10 +55,13 @@ unset PGCONNECT_TIMEOUT PGOPTIONS PGSSLMODE PGSSLROOTCERT PGSSLCERT PGSSLKEY PGS
 unset PGTARGETSESSIONATTRS PGLOADBALANCEHOSTS PGCHANNELBINDING PGGSSENCMODE PGAPPNAME PGCLIENTENCODING PGDATA
 
 REPO=$(cd "$(dirname "$0")/.." && pwd -P)
-MIGRATION="$REPO/supabase/migrations/20261012120000_add_backlink_brave_request_budget.sql"
+BASE_MIGRATION="$REPO/supabase/migrations/20261012120000_add_backlink_brave_request_budget.sql"
+MIGRATION="$REPO/supabase/migrations/20261020120000_increase_backlink_brave_request_budget_to_100.sql"
 VERIFY_SQL="$REPO/scripts/backlink-brave-request-budget-verification.sql"
-[ -f "$MIGRATION" ] || die "migration not found: $MIGRATION"
+[ -f "$BASE_MIGRATION" ] || die "base migration not found: $BASE_MIGRATION"
+[ -f "$MIGRATION" ] || die "additive migration not found: $MIGRATION"
 [ -f "$VERIFY_SQL" ] || die "verification SQL not found: $VERIFY_SQL"
+BASE_MIGRATION_SHA=$(shasum -a 256 "$BASE_MIGRATION" | cut -d' ' -f1)
 MIGRATION_SHA=$(shasum -a 256 "$MIGRATION" | cut -d' ' -f1)
 VERIFY_SHA=$(shasum -a 256 "$VERIFY_SQL" | cut -d' ' -f1)
 
@@ -295,8 +298,8 @@ SQL
   expect "$db" "select count(*) filter (where executed_as = 'service_role') || '/' || count(*) from public.brave_budget_verify_outcomes" \
     "200/200" "$db: concurrent cap, all 200 pgbench reservations ran as service_role"
   expect "$db" "select count(*) filter (where outcome='reserved') || '/' || count(*) filter (where outcome='limit_reached') from public.brave_budget_verify_outcomes" \
-    "80/120" "$db: concurrent cap, 20 sessions x 10 distinct keys -> 80 reserved, 120 refused"
-  expect "$db" "select count(*) from $LEDGER" "80" "$db: concurrent cap, ledger holds exactly 80 rows"
+    "100/100" "$db: concurrent cap, 20 sessions x 10 distinct keys -> 100 reserved, 100 refused"
+  expect "$db" "select count(*) from $LEDGER" "100" "$db: concurrent cap, ledger holds exactly 100 rows"
 
   assert_cluster_identity
   q "$db" -c "truncate $LEDGER; truncate public.brave_budget_verify_outcomes"
@@ -316,17 +319,17 @@ SQL
   q "$db" -c "drop table public.brave_budget_verify_outcomes; truncate $LEDGER"
 }
 
-# Deterministic boundary race: 79 committed reservations, then session A reserves the 80th and
-# keeps its transaction open while session B asks for the 81st.
-#   mode=serialized: B must wait on the advisory lock, then get limit_reached (80 rows).
+# Deterministic boundary race: 99 committed reservations, then session A reserves the 100th and
+# keeps its transaction open while session B asks for the 101st.
+#   mode=serialized: B must wait on the advisory lock, then get limit_reached (100 rows).
 #   mode=race:       expected only for the weakened migration; B is not blocked and both
-#                    reserve (81 rows), which proves the lock-free variant is detected.
+#                    reserve (101 rows), which proves the lock-free variant is detected.
 boundary_test() {
   local db=$1 mode=$2 a b
   assert_cluster_identity
   q "$db" -c "truncate $LEDGER"
-  expect "$db" "select count(*) filter (where r.reservation_outcome='reserved') from generate_series(1,79) g(i) cross join lateral $RESERVE('00000000-0000-0000-0000-0000000000cc'::uuid, null, 'fill:' || g.i) r" \
-    "79" "$db: boundary fixture, 79 committed reservations"
+  expect "$db" "select count(*) filter (where r.reservation_outcome='reserved') from generate_series(1,99) g(i) cross join lateral $RESERVE('00000000-0000-0000-0000-0000000000cc'::uuid, null, 'fill:' || g.i) r" \
+    "99" "$db: boundary fixture, 99 committed reservations"
   qa "$db" boundary-a -At -c "set role service_role" -c "begin" \
     -c "select reservation_outcome from $RESERVE('00000000-0000-0000-0000-0000000000cd'::uuid, null, 'boundary:a')" \
     -c "select pg_sleep(3)" -c "commit" >"$ROOT/$db-boundary-a.out" 2>&1 & a=$!
@@ -338,64 +341,68 @@ boundary_test() {
     wait_for "$db" "select exists(select 1 from pg_stat_activity where application_name='boundary-b' and wait_event_type='Lock' and wait_event='advisory')" "session B blocked on the advisory lock"
     pass "$db: session B is blocked on the global advisory lock while A is open"
     wait "$a"; wait "$b"
-    [ "$(sed -n 1p "$ROOT/$db-boundary-a.out")" = reserved ] || die "$db: session A should reserve the 80th slot"
+    [ "$(sed -n 1p "$ROOT/$db-boundary-a.out")" = reserved ] || die "$db: session A should reserve the 100th slot"
     [ "$(sed -n 1p "$ROOT/$db-boundary-b.out")" = limit_reached ] || die "$db: session B should get limit_reached"
-    expect "$db" "select count(*) from $LEDGER" "80" "$db: boundary race, A reserved #80, B refused #81, ledger 80"
+    expect "$db" "select count(*) from $LEDGER" "100" "$db: boundary race, A reserved #100, B refused #101, ledger 100"
   else
     wait "$b"
     expect "$db" "select exists(select 1 from pg_stat_activity where application_name='boundary-a' and wait_event='PgSleep')" "t" "$db: session B finished while A was still open (no serialization)"
     wait "$a"
     [ "$(sed -n 1p "$ROOT/$db-boundary-a.out")" = reserved ] || die "$db: session A should reserve"
     [ "$(sed -n 1p "$ROOT/$db-boundary-b.out")" = reserved ] || die "$db: weakened migration was expected to over-reserve"
-    expect "$db" "select count(*) from $LEDGER" "81" "$db: NEGATIVE CONTROL detected, lock-free migration over-reserves to 81"
+    expect "$db" "select count(*) from $LEDGER" "101" "$db: NEGATIVE CONTROL detected, lock-free migration over-reserves to 101"
   fi
   assert_cluster_identity
   q "$db" -c "truncate $LEDGER"
 }
 
-# weaken NAME SED_SCRIPT PATTERN — copy of the migration with one protection removed; PATTERN
+# weaken NAME FILE SED_SCRIPT PATTERN — copy of FILE with one protection removed; PATTERN
 # must match the original exactly once and the copy zero times, so the control is never vacuous.
 weaken() {
-  local out="$ROOT/weak-$1.sql"
-  sed -e "$2" "$MIGRATION" >"$out"
-  [ "$(grep -c -e "$3" "$MIGRATION" || true)" = 1 ] || die "weakening $1: pattern not found exactly once in the migration"
-  [ "$(grep -c -e "$3" "$out" || true)" = 0 ] || die "weakening $1: pattern still present"
-  ! cmp -s "$MIGRATION" "$out" || die "weakening $1: copy is identical"
+  local out="$ROOT/weak-$1.sql" file=$2
+  sed -e "$3" "$file" >"$out"
+  [ "$(grep -c -e "$4" "$file" || true)" = 1 ] || die "weakening $1: pattern not found exactly once in the migration"
+  [ "$(grep -c -e "$4" "$out" || true)" = 0 ] || die "weakening $1: pattern still present"
+  ! cmp -s "$file" "$out" || die "weakening $1: copy is identical"
   echo "$out"
 }
 
 # 1) Real migration ------------------------------------------------------------------------------
 new_db brave_p1b
 assert_cluster_identity
+apply_migration brave_p1b "$BASE_MIGRATION" >/dev/null
 apply_migration brave_p1b "$MIGRATION" >/dev/null
 check_structure brave_p1b
 run_part1 brave_p1b || { cat "$ROOT/brave_p1b-part1.log" >&2; die "PART 1 failed on the real migration"; }
 grep -q 'PASS: part 1 left no data behind' "$ROOT/brave_p1b-part1.log" || die "PART 1 did not reach its final check"
-pass "brave_p1b: PART 1 (cap 80, global scope, replay, validation, rolling window, privileges, isolation)"
+pass "brave_p1b: PART 1 (cap 100, global scope, replay, validation, rolling window, privileges, isolation)"
 concurrency_tests brave_p1b
 boundary_test brave_p1b serialized
 
 # 2) Negative controls ---------------------------------------------------------------------------
-WEAK_LOCK=$(weaken lock '/perform pg_advisory_xact_lock(/d' 'pg_advisory_xact_lock(')
+WEAK_LOCK=$(weaken lock "$MIGRATION" '/perform pg_advisory_xact_lock(/d' 'pg_advisory_xact_lock(')
 new_db brave_weak_lock
 assert_cluster_identity
+apply_migration brave_weak_lock "$BASE_MIGRATION" >/dev/null
 apply_migration brave_weak_lock "$WEAK_LOCK" >/dev/null
 boundary_test brave_weak_lock race
 
-WEAK_CAP=$(weaken cap 's/if v_used >= c_limit then/if v_used > c_limit then/' 'if v_used >= c_limit then')
+WEAK_CAP=$(weaken cap "$MIGRATION" 's/if v_used >= c_limit then/if v_used > c_limit then/' 'if v_used >= c_limit then')
 new_db brave_weak_cap
 assert_cluster_identity
+apply_migration brave_weak_cap "$BASE_MIGRATION" >/dev/null
 apply_migration brave_weak_cap "$WEAK_CAP" >/dev/null
-if run_part1 brave_weak_cap; then die "NEGATIVE CONTROL missed: PART 1 accepted a cap of 81"; fi
+if run_part1 brave_weak_cap; then die "NEGATIVE CONTROL missed: PART 1 accepted a cap of 101"; fi
 grep -q 'expected limit_reached' "$ROOT/brave_weak_cap-part1.log" || { cat "$ROOT/brave_weak_cap-part1.log" >&2; die "weak cap failed for an unexpected reason"; }
 pass "brave_weak_cap: NEGATIVE CONTROL detected, off-by-one cap rejected by PART 1"
 
 # service_role dropped from the revoke: Supabase's default privileges leave it every privilege.
 REVOKE_PATTERN='^  from public, anon, authenticated, service_role;$'
-WEAK_PRIV=$(weaken privileges 's/^  from public, anon, authenticated, service_role;$/  from public, anon, authenticated;/' "$REVOKE_PATTERN")
+WEAK_PRIV=$(weaken privileges "$BASE_MIGRATION" 's/^  from public, anon, authenticated, service_role;$/  from public, anon, authenticated;/' "$REVOKE_PATTERN")
 new_db brave_weak_priv
 assert_cluster_identity
 apply_migration brave_weak_priv "$WEAK_PRIV" >/dev/null
+apply_migration brave_weak_priv "$MIGRATION" >/dev/null
 expect brave_weak_priv "select has_table_privilege('service_role','$LEDGER','INSERT')" "t" "brave_weak_priv: Supabase default privileges reproduced (service_role keeps INSERT without the revoke)"
 if run_part1 brave_weak_priv; then die "NEGATIVE CONTROL missed: PART 1 accepted direct ledger writes by service_role"; fi
 grep -q 'service_role must not have INSERT on the ledger' "$ROOT/brave_weak_priv-part1.log" || { cat "$ROOT/brave_weak_priv-part1.log" >&2; die "weak privileges failed for an unexpected reason"; }
@@ -403,10 +410,11 @@ pass "brave_weak_priv: NEGATIVE CONTROL detected, missing service_role revoke re
 
 # The previous, partial revoke (INSERT/UPDATE/DELETE/TRUNCATE only) must now be rejected: it leaves
 # REFERENCES, TRIGGER and MAINTAIN, which the old verification never looked at.
-WEAK_PARTIAL=$(weaken partial-privileges $'s/^  from public, anon, authenticated, service_role;$/  from public, anon, authenticated;\\\nrevoke insert, update, delete, truncate on table public.backlink_brave_request_reservations from service_role;/' "$REVOKE_PATTERN")
+WEAK_PARTIAL=$(weaken partial-privileges "$BASE_MIGRATION" $'s/^  from public, anon, authenticated, service_role;$/  from public, anon, authenticated;\\\nrevoke insert, update, delete, truncate on table public.backlink_brave_request_reservations from service_role;/' "$REVOKE_PATTERN")
 new_db brave_weak_partial
 assert_cluster_identity
 apply_migration brave_weak_partial "$WEAK_PARTIAL" >/dev/null
+apply_migration brave_weak_partial "$MIGRATION" >/dev/null
 for priv in REFERENCES TRIGGER MAINTAIN; do
   expect brave_weak_partial "select has_table_privilege('service_role','$LEDGER','$priv')" "t" "brave_weak_partial: service_role keeps $priv under the partial revoke"
 done
@@ -417,6 +425,7 @@ pass "brave_weak_partial: NEGATIVE CONTROL detected, partial revoke (REFERENCES/
 
 # 3) Repository files untouched ------------------------------------------------------------------
 [ "$(shasum -a 256 "$MIGRATION" | cut -d' ' -f1)" = "$MIGRATION_SHA" ] || die "migration file changed during the run"
+[ "$(shasum -a 256 "$BASE_MIGRATION" | cut -d' ' -f1)" = "$BASE_MIGRATION_SHA" ] || die "base migration file changed during the run"
 [ "$(shasum -a 256 "$VERIFY_SQL" | cut -d' ' -f1)" = "$VERIFY_SHA" ] || die "verification SQL changed during the run"
 assert_cluster_identity
-echo "PASS — backlink Brave request budget PostgreSQL 17 harness (migration sha256 $MIGRATION_SHA)"
+echo "PASS — backlink Brave request budget PostgreSQL 17 harness (additive migration sha256 $MIGRATION_SHA)"

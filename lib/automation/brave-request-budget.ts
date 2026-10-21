@@ -9,7 +9,7 @@ import {
  * `reserve_backlink_brave_request` is authoritative and enforces these numbers;
  * nothing in application code counts requests.
  */
-export const BACKLINK_BRAVE_REQUEST_BUDGET_LIMIT = 80;
+export const BACKLINK_BRAVE_REQUEST_BUDGET_LIMIT = 100;
 export const BACKLINK_BRAVE_REQUEST_BUDGET_WINDOW_DAYS = 30;
 
 export type BraveRequestReservationOutcome = "reserved" | "replayed" | "limit_reached";
@@ -36,7 +36,7 @@ function budgetUnavailableError(): BacklinkDiscoveryProviderError {
   );
 }
 
-/** Internal 80/30-day budget refusal. Distinct from Brave's own HTTP 429 (PROVIDER_QUOTA_EXCEEDED). */
+/** Internal 100/30-day budget refusal. Distinct from Brave's own HTTP 429 (PROVIDER_QUOTA_EXCEEDED). */
 function budgetExhaustedError(): BacklinkDiscoveryProviderError {
   return new BacklinkDiscoveryProviderError(
     "PROVIDER_BUDGET_EXHAUSTED",
