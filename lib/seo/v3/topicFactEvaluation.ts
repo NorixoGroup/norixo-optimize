@@ -137,7 +137,15 @@ function valuesDiffer(a: LocalFact, b: LocalFact): boolean {
     return false;
   }
   if (a.kind === "regulatory" && b.kind === "regulatory") {
-    return a.value.ruleType === b.value.ruleType && a.value.rule.trim() !== b.value.rule.trim();
+    if (a.value.ruleType !== b.value.ruleType) return false;
+    const la = a.value.limit ?? null;
+    const lb = b.value.limit ?? null;
+    // S5.4-L/M: two structured limits are compared field by field and their free text is ignored (it is not rendered);
+    // otherwise the earlier comparison of the rule text applies
+    if (la !== null && lb !== null) {
+      return la.direction !== lb.direction || la.value !== lb.value || la.unit !== lb.unit || la.per !== lb.per || la.condition !== lb.condition;
+    }
+    return a.value.rule.trim() !== b.value.rule.trim();
   }
   if (a.kind === "geographic" && b.kind === "geographic") {
     return a.value.attribute === b.value.attribute && a.value.value !== b.value.value;

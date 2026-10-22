@@ -15,7 +15,7 @@
  *
  * The renderer does not decide whether a fact may be used: S2 and the validator do that.
  */
-import type { DisplayConstraint, FactId, FactPlatform, FactPropertyType, GeographicScope, LocalFact } from "./localFact";
+import type { DisplayConstraint, FactId, FactPlatform, FactPropertyType, GeographicScope, LocalFact, RegulatoryLimit } from "./localFact";
 
 export type PriceStatistic = "median" | "p10" | "p25" | "p75" | "p90";
 
@@ -151,6 +151,24 @@ function renderQuantitative(fact: Extract<LocalFact, { kind: "quantitative" }>, 
   return null; // official statistics carry a free-form name and an unknown unit: not renderable yet
 }
 
+const LIMIT_CONDITION_TEXT: Readonly<Record<RegulatoryLimit["condition"], string>> = {
+  main_residence: "for a furnished tourist rental declared as the host's main residence",
+  all_listings: "for furnished tourist rentals",
+};
+
+/** Deterministic wording of a structured limit: value, unit, direction, what is counted, condition and place are all kept. */
+function renderLimit(scope: GeographicScope, limit: RegulatoryLimit): string | null {
+  const where = place(scope);
+  const count = Number.isInteger(limit.value) && limit.value > 0 ? String(limit.value) : null;
+  const condition = LIMIT_CONDITION_TEXT[limit.condition];
+  if (where === null || count === null || condition === undefined || (limit.unit !== "days" && limit.unit !== "nights")) return null;
+  const amount = `${count} ${limit.unit}`;
+  if (limit.direction === "maximum" && limit.per === "calendar_year") return `In ${where}, the annual limit on rental ${limit.unit} ${condition} is ${amount}.`;
+  if (limit.direction === "maximum" && limit.per === "stay") return `In ${where}, the limit on the length of a stay ${condition} is ${amount}.`;
+  if (limit.direction === "minimum" && limit.per === "stay") return `In ${where}, the minimum length of a stay ${condition} is ${amount}.`;
+  return null;
+}
+
 function renderOne(selection: RenderSelection): Rendered | "invalid" {
   const { fact, statistic } = selection;
   if (fact.kind === "quantitative") return renderQuantitative(fact, statistic);
@@ -164,9 +182,15 @@ function renderOne(selection: RenderSelection): Rendered | "invalid" {
       return { text: `${labelled ? "Editorial note: " : ""}${fact.value.statement}${attributed}`, figures: [] };
     }
     case "regulatory": {
-      const { rule, effectiveFrom, effectiveUntil } = fact.value;
-      if (!line(rule)) return null;
+      const { rule, effectiveFrom, effectiveUntil, limit } = fact.value;
       const period = effectiveFrom === null ? "" : ` (in force from ${effectiveFrom}${effectiveUntil === null ? "" : ` until ${effectiveUntil}`})`;
+      if (limit !== undefined && limit !== null) {
+        // S5.4-L: a numeric limit is rendered from its structure only; the free `rule` text is not used and never carries the number
+        const sentence = renderLimit(fact.scope, limit);
+        if (sentence === null) return null;
+        return { text: `${sentence}${period}${attributed}`, figures: [{ literal: String(limit.value), factId: fact.factId, valuePath: "limit.value" }] };
+      }
+      if (!line(rule)) return null;
       return { text: `${rule}${period}${attributed}`, figures: [] };
     }
     case "geographic": {
@@ -225,6 +249,12 @@ export function selectionsFromFigures(
     const own = figures.filter((figure) => figure.factId === fact.factId).map((figure) => figure.valuePath);
     const unique = new Set(own);
     if (unique.size !== own.length) return { ok: false, reason: "invalid_selection" };
+    if (fact.kind === "regulatory" && fact.value.limit !== undefined && fact.value.limit !== null) {
+      // S5.4-L: a fact with a structured limit is stated through exactly that limit
+      if (own.length !== 1 || own[0] !== "limit.value") return { ok: false, reason: "invalid_selection" };
+      selections.push({ fact });
+      continue;
+    }
     if (fact.kind !== "quantitative") {
       if (own.length > 0) return { ok: false, reason: "invalid_selection" };
       selections.push({ fact });

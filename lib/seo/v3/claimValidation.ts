@@ -467,7 +467,15 @@ const NIGHT_UNITS: ReadonlySet<string> = new Set(["night", "nights", "nuit", "nu
 
 type NumericField = Readonly<{ value: number; role: "amount" | "ratio" | "count" | "statistic"; units?: ReadonlySet<string> }>;
 
+const LIMIT_DAY_UNITS: ReadonlySet<string> = new Set(["day", "days", "jour", "jours"]);
+
 function numericField(fact: LocalFact, path: string): NumericField | null {
+  if (fact.kind === "regulatory") {
+    // S5.4-L: the only regulatory figure is the structured limit, written with its own unit
+    const limit = fact.value.limit;
+    if (path !== "limit.value" || limit === undefined || limit === null) return null;
+    return { value: limit.value, role: "count", units: limit.unit === "days" ? LIMIT_DAY_UNITS : NIGHT_UNITS };
+  }
   if (fact.kind !== "quantitative") return null;
   const value = fact.value;
   if (value.metric === "nightly_price_distribution") {

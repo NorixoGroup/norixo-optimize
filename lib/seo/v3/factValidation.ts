@@ -381,6 +381,36 @@ function collectStrings(value: unknown, path: string, out: { path: string; value
   else if (isRec(value)) for (const [key, item] of Object.entries(value)) collectStrings(item, path === "$" ? key : `${path}.${key}`, out);
 }
 
+const LIMIT_DIRECTIONS = ["maximum", "minimum"] as const;
+const LIMIT_UNITS = ["days", "nights"] as const;
+const LIMIT_PERS = ["calendar_year", "stay"] as const;
+const LIMIT_CONDITIONS = ["main_residence", "all_listings"] as const;
+const MAX_LIMIT_VALUE = 3660;
+
+/** S5.4-L: a structured limit is coherent with its rule type, is a bounded whole number and uses closed vocabularies. */
+function checkRuleLimit(limit: unknown, ruleType: unknown, add: Adder): void {
+  if (!isRec(limit)) {
+    add("invalid_structure", "value.limit", "limit must be an object.");
+    return;
+  }
+  checkKeys(limit, "value.limit", ["direction", "value", "unit", "per", "condition"], add);
+  if (!oneOf(LIMIT_DIRECTIONS, limit.direction)) add("invalid_enum", "value.limit.direction", "direction must be maximum or minimum.");
+  if (!oneOf(LIMIT_UNITS, limit.unit)) add("invalid_enum", "value.limit.unit", "unit must be days or nights.");
+  if (!oneOf(LIMIT_PERS, limit.per)) add("invalid_enum", "value.limit.per", "per must be calendar_year or stay.");
+  if (!oneOf(LIMIT_CONDITIONS, limit.condition)) add("invalid_enum", "value.limit.condition", "condition must be main_residence or all_listings.");
+  if (typeof limit.value !== "number" || !Number.isInteger(limit.value) || limit.value < 1 || limit.value > MAX_LIMIT_VALUE) {
+    add("invalid_value", "value.limit.value", "value must be a whole number from 1 to 3660.");
+  }
+  if (ruleType === "night_cap") {
+    if (limit.direction !== "maximum") add("source_incoherent", "value.limit.direction", "A night cap carries a maximum.");
+  } else if (ruleType === "minimum_stay") {
+    if (limit.direction !== "minimum") add("source_incoherent", "value.limit.direction", "A minimum stay carries a minimum.");
+    if (limit.per !== "stay") add("source_incoherent", "value.limit.per", "A minimum stay is counted per stay.");
+  } else {
+    add("source_incoherent", "value.limit", "Only night_cap and minimum_stay rules may carry a limit.");
+  }
+}
+
 /** Validates a snapshot produced by `snapshotUntrustedFact`. Returns every issue, in a stable order. */
 export function validateFactSnapshot(fact: Rec): FactIssue[] {
   const issues: FactIssue[] = [];
@@ -897,7 +927,7 @@ function validateValue(fact: Rec, sourceType: string | null, add: Adder): void {
       add("source_incoherent", "value.basis", "A cited source cannot be an editorial note.");
     }
   } else if (fact.kind === "regulatory") {
-    checkKeys(value, "value", ["ruleType", "rule", "effectiveFrom", "effectiveUntil", "officialReference"], add);
+    checkKeys(value, "value", ["ruleType", "rule", "effectiveFrom", "effectiveUntil", "officialReference", "limit"], add);
     if (!oneOf(RULE_TYPES, value.ruleType)) add("invalid_enum", "value.ruleType", "Unknown rule type.");
     if (!text(value.rule)) add("invalid_value", "value.rule", "rule is required.");
     if (!text(value.officialReference)) add("invalid_value", "value.officialReference", "officialReference is required.");
@@ -908,6 +938,7 @@ function validateValue(fact: Rec, sourceType: string | null, add: Adder): void {
     if (from !== null && until !== null && from > until) {
       add("invalid_period", "value", "effectiveFrom must not be after effectiveUntil.");
     }
+    if (value.limit !== undefined && value.limit !== null) checkRuleLimit(value.limit, value.ruleType, add);
   } else if (fact.kind === "geographic") {
     checkKeys(value, "value", ["attribute", "value"], add);
     if (!oneOf(GEOGRAPHIC_ATTRIBUTES, value.attribute)) add("invalid_enum", "value.attribute", "Unknown attribute.");

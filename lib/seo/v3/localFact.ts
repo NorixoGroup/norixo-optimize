@@ -100,9 +100,32 @@ export type RegulatoryRuleType =
   | "permit"
   | "other";
 
+/**
+ * A numeric limit of a rule, stated as structure and never as a number inside free text (S5.4-L). The number is
+ * only ever rendered from these fields, and the S3 validator only accepts a figure that equals `value`.
+ *  - night_cap rules carry a "maximum", minimum_stay rules a "minimum"; other rule types carry no limit.
+ *  - `per` says what is counted: rental days over a calendar year, or the length of one stay.
+ *  - `condition` is the scope of application, from a closed list so that the condition cannot be dropped silently.
+ */
+export type RuleLimitDirection = "maximum" | "minimum";
+export type RuleLimitUnit = "days" | "nights";
+export type RuleLimitPer = "calendar_year" | "stay";
+export type RuleLimitCondition = "main_residence" | "all_listings";
+
+export type RegulatoryLimit = Readonly<{
+  direction: RuleLimitDirection;
+  /** Positive whole number, exactly as written in the cited official text. */
+  value: number;
+  unit: RuleLimitUnit;
+  per: RuleLimitPer;
+  condition: RuleLimitCondition;
+}>;
+
 export type RegulatoryValue = Readonly<{
   ruleType: RegulatoryRuleType;
   rule: string;
+  /** Optional structured limit; absent for every rule that does not state one. */
+  limit?: RegulatoryLimit | null;
   effectiveFrom: IsoDate | null;
   effectiveUntil: IsoDate | null;
   /** Article, decree or page of the official text. */

@@ -34,6 +34,9 @@ const RECORD_KEYS = [
 ] as const;
 const SELF_ATTESTED_KEYS = ["validation", "usage"];
 /** Sources that must be backed by at least one verified quote. Datasets and editorial notes may rely on a hash or a record alone. */
+/** Words that can follow a written limit, per declared unit (English, French, Spanish, Italian, Portuguese, Dutch, German). */
+const LIMIT_DAY_WORDS = "days?|jours?|d[ií]as?|giorn[oi]|dag(?:en)?|tage?n?";
+const LIMIT_NIGHT_WORDS = "nights?|nuits?|noches?|nott[ei]|noites?|nacht(?:en)?|n[äa]chte";
 const QUOTE_REQUIRED_SOURCE_TYPES = ["official_authority", "official_tourism_body", "published_research", "public_web_page"];
 
 // --- records ----------------------------------------------------------------------------------------------
@@ -517,6 +520,17 @@ export function importFactStore(input: ImportInput): Readonly<{ registry: FactRe
               } else if (checked.status !== "verified") add(`citation_${checked.status}`, cit.artifactSha256);
             }
             if (citations.length > 0) evidence = unverified ? "unverified" : "verified";
+            // S5.4-L/M: a structured regulatory limit needs a cited quote that writes that very number WITH a unit of the declared kind
+            // (an article number, a year or a day of the month is not a proof). This is a necessary condition only: the engine does not
+            // read the meaning, so the condition, the period and the rule itself stay for the human validation of the fact.
+            const limit = (raw.kind === "regulatory" ? (raw.value as { limit?: { value?: unknown; unit?: unknown } | null } | undefined)?.limit : undefined) ?? null;
+            if (limit !== null && typeof limit === "object") {
+              const digits = String(limit.value).replace(/[^0-9]/g, "");
+              const units = limit.unit === "nights" ? LIMIT_NIGHT_WORDS : LIMIT_DAY_WORDS;
+              const pattern = new RegExp(`(?<![0-9])${digits}(?![0-9])[)\\s\u00a0]{0,3}(?:${units})(?![\\p{L}])`, "iu");
+              const proved = citations.some((c) => typeof (c as { quote?: unknown }).quote === "string" && pattern.test((c as { quote: string }).quote.normalize("NFC")));
+              if (!proved) add("limit_not_in_citation");
+            }
           }
           // decisions
           const chain = evaluateChain(hash, shas, decisionsByFact.get(factId) ?? [], parseIsoDateTime(raw.collectedAt), asOfMs);
