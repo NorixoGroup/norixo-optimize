@@ -38,6 +38,7 @@ import type { GeneratedPage } from "./generatedPage";
 import type { LocalFact } from "./localFact";
 import { assembleGeneratedPage, type AssembleInput, type AssemblyResult } from "./pageAssembler";
 import { comparePages } from "./pageDiagnostics";
+import { isPageScope, LOCAL_SCOPE_MIN_DISTINCT_FACTS, type PageScope } from "./pageScope";
 import { TOPIC_REQUIREMENTS } from "./topicRequirements";
 import type { LocalSeoTopicSlug } from "./topics";
 
@@ -89,6 +90,8 @@ export type PlanApprovalClaim = Readonly<{ approvedBy: string; approvedAt: strin
 export type PageBlueprint = Readonly<{
   topic: LocalSeoTopicSlug;
   searchIntent: string;
+  /** Absent = legacy behaviour. "local" adds a minimum of distinct facts; "global" is refused on a city page (see globalPage.ts). */
+  scope?: PageScope;
   reviewStatus: PlanStatus;
   /** Only meaningful when reviewStatus is "approved". */
   approval?: PlanApprovalClaim | null;
@@ -98,7 +101,8 @@ export type PageBlueprint = Readonly<{
 
 /** Hash of everything that defines a plan: an edit after an approval changes it. */
 export function planHashOf(blueprint: PageBlueprint): string {
-  return sha256Hex(stableStringify({ topic: blueprint.topic, searchIntent: blueprint.searchIntent, slots: blueprint.slots, depth: blueprint.depth }));
+  // scope joins the hash only when declared, so the hash of a plan without a scope is unchanged
+  return sha256Hex(stableStringify({ topic: blueprint.topic, searchIntent: blueprint.searchIntent, slots: blueprint.slots, depth: blueprint.depth, ...(blueprint.scope === undefined ? {} : { scope: blueprint.scope }) }));
 }
 
 // --- approvals: declared, listed identity, verifiable proof ----------------------------------------------------
@@ -473,6 +477,11 @@ function place(input: EditorialInput, catalog: EditorialCatalog, page: Generated
   else if (contextFacts < neededContext) reasons.push("too_few_context_facts");
   // a fact is placed only for a topic it is declared relevant to, and two placed notes never say the same thing
   if (used.some((fact) => !(fact.relevantTopics as readonly string[]).includes(page.topic))) reasons.push("fact_not_relevant_to_topic");
+  if (blueprint.scope !== undefined) {
+    if (!isPageScope(blueprint.scope)) reasons.push("invalid_scope");
+    else if (blueprint.scope === "global") reasons.push("global_blueprint_on_city_page");
+    else if (placedFacts < LOCAL_SCOPE_MIN_DISTINCT_FACTS) reasons.push("local_scope_below_minimum_facts");
+  }
   const statements = used.filter((fact) => fact.kind === "qualitative").map((fact) => String((fact.value as { statement?: unknown }).statement ?? "").trim().toLowerCase());
   if (new Set(statements).size !== statements.length) reasons.push("duplicate_fact_statement");
 
