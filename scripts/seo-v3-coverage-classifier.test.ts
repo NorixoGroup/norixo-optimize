@@ -16,6 +16,10 @@ import { factMatchesRequirement } from "../lib/seo/v3/factUse";
 import { evaluateTopicFacts } from "../lib/seo/v3/topicFactEvaluation";
 import type { RegulatoryRuleType } from "../lib/seo/v3/localFact";
 import { buildCollectionPlan } from "../lib/seo/v3/collectionSheet";
+import { sha256Hex } from "../lib/seo/v3/editorialCatalog";
+import { TIMEZONE_REQUIREMENT } from "../lib/seo/v3/coverageClassifier";
+import { runExclusive } from "./seo-v3-test-guard";
+import type { FactRequirement, TopicRequirements } from "../lib/seo/v3/topicRequirements";
 
 /**
  * S5.2 tests: deterministic coverage classifier.
@@ -590,8 +594,8 @@ const LONG_STAY = () => TOPIC_REQUIREMENTS["long-stay-guide"];
 const evalLongStay = (registry: FactRegistry) =>
   evaluateTopicFacts(registry, { target: SCOPE, platform: "airbnb", propertyType: null, topic: "long-stay-guide", asOf: AS_OF, use: "public" });
 
-test("C3 definition: the version moved to draft-2 and long-stay-guide has an optional, type-filtered rule and nothing required", () => {
-  assert.equal(TOPIC_REQUIREMENTS_VERSION, "seo-v3-topic-requirements/draft-2");
+test("C3 definition: the version is draft-3 (draft-2 for the long-stay change) and long-stay-guide has an optional, type-filtered rule and nothing required", () => {
+  assert.equal(TOPIC_REQUIREMENTS_VERSION, "seo-v3-topic-requirements/draft-3");
   assert.deepEqual(LONG_STAY().required, []);
   const rule = LONG_STAY().optional.find((r) => r.requirementId === "long_stay_rule")!;
   assert.ok(rule);
@@ -681,7 +685,7 @@ test("C3 requirementHash: the long-stay definition is hashed apart, and changing
     const widened = { ...TOPIC_REQUIREMENTS, "long-stay-guide": { ...original, required: original.required.map((r) => (r.kind === "regulatory" ? { ...r, ruleType: "any" as const } : r)) } };
     assert.notEqual(hashOf(widened), base, "widening the types changes the hash");
     const sheet = buildCollectionPlan({ orders, asOf: AS_OF }).sheets[0]!;
-    assert.equal(sheet.requirementsVersion, "seo-v3-topic-requirements/draft-2");
+    assert.equal(sheet.requirementsVersion, "seo-v3-topic-requirements/draft-3");
     assert.deepEqual((sheet.recordTemplate.value as Record<string, unknown>).acceptedRuleTypes, ["minimum_stay", "night_cap"]);
   });
 });
@@ -830,4 +834,120 @@ test("C4 local vs universal: long-stay-guide keeps a human decision without any 
   assert.equal(decision("universal_topic_hub_policy"), 2400, "back to the 2,400 universal pages");
   assert.equal(report.summary.needs_human_decision, 2640);
   assert.ok(report.entries.every((e) => e.publicationAuthorised === false && e.indexingAuthorised === false));
+});
+
+// --- S5.4-G: pricing-guide gains an optional neighbourhood_context requirement -------------------------------------
+
+test("G1 table: only the pricing-guide definition changed, by one optional requirement", () => {
+  const spec = TOPIC_REQUIREMENTS["pricing-guide"];
+  assert.equal(TOPIC_REQUIREMENTS_VERSION, "seo-v3-topic-requirements/draft-3");
+  assert.deepEqual(spec.required.map((r) => r.requirementId), ["nightly_price_distribution"]);
+  assert.deepEqual(spec.optional.map((r) => r.requirementId), ["demand_driver", "neighbourhood_context"]);
+  assert.equal(spec.optional[1]!.thresholdBasis, "provisional_pending_human_decision", "the provisional threshold is not approved");
+  assert.equal(spec.optional[1]!.requiresHumanValidation, true);
+  // the 24 other definitions are byte-for-byte those of the previous commit (hash recorded when the change was made)
+  const others = Object.fromEntries(Object.entries(TOPIC_REQUIREMENTS).filter(([topic]) => topic !== "pricing-guide"));
+  assert.equal(Object.keys(others).length, 24);
+  assert.equal(sha256Hex(stableStringify(others)), "fc3130b006fe8f84c5f418037511d6e85f280e02009434fa1a1d87cc86cb5e70");
+});
+
+test("G2 classifier: the optional fact adds no order, no blocker and does not change a price-only page", () => {
+  const priceOnly = run(registryWith(priceFact()), { topics: ["pricing-guide"] });
+  const entry = entryOf(priceOnly, "pricing-guide");
+  assert.equal(entry.coverageClass, "candidate_for_editorial_review");
+  assert.deepEqual(entry.blockers, []);
+  assert.ok(!priceOnly.workOrders.some((o) => o.requirementId === "neighbourhood_context"));
+  const empty = run(registryWith(), { topics: ["pricing-guide"] });
+  assert.ok(!empty.workOrders.some((o) => o.requirementId === "neighbourhood_context"), "an absent optional fact raises no order");
+  assert.equal(entryOf(empty, "pricing-guide").coverageClass, "needs_data");
+  assert.deepEqual(entryOf(empty, "pricing-guide").blockers, ["facts_absent"]);
+  // with the voluntary request the note can be asked for explicitly, and it is marked voluntary
+  const asked = run(registryWith(), { topics: ["pricing-guide"], voluntaryCollection: [{ citySlug: CITY, topic: "pricing-guide", requirementId: "neighbourhood_context" }] });
+  const order = asked.workOrders.find((o) => o.requirementId === "neighbourhood_context")!;
+  assert.equal(order.origin, "voluntary");
+  assert.deepEqual(order.acceptedSourceTypes, ["editorial_note", "official_tourism_body", "published_research"]);
+  assert.equal(entryOf(asked, "pricing-guide").coverageClass, "needs_data", "asking for the optional fact does not change the class");
+});
+
+// --- S5.4-I: order ids follow the requirement definition, not the global version -----------------------------------
+
+const REAL_RUN = () => classifyCoverage({ cities, registry: createFactRegistry(), asOf: AS_OF, thresholdProfile: "draft-provisional", propertyType: null });
+const idOfKey = (o: { scope: unknown; platform: unknown; propertyType: unknown; requirementId: string; kind: string; requirementHash: string }) =>
+  sha256Hex(stableStringify({ scope: o.scope, platform: o.platform, propertyType: o.propertyType, requirementId: o.requirementId, kind: o.kind, requirementHash: o.requirementHash }));
+/** TEST SUPPORT: replaces the definition of one requirement in the given topics for the duration of `fn` (restored afterwards). */
+function withChangedRequirement<T>(topics: LocalSeoTopicSlug[], requirementId: string, patch: Record<string, unknown>, fn: () => T): T {
+  const table = TOPIC_REQUIREMENTS as Record<string, TopicRequirements>;
+  const originals = new Map<string, TopicRequirements>();
+  return runExclusive("withChangedRequirement", fn, () => { for (const [t, o] of originals) table[t] = o; }, () => {
+    for (const t of topics) {
+      const current = table[t]!;
+      originals.set(t, current);
+      const swap = (r: FactRequirement) => (r.requirementId === requirementId ? ({ ...r, ...patch } as FactRequirement) : r);
+      table[t] = { ...current, required: current.required.map(swap), optional: current.optional.map(swap) };
+    }
+  });
+}
+
+test("S5.4-I id: the key is scope, platform, property type, requirement id, kind and the definition hash; no version", () => {
+  const report = REAL_RUN();
+  assert.equal(report.workOrders.length, 1680);
+  for (const order of report.workOrders) {
+    assert.equal(order.id, idOfKey(order), "the id is exactly the hash of that version-free key");
+    assert.match(order.requirementHash, /^[0-9a-f]{64}$/);
+  }
+  assert.equal(new Set(report.workOrders.map((o) => o.id)).size, 1680, "no collision");
+  // the order's definition hash is the one the sheet will carry
+  const plan = buildCollectionPlan({ orders: report.workOrders.slice(0, 40), asOf: AS_OF });
+  for (const sheet of plan.sheets) assert.equal(sheet.requirementHash, report.workOrders.find((o) => o.id === sheet.workOrderId)!.requirementHash);
+});
+
+test("S5.4-I id: the legacy scheme (global version in the key) gives different ids for all 1,680 orders, so old dossiers are recognisable", () => {
+  const report = REAL_RUN();
+  const legacy = (o: (typeof report.workOrders)[number], version: string) => sha256Hex(stableStringify({ scope: o.scope, platform: o.platform, propertyType: o.propertyType, requirementId: o.requirementId, kind: o.kind, requirementsVersion: version }));
+  for (const version of ["seo-v3-topic-requirements/draft-2", "seo-v3-topic-requirements/draft-3"]) assert.equal(report.workOrders.filter((o) => legacy(o, version) === o.id).length, 0, version);
+  assert.equal(report.workOrders[0]!.requirementsVersion, TOPIC_REQUIREMENTS_VERSION, "the version is kept as information only");
+});
+
+test("S5.4-I stability: changing one topic's unrelated requirement renames none of the other orders", () => {
+  const before = REAL_RUN();
+  const after = withChangedRequirement(["amenities-guide"], "guest_expectation", { maxAgeDays: 123 }, REAL_RUN);
+  const ids = new Set(before.workOrders.map((o) => o.id));
+  const fresh = after.workOrders.filter((o) => !ids.has(o.id));
+  // amenities-guide is the only topic changed: its required guest_expectation order now differs from the shared definition used by family-travel-guide
+  assert.ok(fresh.every((o) => o.requirementId === "guest_expectation"), "only orders of the changed requirement are new");
+  assert.equal(fresh.length, 240);
+  assert.equal(after.workOrders.filter((o) => ids.has(o.id)).length, after.workOrders.length - 240, "every other order keeps its id");
+  assert.equal(after.workOrders.length, 1680 + 240, "two different definitions of one requirement are two orders, not one merged order");
+});
+
+test("S5.4-I stability: changing a requirement everywhere renames exactly its orders and no other", () => {
+  const before = REAL_RUN();
+  const priceTopics = (Object.keys(TOPIC_REQUIREMENTS) as LocalSeoTopicSlug[]).filter((t) => TOPIC_REQUIREMENTS[t].required.some((r) => r.requirementId === "nightly_price_distribution"));
+  assert.ok(priceTopics.length >= 4);
+  const after = withChangedRequirement(priceTopics, "nightly_price_distribution", { maxAgeDays: 45 }, REAL_RUN);
+  const beforeIds = new Set(before.workOrders.map((o) => o.id));
+  const renamed = before.workOrders.filter((o) => !after.workOrders.some((x) => x.id === o.id));
+  assert.equal(renamed.length, 240);
+  assert.ok(renamed.every((o) => o.requirementId === "nightly_price_distribution"));
+  assert.equal(after.workOrders.length, before.workOrders.length);
+  assert.equal(after.workOrders.filter((o) => beforeIds.has(o.id)).length, 1680 - 240);
+  assert.ok(after.workOrders.filter((o) => o.requirementId === "nightly_price_distribution").every((o) => !beforeIds.has(o.id)));
+});
+
+test("S5.4-I distinctness: other cities, other topics and other requirements never share an id; the timezone definition matches the sheets'", () => {
+  const report = REAL_RUN();
+  const paris = report.workOrders.filter((o) => (o.scope as { citySlug: string }).citySlug === "paris");
+  const barcelona = report.workOrders.filter((o) => (o.scope as { citySlug: string }).citySlug === "barcelona");
+  assert.equal(paris.length, 7);
+  assert.equal(new Set(paris.map((o) => o.id)).size, 7, "seven distinct requirements, seven ids");
+  assert.ok(paris.every((p) => !barcelona.some((b) => b.id === p.id)));
+  // the same requirement asked by two topics is one order per city
+  const priceOrders = paris.filter((o) => o.requirementId === "nightly_price_distribution");
+  assert.equal(priceOrders.length, 1);
+  assert.ok(priceOrders[0]!.coversPages.length >= 4);
+  // the classifier's timezone definition is the sheets' one (a drift would silently split ids from sheet hashes)
+  const withZone = withLongStayRuleRequired(() => run(registryWith(ruleFact()), { topics: ["long-stay-guide"] }));
+  const zone = withZone.workOrders.find((o) => o.kind === "timezone")!;
+  assert.equal(zone.requirementHash, sha256Hex(stableStringify(TIMEZONE_REQUIREMENT)));
+  assert.equal(buildCollectionPlan({ orders: [zone], asOf: AS_OF }).sheets[0]!.requirementHash, zone.requirementHash);
 });

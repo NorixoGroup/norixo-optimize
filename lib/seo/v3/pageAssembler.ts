@@ -127,7 +127,7 @@ function assembleChecked(input: AssembleInput): AssemblyResult {
   // sections: rendered facts first-class; fixed blocks only around them
   const sections: { order: number; section: PageSection }[] = [];
   selection.selected.forEach((item, index) => {
-    sections.push({ order: 1 + index / 1000, section: { sectionId: item.claim.sectionId, heading: item.heading, claims: [item.claim as unknown as PageSection["claims"][number]] } });
+    sections.push({ order: 1 + index / 1000, section: { sectionId: item.claim.sectionId, heading: item.heading, claims: [item.claim, ...item.extraClaims.map((extra) => extra.claim)] as unknown as PageSection["claims"] } });
   });
   const hasFacts = selection.selected.length > 0;
   const blocks = hasFacts ? input.catalog.blocksFor(context.topic, "en", context.asOf) : [];
@@ -139,7 +139,7 @@ function assembleChecked(input: AssembleInput): AssemblyResult {
   }
   sections.sort((a, b) => a.order - b.order);
 
-  const usedFactIds = [...new Set(selection.selected.flatMap((item) => [...item.claim.supportingFactIds, ...item.claim.figures.map((figure) => figure.factId)]))].sort() as FactId[];
+  const usedFactIds = [...new Set(selection.selected.flatMap((item) => [item.claim, ...item.extraClaims.map((extra) => extra.claim)].flatMap((claim) => [...claim.supportingFactIds, ...claim.figures.map((figure) => figure.factId)])))].sort() as FactId[];
   const missingFacts = selection.report.missing;
   const eligibilityReasons: [EditorialDecisionReason, ...EditorialDecisionReason[]] = completeness.requiredUncovered.length > 0 ? ["required_fact_missing"] : ["human_editorial_decision"];
   // S4 never states publishable_standalone: whether a page deserves to exist is a human decision
@@ -171,7 +171,13 @@ function assembleChecked(input: AssembleInput): AssemblyResult {
   const integrityOk =
     selection.selected.every((item) => {
       const again = renderFactualClaim([{ fact: item.fact, ...(item.statistic === null ? {} : { statistic: item.statistic }) }]);
-      return again.ok && again.value.text === item.claim.text && stableStringify(again.value.figures) === stableStringify(item.claim.figures);
+      const mainOk = again.ok && again.value.text === item.claim.text && stableStringify(again.value.figures) === stableStringify(item.claim.figures);
+      // each quartile claim must be exactly what the renderer produces for that statistic of the same fact
+      const extrasOk = item.extraClaims.every((extra) => {
+        const quartile = renderFactualClaim([{ fact: item.fact, statistic: extra.statistic }]);
+        return quartile.ok && quartile.value.text === extra.claim.text && stableStringify(quartile.value.figures) === stableStringify(extra.claim.figures);
+      });
+      return mainOk && extrasOk;
     }) &&
     blocks.every((block) => finalSections.some((section) => section.claims.some((claim) => claim.text === block.text && sha256Hex(claim.text) === block.textHash)));
 

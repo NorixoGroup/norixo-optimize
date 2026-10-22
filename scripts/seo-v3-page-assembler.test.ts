@@ -416,14 +416,14 @@ test("15. diagnostics: counts and shares of what the page really contains; no th
   const registry = registryWith(priceFact());
   const r = assemble(registry);
   const d = r.differentiation!;
-  assert.equal(d.factualClaimCount, 1);
+  assert.equal(d.factualClaimCount, 3, "S5.4-E: the median and the two quartiles that the fixture fact carries");
   assert.equal(d.cityFactCount, 1);
   assert.equal(d.countryFactCount, 0);
   assert.equal(d.supportedSectionCount, 1);
   assert.equal(d.genericBlockCount, 3);
   assert.deepEqual(d.genericBlockIds, ["block:fixture-advice-1", "block:fixture-hyp-1", "block:fixture-intro-1"]);
   assert.ok(d.localVerifiableShare! > 0 && d.localVerifiableShare! < 1);
-  assert.deepEqual(d.missingSections, [{ requirementId: "demand_driver", required: false, cause: "no_usable_fact" }], "the optional section without a fact is reported as missing, not filled");
+  assert.deepEqual(d.missingSections, [{ requirementId: "demand_driver", required: false, cause: "no_usable_fact" }, { requirementId: "neighbourhood_context", required: false, cause: "no_usable_fact" }], "the optional sections without a fact are reported as missing, not filled");
   assert.ok(!Object.keys(d).some((k) => /eligib|publish|index|score|threshold|pass/i.test(k)), "a diagnostic carries no decision");
   assert.match(d.note, /no threshold, no eligibility, no indexing decision/);
   // the same facts with no blocks: only local content
@@ -873,4 +873,111 @@ test("D3c. masking: country codes anywhere, and the place phrase of a rendered f
   const rendered = (district: string, slug: string, code: string) => `In ${district}, ${slug}, ${code} (platform: not specified, property type: not specified), the median nightly price is €90.00.`;
   assert.equal(sim(one("alpha-town", rendered("north quarter", "alpha-town", "ZZ")), one("beta-city", rendered("old port area", "beta-city", "YY"))), 1);
   assert.ok(sim(one("alpha-town", rendered("north quarter", "alpha-town", "ZZ")), one("beta-city", rendered("old port area", "beta-city", "YY").replace("median", "lowest"))) < 1);
+});
+
+// --- S5.4-E. quartiles (p25, p75) of a validated price fact --------------------------------------------------------
+
+const priceSection = (r: ReturnType<typeof assemble>) => r.page!.sections.find((section) => section.heading === "Observed nightly prices")!;
+
+test("E1. a price fact that carries p25 and p75 states the median, then the quartiles, each as its own claim of the same fact", () => {
+  const registry = registryWith(priceFact());
+  const r = assemble(registry, { catalog: APPROVED_EDITORIAL_CATALOG });
+  assert.equal(r.status, "ready_for_editorial_review", JSON.stringify(r.reasons));
+  const claims = priceSection(r).claims;
+  assert.deepEqual(claims.map((c) => c.claimId), ["claim:fact:nightly_price_distribution", "claim:fact:nightly_price_distribution:p25", "claim:fact:nightly_price_distribution:p75"]);
+  assert.match(claims[0]!.text, /the median nightly price is €111\.11 \(confidence: high, 25 listings observed from 2026-06-01 to 2026-08-31/);
+  assert.match(claims[1]!.text, /the lower-quartile nightly price is €90\.00 \(confidence: high, 25 listings/);
+  assert.match(claims[2]!.text, /the upper-quartile nightly price is €130\.00 \(confidence: high, 25 listings/);
+  for (const [claim, stat] of [[claims[0]!, "median"], [claims[1]!, "p25"], [claims[2]!, "p75"]] as const) {
+    assert.equal(claim.kind, "factual");
+    assert.deepEqual((claim as unknown as { supportingFactIds: string[] }).supportingFactIds, [PRICE_ID]);
+    assert.deepEqual((claim as unknown as { figures: { valuePath: string }[] }).figures.map((f) => f.valuePath).sort(), [stat, "sampleSize"].sort());
+  }
+  assert.deepEqual(r.page!.usedFactIds, [PRICE_ID], "same fact, nothing new is used");
+  assert.equal(r.validation!.verdict, "accepted", "S3 still validates every claim");
+  assert.equal(r.publicationAuthorised, false);
+  assert.equal(r.indexingAuthorised, false);
+});
+
+test("E2. without p25 and p75 the page is exactly what it was: the median only", () => {
+  const withQuartiles = assemble(registryWith(priceFact()), { catalog: APPROVED_EDITORIAL_CATALOG });
+  const without = assemble(registryWith(priceFact({ value: priceValue(111.11) })), { catalog: APPROVED_EDITORIAL_CATALOG });
+  const claims = priceSection(without).claims;
+  assert.equal(claims.length, 1);
+  assert.equal(claims[0]!.text, priceSection(withQuartiles).claims[0]!.text, "the median sentence is unchanged");
+  assert.equal(claims[0]!.claimId, "claim:fact:nightly_price_distribution");
+  // one quartile only: only that one
+  const onlyP75 = assemble(registryWith(priceFact({ value: priceValue(111.11, { p75: 130 }) })), { catalog: APPROVED_EDITORIAL_CATALOG });
+  assert.deepEqual(priceSection(onlyP75).claims.map((c) => c.claimId.split(":").pop()), ["nightly_price_distribution", "p75"]);
+});
+
+test("E3. nothing is computed or repaired: a quartile out of order with the median or unusable never reaches a page", () => {
+  // S2 already refuses these facts at registration; the S4 selection repeats the same checks as a second line of defence
+  // (not reachable through a real registry, so not testable from here).
+  const cases: [string, Record<string, unknown>][] = [
+    ["p25 above the median", { p25: 120, p75: 130 }],
+    ["p75 below the median", { p25: 90, p75: 100 }],
+    ["negative p25", { p25: -5 }],
+    ["p25 not a number", { p25: Number.NaN }],
+    ["p75 infinite", { p75: Number.POSITIVE_INFINITY }],
+    ["p25 as text", { p25: "90" }],
+  ];
+  for (const [label, extra] of cases) {
+    const outcome = createFactRegistry().register(priceFact({ value: priceValue(111.11, extra) }));
+    assert.equal(outcome.ok, false, label);
+    assert.equal(assemble(createFactRegistry(), { catalog: APPROVED_EDITORIAL_CATALOG }).page, null, "no fact, no page");
+  }
+});
+
+test("E4. other facts are unchanged: one claim for an unavailability rate, none for a missing fact", () => {
+  const registry = registryWith(priceFact(), unavailabilityFact());
+  const r = assemble(registry, { catalog: APPROVED_EDITORIAL_CATALOG });
+  const sections = r.page ? r.page.sections : [];
+  const calendar = sections.find((section) => section.heading === "Calendar unavailability");
+  if (calendar !== undefined) assert.equal(calendar.claims.length, 1);
+  assert.equal(assemble(createFactRegistry(), { catalog: APPROVED_EDITORIAL_CATALOG }).page, null);
+});
+
+test("E5. a tampered quartile sentence is refused by S3 even when the hash is recomputed", () => {
+  const registry = registryWith(priceFact());
+  const r = assemble(registry, { catalog: APPROVED_EDITORIAL_CATALOG });
+  const copy = JSON.parse(JSON.stringify(r.page)) as { sections: { heading: string; claims: { text: string }[] }[]; traceability: { contentHash: string } };
+  const claim = copy.sections.find((section) => section.heading === "Observed nightly prices")!.claims[1]!;
+  claim.text = claim.text.replace("lower-quartile", "upper-quartile");
+  const sort = (v: unknown): unknown => (Array.isArray(v) ? v.map(sort) : v && typeof v === "object" ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, sort((v as Record<string, unknown>)[k])])) : v);
+  copy.traceability.contentHash = sha256Hex(JSON.stringify(sort(copy.sections)));
+  const verdict = verifyAssembledPage(copy, context(), registry, APPROVED_EDITORIAL_CATALOG);
+  assert.equal(verdict.ok, false);
+  assert.ok(verdict.reasons.includes("page_validation_not_accepted"));
+  claim.text = claim.text.replace("€90.00", "€95.00");
+  assert.equal(verifyAssembledPage(copy, context(), registry, APPROVED_EDITORIAL_CATALOG).ok, false, "an invented amount is refused");
+});
+
+// --- S5.4-G. neighbourhood_context, an OPTIONAL requirement of pricing-guide ------------------------------------------
+
+const areaNote = (overrides: Record<string, unknown> = {}) =>
+  editorialFact({
+    factId: "fact:fixture:fixture-city:area:2026:v1", relevantTopics: ["pricing-guide"], usage: { ...approvedFor(["pricing-guide"]), displayConstraints: ["label_as_editorial_note"] },
+    value: { category: "neighbourhood_context", statement: "FIXTURE area sentence without any figure.", language: "en", basis: "editorial_observation" }, ...overrides,
+  });
+
+test("G1. a price-only pricing-guide page is unchanged: the new optional fact is absent and nothing is blocked", () => {
+  const r = assemble(registryWith(priceFact()), { catalog: APPROVED_EDITORIAL_CATALOG });
+  assert.equal(r.status, "ready_for_editorial_review", JSON.stringify(r.reasons));
+  assert.deepEqual(r.completeness!.requiredUncovered, []);
+  assert.ok(r.completeness!.optionalOmitted.some((u) => u.requirementId === "neighbourhood_context" && u.cause === "no_usable_fact"));
+});
+
+test("G2. with its provisional threshold the note is present but not rendered: reported as a pending human decision, never filled", () => {
+  const r = assemble(registryWith(priceFact(), areaNote()), { catalog: APPROVED_EDITORIAL_CATALOG });
+  assert.equal(r.status, "ready_for_editorial_review");
+  assert.ok(r.completeness!.optionalOmitted.some((u) => u.requirementId === "neighbourhood_context" && u.cause === "human_decision_pending"));
+  assert.ok(!r.page!.sections.some((section) => section.claims.some((claim) => claim.text.includes("FIXTURE area sentence"))));
+});
+
+test("G3. a note about another topic is never offered to pricing-guide", () => {
+  const stranger = areaNote({ relevantTopics: ["business-travel-guide"], usage: { ...approvedFor(["business-travel-guide"]), displayConstraints: ["label_as_editorial_note"] } });
+  const r = assemble(registryWith(priceFact(), stranger), { catalog: APPROVED_EDITORIAL_CATALOG });
+  assert.ok(r.completeness!.optionalOmitted.some((u) => u.requirementId === "neighbourhood_context" && u.cause === "no_usable_fact"));
+  assert.ok(!r.page!.usedFactIds.includes("fact:fixture:fixture-city:area:2026:v1" as never));
 });

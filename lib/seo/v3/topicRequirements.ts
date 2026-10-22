@@ -21,7 +21,7 @@ import type {
 } from "./localFact";
 import type { LocalSeoTopicSlug, TopicFamily } from "./topics";
 
-export const TOPIC_REQUIREMENTS_VERSION = "seo-v3-topic-requirements/draft-2";
+export const TOPIC_REQUIREMENTS_VERSION = "seo-v3-topic-requirements/draft-3";
 
 /** Where a numeric threshold comes from. */
 export type ThresholdBasis =
@@ -186,7 +186,8 @@ export const TOPIC_REQUIREMENTS: Readonly<Record<LocalSeoTopicSlug, TopicRequire
     topic: "pricing-guide",
     family: "data_dependent",
     required: [priceDistribution],
-    optional: [demandDriver],
+    // S5.4-G: neighbourhood_context added as OPTIONAL (provisional threshold, like demand_driver); nothing else changes
+    optional: [demandDriver, qualitative("neighbourhood_context", "neighbourhood_context")],
     standalonePolicy: "requires_all_required_facts",
     eligibilityWhenRequiredMissing: "needs_data",
     onMissingOptional: "omit_section",

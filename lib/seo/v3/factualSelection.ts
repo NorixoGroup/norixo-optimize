@@ -6,8 +6,11 @@
  * the text, the figures and the inherited display constraints are exactly what `renderFactualClaim` returned.
  * Nothing is added to the rendered sentence and nothing is substituted in it.
  *
- * Policy of S4 (a product choice, kept minimal): a price distribution is stated through its median only; an
- * unavailability rate through its ratio; qualitative, regulatory and geographic facts through their statement.
+ * Policy of S4 (a product choice, kept minimal): a price distribution is stated through its median and, when the validated fact
+ * itself carries them, its lower and upper quartiles (p25, p75), each as its own factual claim cited to the same fact (S3 allows
+ * exactly one statistic per claim). Nothing is computed: a quartile that is absent, not a finite non-negative number or out of
+ * order with the median is simply not stated. An unavailability rate is stated through its ratio; qualitative, regulatory and
+ * geographic facts through their statement.
  */
 import { renderFactualClaim, type PriceStatistic, type RenderedFactual } from "./claimRender";
 import type { ClaimContext } from "./claimValidation";
@@ -27,6 +30,8 @@ export type SelectedFactual = Readonly<{
   heading: string;
   rendered: RenderedFactual;
   statistic: PriceStatistic | null;
+  /** Quartile claims of the same price fact (p25, p75), in that order; empty for any other fact or when the fact lacks them. */
+  extraClaims: readonly ExtraPriceClaim[];
   /** The claim exactly as the page will carry it. */
   claim: Readonly<{
     claimId: string;
@@ -44,6 +49,11 @@ export type FactualSelection = Readonly<{
   selected: readonly SelectedFactual[];
   uncovered: readonly UncoveredRequirement[];
 }>;
+
+export type FactualClaimView = SelectedFactual["claim"];
+
+/** A further statistic of the same price fact, stated as its own claim in the same section. */
+export type ExtraPriceClaim = Readonly<{ statistic: PriceStatistic; rendered: RenderedFactual; claim: FactualClaimView }>;
 
 /** Closed table of section titles. Exhaustive over the kinds of fact: a new kind breaks compilation here. */
 function headingFor(fact: LocalFact): string {
@@ -103,6 +113,30 @@ export function selectFactualClaims(registry: FactRegistry, context: ClaimContex
     }
     used.add(fact.factId);
     const rendered = outcome.value;
+    const claimOf = (suffix: string, from: RenderedFactual): FactualClaimView =>
+      Object.freeze({
+        claimId: `claim:fact:${safeId(requirement.requirementId)}${suffix}`,
+        sectionId: `sec:${safeId(requirement.requirementId)}`,
+        kind: "factual" as const,
+        text: from.text,
+        supportingFactIds: Object.freeze([...from.supportingFactIds]),
+        figures: Object.freeze(from.figures.map((figure) => ({ literal: figure.literal, factId: figure.factId, valuePath: figure.valuePath }))),
+        inheritedDisplayConstraints: Object.freeze([...from.inheritedDisplayConstraints]),
+      });
+    const extraClaims: ExtraPriceClaim[] = [];
+    if (fact.kind === "quantitative" && fact.value.metric === "nightly_price_distribution") {
+      const { median, p25, p75 } = fact.value;
+      const usable = (statistic: "p25" | "p75"): boolean => {
+        const value = statistic === "p25" ? p25 : p75;
+        if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return false;
+        return statistic === "p25" ? value <= median : value >= median;
+      };
+      for (const quartile of ["p25", "p75"] as const) {
+        if (!usable(quartile)) continue;
+        const again = renderFactualClaim([{ fact, statistic: quartile }]);
+        if (again.ok) extraClaims.push(Object.freeze({ statistic: quartile, rendered: again.value, claim: claimOf(`:${quartile}`, again.value) }));
+      }
+    }
     selected.push({
       requirementId: requirement.requirementId,
       required: requirement.required,
@@ -110,15 +144,8 @@ export function selectFactualClaims(registry: FactRegistry, context: ClaimContex
       heading: headingFor(fact),
       rendered,
       statistic,
-      claim: Object.freeze({
-        claimId: `claim:fact:${safeId(requirement.requirementId)}`,
-        sectionId: `sec:${safeId(requirement.requirementId)}`,
-        kind: "factual",
-        text: rendered.text,
-        supportingFactIds: Object.freeze([...rendered.supportingFactIds]),
-        figures: Object.freeze(rendered.figures.map((figure) => ({ literal: figure.literal, factId: figure.factId, valuePath: figure.valuePath }))),
-        inheritedDisplayConstraints: Object.freeze([...rendered.inheritedDisplayConstraints]),
-      }),
+      extraClaims: Object.freeze(extraClaims),
+      claim: claimOf("", rendered),
     });
   }
   return Object.freeze({ report, selected: Object.freeze(selected), uncovered: Object.freeze(uncovered) });

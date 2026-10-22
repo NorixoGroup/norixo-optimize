@@ -110,7 +110,11 @@ export type WorkOrderReason = "absent" | "expired" | "renewal_due";
 export type WorkOrderOrigin = "required" | "voluntary";
 
 export type WorkOrder = Readonly<{
-  /** Hash of the full key: scope, platform, property type, requirement, kind and requirements version. */
+  /**
+   * Hash of the full key: scope, platform, property type, requirement id, kind and the hash of the requirement DEFINITION.
+   * The global requirements version is deliberately NOT in it: raising the version for another topic does not rename an order
+   * whose requirement did not change, and changing one requirement renames only the orders of that requirement.
+   */
   id: string;
   kind: "fact" | "timezone";
   scope: GeographicScope;
@@ -118,7 +122,10 @@ export type WorkOrder = Readonly<{
   platform: typeof PAGE_PLATFORM | null;
   propertyType: FactPropertyType;
   requirementId: string;
+  /** Version of the requirements table the order was issued under. INFORMATIVE: it is not part of the order id. */
   requirementsVersion: string;
+  /** SHA-256 of the exact requirement definition (the same value as the sheet's `requirementHash`). Part of the order id. */
+  requirementHash: string;
   reason: WorkOrderReason;
   origin: WorkOrderOrigin;
   /** Source types that may be asked for. `user_audit_aggregate` is left out while the audit lock is closed. */
@@ -278,6 +285,9 @@ function notMetBlocker(reason: NonNullable<RequirementReport["reason"]>, issues:
   }
 }
 
+/** What a time-zone order asks for. Identical to the one the collection sheets use (a test compares the two hashes). */
+export const TIMEZONE_REQUIREMENT = { requirementId: "timezone", kind: "geographic", attribute: "timezone" } as const;
+
 const DECISION_OF_BLOCKER: Partial<Record<BlockerCode, string>> = {
   country_iso_unknown: "country_iso_table",
   audit_governance_lock: "audit_public_use_governance",
@@ -332,12 +342,14 @@ export function classifyCoverage(input: ClassifyInput): CoverageReport {
     if (!decisions.has(id)) decisions.set(id, new Set());
     decisions.get(id)!.add(page);
   };
-  const addOrder = (scope: GeographicScope, requirementId: string, kind: WorkOrder["kind"], reason: WorkOrderReason, sources: readonly FactSourceType[],
+  const addOrder = (scope: GeographicScope, definition: FactRequirement | typeof TIMEZONE_REQUIREMENT, kind: WorkOrder["kind"], reason: WorkOrderReason, sources: readonly FactSourceType[],
     closest: FactId | null, refreshDueAt: string | null, page: { citySlug: string; topic: LocalSeoTopicSlug }, origin: WorkOrderOrigin = "required"): string => {
     // the registry resolves a time zone only from a fact with platform null and property type null
     const orderPlatform = kind === "timezone" ? null : PAGE_PLATFORM;
     const orderPropertyType = kind === "timezone" ? null : propertyType;
-    const id = sha256Hex(stableStringify({ scope, platform: orderPlatform, propertyType: orderPropertyType, requirementId, kind, requirementsVersion: TOPIC_REQUIREMENTS_VERSION }));
+    const requirementId = definition.requirementId;
+    const requirementHash = sha256Hex(stableStringify(definition));
+    const id = sha256Hex(stableStringify({ scope, platform: orderPlatform, propertyType: orderPropertyType, requirementId, kind, requirementHash }));
     let order = orders.get(id);
     if (order !== undefined) {
       // merge: most urgent reason wins (with its closest fact), earliest due date, union of acceptable sources
@@ -352,7 +364,7 @@ export function classifyCoverage(input: ClassifyInput): CoverageReport {
       if (origin === "required") order.origin = "required"; // a required need is never downgraded by a voluntary one
     }
     if (order === undefined) {
-      order = { id, kind, scope, platform: orderPlatform, propertyType: orderPropertyType, requirementId, requirementsVersion: TOPIC_REQUIREMENTS_VERSION, reason, origin, acceptedSourceTypes: [...sources].sort(compare) as FactSourceType[], closestFactId: closest, refreshDueAt, covers: new Map() };
+      order = { id, kind, scope, platform: orderPlatform, propertyType: orderPropertyType, requirementId, requirementsVersion: TOPIC_REQUIREMENTS_VERSION, requirementHash, reason, origin, acceptedSourceTypes: [...sources].sort(compare) as FactSourceType[], closestFactId: closest, refreshDueAt, covers: new Map() };
       orders.set(id, order);
     }
     order.covers.set(`${page.citySlug}/${page.topic}`, page);
@@ -419,7 +431,7 @@ export function classifyCoverage(input: ClassifyInput): CoverageReport {
           for (const blocker of notMetBlockers(requirementReport)) {
             draft.blockers.add(blocker);
             if (blocker === "timezone_unvalidated") {
-              const id = addOrder(scope, "timezone", "timezone", "absent", requirement.acceptableSourceTypes, null, null, pageRef);
+              const id = addOrder(scope, TIMEZONE_REQUIREMENT, "timezone", "absent", requirement.acceptableSourceTypes, null, null, pageRef);
               pushAction(draft, { kind: "collect", workOrderId: id });
             } else if (blocker === "facts_absent" || blocker === "facts_expired") {
               const sources = acceptedSources(requirement);
@@ -430,7 +442,7 @@ export function classifyCoverage(input: ClassifyInput): CoverageReport {
               if (sources.length > 0) {
                 const chain = missing.closestFactId === null ? null : registry.getVersionChain(missing.closestFactId);
                 const head = chain === null ? missing.closestFactId : chain[chain.length - 1]!.factId;
-                const id = addOrder(scope, requirement.requirementId, "fact", blocker === "facts_expired" ? "expired" : "absent", sources, head, null, pageRef);
+                const id = addOrder(scope, requirement, "fact", blocker === "facts_expired" ? "expired" : "absent", sources, head, null, pageRef);
                 pushAction(draft, { kind: "collect", workOrderId: id });
               }
             } else if (blocker === "facts_pending_validation" || blocker === "public_use_not_approved" || blocker === "approval_scope_excludes_topic") {
@@ -466,13 +478,13 @@ export function classifyCoverage(input: ClassifyInput): CoverageReport {
           const unmet = notMetBlockers(optionalReport);
           let ordered = false;
           if (unmet.includes("timezone_unvalidated")) {
-            pushAction(draft, { kind: "collect", workOrderId: addOrder(scope, "timezone", "timezone", "absent", requirement.acceptableSourceTypes, null, null, pageRef, "voluntary") });
+            pushAction(draft, { kind: "collect", workOrderId: addOrder(scope, TIMEZONE_REQUIREMENT, "timezone", "absent", requirement.acceptableSourceTypes, null, null, pageRef, "voluntary") });
             ordered = true;
           }
           if (unmet.includes("facts_absent") || unmet.includes("facts_expired")) {
             const chain = optionalReport.chosenFactId === null ? null : registry.getVersionChain(optionalReport.chosenFactId);
             const head = chain === null ? optionalReport.chosenFactId : chain[chain.length - 1]!.factId;
-            pushAction(draft, { kind: "collect", workOrderId: addOrder(scope, requirement.requirementId, "fact", unmet.includes("facts_expired") ? "expired" : "absent", sources, head, null, pageRef, "voluntary") });
+            pushAction(draft, { kind: "collect", workOrderId: addOrder(scope, requirement, "fact", unmet.includes("facts_expired") ? "expired" : "absent", sources, head, null, pageRef, "voluntary") });
             ordered = true;
           }
           if (ordered) voluntaryOrdered.set(key, request);
@@ -533,7 +545,7 @@ export function classifyCoverage(input: ClassifyInput): CoverageReport {
             const head = chain === null ? r.chosenFactId : chain[chain.length - 1]!.factId;
             const sources = acceptedSources(requirement);
             if (sources.length > 0) {
-              const id = addOrder(scope, requirement.requirementId, "fact", "renewal_due", sources, head, new Date(due).toISOString(), pageRef);
+              const id = addOrder(scope, requirement, "fact", "renewal_due", sources, head, new Date(due).toISOString(), pageRef);
               if (r.required) pushAction(draft, { kind: "collect", workOrderId: id });
             }
           }
