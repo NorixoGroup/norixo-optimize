@@ -8,14 +8,15 @@ import { SectionDescription } from "@/components/ui/SectionDescription";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { SectionStack } from "@/components/ui/SectionStack";
 import { SectionTitle } from "@/components/ui/SectionTitle";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { AuditLaunchOverlay } from "@/components/AuditLaunchOverlay";
+import { useTranslation } from "@/components/i18n/useTranslation";
+import { auditNewCopy, type AuditNewErrorCode } from "@/data/auditNewI18n";
 import {
   clearGuestAuditDraft,
   consumeFreeAuditGuestDraftForAuditNew,
   type GuestAuditDraft,
-  getOrCreateGuestAuditToken,
   isGuestAuditDraftExpired,
   loadGuestAuditDraft,
   saveGuestAuditDraft,
@@ -23,6 +24,7 @@ import {
 import {
   detectPlatformFromUrl,
   formatPlatformLabel,
+  getGuestListingReasonCode,
   validateGuestListingUrl,
 } from "@/lib/guestAudit/shared";
 import { supabase } from "@/lib/supabase";
@@ -32,13 +34,8 @@ import { getStoredWorkspaceId } from "@/lib/workspaces/getStoredWorkspaceId";
 import { setStoredWorkspaceId } from "@/lib/workspaces/setStoredWorkspaceId";
 import { getOrCreateWorkspaceForUser } from "@/lib/workspaces/ensureWorkspaceForUser";
 import { PROPERTY_TYPE_OPTIONS } from "@/lib/listings/propertyTypeOverrideOptions";
-
-const LOADING_STEPS = [
-  "Extraction du logement...",
-  "Recherche des concurrents comparables...",
-  "Analyse IA de l’annonce...",
-  "Préparation de l’aperçu...",
-];
+import { draftHasRealResult } from "@/lib/guestAudit/draftResult";
+import { getAuditEntryDestinations } from "@/lib/guestAudit/entryDestination";
 
 type GuestAuditPreview = {
   listing_url: string;
@@ -123,34 +120,11 @@ type GuestAuditPreview = {
   } | null;
 };
 
+// Display text of the offers lives in data/auditNewI18n.ts; codes, plan mapping and amounts stay here.
 const PAYWALL_OFFERS = [
-  {
-    code: "audit_test",
-    name: "Starter",
-    price: "9 €",
-    detail: "1 audit ponctuel",
-    note: "Ideal pour tester la valeur du rapport",
-    highlighted: false,
-    cta: "Continuer avec l'audit test",
-  },
-  {
-    code: "pack_5",
-    name: "Pack 5 audits",
-    price: "39 €",
-    detail: "5 audits, soit 7,80 € / audit",
-    note: "Recommande pour comparer plusieurs annonces ou suivre vos optimisations",
-    highlighted: true,
-    cta: "Continuer avec le pack 5 audits",
-  },
-  {
-    code: "pack_15",
-    name: "Pack 15 audits",
-    price: "99 €",
-    detail: "15 audits, soit 6,60 € / audit",
-    note: "Pense pour les usages reguliers ou multi-biens",
-    highlighted: false,
-    cta: "Continuer avec le pack 15 audits",
-  },
+  { code: "audit_test", highlighted: false },
+  { code: "pack_5", highlighted: true },
+  { code: "pack_15", highlighted: false },
 ] as const;
 
 function mapOfferToCheckoutPlan(
@@ -216,12 +190,18 @@ function getPhotoStatusLabel(subScore: ReturnType<typeof getSubScore>) {
 
 export default function PublicAuditPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { copy: t } = useTranslation(auditNewCopy);
+  const loadingSteps = useMemo(() => [...t.loadingSteps], [t]);
+  // Read inside an effect that must not re-run when the language changes.
+  const untitledListingRef = useRef(t.untitledListing);
+  untitledListingRef.current = t.untitledListing;
 
   const [url, setUrl] = useState("");
   const [propertyTypeOverride, setPropertyTypeOverride] = useState("");
   const [title, setTitle] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<AuditNewErrorCode | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
   const [progress, setProgress] = useState(8);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -232,7 +212,7 @@ export default function PublicAuditPage() {
     (typeof PAYWALL_OFFERS)[number]["code"]
   >("audit_test");
   const [isPremiumCheckoutLoading, setIsPremiumCheckoutLoading] = useState(false);
-  const [premiumCheckoutError, setPremiumCheckoutError] = useState<string | null>(null);
+  const [premiumCheckoutError, setPremiumCheckoutError] = useState<AuditNewErrorCode | null>(null);
   const activeSubmitIdRef = useRef(0);
   const previewTimerRef = useRef<number | null>(null);
   const resultSectionRef = useRef<HTMLDivElement | null>(null);
@@ -318,8 +298,8 @@ export default function PublicAuditPage() {
         isExplicitRestore ||
         (initialUrl.length > 0 && initialUrl === storedDraft.listing_url);
 
-      if (shouldRestoreDraftResult) {
-        setGuestAudit(buildPreviewFromDraft(storedDraft));
+      if (shouldRestoreDraftResult && draftHasRealResult(storedDraft)) {
+        setGuestAudit(buildPreviewFromDraft(storedDraft, untitledListingRef.current));
       }
 
       if (
@@ -385,7 +365,7 @@ export default function PublicAuditPage() {
     }
 
     const stepTimer = window.setInterval(() => {
-      setStepIndex((prev) => Math.min(prev + 1, LOADING_STEPS.length - 1));
+      setStepIndex((prev) => Math.min(prev + 1, loadingSteps.length - 1));
     }, 2200);
 
     const progressTimer = window.setInterval(() => {
@@ -399,7 +379,7 @@ export default function PublicAuditPage() {
       window.clearInterval(stepTimer);
       window.clearInterval(progressTimer);
     };
-  }, [isSubmitting]);
+  }, [isSubmitting, loadingSteps.length]);
 
   useEffect(() => {
     return () => {
@@ -426,8 +406,8 @@ export default function PublicAuditPage() {
   }, [url]);
 
   const currentStep = useMemo(
-    () => LOADING_STEPS[stepIndex] ?? LOADING_STEPS[0],
-    [stepIndex]
+    () => loadingSteps[stepIndex] ?? loadingSteps[0],
+    [loadingSteps, stepIndex]
   );
   const displayPreview = guestAudit;
   const isProvisionalPreview = isBackgroundLoading && !guestAudit;
@@ -449,25 +429,22 @@ export default function PublicAuditPage() {
     }
     return null;
   }, [searchParams]);
+  const entryDestinations = useMemo(
+    () => getAuditEntryDestinations({ isAuthenticated, offer: offerFromQuery }),
+    [isAuthenticated, offerFromQuery]
+  );
   const selectedOfferSummary = useMemo(() => {
     if (!offerFromQuery) return null;
 
-    if (offerFromQuery === "pack_5") {
-      return { label: "Pack 5 audits", price: "39 €" };
-    }
-
-    if (offerFromQuery === "pack_15") {
-      return { label: "Pack 15 audits", price: "99 €" };
-    }
-
-    return { label: "Audit unique", price: "9 €" };
-  }, [offerFromQuery]);
+    const offer = t.offers[offerFromQuery];
+    return { label: offer.summaryLabel, price: offer.price };
+  }, [offerFromQuery, t]);
   const platformValidation = useMemo(() => validateGuestListingUrl(url), [url]);
   const detectedPlatform = platformValidation.platform;
   const detectedPlatformLabel = !url.trim()
-    ? "Détection en attente"
+    ? t.platformPending
     : detectedPlatform === "other"
-    ? "Non reconnue"
+    ? t.platformUnknown
     : formatPlatformLabel(detectedPlatform);
   const canLaunchAudit = useMemo(() => {
     return Boolean(url.trim()) && detectedPlatform !== "other";
@@ -549,12 +526,12 @@ export default function PublicAuditPage() {
         reason: validation.reason,
         platform: validation.platform,
       });
-      setError(validation.reason || "URL invalide");
+      setError(getGuestListingReasonCode(validation.reason) ?? "url_invalid");
       return;
     }
 
     if (!propertyTypeOverride.trim()) {
-      setError("Veuillez choisir le type de logement.");
+      setError("property_type_required");
       return;
     }
 
@@ -580,37 +557,12 @@ export default function PublicAuditPage() {
     setProgress(10);
 
     try {
-      const detectedPlatformForSubmit = validation.platform;
-
       if (submitId !== activeSubmitIdRef.current) {
         return;
       }
 
-      const guestToken = getOrCreateGuestAuditToken();
-
-      saveGuestAuditDraft({
-        guest_token: guestToken,
-        listing_url: normalizedUrl,
-        title: title.trim() || undefined,
-        platform: detectedPlatformForSubmit,
-        selected_offer: selectedOffer,
-        property_type_override: propertyTypeOverride.trim() || undefined,
-        generated_at: new Date().toISOString(),
-        status: "pending",
-        payment_status: "unpaid",
-        preview_payload: null,
-        full_payload: null,
-        result: {
-          insights: [],
-          recommendations: [],
-          raw_payload: null,
-        },
-      });
-
-      setGuestAudit(null);
-      setIsBackgroundLoading(false);
-      setStepIndex(LOADING_STEPS.length - 1);
-      setProgress(100);
+      // The guest audit is disabled: nothing is analysed or saved here. Send the visitor to the real, credit-gated flow.
+      router.push(entryDestinations.auditHref);
       setIsSubmitting(false);
     } catch (err) {
       if (previewTimerRef.current) {
@@ -621,9 +573,7 @@ export default function PublicAuditPage() {
         return;
       }
       setIsBackgroundLoading(false);
-      setError(
-        err instanceof Error ? err.message : "Une erreur inconnue est survenue"
-      );
+      setError("unknown_error");
       setIsSubmitting(false);
       console.error("[audit/new] submit catch", err);
     }
@@ -646,7 +596,7 @@ export default function PublicAuditPage() {
       } = await supabase.auth.getUser();
 
       if (!user) {
-        setPremiumCheckoutError("Session introuvable. Reconnectez-vous puis réessayez.");
+        setPremiumCheckoutError("session_not_found");
         return;
       }
 
@@ -657,14 +607,14 @@ export default function PublicAuditPage() {
       });
 
       if (!workspace) {
-        setPremiumCheckoutError("Impossible de charger votre espace de travail.");
+        setPremiumCheckoutError("workspace_load_failed");
         return;
       }
 
       const storedWorkspaceId = getStoredWorkspaceId();
       const activeWorkspaceId = (storedWorkspaceId?.trim() || workspace.id).trim();
       if (!activeWorkspaceId) {
-        setPremiumCheckoutError("Workspace introuvable. Réessayez ou ouvrez la page Facturation.");
+        setPremiumCheckoutError("workspace_not_found");
         return;
       }
       setStoredWorkspaceId(activeWorkspaceId);
@@ -724,22 +674,20 @@ export default function PublicAuditPage() {
       });
 
       if (!response.ok) {
-        setPremiumCheckoutError(
-          "Impossible d'ouvrir le checkout Stripe pour le moment."
-        );
+        setPremiumCheckoutError("checkout_unavailable");
         return;
       }
 
       const data = (await response.json().catch(() => null)) as { url?: string } | null;
       if (!data?.url) {
-        setPremiumCheckoutError("Session Stripe indisponible, merci de réessayer.");
+        setPremiumCheckoutError("checkout_session_unavailable");
         return;
       }
 
       window.location.href = data.url;
     } catch (error) {
       console.warn("[audit/new] failed to start premium checkout", error);
-      setPremiumCheckoutError("Impossible d'ouvrir le checkout Stripe pour le moment.");
+      setPremiumCheckoutError("checkout_unavailable");
     } finally {
       setIsPremiumCheckoutLoading(false);
     }
@@ -764,31 +712,26 @@ export default function PublicAuditPage() {
       <div className="nk-card nk-card-hover nk-page-header-card nk-border nk-card-lg w-full max-w-full overflow-x-hidden border border-slate-300/70 bg-[radial-gradient(circle_at_0_0,rgba(251,146,60,0.12),transparent_60%),radial-gradient(circle_at_100%_100%,rgba(16,185,129,0.12),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.96)_100%)] px-4 py-3 shadow-[0_14px_34px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_20px_44px_rgba(15,23,42,0.12)] md:flex md:items-center md:justify-between md:gap-6 md:overflow-visible md:px-7 md:py-4">
         <div className="max-w-full min-w-0 space-y-2 md:max-w-2xl md:space-y-1">
           <p className="nk-kicker-muted inline-flex items-center gap-2 rounded-full border border-emerald-100/80 bg-white/80 px-3.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-900 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
-            Audit en mode invité
+            {t.kicker}
           </p>
           <HeroTitle className="mt-0.5 text-[1.52rem] tracking-tight md:text-[2.35rem]">
-            Découvrez un premier aperçu de votre annonce
+            {t.heroTitle}
           </HeroTitle>
           <SectionDescription className="nk-body-muted mt-0.5 max-w-none text-[13px] leading-[1.42] md:max-w-xl md:text-[0.92rem] md:leading-5">
-            Obtenez une première lecture structurée de la performance de votre
-            annonce. Créez ensuite votre compte pour débloquer l’analyse complète
-            et vos recommandations priorisées.
+            {t.heroDescription}
           </SectionDescription>
         </div>
         <div className="nk-card-sm mt-2.5 rounded-2xl border border-emerald-200/90 bg-gradient-to-r from-emerald-50/80 via-emerald-50/60 to-slate-50 px-3 py-1.5 text-[11px] text-slate-600 shadow-sm md:mt-0 md:px-3.5 md:py-2 md:text-xs">
           <p className="font-semibold text-slate-900">
-            {isAuthenticated ? "Mode compte connecté" : "Mode invité"}
+            {isAuthenticated ? t.modeConnected : t.modeGuest}
           </p>
           <p className="mt-1 leading-5">
             {isAuthenticated && isPlatformAdmin ? (
-              <>
-                Admin plateforme — audits illimités. Les analyses complètes ne sont pas limitées par
-                les crédits ni les quotas depuis le tableau de bord.
-              </>
+              <>{t.adminUnlimited}</>
             ) : isAuthenticated ? (
-              "Votre audit est enregistré et reste accessible depuis votre dashboard."
+              t.connectedSaved
             ) : (
-              "Aperçu instantané, sans création de compte ni engagement."
+              t.guestInstant
             )}
           </p>
         </div>
@@ -799,21 +742,21 @@ export default function PublicAuditPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Offre sélectionnée
+                {t.selectedOffer}
               </p>
               <p className="mt-1 text-sm font-semibold text-slate-900">
                 {selectedOfferSummary.label} — {selectedOfferSummary.price}
               </p>
               <p className="mt-1 text-xs leading-5 text-slate-600">
-                Vous allez lancer votre audit avec cette offre.
+                {t.selectedOfferHint}
               </p>
             </div>
-            {isAuthenticated && !isPlatformAdmin ? (
+            {!isPlatformAdmin ? (
               <Link
-                href="/pricing"
+                href={entryDestinations.billingHref}
                 className="text-xs font-medium text-slate-600 transition hover:text-slate-900"
               >
-                Changer d’offre
+                {t.changeOffer}
               </Link>
             ) : null}
           </div>
@@ -825,7 +768,7 @@ export default function PublicAuditPage() {
           <AuditLaunchOverlay
             currentStep={currentStep}
             progress={progress}
-            steps={LOADING_STEPS}
+            steps={loadingSteps}
             stepIndex={stepIndex}
           />
         )}
@@ -837,11 +780,10 @@ export default function PublicAuditPage() {
               className="nk-card nk-card-hover nk-card-md nk-border border border-slate-300/70 space-y-4 p-3.5 shadow-[0_12px_30px_rgba(15,23,42,0.08)] ring-1 ring-emerald-50/90 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(15,23,42,0.12)] md:space-y-5 md:p-5"
             >
               <SectionTitle className="nk-section-title text-slate-900">
-                Paramètres de l’annonce
+                {t.formTitle}
               </SectionTitle>
               <SectionDescription className="mt-1 text-slate-600">
-                Utilisez l’URL publique exacte de votre annonce pour générer un
-                audit cohérent, comparable et directement exploitable.
+                {t.formDescription}
               </SectionDescription>
 
               <form
@@ -851,7 +793,7 @@ export default function PublicAuditPage() {
               >
                 <div>
                   <label className="mb-0.5 block text-sm font-medium text-slate-900">
-                    URL de l’annonce
+                    {t.urlLabel}
                   </label>
                   <input
                     ref={urlInputRef}
@@ -876,15 +818,15 @@ export default function PublicAuditPage() {
                     }}
                     type="url"
                     required
-                    placeholder="https://www.airbnb.com/rooms/123456789"
+                    placeholder={t.urlPlaceholder}
                     className="w-full rounded-2xl border border-slate-300 bg-white/95 px-3 py-2.5 text-sm text-slate-900 outline-none transition-all duration-150 ease-out placeholder:text-slate-500 hover:border-emerald-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-400/30 shadow-[0_1px_2px_rgba(15,23,42,0.06)] focus:shadow-[0_0_0_1px_rgba(16,185,129,0.18),0_10px_30px_rgba(15,23,42,0.10)]"
                   />
                 </div>
 
                 <div>
                   <label className="mb-0.5 block text-sm font-medium text-slate-900">
-                    Type de logement{" "}
-                    <span className="font-normal text-slate-500">(obligatoire)</span>
+                    {t.propertyTypeLabel}{" "}
+                    <span className="font-normal text-slate-500">{t.required}</span>
                   </label>
                   <select
                     value={propertyTypeOverride}
@@ -894,7 +836,7 @@ export default function PublicAuditPage() {
                     }}
                     required
                     className={`nk-form-select w-full rounded-2xl text-sm ${
-                      error === "Veuillez choisir le type de logement."
+                      error === "property_type_required"
                         ? "ring-2 ring-amber-400/85 ring-offset-2 ring-offset-white"
                         : ""
                     }`}
@@ -906,54 +848,40 @@ export default function PublicAuditPage() {
                     ))}
                   </select>
                   <p className="mt-1.5 text-xs text-slate-500">
-                    Choisissez le type réel du logement pour obtenir des comparables fiables.
+                    {t.propertyTypeHint}
                   </p>
                 </div>
 
                 <div>
                   <label className="mb-0.5 block text-sm font-medium text-slate-900">
-                    Titre personnalisé (optionnel)
+                    {t.titleLabel}
                   </label>
                   <input
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     type="text"
-                    placeholder="Studio moderne au centre de Guéliz avec balcon"
+                    placeholder={t.titlePlaceholder}
                     className="w-full rounded-2xl border border-slate-300 bg-white/95 px-3 py-2.5 text-sm text-slate-900 outline-none transition-all duration-150 ease-out placeholder:text-slate-500 hover:border-emerald-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-400/30 shadow-[0_1px_2px_rgba(15,23,42,0.06)] focus:shadow-[0_0_0_1px_rgba(16,185,129,0.18),0_10px_30px_rgba(15,23,42,0.10)]"
                   />
                 </div>
 
                 <div>
                   <label className="mb-0.5 block text-sm font-medium text-slate-900">
-                    Plateforme détectée
+                    {t.platformDetected}
                   </label>
                   <div className="w-full rounded-2xl border border-slate-300 bg-white/95 px-3 py-2.5 text-sm font-medium text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
                     {detectedPlatformLabel}
                   </div>
                   <p className="mt-1.5 text-xs text-slate-500">
-                    Détection automatique depuis l’URL. Cette valeur est verrouillée.
+                    {t.platformHint}
                   </p>
                 </div>
 
                 {error && (
                   <div className="whitespace-pre-line rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    {error}
+                    {t.errors[error]}
                   </div>
                 )}
-
-                <div className="rounded-xl border border-slate-300/80 bg-slate-50/80 px-3 py-2 text-[11px] text-slate-700">
-                  <p>url: {url.trim() || "(vide)"}</p>
-                  <p>detectedPlatform: {detectedPlatform}</p>
-                  <p>isSubmitting: {String(isSubmitting)}</p>
-                  <p>canLaunchAudit: {String(canLaunchAudit)}</p>
-                  {isAuthenticated && isPlatformAdmin ? (
-                    <p className="font-medium text-violet-800">
-                      canCreateAudit (admin plateforme) : true — pas de quota ni débit automatique depuis
-                      /api/audits ni /api/listings
-                    </p>
-                  ) : null}
-                  <p>disabledFinal: {String(isLaunchDisabled)}</p>
-                </div>
 
                 <div className="flex flex-wrap items-center gap-2.5 pt-0.5">
                   <PrimaryButton
@@ -961,13 +889,13 @@ export default function PublicAuditPage() {
                     disabled={isLaunchDisabled}
                     className="inline-flex items-center justify-center rounded-lg border !border-blue-500/80 !bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 py-2.5 text-sm font-semibold uppercase tracking-[0.18em] text-white !shadow-[0_14px_30px_rgba(59,130,246,0.30)] transition-all duration-200 hover:scale-[1.02] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/70 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {isSubmitting ? "Analyse en cours..." : "Lancer l’audit"}
+                    {isSubmitting ? t.launchBusy : t.launch}
                   </PrimaryButton>
 
                   <span className="text-xs font-medium text-slate-600">
                     {isAuthenticated
-                      ? "Audit complet enregistré dans votre dashboard"
-                      : "Aperçu immédiat en mode invité, sans inscription"}
+                      ? t.submitHintConnected
+                      : t.submitHintGuest}
                   </span>
                 </div>
               </form>
@@ -980,7 +908,7 @@ export default function PublicAuditPage() {
                   className="nk-card nk-card-hover nk-card-sm h-full min-h-[176px] border border-slate-300/70 bg-gradient-to-b from-white via-slate-50/70 to-white space-y-4 p-3.5 shadow-[0_10px_26px_rgba(15,23,42,0.08)] ring-1 ring-emerald-50/90 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.12)] md:space-y-4 md:p-4"
                 >
                   <SectionTitle className="nk-section-title text-slate-900">
-                    Ce que l’outil analyse
+                    {t.analyzesTitle}
                   </SectionTitle>
 
                   <ul className="mt-1.5 space-y-1.5 text-sm text-slate-800">
@@ -993,9 +921,9 @@ export default function PublicAuditPage() {
                       </span>
                       <span className="leading-5">
                         <span className="font-medium text-slate-900">
-                          Qualité, ordre et lisibilité
+                          {t.analyzesItems[0].strong}
                         </span>{" "}
-                        de la galerie photo
+                        {t.analyzesItems[0].rest}
                       </span>
                     </li>
                     <li className="flex items-start gap-3">
@@ -1007,9 +935,9 @@ export default function PublicAuditPage() {
                       </span>
                       <span className="leading-5">
                         <span className="font-medium text-slate-900">
-                          Clarté de la promesse
+                          {t.analyzesItems[1].strong}
                         </span>{" "}
-                        et qualité de la description
+                        {t.analyzesItems[1].rest}
                       </span>
                     </li>
                     <li className="flex items-start gap-3">
@@ -1021,9 +949,9 @@ export default function PublicAuditPage() {
                       </span>
                       <span className="leading-5">
                         <span className="font-medium text-slate-900">
-                          Positionnement
+                          {t.analyzesItems[2].strong}
                         </span>{" "}
-                        de l’annonce face aux offres proches
+                        {t.analyzesItems[2].rest}
                       </span>
                     </li>
                     <li className="flex items-start gap-3">
@@ -1035,9 +963,9 @@ export default function PublicAuditPage() {
                       </span>
                       <span className="leading-5">
                         <span className="font-medium text-slate-900">
-                          Leviers d’optimisation
+                          {t.analyzesItems[3].strong}
                         </span>{" "}
-                        à plus fort impact sur la conversion
+                        {t.analyzesItems[3].rest}
                       </span>
                     </li>
                   </ul>
@@ -1049,21 +977,20 @@ export default function PublicAuditPage() {
                 >
 
                   <SectionTitle className="nk-section-title mt-1.5 text-slate-900">
-                    Pourquoi commencer en invité
+                    {t.whyGuestTitle}
                   </SectionTitle>
 
                   <ul className="mt-1 space-y-1.5 text-sm leading-5 text-slate-800">
                     <li className="flex items-start gap-3">
                       <span className="mt-1 inline-flex h-2 w-2 flex-none rounded-full border border-amber-300 bg-amber-100 shadow-[0_0_0_1px_rgba(251,191,36,0.35)]" />
                       <span className="text-sm leading-6 text-slate-800">
-                        Validez la valeur du rapport avant de créer un compte.
+                        {t.whyGuestItems[0]}
                       </span>
                     </li>
                     <li className="flex items-start gap-3">
                       <span className="mt-1 inline-flex h-2 w-2 flex-none rounded-full border border-amber-300 bg-amber-100 shadow-[0_0_0_1px_rgba(251,191,36,0.35)]" />
                       <span className="text-sm leading-6 text-slate-800">
-                        Passez en mode connecté pour conserver l’historique et
-                        suivre vos optimisations.
+                        {t.whyGuestItems[1]}
                       </span>
                     </li>
                   </ul>
@@ -1083,32 +1010,32 @@ export default function PublicAuditPage() {
             <div className="nk-card nk-card-hover nk-card-lg nk-border w-full rounded-2xl border border-emerald-300/80 bg-[radial-gradient(circle_at_10%_0%,rgba(16,185,129,0.1),transparent_46%),radial-gradient(circle_at_92%_100%,rgba(249,115,22,0.12),transparent_42%),linear-gradient(180deg,rgba(236,253,245,0.72)_0%,rgba(255,247,237,0.7)_52%,rgba(255,255,255,0.98)_100%)] space-y-6 p-4 shadow-[0_14px_34px_rgba(15,23,42,0.08)] ring-1 ring-emerald-100/90 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_50px_rgba(15,23,42,0.14)] md:space-y-6 md:p-6">
               <div className="rounded-2xl border border-emerald-200/80 bg-white/85 px-4 py-4 shadow-[0_8px_20px_rgba(15,23,42,0.05)]">
                 <SectionLabel className="nk-section-title text-lg text-emerald-700 tracking-widest uppercase mb-1">
-                  APERÇU DU RÉSULTAT
+                  {t.previewLabel}
                 </SectionLabel>
                 <h2 className="mt-3 text-2xl font-extrabold leading-tight text-slate-900 md:text-[2rem]">
-                  Votre annonce est bien visible… mais certaines données avancées sont protégées
+                  {t.blockedTitle}
                 </h2>
                 <p className="mt-2 text-sm font-medium leading-6 text-slate-600">
-                  Nous avons détecté votre annonce, mais Airbnb limite l&apos;accès à certaines informations détaillées.
+                  {t.blockedBody}
                 </p>
               </div>
 
               <div className="rounded-2xl border border-orange-200/80 bg-white/90 px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-orange-700">
-                  Valeur déjà disponible
+                  {t.valueAvailableTitle}
                 </p>
                 <ul className="mt-3 space-y-2.5 text-sm font-medium text-slate-800">
                   <li className="flex items-start gap-2.5">
                     <span className="mt-1 h-2 w-2 rounded-full bg-emerald-500" />
-                    <span>Analyse partielle déjà disponible</span>
+                    <span>{t.valueAvailableItems[0]}</span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <span className="mt-1 h-2 w-2 rounded-full bg-orange-400" />
-                    <span>Benchmark complet accessible dans la version complète</span>
+                    <span>{t.valueAvailableItems[1]}</span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <span className="mt-1 h-2 w-2 rounded-full bg-emerald-400" />
-                    <span>Recommandations personnalisées pour augmenter vos réservations</span>
+                    <span>{t.valueAvailableItems[2]}</span>
                   </li>
                 </ul>
               </div>
@@ -1117,7 +1044,7 @@ export default function PublicAuditPage() {
                 href="#plan-action-premium"
                 className="inline-flex w-full items-center justify-center rounded-lg border !border-blue-500/80 !bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 py-2.5 text-sm font-semibold uppercase tracking-[0.18em] text-white !shadow-[0_14px_30px_rgba(59,130,246,0.30)] transition-all duration-200 hover:scale-[1.02] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/70 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Débloquer l’analyse complète
+                {t.unlockFull}
               </a>
             </div>
           ) : null}
@@ -1126,16 +1053,16 @@ export default function PublicAuditPage() {
             <div className="nk-card nk-card-hover nk-card-lg nk-border w-full rounded-2xl border border-slate-300/75 bg-[radial-gradient(circle_at_0%_0%,rgba(16,185,129,0.08),transparent_36%),radial-gradient(circle_at_100%_100%,rgba(251,146,60,0.08),transparent_36%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.97)_100%)] space-y-3.5 p-3 shadow-[0_14px_34px_rgba(15,23,42,0.08)] ring-1 ring-emerald-50/95 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_50px_rgba(15,23,42,0.14)] md:space-y-4 md:p-4">
               {isBackgroundLoading ? (
                 <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                  Aperçu rapide affiché pendant l’analyse complète.
+                  {t.quickPreviewNote}
                 </div>
               ) : null}
 
               <div className="rounded-2xl border border-slate-200/80 bg-white/92 px-3.5 py-3 shadow-[0_8px_20px_rgba(15,23,42,0.06)]">
                 <SectionLabel className="nk-section-title text-base text-emerald-700 tracking-widest uppercase">
-                  APERÇU DU RÉSULTAT
+                  {t.previewLabel}
                 </SectionLabel>
                 <h2 className="mt-1 text-xl font-extrabold leading-tight text-slate-900 md:text-[1.7rem]">
-                  {title.trim() ? title.trim() : "Annonce analysée automatiquement"}
+                  {title.trim() ? title.trim() : t.analyzedAutomatically}
                 </h2>
                 <div className="mt-2.5 rounded-2xl border border-emerald-200/85 bg-gradient-to-br from-emerald-50/90 via-white to-orange-50/55 px-3 py-2.5 md:px-3.5 md:py-3">
                   <div className="grid gap-2.5 md:grid-cols-[minmax(180px,auto),minmax(0,1fr)] md:items-center md:gap-3.5">
@@ -1146,22 +1073,22 @@ export default function PublicAuditPage() {
                       </p>
                       {isProvisionalPreview ? (
                         <span className="inline-flex rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
-                          Estimé
+                          {t.estimated}
                         </span>
                       ) : null}
                     </div>
                     <div className="space-y-1.5 md:pl-1">
                       <p className="inline-flex items-center rounded-full border border-orange-300 bg-orange-100/95 px-3 py-1 text-[11px] font-semibold text-orange-900 shadow-[0_6px_14px_rgba(249,115,22,0.2)]">
-                        Vous perdez des réservations chaque semaine
+                        {t.losingBookings}
                       </p>
                       <div className="flex flex-wrap items-center gap-2.5">
                         <span className="inline-flex rounded-full border border-slate-300/80 bg-white/95 px-2.5 py-1 text-[11px] font-semibold text-slate-700 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
-                          {displayPreview.trustInsight?.label ?? "Confiance partielle"}
+                          {displayPreview.trustInsight?.label ?? t.trustPartial}
                         </span>
                         <span className="inline-flex rounded-full border border-slate-200/90 bg-white/85 px-2.5 py-1 text-[11px] font-medium text-slate-600">
                           {typeof displayPreview.rating === "number"
-                            ? `Note visible : ${displayPreview.rating.toFixed(1)} / 5`
-                            : "Certaines données de confiance ne sont pas disponibles"}
+                            ? t.visibleRating(displayPreview.rating.toFixed(1))
+                            : t.trustUnavailable}
                         </span>
                       </div>
                     </div>
@@ -1171,10 +1098,7 @@ export default function PublicAuditPage() {
                 <ul className="mt-2.5 space-y-1.5 text-sm text-slate-700">
                   {(visibleInsights.length > 0
                     ? visibleInsights
-                    : [
-                        "Analyse partielle basée sur des signaux visibles.",
-                        "Le rapport complet priorise les actions à impact.",
-                      ]
+                    : [...t.fallbackInsights]
                   )
                     .slice(0, 2)
                     .map((insight) => (
@@ -1191,7 +1115,7 @@ export default function PublicAuditPage() {
                   rel="noopener noreferrer"
                   className="mt-2.5 inline-flex items-center gap-1 text-xs font-medium text-emerald-600 transition-colors hover:text-emerald-700 hover:underline"
                 >
-                  Voir l’annonce analysée
+                  {t.viewAnalyzedListing}
                   <svg
                     viewBox="0 0 20 20"
                     className="h-3 w-3"
@@ -1208,18 +1132,17 @@ export default function PublicAuditPage() {
 
               <div className="w-full rounded-2xl border border-slate-200/90 bg-[radial-gradient(circle_at_100%_0%,rgba(16,185,129,0.08),transparent_36%),radial-gradient(circle_at_0%_100%,rgba(59,130,246,0.08),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.99)_0%,rgba(248,250,252,0.96)_100%)] p-3.5 shadow-[0_16px_36px_rgba(15,23,42,0.08)] ring-1 ring-slate-100/90 md:p-4">
                 <h3 className="text-[1.1rem] font-semibold leading-7 text-slate-900">
-                  Ce que vous allez récupérer
+                  {t.whatYouGetTitle}
                 </h3>
                 <p className="mt-2 max-w-md text-sm leading-6 text-slate-600">
-                  Le rapport complet vous aide à transformer une annonce correcte
-                  en annonce qui convertit mieux.
+                  {t.whatYouGetBody}
                 </p>
 
                 {(() => {
                   const scoreValue =
                     typeof displayPreview?.score === "number"
                       ? `${displayPreview.score.toFixed(1)}/10`
-                      : "7.8/10";
+                      : "—";
                   const bookingPotentialValue =
                     typeof displayPreview?.bookingPotential === "string"
                       ? displayPreview.bookingPotential.trim()
@@ -1232,10 +1155,10 @@ export default function PublicAuditPage() {
                   const gainMatch = gainSource.match(/[+−-]?\d+\s?%/);
                   const impactValue = gainMatch
                     ? gainMatch[0].replace(/\s+/g, "")
-                    : "+ visible";
+                    : t.impactVisible;
                   const impactSubText = gainMatch
-                    ? "Vision rapide du potentiel identifié avant rapport complet"
-                    : "Premiers leviers visibles avant analyse complète";
+                    ? t.impactSubWithGain
+                    : t.impactSubNoGain;
                   const signalCount = [
                     displayPreview?.trustInsight ? 1 : 0,
                     typeof displayPreview?.hostName === "string" &&
@@ -1249,9 +1172,9 @@ export default function PublicAuditPage() {
                     typeof displayPreview?.reviewCount === "number" ? 1 : 0,
                     typeof displayPreview?.rating === "number" ? 1 : 0,
                   ].reduce((total, value) => total + value, 0);
-                  const signalsValue = signalCount > 0 ? String(signalCount) : "3";
+                  const signalsValue = signalCount > 0 ? String(signalCount) : "—";
                   const axesCount = visibleInsights.length;
-                  const axesValue = axesCount > 0 ? String(axesCount) : "2";
+                  const axesValue = axesCount > 0 ? String(axesCount) : "—";
 
                   return (
                     <>
@@ -1264,10 +1187,10 @@ export default function PublicAuditPage() {
                             {scoreValue}
                           </p>
                           <p className="mt-1 text-[13px] font-semibold text-slate-900">
-                            Score aperçu
+                            {t.statScoreTitle}
                           </p>
                           <p className="mt-1.5 text-xs leading-5 text-slate-500">
-                            Première lecture de la qualité visible de votre annonce
+                            {t.statScoreSub}
                           </p>
                         </div>
 
@@ -1279,7 +1202,7 @@ export default function PublicAuditPage() {
                             {impactValue}
                           </p>
                           <p className="mt-1 text-[13px] font-semibold text-slate-900">
-                            Potentiel détecté
+                            {t.statPotentialTitle}
                           </p>
                           <p className="mt-1.5 text-xs leading-5 text-slate-500">
                             {impactSubText}
@@ -1294,10 +1217,10 @@ export default function PublicAuditPage() {
                             {signalsValue}
                           </p>
                           <p className="mt-1 text-[13px] font-semibold text-slate-900">
-                            Signaux détectés
+                            {t.statSignalsTitle}
                           </p>
                           <p className="mt-1.5 text-xs leading-5 text-slate-500">
-                            Indices publics visibles récupérés sur l’annonce
+                            {t.statSignalsSub}
                           </p>
                         </div>
 
@@ -1309,10 +1232,10 @@ export default function PublicAuditPage() {
                             {axesValue}
                           </p>
                           <p className="mt-1 text-[13px] font-semibold text-slate-900">
-                            Actions prioritaires
+                            {t.statActionsTitle}
                           </p>
                           <p className="mt-1.5 text-xs leading-5 text-slate-500">
-                            Pistes concrètes visibles avant déblocage complet
+                            {t.statActionsSub}
                           </p>
                         </div>
                       </div>
@@ -1324,9 +1247,9 @@ export default function PublicAuditPage() {
               <div className="nk-card-lg nk-border rounded-3xl border border-slate-300/80 bg-[linear-gradient(180deg,rgba(248,250,252,1)_0%,rgba(241,245,249,0.96)_100%)] space-y-4 p-3.5 shadow-[0_12px_30px_rgba(15,23,42,0.07)] md:space-y-5 md:p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <SectionLabel>Bloc verrouillé</SectionLabel>
+                    <SectionLabel>{t.lockedBlock}</SectionLabel>
                     <h3 className="mt-2 text-lg font-semibold text-slate-900">
-                      Vous perdez des réservations chaque semaine
+                      {t.losingBookings}
                     </h3>
                   </div>
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-800 shadow-[0_0_0_1px_rgba(251,191,36,0.35)]">
@@ -1343,13 +1266,13 @@ export default function PublicAuditPage() {
                         <rect x="5.2" y="9" width="9.6" height="7.2" rx="1.6" />
                       </svg>
                     </span>
-                    Verrouillé
+                    {t.locked}
                   </span>
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-3">
                   <div className="relative overflow-hidden rounded-2xl border border-slate-300/85 bg-white/95 px-3.5 py-3.5 shadow-[0_8px_22px_rgba(15,23,42,0.08)]">
-                    <SectionLabel>Sous-scores détaillés</SectionLabel>
+                    <SectionLabel>{t.lockedItems[0]}</SectionLabel>
                     <div className="mt-3 space-y-3 opacity-90 blur-[1px]">
                       <div className="space-y-2">
                         <div className="h-2.5 w-20 rounded-full bg-slate-300" />
@@ -1359,13 +1282,13 @@ export default function PublicAuditPage() {
                     </div>
                     <div className="absolute inset-x-0 bottom-0 top-10 flex items-center justify-center bg-gradient-to-b from-white/10 via-white/35 to-white/65">
                       <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-700 shadow-sm">
-                        Verrouillé
+                        {t.locked}
                       </span>
                     </div>
                   </div>
 
                   <div className="relative overflow-hidden rounded-2xl border border-slate-300/85 bg-white/95 px-3.5 py-3.5 shadow-[0_8px_22px_rgba(15,23,42,0.08)]">
-                    <SectionLabel>Benchmark local complet</SectionLabel>
+                    <SectionLabel>{t.lockedItems[1]}</SectionLabel>
                     <div className="mt-3 space-y-3 opacity-90 blur-[1px]">
                       <div className="grid gap-2">
                         <div className="h-8 rounded-xl bg-slate-200" />
@@ -1375,13 +1298,13 @@ export default function PublicAuditPage() {
                     </div>
                     <div className="absolute inset-x-0 bottom-0 top-10 flex items-center justify-center bg-gradient-to-b from-white/10 via-white/35 to-white/65">
                       <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-700 shadow-sm">
-                        Verrouillé
+                        {t.locked}
                       </span>
                     </div>
                   </div>
 
                   <div className="relative overflow-hidden rounded-2xl border border-slate-300/85 bg-white/95 px-3.5 py-3.5 shadow-[0_8px_22px_rgba(15,23,42,0.08)]">
-                    <SectionLabel>Recommandations actionnables</SectionLabel>
+                    <SectionLabel>{t.lockedItems[2]}</SectionLabel>
                     <div className="mt-3 space-y-3 opacity-90 blur-[1px]">
                       <div className="space-y-2">
                         <div className="h-10 rounded-xl bg-slate-200" />
@@ -1391,7 +1314,7 @@ export default function PublicAuditPage() {
                     </div>
                     <div className="absolute inset-x-0 bottom-0 top-10 flex items-center justify-center bg-gradient-to-b from-white/10 via-white/35 to-white/65">
                       <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-700 shadow-sm">
-                        Verrouillé
+                        {t.locked}
                       </span>
                     </div>
                   </div>
@@ -1407,50 +1330,50 @@ export default function PublicAuditPage() {
                 className="rounded-2xl border border-white/70 bg-white/68 p-3.5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.65)] backdrop-blur-sm md:p-4"
               >
               <p className="text-xs font-medium text-slate-500">
-                Plan d’action premium
+                {t.premiumKicker}
               </p>
               <h2 className="mt-2 text-xl font-semibold text-slate-900">
                 {isAuthenticated && isPlatformAdmin
-                  ? "Compte administrateur — aucun paiement requis pour auditer"
+                  ? t.premiumHeadingAdmin
                   : isAuthenticated
-                    ? "Votre analyse calculée a été retrouvée"
-                    : "Débloquez le plan d’action complet de votre annonce"}
+                    ? t.premiumHeadingAuthenticated
+                    : t.premiumHeadingGuest}
               </h2>
               <SectionDescription className="mt-2 text-sm text-slate-500">
                 {isAuthenticated && isPlatformAdmin
-                  ? "Utilisez vos annonces dans le dashboard pour lancer des analyses complètes : le gating crédits/quota est désactivé côté serveur pour votre email admin privé."
+                  ? t.premiumDescriptionAdmin
                   : isAuthenticated
-                    ? "Nous avons réaffiché votre résultat local sans relancer une analyse complète."
-                    : "Ce que vous débloquez immédiatement :"}
+                    ? t.premiumDescriptionAuthenticated
+                    : t.premiumDescriptionGuest}
               </SectionDescription>
 
               <div className="mt-3 grid gap-2.5 sm:grid-cols-3">
                 <div className="rounded-xl border border-slate-300/90 bg-white px-3 py-2.5 shadow-[0_10px_20px_rgba(15,23,42,0.1)] ring-1 ring-white/90 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_26px_rgba(15,23,42,0.16)]">
                   <p className="text-[11px] font-semibold text-slate-900">
-                    Analyse partielle visible
+                    {t.benefitPartialTitle}
                   </p>
                   <p className="mt-1 text-[11px] leading-4.5 text-slate-600">
-                    Basée sur les signaux publics détectés sur votre annonce.
+                    {t.benefitPartialBody}
                   </p>
                 </div>
                 <div className="rounded-xl border border-slate-300/90 bg-white px-3 py-2.5 shadow-[0_10px_20px_rgba(15,23,42,0.1)] ring-1 ring-white/90 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_26px_rgba(15,23,42,0.16)]">
                   <p className="text-[11px] font-semibold text-slate-900">
                     {isAuthenticated && isPlatformAdmin
-                      ? "Rapport complet sans achat"
-                      : "Rapport complet après paiement"}
+                      ? t.benefitFullTitleAdmin
+                      : t.benefitFullTitle}
                   </p>
                   <p className="mt-1 text-[11px] leading-4.5 text-slate-600">
                     {isAuthenticated && isPlatformAdmin
-                      ? "Depuis vos annonces, un audit utilise le bypass administrativement autorisé."
-                      : "Déblocage immédiat du plan d’action détaillé."}
+                      ? t.benefitFullBodyAdmin
+                      : t.benefitFullBody}
                   </p>
                 </div>
                 <div className="rounded-xl border border-slate-300/90 bg-white px-3 py-2.5 shadow-[0_10px_20px_rgba(15,23,42,0.1)] ring-1 ring-white/90 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_26px_rgba(15,23,42,0.16)]">
                   <p className="text-[11px] font-semibold text-slate-900">
-                    Résultat exploitable rapidement
+                    {t.benefitFastTitle}
                   </p>
                   <p className="mt-1 text-[11px] leading-4.5 text-slate-600">
-                    Lecture claire et priorisée en moins de 30 secondes.
+                    {t.benefitFastBody}
                   </p>
                 </div>
               </div>
@@ -1465,9 +1388,9 @@ export default function PublicAuditPage() {
                       </svg>
                     </span>
                     <div>
-                      <p className="text-sm font-semibold text-slate-900">Plan d’action complet</p>
+                      <p className="text-sm font-semibold text-slate-900">{t.features[0].title}</p>
                       <p className="mt-1 text-xs leading-5 text-slate-500">
-                        Ordre exact des actions à appliquer pour améliorer la conversion.
+                        {t.features[0].body}
                       </p>
                     </div>
                   </div>
@@ -1482,9 +1405,9 @@ export default function PublicAuditPage() {
                       </svg>
                     </span>
                     <div>
-                      <p className="text-sm font-semibold text-slate-900">Priorisation claire</p>
+                      <p className="text-sm font-semibold text-slate-900">{t.features[1].title}</p>
                       <p className="mt-1 text-xs leading-5 text-slate-500">
-                        Quoi faire maintenant, quoi faire ensuite, et pourquoi.
+                        {t.features[1].body}
                       </p>
                     </div>
                   </div>
@@ -1498,9 +1421,9 @@ export default function PublicAuditPage() {
                       </svg>
                     </span>
                     <div>
-                      <p className="text-sm font-semibold text-slate-900">Rapport complet actionnable</p>
+                      <p className="text-sm font-semibold text-slate-900">{t.features[2].title}</p>
                       <p className="mt-1 text-xs leading-5 text-slate-500">
-                        Au-delà de l’aperçu affiché à gauche.
+                        {t.features[2].body}
                       </p>
                     </div>
                   </div>
@@ -1514,9 +1437,9 @@ export default function PublicAuditPage() {
                       </svg>
                     </span>
                     <div>
-                      <p className="text-sm font-semibold text-slate-900">Suivi historique</p>
+                      <p className="text-sm font-semibold text-slate-900">{t.features[3].title}</p>
                       <p className="mt-1 text-xs leading-5 text-slate-500">
-                        Pour suivre vos progrès annonce par annonce.
+                        {t.features[3].body}
                       </p>
                     </div>
                   </div>
@@ -1527,21 +1450,19 @@ export default function PublicAuditPage() {
                 {isAuthenticated && isPlatformAdmin ? (
                   <div className="rounded-xl border border-violet-200 bg-gradient-to-br from-violet-50/90 via-white to-indigo-50/40 px-4 py-5 text-center shadow-[0_10px_28px_rgba(124,58,237,0.08)]">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-violet-700">
-                      Admin plateforme — audits illimités
+                      {t.adminPanelTitle}
                     </p>
                     <p className="mt-3 text-sm font-semibold text-slate-900">
-                      Aucun paiement ni quota requis depuis cette page ou le tableau de bord.
+                      {t.adminPanelBody}
                     </p>
                     <p className="mt-2 text-xs leading-relaxed text-slate-600">
-                      Pour lancer une analyse complète, ajoutez l’URL dans vos annonces et exécutez un audit
-                      depuis votre espace habituel — les gardes quotas/crédits sont désactivés côté API pour
-                      votre compte administrateur privé uniquement.
+                      {t.adminPanelHelp}
                     </p>
                     <Link
                       href="/dashboard/listings"
                       className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-lg border border-violet-300 bg-white px-5 text-[11px] font-semibold uppercase tracking-[0.16em] text-violet-800 shadow-sm transition hover:bg-violet-50 md:h-12"
                     >
-                      Ouvrir mes annonces
+                      {t.adminPanelOpen}
                     </Link>
                   </div>
                 ) : null}
@@ -1549,19 +1470,19 @@ export default function PublicAuditPage() {
                   <>
                 <div className="rounded-xl border border-orange-200 bg-orange-50/60 px-3.5 py-2.5 text-center">
                   <p className="text-sm font-bold text-orange-900">
-                    Vous perdez des réservations chaque semaine
+                    {t.losingBookings}
                   </p>
                   <p className="mt-1 text-xs font-medium text-orange-800">
-                    Votre annonce est vue… mais vos concurrents convertissent mieux.
+                    {t.seenButCompetitors}
                   </p>
                   <p className="mt-1 text-xs text-orange-700">
-                    Quelques optimisations peuvent augmenter vos revenus rapidement.
+                    {t.fewOptimizations}
                   </p>
                 </div>
                 <div className="space-y-2">
                   {PAYWALL_OFFERS.map((offer) => (
                     <div
-                      key={offer.name}
+                      key={offer.code}
                       className={`w-full rounded-2xl text-left transition-all duration-200 ${
                         offer.highlighted
                           ? "nk-card-highlight border border-orange-300/95 bg-orange-50/80 px-4 py-3.5 shadow-[0_10px_22px_rgba(249,115,22,0.14)] md:scale-[1.01] md:px-5 md:py-4"
@@ -1571,36 +1492,32 @@ export default function PublicAuditPage() {
                       <div className="flex items-start justify-between gap-4 md:gap-5">
                         <div className="min-w-0 flex-1 pr-1">
                           <p className="text-sm font-semibold leading-5 text-slate-900">
-                            {offer.name}
+                            {t.offers[offer.code].name}
                           </p>
                           <p className="mt-1 text-[12px] leading-5 text-slate-600">
-                            {offer.detail} —{" "}
+                            {t.offers[offer.code].detail} —{" "}
                             <b>
-                              {offer.code === "audit_test"
-                                ? "1 annonce"
-                                : offer.code === "pack_5"
-                                  ? "5 annonces"
-                                  : "15 annonces"}
+                              {t.offers[offer.code].listings}
                             </b>
                           </p>
                           <p className="mt-1 text-[11px] leading-5 text-emerald-700">
-                            Toutes les fonctionnalités incluses. Seule la quantité d’annonces change.
+                            {t.offerIncluded}
                           </p>
                           <p className="mt-1.5 text-[11px] leading-5 text-slate-600">
-                            {offer.note}
+                            {t.offers[offer.code].note}
                           </p>
                         </div>
                         <div className="shrink-0 space-y-1 text-right md:border-l md:border-slate-200/80 md:pl-4">
                           <p className="text-2xl font-bold leading-none tracking-tight text-slate-950">
-                            {offer.price}
+                            {t.offers[offer.code].price}
                           </p>
                           {offer.highlighted ? (
                             <>
                               <span className="mt-1 inline-flex rounded-full border border-orange-200 bg-orange-100 px-2 py-0.5 text-[10px] font-medium text-orange-700">
-                                Recommandé
+                                {t.recommended}
                               </span>
                               <p className="mt-1 max-w-[170px] text-[11px] font-medium leading-4 text-slate-500">
-                                Choisi par les hôtes qui veulent maximiser leurs revenus
+                                {t.recommendedNote}
                               </p>
                             </>
                           ) : null}
@@ -1617,33 +1534,33 @@ export default function PublicAuditPage() {
                 {!(isAuthenticated && isPlatformAdmin) ? (
                   <>
                 <p className="mb-1.5 mt-2.5 text-center text-xs text-orange-700 md:mt-3">
-                  Sans plan d’action clair, vous laissez des réservations à vos concurrents.
+                  {t.closingLine}
                 </p>
                 <p className="mb-2 text-center text-xs font-medium text-slate-600">
-                  Accès immédiat • Résultat en moins de 30 secondes
+                  {t.immediateAccess}
                 </p>
                 {isAuthenticated ? (
                   <button
                     type="button"
                     onClick={handlePremiumCheckout}
-                    aria-label={`Débloquer mes réservations maintenant - ${selectedOfferConfig.name}`}
+                    aria-label={t.unlockAria(t.offers[selectedOfferConfig.code].name)}
                     disabled={isPremiumCheckoutLoading}
                     className="inline-flex h-11 w-full items-center justify-center rounded-lg border !border-blue-500/80 !bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 py-2.5 text-sm font-semibold uppercase tracking-[0.18em] text-white !shadow-[0_14px_30px_rgba(59,130,246,0.30)] transition-all duration-200 hover:scale-[1.02] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/70 disabled:opacity-50 disabled:cursor-not-allowed md:h-12 md:px-7"
                   >
-                    Débloquer mes réservations maintenant
+                    {t.unlockCta}
                   </button>
                 ) : (
                   <Link
                     href={`/sign-in?next=${encodeURIComponent(`/audit/new?restored=1&offer=${selectedOffer}`)}`}
-                    aria-label={`Débloquer mes réservations maintenant - ${selectedOfferConfig.name}`}
+                    aria-label={t.unlockAria(t.offers[selectedOfferConfig.code].name)}
                     className="inline-flex h-11 w-full items-center justify-center rounded-lg border !border-blue-500/80 !bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 py-2.5 text-sm font-semibold uppercase tracking-[0.18em] text-white !shadow-[0_14px_30px_rgba(59,130,246,0.30)] transition-all duration-200 hover:scale-[1.02] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/70 disabled:opacity-50 disabled:cursor-not-allowed md:h-12 md:px-7"
                   >
-                    Débloquer mes réservations maintenant
+                    {t.unlockCta}
                   </Link>
                 )}
                 {premiumCheckoutError ? (
                   <p className="mt-2 text-center text-xs text-red-600">
-                    {premiumCheckoutError}
+                    {t.errors[premiumCheckoutError]}
                   </p>
                 ) : null}
                   </>
@@ -1653,7 +1570,7 @@ export default function PublicAuditPage() {
                     href={`/sign-in?next=${encodeURIComponent("/dashboard")}`}
                     className="text-xs font-medium text-slate-600 transition hover:text-slate-900"
                   >
-                    J&apos;ai déjà un compte
+                    {t.alreadyAccount}
                   </Link>
                 </div>
                 <div className="mt-2.5 border-t border-slate-200" />
@@ -1675,7 +1592,7 @@ export default function PublicAuditPage() {
                         />
                       </svg>
                     </span>
-                    Accès immédiat après paiement
+                    {t.trustItems[0]}
                   </p>
                   <p className="flex items-center justify-center gap-1.5 md:justify-center">
                     <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
@@ -1694,7 +1611,7 @@ export default function PublicAuditPage() {
                         />
                       </svg>
                     </span>
-                    Aucune compétence technique requise
+                    {t.trustItems[1]}
                   </p>
                   <p className="flex items-center justify-center gap-1.5 md:justify-end">
                     <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
@@ -1713,11 +1630,11 @@ export default function PublicAuditPage() {
                         />
                       </svg>
                     </span>
-                    Résultats concrets en quelques minutes
+                    {t.trustItems[2]}
                   </p>
                 </div>
                 <p className="mt-2.5 text-center text-[11px] text-slate-400">
-                  Paiement sécurisé • Sans engagement
+                  {t.securePayment}
                 </p>
               </div>
               </Card>
@@ -1730,7 +1647,7 @@ export default function PublicAuditPage() {
   );
 }
 
-function buildPreviewFromDraft(draft: GuestAuditDraft): GuestAuditPreview {
+function buildPreviewFromDraft(draft: GuestAuditDraft, untitledListing: string): GuestAuditPreview {
   const payloadCandidate =
     draft.full_payload ?? draft.preview_payload ?? draft.result.raw_payload ?? null;
 
@@ -1757,7 +1674,7 @@ function buildPreviewFromDraft(draft: GuestAuditDraft): GuestAuditPreview {
 
   return {
     listing_url: rawPayload?.listing_url ?? draft.listing_url,
-    title: rawPayload?.title ?? draft.title ?? "Annonce sans titre",
+    title: rawPayload?.title ?? draft.title ?? untitledListing,
     platform:
       rawPayload?.platform ??
       draft.platform ??

@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { FileText, RotateCcw, Trash2 } from "lucide-react";
 import AuditInsightsPanel from "@/components/AuditInsightsPanel";
+import { hasPaidAuditSignal as computeHasPaidAuditSignal } from "@/lib/audits/paidAuditSignal";
 import type { Locale } from "@/data/i18n";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import { getWorkspacePlan } from "@/lib/billing/getWorkspacePlan";
@@ -1803,14 +1804,7 @@ export default function AuditsPage() {
   const auditPayloadInsights = Array.isArray(latestAuditPayload?.insights)
     ? latestAuditPayload.insights.filter((value) => typeof value === "string" && value.trim())
     : [];
-  const hasPaidAuditSignal = audits.some((audit) => {
-    const payload = audit.result_payload;
-    return Boolean(
-      payload?.restored_after_payment ||
-        payload?.source === "stripe_webhook_audit_test" ||
-        payload?.stripe_checkout_session_id
-    );
-  });
+  const hasPaidAuditSignal = computeHasPaidAuditSignal(audits);
   const hasAuditInsightData =
     Boolean(latestAuditPayload?.summary?.trim()) ||
     auditPayloadInsights.length > 0 ||

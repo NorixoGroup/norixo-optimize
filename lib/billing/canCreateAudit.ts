@@ -1,6 +1,7 @@
 import { supabase } from "../supabase";
 import type { WorkspacePlan } from "./getWorkspacePlan";
 import { getWorkspacePlan } from "./getWorkspacePlan";
+import { getWorkspaceAuditCredits } from "./getWorkspaceAuditCredits";
 
 export type CanCreateAuditResult = {
   allowed: boolean;
@@ -8,6 +9,11 @@ export type CanCreateAuditResult = {
   currentCount: number;
   limit: number | null;
   planCode: string;
+  /**
+   * True when the free-plan allowance is used up but the workspace holds purchased credits. The credit reservation still
+   * consumes one credit per audit (and refuses when none is left), so this never grants a free audit.
+   */
+  hasAvailableCredits?: boolean;
 };
 
 export async function canCreateAudit(workspaceId: string, client = supabase): Promise<CanCreateAuditResult> {
@@ -61,6 +67,19 @@ export async function canCreateAudit(workspaceId: string, client = supabase): Pr
   });
 
   if (currentCount >= limit) {
+    // A purchased credit must stay usable on the free plan. Each audit still needs (and consumes) one credit.
+    const credits = await getWorkspaceAuditCredits(workspaceId, client);
+    if (credits.available > 0) {
+      return {
+        allowed: true,
+        reason: undefined,
+        currentCount,
+        limit,
+        planCode: plan.planCode,
+        hasAvailableCredits: true,
+      };
+    }
+
     return {
       allowed: false,
       reason:

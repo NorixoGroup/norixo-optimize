@@ -6,11 +6,8 @@ import { useTranslation } from "@/components/i18n/useTranslation";
 import { useRouter, useSearchParams } from "next/navigation";
 import { pricingPlans } from "@/lib/billing/pricingPlans";
 import { getWorkspaceAuditCredits } from "@/lib/billing/getWorkspaceAuditCredits";
-import {
-  loadGuestAuditDraft,
-  persistGuestAuditDraftAfterPayment,
-  saveGuestAuditDraft,
-} from "@/lib/guestAuditDraft";
+import { loadGuestAuditDraft, saveGuestAuditDraft } from "@/lib/guestAuditDraft";
+import { resolvePostPaymentState, waitForPostPaymentConfirmation, type PostPaymentState } from "@/lib/billing/postPayment";
 import { supabase } from "@/lib/supabase";
 import { getStoredWorkspaceId } from "@/lib/workspaces/getStoredWorkspaceId";
 import { setStoredWorkspaceId } from "@/lib/workspaces/setStoredWorkspaceId";
@@ -1487,7 +1484,8 @@ function normalizeCheckoutErrorMessage(
 
 const PACK_CHECKOUT_PLANS = new Set(["starter", "pro", "scale"]);
 const PENDING_INTENT_MAX_AGE_MS = 120_000;
-const POST_SUCCESS_VALIDATION_MS = 8_000;
+/** Pause between two confirmation checks after the Stripe redirect. */
+const POST_PAYMENT_POLL_MS = 2_500;
 
 type PackCheckoutIntentSnapshot = {
   status: string;
@@ -1589,6 +1587,12 @@ export default function BillingPage() {
 
   const isPaymentProcessing = paymentValidationHold;
 
+  // Offer chosen on /pricing (kept through sign-in): highlighted only, the customer still confirms the payment.
+  const preselectedOffer = searchParams.get("offer");
+  const preselectedPlan =
+    preselectedOffer === "audit_test" ? "starter" : preselectedOffer === "pack_5" ? "pro" : preselectedOffer === "pack_15" ? "scale" : null;
+  const offerRing = (plan: "starter" | "pro" | "scale") =>
+    preselectedPlan === plan ? " ring-4 ring-blue-500/70" : "";
   const checkoutLocked = loadingPlan || checkoutInFlight !== null || isPaymentProcessing;
   const upsellState = getBillingUpsellState(
     activePlanCode,
@@ -1887,6 +1891,26 @@ export default function BillingPage() {
     };
   }, [currentWorkspaceId, billingSearchSignature, paymentValidationHold, pendingPackIntentRecent]);
 
+  async function fetchPostPaymentState(checkoutSessionId: string): Promise<PostPaymentState> {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) return "pending";
+      const response = await fetch(
+        `/api/billing/checkout-intent-status?session_id=${encodeURIComponent(checkoutSessionId)}`,
+        { headers: { Authorization: `Bearer ${session.access_token}` }, cache: "no-store" }
+      );
+      if (!response.ok) return "pending";
+      const body = (await response.json().catch(() => null)) as {
+        intent?: { status?: string | null; completed_at?: string | null } | null;
+      } | null;
+      return resolvePostPaymentState(body?.intent);
+    } catch {
+      return "pending";
+    }
+  }
+
   useEffect(() => {
     let mounted = true;
 
@@ -1906,66 +1930,44 @@ export default function BillingPage() {
         if (paymentValidationHoldTimeoutRef.current) {
           window.clearTimeout(paymentValidationHoldTimeoutRef.current);
         }
-        if (plan === "audit_test") {
-          if (!checkoutSessionId) {
-            if (!mounted) return;
-            setPaymentValidationHold(false);
-            setFreeNotice("Impossible de verifier ce paiement. Rechargez la page Facturation dans quelques instants.");
-            router.replace("/dashboard/billing");
-            return;
-          }
 
-          if (processedCheckoutSessionRef.current === checkoutSessionId) {
-            return;
-          }
-          processedCheckoutSessionRef.current = checkoutSessionId;
-
-          const deadline = Date.now() + POST_SUCCESS_VALIDATION_MS;
-          let finalMessage: string | null = null;
-
-          while (mounted && Date.now() <= deadline) {
-            const persistence = await persistGuestAuditDraftAfterPayment(checkoutSessionId);
-
-            if (!mounted) return;
-
-            if (persistence.persisted) {
-              setCheckoutStatus("success");
-              setFreeNotice(null);
-              setPaymentValidationHold(false);
-              router.replace("/dashboard/billing");
-              return;
-            }
-
-            if (persistence.status !== "payment_not_confirmed") {
-              finalMessage =
-                persistence.error ?? "Impossible de confirmer votre paiement pour le moment.";
-              break;
-            }
-
-            finalMessage =
-              persistence.error ?? "Le paiement est encore en cours de confirmation.";
-
-            await new Promise<void>((resolve) => {
-              window.setTimeout(resolve, 1500);
-            });
-          }
-
+        // The purchase is announced as successful only once the webhook has finished (credit granted, intent completed).
+        // No audit is created or restored here: the customer launches a real audit from the dashboard.
+        if (!checkoutSessionId) {
           if (!mounted) return;
-
           setPaymentValidationHold(false);
-          setFreeNotice(
-            finalMessage ?? "Le paiement est encore en cours de confirmation."
-          );
+          setFreeNotice(copy.paymentValidationHoldMessage);
           router.replace("/dashboard/billing");
           return;
         }
 
-        setCheckoutStatus("success");
-        paymentValidationHoldTimeoutRef.current = window.setTimeout(() => {
+        if (processedCheckoutSessionRef.current === checkoutSessionId) {
+          return;
+        }
+        processedCheckoutSessionRef.current = checkoutSessionId;
+
+        const outcome = await waitForPostPaymentConfirmation({
+          fetchState: () => fetchPostPaymentState(checkoutSessionId),
+          sleep: (ms) => new Promise<void>((resolve) => window.setTimeout(resolve, ms)),
+          now: Date.now,
+          isActive: () => mounted,
+          pollMs: POST_PAYMENT_POLL_MS,
+        });
+
+        if (outcome === "credit_available") {
+          setCheckoutStatus("success");
+          setFreeNotice(null);
           setPaymentValidationHold(false);
-          paymentValidationHoldTimeoutRef.current = null;
-        }, POST_SUCCESS_VALIDATION_MS);
-        router.replace("/dashboard/billing");
+          router.replace("/dashboard/billing");
+        } else if (outcome === "failed") {
+          setCheckoutStatus("cancel");
+          setPaymentValidationHold(false);
+          router.replace("/dashboard/billing");
+        } else if (outcome === "still_pending") {
+          setPaymentValidationHold(false);
+          setFreeNotice(copy.paymentValidationHoldMessage);
+          router.replace("/dashboard/billing");
+        }
         return;
       }
 
@@ -1980,7 +1982,7 @@ export default function BillingPage() {
     return () => {
       mounted = false;
     };
-  }, [router, searchParams]);
+  }, [router, searchParams, copy.paymentValidationHoldMessage]);
 
   function releaseCheckoutLock() {
     checkoutActivePlanRef.current = null;
@@ -2290,17 +2292,15 @@ export default function BillingPage() {
       {checkoutStatus === "success" && (
         <div className="nk-card-accent nk-card-accent-emerald nk-card-hover flex flex-col items-start justify-between gap-2 rounded-2xl border border-emerald-200/85 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 shadow-[0_10px_24px_rgba(5,150,105,0.12),0_1px_0_rgba(255,255,255,0.62)_inset] sm:flex-row sm:items-center">
           <span>
-            {checkoutPlan === "audit_test"
-              ? copy.paymentSuccessAuditTest
-              : checkoutPlan === "starter"
-                ? copy.paymentSuccessStarter
+            {checkoutPlan === "audit_test" || checkoutPlan === "starter"
+              ? copy.paymentSuccessStarter
               : checkoutPlan === "scale"
               ? copy.paymentSuccessScale
               : checkoutPlan === "pro"
               ? copy.paymentSuccessPro
               : copy.paymentSuccessGeneric}
           </span>
-          {(checkoutPlan === "pro" || checkoutPlan === "scale" || checkoutPlan === "starter") && (
+          {(checkoutPlan === "pro" || checkoutPlan === "scale" || checkoutPlan === "starter" || checkoutPlan === "audit_test") && (
             <Link
               href="/dashboard/listings"
               className="nk-ghost-btn text-[11px] font-semibold uppercase tracking-[0.16em]"
@@ -2405,7 +2405,7 @@ export default function BillingPage() {
       ) : null}
 
       <div className="mt-5 grid gap-6 md:grid-cols-3 md:gap-7 xl:gap-8">
-        <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_18px_50px_rgba(15,23,42,0.15)]">
+        <div className={`flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_18px_50px_rgba(15,23,42,0.15)]${offerRing("starter")}`}>
           <div className="flex items-start justify-between gap-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
               {copy.starter.name}
@@ -2454,7 +2454,7 @@ export default function BillingPage() {
           strategicRecommendedOfferCode === "pro"
             ? "ring-2 ring-emerald-300/80"
             : "ring-1 ring-orange-200/70"
-        }`}>
+        }${offerRing("pro")}`}>
           <div className="flex items-start justify-between gap-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-700">
               {copy.pro.name}
@@ -2511,7 +2511,7 @@ export default function BillingPage() {
           strategicRecommendedOfferCode === "scale"
             ? "ring-2 ring-violet-300/75"
             : ""
-        }`}>
+        }${offerRing("scale")}`}>
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-700">
             {copy.scale.name}
           </p>
