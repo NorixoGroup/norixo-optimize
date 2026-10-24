@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { stripe } from "@/stripe/server";
 import { alertIfWorkspaceIsAnomaly } from "@/lib/billing/alertIfWorkspaceIsAnomaly";
-import { normalizeSourceUrl } from "@/lib/listings/normalizeSourceUrl";
+import { getPostPaymentAuditUrl } from "@/lib/billing/postPayment";
+import {
+  WEBHOOK_SECURITY,
+  grantPackCheckoutCredit,
+  grantStarterCheckoutCredit,
+} from "@/lib/billing/webhookCreditGrants";
+import { resolvePlanCodeAfterPurchase } from "@/lib/billing/planAfterPurchase";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { sendTransactionalEmail } from "@/lib/email/sendTransactionalEmail";
 
@@ -65,22 +71,6 @@ type InvoiceEvent = {
   currency?: string | null;
   payment_intent?: string | null;
 };
-
-const WEBHOOK_SECURITY = "[stripe][webhook][security]";
-
-function logStripeCreditWorkspaceBindingAccepted(params: {
-  eventType: string;
-  sessionId: string | null;
-  metadataWorkspaceId: string;
-  customerId: string | null;
-  planCode: string;
-  grantedQuantity: number;
-  insertedWorkspaceId: string;
-  /** Paiement Checkout `mode: payment` validé sans `session.customer` (métadonnées + intent + accès workspace) */
-  oneShotCustomerAbsentAccepted?: boolean;
-}) {
-  console.info("[stripe][webhook][credit_workspace_binding]", params);
-}
 
 function parseCheckoutMetadataPlan(
   raw: string | undefined | null
@@ -324,352 +314,6 @@ async function updateWorkspaceSubscriptionByWorkspaceId(
   return true;
 }
 
-async function recordUsageEvent(
-  supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>,
-  values: {
-    workspaceId: string;
-    userId?: string | null;
-    eventType: string;
-    quantity?: number;
-    metadata?: Record<string, unknown>;
-  }
-): Promise<boolean> {
-  if (values.eventType === "audit_credit_consumed") {
-    console.error(`${WEBHOOK_SECURITY} blocked_audit_credit_consumed_via_webhook`, {
-      workspaceId: values.workspaceId,
-    });
-    return false;
-  }
-
-  const { error } = await supabaseAdmin.from("usage_events").insert({
-    workspace_id: values.workspaceId,
-    user_id: values.userId ?? null,
-    event_type: values.eventType,
-    quantity: values.quantity ?? 1,
-    metadata: values.metadata ?? {},
-  });
-
-  if (error) {
-    console.error(`${WEBHOOK_SECURITY} grant_usage_event_insert_failed`, {
-      error,
-      workspaceId: values.workspaceId,
-      eventType: values.eventType,
-    });
-    return false;
-  }
-
-  return true;
-}
-
-async function recordAuditCreditLotGrant(
-  supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>,
-  values: {
-    workspaceId: string;
-    sourceType: string;
-    sourceRef: string;
-    planCode?: string | null;
-    grantedQuantity: number;
-    periodStart?: string | null;
-    periodEnd?: string | null;
-    expiresAt?: string | null;
-    metadata?: Record<string, unknown>;
-  }
-): Promise<boolean> {
-  const payload = {
-    workspace_id: values.workspaceId,
-    source_type: values.sourceType,
-    source_ref: values.sourceRef,
-    plan_code: values.planCode ?? null,
-    granted_quantity: values.grantedQuantity,
-    consumed_quantity: 0,
-    period_start: values.periodStart ?? null,
-    period_end: values.periodEnd ?? null,
-    expires_at: values.expiresAt ?? null,
-    metadata: values.metadata ?? {},
-  };
-
-  const { error } = await supabaseAdmin
-    .from("audit_credit_lots")
-    .upsert(payload, {
-      onConflict: "source_type,source_ref",
-      ignoreDuplicates: true,
-    });
-
-  if (error) {
-    console.error(`${WEBHOOK_SECURITY} audit_credit_lot_upsert_failed`, {
-      error,
-      workspaceId: values.workspaceId,
-      sourceType: values.sourceType,
-    });
-    return false;
-  }
-
-  return true;
-}
-
-async function fetchAuditCreditLotTotals(
-  supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>,
-  workspaceId: string
-): Promise<{ granted: number; consumed: number; available: number }> {
-  const { data: rows } = await supabaseAdmin
-    .from("audit_credit_lots")
-    .select("granted_quantity, consumed_quantity")
-    .eq("workspace_id", workspaceId);
-
-  let granted = 0;
-  let consumed = 0;
-  for (const row of rows ?? []) {
-    const r = row as { granted_quantity?: unknown; consumed_quantity?: unknown };
-    granted += Math.max(Number(r.granted_quantity ?? 0), 0);
-    consumed += Math.max(Number(r.consumed_quantity ?? 0), 0);
-  }
-  const available = Math.max(granted - consumed, 0);
-  return { granted, consumed, available };
-}
-
-type UsageEventRow = {
-  id: string;
-  metadata: Record<string, unknown> | null;
-};
-
-async function findUsageEventByMetadata(params: {
-  supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>;
-  workspaceId: string;
-  eventType: string;
-  sessionId?: string | null;
-  generatedAt?: string | null;
-  auditId?: string | null;
-}) {
-  const { supabaseAdmin, workspaceId, eventType, sessionId, generatedAt, auditId } =
-    params;
-
-  const { data, error } = await supabaseAdmin
-    .from("usage_events")
-    .select("id, metadata")
-    .eq("workspace_id", workspaceId)
-    .eq("event_type", eventType)
-    .order("created_at", { ascending: false })
-    .limit(50);
-
-  if (error) {
-    console.error("Failed to load usage events for idempotence check", {
-      error,
-      workspaceId,
-      eventType,
-      sessionId,
-      generatedAt,
-      auditId,
-    });
-    return null;
-  }
-
-  return ((data ?? []) as UsageEventRow[]).find((row) => {
-    const metadata = row.metadata ?? {};
-    return (
-      (sessionId && metadata.stripe_session_id === sessionId) ||
-      (generatedAt && metadata.guest_draft_generated_at === generatedAt) ||
-      (auditId && metadata.audit_id === auditId)
-    );
-  }) ?? null;
-}
-
-type ListingRow = {
-  id: string;
-  source_url: string | null;
-  title: string | null;
-};
-
-type AuditRow = {
-  id: string;
-  result_payload: {
-    stripe_checkout_session_id?: string;
-    guest_draft_generated_at?: string;
-  } | null;
-};
-
-async function persistAuditTestPurchase(params: {
-  supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>;
-  workspaceId: string;
-  userId?: string | null;
-  sessionId?: string | null;
-  listingUrl?: string | null;
-  title?: string | null;
-  platform?: string | null;
-  generatedAt?: string | null;
-  score?: string | null;
-  summary?: string | null;
-}) {
-  const {
-    supabaseAdmin,
-    workspaceId,
-    userId,
-    sessionId,
-    listingUrl,
-    title,
-    platform,
-    generatedAt,
-    score,
-    summary,
-  } = params;
-
-  if (!listingUrl) {
-    console.warn(
-      "[stripe][webhook][audit_test] Missing listing URL, skipping audit persistence",
-      {
-        workspaceId,
-        sessionId,
-      }
-    );
-    return;
-  }
-
-  const normalizedUrl = normalizeSourceUrl(listingUrl);
-
-  const { data: listingRows, error: listingsError } = await supabaseAdmin
-    .from("listings")
-    .select("id, source_url, title")
-    .eq("workspace_id", workspaceId);
-
-  if (listingsError) {
-    console.error("[stripe][webhook][audit_test] Failed to load listings", {
-      listingsError,
-      workspaceId,
-      sessionId,
-    });
-    return;
-  }
-
-  let listing = ((listingRows ?? []) as ListingRow[]).find(
-    (row) => normalizeSourceUrl(row.source_url) === normalizedUrl
-  );
-
-  if (!listing) {
-    const { data: createdListing, error: listingInsertError } = await supabaseAdmin
-      .from("listings")
-      .insert({
-        workspace_id: workspaceId,
-        created_by: userId ?? null,
-        source_platform: platform ?? null,
-        source_url: listingUrl,
-        title: title || "Annonce sans titre",
-        city: null,
-        country: null,
-        price: null,
-        currency: null,
-        rating: null,
-        reviews_count: null,
-        raw_payload: {
-          source: "stripe_webhook_audit_test",
-          restored_after_payment: true,
-          summary: summary ?? null,
-        },
-      })
-      .select("id, source_url, title")
-      .single();
-
-    if (listingInsertError || !createdListing) {
-      console.error("[stripe][webhook][audit_test] Failed to create listing", {
-        listingInsertError,
-        workspaceId,
-        sessionId,
-      });
-      return;
-    }
-
-    listing = createdListing as ListingRow;
-  }
-
-  const { data: auditRows, error: auditsError } = await supabaseAdmin
-    .from("audits")
-    .select("id, result_payload")
-    .eq("workspace_id", workspaceId)
-    .eq("listing_id", listing.id)
-    .order("created_at", { ascending: false })
-    .limit(10);
-
-  if (auditsError) {
-    console.error("[stripe][webhook][audit_test] Failed to load audits", {
-      auditsError,
-      workspaceId,
-      listingId: listing.id,
-      sessionId,
-    });
-    return;
-  }
-
-  const duplicateAudit = ((auditRows ?? []) as AuditRow[]).find((row) => {
-    const payload = row.result_payload ?? {};
-    return (
-      (sessionId && payload.stripe_checkout_session_id === sessionId) ||
-      (generatedAt && payload.guest_draft_generated_at === generatedAt)
-    );
-  });
-
-  if (duplicateAudit?.id) {
-    console.info("[stripe][webhook][audit_test] Audit already persisted (idempotent, no credit debit)", {
-      workspaceId,
-      listingId: listing.id,
-      auditId: duplicateAudit.id,
-      sessionId,
-    });
-    return;
-  }
-
-  const numericScore = score ? Number.parseFloat(score) : null;
-
-  console.info("[stripe][webhook][audit_test] writing audit with workspace_id", {
-    workspaceId,
-    listingId: listing.id,
-    sessionId,
-  });
-
-  const { data: insertedAudit, error: auditInsertError } = await supabaseAdmin
-    .from("audits")
-    .insert({
-      workspace_id: workspaceId,
-      listing_id: listing.id,
-      created_by: userId ?? null,
-      overall_score: Number.isFinite(numericScore) ? numericScore : null,
-      listing_quality_index: null,
-      market_score: null,
-      potential_score: null,
-      booking_lift_low: null,
-      booking_lift_high: null,
-      revenue_impact_low: null,
-      revenue_impact_high: null,
-      result_payload: {
-        source: "stripe_webhook_audit_test",
-        restored_after_payment: true,
-        stripe_checkout_session_id: sessionId ?? null,
-        guest_draft_generated_at: generatedAt ?? null,
-        listing_url: listingUrl,
-        title: title ?? listing.title ?? null,
-        platform: platform ?? null,
-        score: Number.isFinite(numericScore) ? numericScore : null,
-        summary: summary ?? null,
-      },
-    })
-    .select("id")
-    .single();
-
-  if (auditInsertError || !insertedAudit) {
-    console.error("[stripe][webhook][audit_test] Failed to create audit", {
-      auditInsertError,
-      workspaceId,
-      listingId: listing.id,
-      sessionId,
-    });
-    return;
-  }
-
-  console.info("[stripe][webhook][audit_test] Audit persisted (credits unchanged; consumption only via API audit)", {
-    workspaceId,
-    listingId: listing.id,
-    auditId: insertedAudit.id,
-    sessionId,
-  });
-}
-
 async function updateWorkspaceSubscriptionByStripeIds(
   supabaseAdmin: ReturnType<typeof createSupabaseAdminClient>,
   values: Record<string, unknown>,
@@ -757,7 +401,7 @@ Prochaine étape :
 Lancez votre audit pour analyser votre annonce, comparer votre positionnement au marché et identifier les optimisations prioritaires.
 
 Lancer mon premier audit :
-${appUrl}/audit/new
+${getPostPaymentAuditUrl(appUrl)}
 
 Merci pour votre confiance,
 L'équipe Norixo
@@ -828,7 +472,7 @@ ${appUrl}`;
             </div>
 
             <div style="text-align:center;margin:28px 0 10px">
-              <a href="${appUrl}/audit/new" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:800;border-radius:999px;padding:14px 22px;font-size:15px">
+              <a href="${getPostPaymentAuditUrl(appUrl)}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:800;border-radius:999px;padding:14px 22px;font-size:15px">
                 Lancer mon premier audit
               </a>
             </div>
@@ -1491,14 +1135,11 @@ export async function POST(request: NextRequest) {
         (existingBilling as { plan_code?: string | null } | null)?.plan_code ?? "free"
       );
 
-      const resolvedPlanCode =
-        planFromMetadata === "audit_test"
-          ? "pro"
-          : planFromMetadata === "starter"
-            ? priorPlanCode === "pro" || priorPlanCode === "scale"
-              ? priorPlanCode
-              : "free"
-            : getPlanCodeFromPlan(planFromMetadata, subscriptionStatus);
+      const resolvedPlanCode = resolvePlanCodeAfterPurchase({
+        purchasedPlan: planFromMetadata,
+        priorPlanCode,
+        subscriptionStatus,
+      });
 
       const amount =
         planFromMetadata === "audit_test" || planFromMetadata === "starter"
@@ -1509,8 +1150,6 @@ export async function POST(request: NextRequest) {
 
       const normalizedPlanCode =
         planFromMetadata === "audit_test" ? "starter" : planFromMetadata;
-
-      const sessionForPersist = fullSession as unknown as CheckoutSessionEvent;
 
       console.info("[billing][webhook] checkout.session.completed validated", {
         sessionId: sessionRef,
@@ -1572,124 +1211,24 @@ export async function POST(request: NextRequest) {
       // or increase audit_credit_lots.consumed_quantity (lots are created here with consumed_quantity = 0 only).
       if (planFromMetadata !== "audit_test") {
         const grantQuantity = metaCreditQtyParsed ?? expectedGrantCredits;
-        const creditGrantSource =
-          planFromMetadata === "scale" ||
-          planFromMetadata === "pro" ||
-          planFromMetadata === "starter"
-            ? "pack_checkout"
-            : "subscription_checkout";
-        const creditLotSourceType = "stripe_checkout_pack";
 
-        const existingPackGrant = await findUsageEventByMetadata({
+        const packGrant = await grantPackCheckoutCredit({
           supabaseAdmin,
           workspaceId,
-          eventType: "audit_credit_granted",
-          sessionId: sessionRef,
+          userId,
+          sessionRef,
+          customerId,
+          subscriptionStripeCustomerForDb,
+          checkoutIntentIdMeta,
+          eventType: event.type,
+          eventId: event.id,
+          planFromMetadata,
+          grantQuantity,
+          currentPeriodEnd,
+          subscriptionId,
         });
-
-        if (existingPackGrant?.id) {
-          console.info("[billing][grant][idempotency] pack_grant_usage_event_exists", {
-            workspaceId,
-            planCode: planFromMetadata,
-            sessionId: sessionRef,
-            eventId: event.id,
-            usageEventId: existingPackGrant.id,
-          });
-        } else if (grantQuantity > 0) {
-          const totalsBeforeGrant = await fetchAuditCreditLotTotals(supabaseAdmin, workspaceId);
-
-          console.info("[billing][grant] inserting_pack_grant", {
-            workspaceId,
-            planCode: planFromMetadata,
-            sessionId: sessionRef,
-            eventId: event.id,
-            creditsToGrant: grantQuantity,
-          });
-          const lotOk = await recordAuditCreditLotGrant(supabaseAdmin, {
-            workspaceId,
-            sourceType: creditLotSourceType,
-            sourceRef: sessionRef,
-            planCode: planFromMetadata,
-            grantedQuantity: grantQuantity,
-            periodStart: new Date().toISOString(),
-            periodEnd: currentPeriodEnd,
-            expiresAt: currentPeriodEnd,
-            metadata: {
-              stripe_session_id: sessionRef,
-              stripe_subscription_id: subscriptionId,
-              stripe_customer_id: subscriptionStripeCustomerForDb,
-              usage_event_type: "audit_credit_granted",
-              checkout_intent_id: checkoutIntentIdMeta,
-            },
-          });
-          if (!lotOk) {
-            return NextResponse.json({ error: "stripe_webhook_lot_failed" }, { status: 500 });
-          }
-
-          logStripeCreditWorkspaceBindingAccepted({
-            eventType: event.type,
-            sessionId: sessionRef,
-            metadataWorkspaceId: workspaceId,
-            customerId,
-            planCode: planFromMetadata,
-            grantedQuantity: grantQuantity,
-            insertedWorkspaceId: workspaceId,
-            oneShotCustomerAbsentAccepted: customerId === null,
-          });
-
-          const usageOk = await recordUsageEvent(supabaseAdmin, {
-            workspaceId,
-            userId,
-            eventType: "audit_credit_granted",
-            quantity: grantQuantity,
-            metadata: {
-              stripe_session_id: sessionRef,
-              stripe_customer_id: subscriptionStripeCustomerForDb,
-              plan: planFromMetadata,
-              source: creditGrantSource,
-              checkout_intent_id: checkoutIntentIdMeta,
-            },
-          });
-          if (!usageOk) {
-            return NextResponse.json({ error: "stripe_webhook_grant_failed" }, { status: 500 });
-          }
-
-          const totalsAfterGrant = await fetchAuditCreditLotTotals(supabaseAdmin, workspaceId);
-
-          console.info("[billing][grant] pack_checkout_credits_applied", {
-            workspaceId,
-            planCode: planFromMetadata,
-            sessionId: sessionRef,
-            eventId: event.id,
-            creditsGrantedThisCheckout: grantQuantity,
-          });
-          console.info("[billing][balance] audit_credit_lots_totals_after_grant", {
-            workspaceId,
-            sessionId: sessionRef,
-            totalGranted: totalsAfterGrant.granted,
-            totalConsumed: totalsAfterGrant.consumed,
-            available: totalsAfterGrant.available,
-          });
-          console.info("[billing][security][grant_snapshot]", {
-            workspaceId,
-            planCode: planFromMetadata,
-            sessionId: sessionRef,
-            grantQuantity,
-            grantedTotal: totalsAfterGrant.granted,
-            consumedTotal: totalsAfterGrant.consumed,
-            availableTotal: totalsAfterGrant.available,
-            availableBeforeGrant: totalsBeforeGrant.available,
-          });
-          if (totalsAfterGrant.available <= totalsBeforeGrant.available) {
-            console.error("[billing][security][grant_without_available_increase]", {
-              workspaceId,
-              planCode: planFromMetadata,
-              sessionId: sessionRef,
-              grantQuantity,
-              availableBeforeGrant: totalsBeforeGrant.available,
-              availableAfterGrant: totalsAfterGrant.available,
-            });
-          }
+        if (!packGrant.ok) {
+          return NextResponse.json({ error: packGrant.error }, { status: 500 });
         }
 
         const billingOk = await insertBillingPayment(supabaseAdmin, billingInsertBase);
@@ -1730,94 +1269,20 @@ export async function POST(request: NextRequest) {
       } else {
         const auditQuantity = normalizedAuditQuantity;
 
-        const existingStarterGrant = await findUsageEventByMetadata({
+        const starterGrant = await grantStarterCheckoutCredit({
           supabaseAdmin,
           workspaceId,
-          eventType: "audit_test_purchased",
-          sessionId: sessionRef,
+          userId,
+          sessionRef,
+          customerId,
+          subscriptionStripeCustomerForDb,
+          checkoutIntentIdMeta,
+          eventType: event.type,
+          eventId: event.id,
+          auditQuantity,
         });
-
-        if (existingStarterGrant?.id) {
-          console.info("[stripe][webhook][idempotency] audit_test_grant_exists_completing_billing", {
-            workspaceId,
-            sessionId: sessionRef,
-            usageEventId: existingStarterGrant.id,
-          });
-        } else {
-          const totalsBeforeGrant = await fetchAuditCreditLotTotals(supabaseAdmin, workspaceId);
-
-          const lotOk = await recordAuditCreditLotGrant(supabaseAdmin, {
-            workspaceId,
-            sourceType: "stripe_checkout_audit_test",
-            sourceRef: sessionRef,
-            planCode: "starter",
-            grantedQuantity: auditQuantity,
-            periodStart: new Date().toISOString(),
-            metadata: {
-              stripe_session_id: sessionRef,
-              stripe_customer_id: subscriptionStripeCustomerForDb,
-              usage_event_type: "audit_test_purchased",
-              checkout_intent_id: checkoutIntentIdMeta,
-            },
-          });
-          if (!lotOk) {
-            return NextResponse.json({ error: "stripe_webhook_lot_failed" }, { status: 500 });
-          }
-
-          logStripeCreditWorkspaceBindingAccepted({
-            eventType: event.type,
-            sessionId: sessionRef,
-            metadataWorkspaceId: workspaceId,
-            customerId,
-            planCode: planFromMetadata,
-            grantedQuantity: auditQuantity,
-            insertedWorkspaceId: workspaceId,
-            oneShotCustomerAbsentAccepted: customerId === null,
-          });
-
-          const usageOk = await recordUsageEvent(supabaseAdmin, {
-            workspaceId,
-            userId,
-            eventType: "audit_test_purchased",
-            quantity: auditQuantity,
-            metadata: {
-              stripe_session_id: sessionRef,
-              stripe_customer_id: subscriptionStripeCustomerForDb,
-              plan: planFromMetadata,
-              audit_quantity: auditQuantity,
-            },
-          });
-          if (!usageOk) {
-            return NextResponse.json({ error: "stripe_webhook_grant_failed" }, { status: 500 });
-          }
-
-          const totalsAfterGrant = await fetchAuditCreditLotTotals(supabaseAdmin, workspaceId);
-
-          console.info("[stripe][webhook][audit_credits] granted audit_test", {
-            workspaceId,
-            sessionId: sessionRef,
-            quantity: auditQuantity,
-          });
-          console.info("[billing][security][grant_snapshot]", {
-            workspaceId,
-            planCode: "audit_test",
-            sessionId: sessionRef,
-            grantQuantity: auditQuantity,
-            grantedTotal: totalsAfterGrant.granted,
-            consumedTotal: totalsAfterGrant.consumed,
-            availableTotal: totalsAfterGrant.available,
-            availableBeforeGrant: totalsBeforeGrant.available,
-          });
-          if (totalsAfterGrant.available <= totalsBeforeGrant.available) {
-            console.error("[billing][security][grant_without_available_increase]", {
-              workspaceId,
-              planCode: "audit_test",
-              sessionId: sessionRef,
-              grantQuantity: auditQuantity,
-              availableBeforeGrant: totalsBeforeGrant.available,
-              availableAfterGrant: totalsAfterGrant.available,
-            });
-          }
+        if (!starterGrant.ok) {
+          return NextResponse.json({ error: starterGrant.error }, { status: 500 });
         }
 
         const billingOk = await insertBillingPayment(supabaseAdmin, billingInsertBase);
@@ -1833,18 +1298,7 @@ export async function POST(request: NextRequest) {
           sessionId: sessionRef,
         });
 
-        await persistAuditTestPurchase({
-          supabaseAdmin,
-          workspaceId,
-          userId,
-          sessionId: sessionRef,
-          listingUrl: sessionForPersist.metadata?.audit_listing_url ?? null,
-          title: sessionForPersist.metadata?.audit_title ?? null,
-          platform: sessionForPersist.metadata?.audit_platform ?? null,
-          generatedAt: sessionForPersist.metadata?.audit_generated_at ?? null,
-          score: sessionForPersist.metadata?.audit_score ?? null,
-          summary: sessionForPersist.metadata?.audit_summary ?? null,
-        });
+        // No audit row is created here: the purchase grants a credit (above) and the customer launches a real audit from the dashboard.
 
         const subOk = await updateWorkspaceSubscriptionByWorkspaceId(
           supabaseAdmin,

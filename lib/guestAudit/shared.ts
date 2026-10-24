@@ -37,21 +37,21 @@ function isVrboLikeExpediaPath(pathname: string): boolean {
   ].some((needle) => pathname.toLowerCase().includes(needle));
 }
 
-const URL_INCOMPLETE_MESSAGE =
+export const URL_INCOMPLETE_MESSAGE =
   "URL incomplete : merci de coller l'URL publique complete de l'annonce.";
-const URL_INVALID_MESSAGE =
+export const URL_INVALID_MESSAGE =
   "URL invalide : cette adresse ne correspond pas a une page d'annonce exploitable.";
-const PLATFORM_UNSUPPORTED_MESSAGE =
+export const PLATFORM_UNSUPPORTED_MESSAGE =
   "Plateforme non reconnue : seules certaines pages Airbnb / Booking / Vrbo / Agoda sont acceptees.";
-const PAGE_UNUSABLE_MESSAGE =
+export const PAGE_UNUSABLE_MESSAGE =
   "Page non exploitable : les donnees necessaires n'ont pas pu etre extraites.";
-const AIRBNB_INVALID_MESSAGE = [
+export const AIRBNB_INVALID_MESSAGE = [
   "Lien non valide. Merci de coller le lien complet de l'annonce Airbnb.",
   "Exemples de liens valides :",
   "https://www.airbnb.com/rooms/12345",
   "https://www.airbnb.fr/rooms/12345",
 ].join("\n");
-const AIRBNB_SHORT_LINK_MESSAGE = [
+export const AIRBNB_SHORT_LINK_MESSAGE = [
   "Lien non valide. Merci de coller le lien complet de l'annonce Airbnb.",
   "Exemples de liens valides :",
   "https://www.airbnb.com/rooms/12345",
@@ -195,6 +195,38 @@ function canonicalizeGuestUrl(input: string): CanonicalGuestUrl | null {
     platformCategory: site.platformCategory,
     detectedSiteLabel: site.detectedSiteLabel,
   };
+}
+
+/**
+ * Stable codes for the historical (French) `reason` strings of `validateGuestListingUrl`.
+ * The `reason` field itself is unchanged (the guest-audit API still returns it); user interfaces map the code
+ * to their own localized message. Returns null for a string that is not one of the known reasons.
+ */
+export type GuestListingReasonCode =
+  | "url_incomplete"
+  | "url_invalid"
+  | "platform_unsupported"
+  | "page_unusable"
+  | "airbnb_invalid"
+  | "airbnb_short_link";
+
+export function getGuestListingReasonCode(reason: string | null | undefined): GuestListingReasonCode | null {
+  switch (reason) {
+    case URL_INCOMPLETE_MESSAGE:
+      return "url_incomplete";
+    case URL_INVALID_MESSAGE:
+      return "url_invalid";
+    case PLATFORM_UNSUPPORTED_MESSAGE:
+      return "platform_unsupported";
+    case PAGE_UNUSABLE_MESSAGE:
+      return "page_unusable";
+    case AIRBNB_INVALID_MESSAGE:
+      return "airbnb_invalid";
+    case AIRBNB_SHORT_LINK_MESSAGE:
+      return "airbnb_short_link";
+    default:
+      return null;
+  }
 }
 
 export function detectPlatformFromUrl(url: string): GuestSupportedPlatform {

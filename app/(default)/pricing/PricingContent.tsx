@@ -11,22 +11,23 @@ import { useTranslation } from "@/components/i18n/useTranslation";
 import { authorityTrustI18n } from "@/data/marketing/authorityTrustI18n";
 import { pricingI18n } from "@/data/marketing/pricingI18n";
 import { buildLocalizedPath } from "@/lib/seo/seoUrls";
+import { getAuditEntryDestinations } from "@/lib/guestAudit/entryDestination";
 
 const planUiConfig = [
   {
     accent: "slate",
     highlighted: false,
-    href: "/audit/new?restored=1&offer=audit_test",
+    offer: "audit_test",
   },
   {
     accent: "orange",
     highlighted: true,
-    href: "/audit/new?restored=1&offer=pack_5",
+    offer: "pack_5",
   },
   {
     accent: "sky",
     highlighted: false,
-    href: "/audit/new?restored=1&offer=pack_15",
+    offer: "pack_15",
   },
 ] as const;
 
@@ -62,7 +63,6 @@ export default function PricingContent() {
     };
   }, []);
 
-  const authGateHref = `/sign-in?next=${encodeURIComponent("/pricing")}`;
 
   return (
     <MarketingPageShell>
@@ -191,7 +191,7 @@ export default function PricingContent() {
                 <div className="mt-5 flex-1" />
 
                 <Link
-                  href={isAuthenticated ? plan.href : authGateHref}
+                  href={getAuditEntryDestinations({ isAuthenticated, offer: plan.offer }).billingHref}
                   className={
                     "inline-flex h-10 w-full items-center justify-center rounded-xl text-[11px] font-semibold uppercase tracking-[0.18em] transition-all duration-200 " +
                     (plan.highlighted
@@ -390,7 +390,7 @@ export default function PricingContent() {
           <div className="flex flex-wrap items-center gap-3 md:justify-end">
             <div className="flex flex-col items-start gap-2 md:items-end">
               <Link
-                href="/sign-in?next=/audit/new"
+                href={getAuditEntryDestinations({ isAuthenticated }).billingHref}
                 className="rounded-2xl bg-[linear-gradient(135deg,#3b82f6_0%,#06b6d4_50%,#7c3aed_100%)] px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-white shadow-[0_12px_30px_rgba(59,130,246,0.30)] transition-all duration-200 hover:-translate-y-[1px] hover:brightness-105"
               >
                 {copy.cta.primary}
