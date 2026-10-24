@@ -6,11 +6,8 @@ import { useTranslation } from "@/components/i18n/useTranslation";
 import { useRouter, useSearchParams } from "next/navigation";
 import { pricingPlans } from "@/lib/billing/pricingPlans";
 import { getWorkspaceAuditCredits } from "@/lib/billing/getWorkspaceAuditCredits";
-import {
-  loadGuestAuditDraft,
-  persistGuestAuditDraftAfterPayment,
-  saveGuestAuditDraft,
-} from "@/lib/guestAuditDraft";
+import { loadGuestAuditDraft, saveGuestAuditDraft } from "@/lib/guestAuditDraft";
+import { resolvePostPaymentState, waitForPostPaymentConfirmation, type PostPaymentState } from "@/lib/billing/postPayment";
 import { supabase } from "@/lib/supabase";
 import { getStoredWorkspaceId } from "@/lib/workspaces/getStoredWorkspaceId";
 import { setStoredWorkspaceId } from "@/lib/workspaces/setStoredWorkspaceId";
@@ -28,11 +25,11 @@ const billingCopy = {
   en: {
     checkoutLoading: "Opening payment...",
     heading: "Billing",
-    conversionReading: "Immediate conversion reading",
+    conversionReading: "Listing conversion analysis",
     subtitle:
-      "Choose the right pack for your audit volume: fewer one-off purchases, lower cost per audit and continuous usage.",
+      "Buy 1, 5 or 15 audit credits whenever you need them. Each purchase adds to your existing balance. One-time payments, no subscription.",
     paymentProcessing:
-      "Payment is being validated… your credits will arrive in a few seconds.",
+      "Payment is being validated… your credits will be added once the payment is confirmed.",
     adminUnlimited: "Platform admin — unlimited audits",
     availableCredits: "Available credits",
     averageBookings: "Conversion potential analysis",
@@ -62,17 +59,17 @@ const billingCopy = {
     checkoutOpenGenericError:
       "The payment page could not be opened right now. Please try again in a few moments.",
     upsellSoftMessage:
-      "Only 2 audits left. Plan ahead now to keep your optimization pace.",
+      "Only 2 audits left. You can buy more audit credits at any time.",
     upsellCriticalMessage:
-      "Last audit available. Move to the next offer to avoid interrupting your analyses.",
+      "Last audit available. You can buy more audit credits whenever you need them.",
     upsellEmptyFreeMessage:
-      "You have no credits left. The Pro pack (5 audits, one-time payment) lets you continue with a better cost per audit than single purchases.",
+      "You have no credits left. Buy audit credits whenever you need them: Starter (1 audit), Pro (5 audits) or Scale (15 audits). Larger packs cost less per audit.",
     upsellEmptyProMessage:
-      "You have no credits left. The Scale pack (15 audits, one-time payment — same offer as on the card) lowers the cost per audit compared with single purchases.",
+      "You have no credits left. Buy audit credits whenever you need them: Starter (1 audit), Pro (5 audits) or Scale (15 audits). Larger packs cost less per audit.",
     upsellEmptyScaleMessage:
-      "You have no audits left. Top up now to keep usage continuity.",
+      "You have no audits left. Buy more audit credits whenever you need them.",
     upsellBalanceText:
-      "Balance for new audits: {remaining}/{total} (remaining credits on your offer ceiling — not the number of reports already in your history). Plan ahead to avoid any audit interruption.",
+      "Balance for new audits: {remaining} credits (not the number of reports already in your history). Each purchase adds to your existing balance.",
     starter: {
       name: "Starter",
       audience: "Best for testing the platform",
@@ -80,7 +77,7 @@ const billingCopy = {
       description:
         "Best for a one-off need, but quickly expensive if you audit regularly.",
       bulletOne: "1 audit on the listing of your choice",
-      conversionReading: "Immediate conversion reading",
+      conversionReading: "Listing conversion analysis",
       bulletThree: "Priority recommendations",
       bulletTwo: "One-off purchase",
       cta: "Buy 1 audit",
@@ -90,7 +87,7 @@ const billingCopy = {
       subtitle: "5-audit pack (one-time payment)",
       description: "One-time pack, no subscription.",
       bulletOne: "5 audits to use after purchase",
-      conversionReading: "Immediate conversion reading",
+      conversionReading: "Listing conversion analysis",
       cta: "Buy Pro pack (5 audits)",
       audience: "The best balance for comparing several listings",
       savings: "One-time pack, no subscription. Around {unit} per audit, with {savings} saved vs {total} one-off purchases.",
@@ -103,7 +100,7 @@ const billingCopy = {
       subtitle: "15-audit pack (one-time payment)",
       description: "One-time pack, no subscription.",
       bulletOne: "15 audits to use after purchase",
-      conversionReading: "Immediate conversion reading",
+      conversionReading: "Listing conversion analysis",
       cta: "Buy Scale pack (15 audits)",
       audience: "Designed for larger portfolios",
       savings: "One-time pack, no subscription. Around {unit} per audit, with {savings} saved vs {total} one-off purchases.",
@@ -121,7 +118,7 @@ const billingCopy = {
       "The payment service is temporarily unavailable. Please try again later.",
     planLoadingMessage: "Your plan is still loading. Please try again in a moment.",
     paymentValidationHoldMessage:
-      "Payment is being validated. Your credits will arrive in a few seconds — please wait before making another purchase.",
+      "Payment is being validated. Your credits will be added once the payment is confirmed — please wait before making another purchase.",
     paymentAlreadyInProgressMessage:
       "A payment is already in progress. Please wait a few seconds.",
     incompletePaymentResponse: "Incomplete payment response (missing redirect URL).",
@@ -131,26 +128,26 @@ const billingCopy = {
     duplicateAuditUnlockedPersisted:
       "This test audit has already been purchased for this listing.",
     behaviorUpsellStarterPurchaseMessage:
-      "You often buy single audits. The Pro pack (5 audits, one-time payment) lowers the cost per audit and keeps your pace secure.",
+      "You buy single audits often. Larger packs cost less per audit: Pro (5 audits, one-time payment). You can still buy any offer at any time.",
     behaviorUpsellHighPaceMessage:
-      "Your usage pace is high: the Scale pack (15 audits, one-time payment — same offer as on the card) secures volume with a better cost per audit.",
+      "Your usage pace is high. Scale (15 audits, one-time payment) costs less per audit, and you can buy any offer at any time.",
     behaviorUpsellScaleDepletedMessage:
-      "Your Scale credits are exhausted. Top up now to avoid interrupting your ongoing optimizations.",
+      "Your credits are used up. Buy more audit credits whenever you need them.",
     paymentSuccessAuditTest: "Payment successful. Your test audit is now unlocked.",
     viewListings: "View listings",
     behaviorUpsellFooter:
-      "Based on your recent usage (balance for new audits: {remaining}/{total}) to preserve usage continuity.",
+      "Based on your recent usage (balance for new audits: {remaining} credits).",
     behaviorUpsellFooterScaleNote:
       "The button above triggers the same purchase as the Scale card (pack, one-time payment).",
   },
   fr: {
     checkoutLoading: "Ouverture du paiement...",
     heading: "Facturation",
-    conversionReading: "Lecture conversion immédiate",
+    conversionReading: "Analyse de conversion de l’annonce",
     subtitle:
-      "Choisissez le pack adapté à votre volume d’audits : moins d’achats unitaires, un coût par audit réduit et une utilisation continue.",
+      "Achetez 1, 5 ou 15 crédits d’audit quand vous en avez besoin. Chaque achat s’ajoute à votre solde existant. Paiements uniques, sans abonnement.",
     paymentProcessing:
-      "Paiement en cours de validation… vos crédits arriveront dans quelques secondes.",
+      "Paiement en cours de validation… vos crédits seront ajoutés une fois le paiement confirmé.",
     adminUnlimited: "Administrateur de la plateforme — audits illimités",
     availableCredits: "Crédits disponibles",
     averageBookings: "Analyse du potentiel de conversion",
@@ -180,17 +177,17 @@ const billingCopy = {
     checkoutOpenGenericError:
       "Impossible d’ouvrir la page de paiement pour le moment. Réessayez dans quelques instants.",
     upsellSoftMessage:
-      "Plus que 2 audits restants. Anticipez maintenant pour garder votre cadence d’optimisation.",
+      "Plus que 2 audits restants. Vous pouvez acheter des crédits d’audit supplémentaires à tout moment.",
     upsellCriticalMessage:
-      "Dernier audit disponible. Passez à l’offre supérieure pour éviter une interruption de vos analyses.",
+      "Dernier audit disponible. Vous pouvez acheter des crédits d’audit supplémentaires quand vous en avez besoin.",
     upsellEmptyFreeMessage:
-      "Vous n’avez plus de crédits. Le pack Pro (5 audits, paiement unique) permet de continuer avec un meilleur coût par audit que l’unitaire.",
+      "Vous n’avez plus de crédits. Achetez des crédits d’audit quand vous en avez besoin : Starter (1 audit), Pro (5 audits) ou Scale (15 audits). Les packs plus grands coûtent moins cher par audit.",
     upsellEmptyProMessage:
-      "Vous n’avez plus de crédits. Le pack Scale (15 audits, paiement unique — même offre que sur la carte) réduit le coût par audit par rapport à l’unitaire.",
+      "Vous n’avez plus de crédits. Achetez des crédits d’audit quand vous en avez besoin : Starter (1 audit), Pro (5 audits) ou Scale (15 audits). Les packs plus grands coûtent moins cher par audit.",
     upsellEmptyScaleMessage:
-      "Vous n’avez plus d’audits disponibles. Rechargez pour maintenir la continuité d’usage.",
+      "Vous n’avez plus d’audits disponibles. Achetez des crédits d’audit supplémentaires quand vous en avez besoin.",
     upsellBalanceText:
-      "Solde pour de nouveaux audits : {remaining}/{total} (crédits restants sur le plafond de votre offre — pas le nombre de rapports déjà dans l’historique). Anticipez pour éviter tout arrêt d’audit.",
+      "Solde pour de nouveaux audits : {remaining} crédits (et non le nombre de rapports déjà dans l’historique). Chaque achat s’ajoute à votre solde existant.",
     starter: {
       name: "Starter",
       audience: "Idéal pour tester la plateforme",
@@ -198,7 +195,7 @@ const billingCopy = {
       description:
         "Idéal pour un besoin ponctuel, mais vite coûteux si vous auditez régulièrement.",
       bulletOne: "1 audit sur l’annonce de votre choix",
-      conversionReading: "Lecture conversion immédiate",
+      conversionReading: "Analyse de conversion de l’annonce",
       bulletThree: "Recommandations prioritaires",
       bulletTwo: "Achat unitaire",
       cta: "Acheter 1 audit",
@@ -208,7 +205,7 @@ const billingCopy = {
       subtitle: "Pack 5 audits (paiement unique)",
       description: "Pack ponctuel, sans abonnement.",
       bulletOne: "5 audits à utiliser après achat",
-      conversionReading: "Lecture conversion immédiate",
+      conversionReading: "Analyse de conversion de l’annonce",
       cta: "Acheter le pack Pro (5 audits)",
       audience: "Le meilleur équilibre pour comparer plusieurs annonces",
       savings: "Pack ponctuel, sans abonnement. Soit ~{unit} par audit, avec {savings} € économisés vs {total} achats unitaires.",
@@ -221,7 +218,7 @@ const billingCopy = {
       subtitle: "Pack 15 audits (paiement unique)",
       description: "Pack ponctuel, sans abonnement.",
       bulletOne: "15 audits à utiliser après achat",
-      conversionReading: "Lecture conversion immédiate",
+      conversionReading: "Analyse de conversion de l’annonce",
       cta: "Acheter le pack Scale (15 audits)",
       audience: "Pensé pour les portefeuilles plus larges",
       savings: "Pack ponctuel, sans abonnement. Soit ~{unit} par audit, avec {savings} € économisés vs {total} achats unitaires.",
@@ -239,7 +236,7 @@ const billingCopy = {
       "Le service de paiement est momentanément indisponible. Réessayez plus tard.",
     planLoadingMessage: "Chargement du plan en cours. Réessayez dans un instant.",
     paymentValidationHoldMessage:
-      "Paiement en cours de validation. Vos crédits arrivent dans quelques secondes — patientez avant un nouvel achat.",
+      "Paiement en cours de validation. Vos crédits seront ajoutés une fois le paiement confirmé — patientez avant un nouvel achat.",
     paymentAlreadyInProgressMessage:
       "Un paiement est déjà en cours. Patientez quelques secondes.",
     incompletePaymentResponse:
@@ -251,27 +248,27 @@ const billingCopy = {
     duplicateAuditUnlockedPersisted:
       "Cet audit test a déjà été acheté pour cette annonce.",
     behaviorUpsellStarterPurchaseMessage:
-      "Vous rachetez souvent des audits unitaires. Le pack Pro (5 audits, paiement unique) réduit le coût par audit et sécurise votre rythme.",
+      "Vous achetez souvent des audits unitaires. Les packs plus grands coûtent moins cher par audit : Pro (5 audits, paiement unique). Vous pouvez acheter n’importe quelle offre à tout moment.",
     behaviorUpsellHighPaceMessage:
-      "Votre cadence est élevée : le pack Scale (15 audits, paiement unique — même offre que la carte) sécurise le volume avec un meilleur coût par audit.",
+      "Votre cadence est élevée. Scale (15 audits, paiement unique) coûte moins cher par audit, et vous pouvez acheter n’importe quelle offre à tout moment.",
     behaviorUpsellScaleDepletedMessage:
-      "Vos crédits Scale sont épuisés. Rechargez maintenant pour éviter d’interrompre vos optimisations en cours.",
+      "Vos crédits sont épuisés. Achetez des crédits d’audit supplémentaires quand vous en avez besoin.",
     paymentSuccessAuditTest:
       "Paiement réussi. Votre audit test est maintenant débloqué.",
     viewListings: "Voir les annonces",
     behaviorUpsellFooter:
-      "Basé sur votre consommation récente (solde pour nouveaux audits : {remaining}/{total}) pour préserver la continuité d’usage.",
+      "Selon votre utilisation récente (solde pour de nouveaux audits : {remaining} crédits).",
     behaviorUpsellFooterScaleNote:
       "Le bouton ci-dessus déclenche le même achat que sur la carte Scale (pack, paiement unique).",
   },
   es: {
     checkoutLoading: "Abriendo el pago...",
     heading: "Facturación",
-    conversionReading: "Lectura inmediata de conversión",
+    conversionReading: "Análisis de conversión del anuncio",
     subtitle:
-      "Elige el pack adecuado para tu volumen: menos compras unitarias, menor coste por auditoría y continuidad de uso.",
+      "Compra 1, 5 o 15 créditos de auditoría cuando los necesites. Cada compra se suma a tu saldo existente. Pagos únicos, sin suscripción.",
     paymentProcessing:
-      "Pago en validación… tus créditos llegarán en unos segundos.",
+      "Pago en validación… tus créditos se añadirán cuando se confirme el pago.",
     adminUnlimited: "Admin plataforma — auditorías ilimitadas",
     availableCredits: "Créditos disponibles",
     averageBookings: "Análisis del potencial de conversión",
@@ -301,17 +298,17 @@ const billingCopy = {
     checkoutOpenGenericError:
       "No se pudo abrir la página de pago por el momento. Vuelve a intentarlo en unos instantes.",
     upsellSoftMessage:
-      "Solo te quedan 2 auditorías. Anticípate ahora para mantener tu ritmo de optimización.",
+      "Solo te quedan 2 auditorías. Puedes comprar más créditos de auditoría en cualquier momento.",
     upsellCriticalMessage:
-      "Última auditoría disponible. Pasa a la oferta superior para evitar una interrupción de tus análisis.",
+      "Última auditoría disponible. Puedes comprar más créditos de auditoría cuando los necesites.",
     upsellEmptyFreeMessage:
-      "Ya no te quedan créditos. El pack Pro (5 auditorías, pago único) te permite continuar con un mejor coste por auditoría que la compra unitaria.",
+      "Ya no te quedan créditos. Compra créditos de auditoría cuando los necesites: Starter (1 auditoría), Pro (5 auditorías) o Scale (15 auditorías). Los packs más grandes cuestan menos por auditoría.",
     upsellEmptyProMessage:
-      "Ya no te quedan créditos. El pack Scale (15 auditorías, pago único — la misma oferta que en la tarjeta) reduce el coste por auditoría frente a la compra unitaria.",
+      "Ya no te quedan créditos. Compra créditos de auditoría cuando los necesites: Starter (1 auditoría), Pro (5 auditorías) o Scale (15 auditorías). Los packs más grandes cuestan menos por auditoría.",
     upsellEmptyScaleMessage:
-      "Ya no tienes auditorías disponibles. Recarga para mantener la continuidad de uso.",
+      "Ya no tienes auditorías disponibles. Compra más créditos de auditoría cuando los necesites.",
     upsellBalanceText:
-      "Saldo para nuevas auditorías: {remaining}/{total} (créditos restantes sobre el límite de tu oferta, no el número de informes ya presentes en tu historial). Anticípate para evitar cualquier interrupción de auditoría.",
+      "Saldo para nuevas auditorías: {remaining} créditos (no el número de informes ya presentes en tu historial). Cada compra se suma a tu saldo existente.",
     starter: {
       name: "Starter",
       audience: "Ideal para probar la plataforma",
@@ -319,7 +316,7 @@ const billingCopy = {
       description:
         "Ideal para una necesidad puntual, pero se vuelve caro si auditas con frecuencia.",
       bulletOne: "1 auditoría sobre el anuncio que elijas",
-      conversionReading: "Lectura inmediata de conversión",
+      conversionReading: "Análisis de conversión del anuncio",
       bulletThree: "Recomendaciones prioritarias",
       bulletTwo: "Compra unitaria",
       cta: "Comprar 1 auditoría",
@@ -329,7 +326,7 @@ const billingCopy = {
       subtitle: "Pack de 5 auditorías (pago único)",
       description: "Pack puntual, sin suscripción.",
       bulletOne: "5 auditorías para usar después de la compra",
-      conversionReading: "Lectura inmediata de conversión",
+      conversionReading: "Análisis de conversión del anuncio",
       cta: "Comprar pack Pro (5 auditorías)",
       audience: "El mejor equilibrio para comparar varios anuncios",
       savings: "Pack puntual, sin suscripción. Aproximadamente {unit} por auditoría, con {savings} € ahorrados frente a {total} compras unitarias.",
@@ -342,7 +339,7 @@ const billingCopy = {
       subtitle: "Pack de 15 auditorías (pago único)",
       description: "Pack puntual, sin suscripción.",
       bulletOne: "15 auditorías para usar después de la compra",
-      conversionReading: "Lectura inmediata de conversión",
+      conversionReading: "Análisis de conversión del anuncio",
       cta: "Comprar pack Scale (15 auditorías)",
       audience: "Diseñado para portafolios más amplios",
       savings: "Pack puntual, sin suscripción. Aproximadamente {unit} por auditoría, con {savings} € ahorrados frente a {total} compras unitarias.",
@@ -362,7 +359,7 @@ const billingCopy = {
     planLoadingMessage:
       "Tu plan todavía se está cargando. Inténtalo de nuevo en un momento.",
     paymentValidationHoldMessage:
-      "El pago se está validando. Tus créditos llegarán en unos segundos; espera antes de hacer otra compra.",
+      "El pago se está validando. Tus créditos se añadirán cuando se confirme el pago; espera antes de hacer otra compra.",
     paymentAlreadyInProgressMessage:
       "Ya hay un pago en curso. Espera unos segundos.",
     incompletePaymentResponse:
@@ -375,27 +372,27 @@ const billingCopy = {
     duplicateAuditUnlockedPersisted:
       "Esta auditoría de prueba ya se compró para este anuncio.",
     behaviorUpsellStarterPurchaseMessage:
-      "Compras auditorías individuales con frecuencia. El pack Pro (5 auditorías, pago único) reduce el coste por auditoría y asegura tu ritmo.",
+      "Compras auditorías individuales con frecuencia. Los packs más grandes cuestan menos por auditoría: Pro (5 auditorías, pago único). Puedes comprar cualquier oferta en cualquier momento.",
     behaviorUpsellHighPaceMessage:
-      "Tu ritmo de uso es alto: el pack Scale (15 auditorías, pago único — la misma oferta que en la tarjeta) asegura volumen con un mejor coste por auditoría.",
+      "Tu ritmo de uso es alto. Scale (15 auditorías, pago único) cuesta menos por auditoría, y puedes comprar cualquier oferta en cualquier momento.",
     behaviorUpsellScaleDepletedMessage:
-      "Tus créditos Scale se han agotado. Recarga ahora para no interrumpir tus optimizaciones en curso.",
+      "Tus créditos se han agotado. Compra más créditos de auditoría cuando los necesites.",
     paymentSuccessAuditTest:
       "Pago realizado. Tu auditoría de prueba ya está desbloqueada.",
     viewListings: "Ver anuncios",
     behaviorUpsellFooter:
-      "Basado en tu uso reciente (saldo para nuevas auditorías: {remaining}/{total}) para preservar la continuidad de uso.",
+      "Según tu uso reciente (saldo para nuevas auditorías: {remaining} créditos).",
     behaviorUpsellFooterScaleNote:
       "El botón de arriba activa la misma compra que la tarjeta Scale (pack, pago único).",
   },
   de: {
     checkoutLoading: "Zahlung wird geöffnet...",
     heading: "Abrechnung",
-    conversionReading: "Sofortige Conversion-Auswertung",
+    conversionReading: "Conversion-Analyse des Inserats",
     subtitle:
-      "Wähle das passende Paket für dein Audit-Volumen: weniger Einzelkäufe, geringere Kosten pro Audit und kontinuierliche Nutzung.",
+      "Kaufe 1, 5 oder 15 Audit-Credits, wann immer du sie brauchst. Jeder Kauf wird deinem bestehenden Guthaben hinzugefügt. Einmalzahlungen, kein Abonnement.",
     paymentProcessing:
-      "Die Zahlung wird bestätigt… deine Credits werden in wenigen Sekunden verfügbar sein.",
+      "Die Zahlung wird bestätigt… deine Credits werden hinzugefügt, sobald die Zahlung bestätigt ist.",
     adminUnlimited: "Plattform-Administrator — unbegrenzte Audits",
     availableCredits: "Verfügbare Credits",
     averageBookings: "+20 % mehr Buchungen im Durchschnitt",
@@ -425,17 +422,17 @@ const billingCopy = {
     checkoutOpenGenericError:
       "Die Zahlungsseite konnte im Moment nicht geöffnet werden. Bitte versuche es in wenigen Augenblicken erneut.",
     upsellSoftMessage:
-      "Nur noch 2 Audits verfügbar. Plane jetzt voraus, um dein Optimierungstempo beizubehalten.",
+      "Nur noch 2 Audits verfügbar. Du kannst jederzeit weitere Audit-Credits kaufen.",
     upsellCriticalMessage:
-      "Letztes Audit verfügbar. Wechsle zum nächsten Angebot, um eine Unterbrechung deiner Analysen zu vermeiden.",
+      "Letztes Audit verfügbar. Du kannst weitere Audit-Credits kaufen, wann immer du sie brauchst.",
     upsellEmptyFreeMessage:
-      "Du hast keine Credits mehr. Das Pro-Paket (5 Audits, Einmalzahlung) ermöglicht dir, mit geringeren Kosten pro Audit als beim Einzelkauf weiterzumachen.",
+      "Du hast keine Credits mehr. Kaufe Audit-Credits, wann immer du sie brauchst: Starter (1 Audit), Pro (5 Audits) oder Scale (15 Audits). Größere Pakete kosten pro Audit weniger.",
     upsellEmptyProMessage:
-      "Du hast keine Credits mehr. Das Scale-Paket (15 Audits, Einmalzahlung — dasselbe Angebot wie auf der Karte) senkt die Kosten pro Audit im Vergleich zum Einzelkauf.",
+      "Du hast keine Credits mehr. Kaufe Audit-Credits, wann immer du sie brauchst: Starter (1 Audit), Pro (5 Audits) oder Scale (15 Audits). Größere Pakete kosten pro Audit weniger.",
     upsellEmptyScaleMessage:
-      "Du hast keine Audits mehr verfügbar. Lade jetzt nach, um die Nutzung ohne Unterbrechung fortzusetzen.",
+      "Du hast keine Audits mehr verfügbar. Kaufe weitere Audit-Credits, wann immer du sie brauchst.",
     upsellBalanceText:
-      "Guthaben für neue Audits: {remaining}/{total} (verbleibende Credits innerhalb deines Angebotslimits — nicht die Anzahl der Berichte, die bereits im Verlauf vorhanden sind). Plane voraus, um jede Unterbrechung von Audits zu vermeiden.",
+      "Guthaben für neue Audits: {remaining} Credits (nicht die Anzahl der Berichte, die bereits im Verlauf vorhanden sind). Jeder Kauf wird deinem bestehenden Guthaben hinzugefügt.",
     starter: {
       name: "Starter",
       audience: "Ideal zum Testen der Plattform",
@@ -443,7 +440,7 @@ const billingCopy = {
       description:
         "Ideal für einen einmaligen Bedarf, aber schnell teuer, wenn du regelmäßig Audits durchführst.",
       bulletOne: "1 Audit für das Inserat deiner Wahl",
-      conversionReading: "Sofortige Conversion-Auswertung",
+      conversionReading: "Conversion-Analyse des Inserats",
       bulletThree: "Priorisierte Empfehlungen",
       bulletTwo: "Einzelkauf",
       cta: "1 Audit kaufen",
@@ -453,7 +450,7 @@ const billingCopy = {
       subtitle: "5-Audit-Paket (Einmalzahlung)",
       description: "Einmaliges Paket, kein Abonnement.",
       bulletOne: "5 Audits zur Nutzung nach dem Kauf",
-      conversionReading: "Sofortige Conversion-Auswertung",
+      conversionReading: "Conversion-Analyse des Inserats",
       cta: "Pro-Paket kaufen (5 Audits)",
       audience: "Die beste Balance zum Vergleichen mehrerer Inserate",
       savings: "Einmaliges Paket, kein Abonnement. Etwa {unit} pro Audit, mit {savings} € Ersparnis gegenüber {total} Einzelkäufen.",
@@ -466,7 +463,7 @@ const billingCopy = {
       subtitle: "15-Audit-Paket (Einmalzahlung)",
       description: "Einmaliges Paket, kein Abonnement.",
       bulletOne: "15 Audits zur Nutzung nach dem Kauf",
-      conversionReading: "Sofortige Conversion-Auswertung",
+      conversionReading: "Conversion-Analyse des Inserats",
       cta: "Scale-Paket kaufen (15 Audits)",
       audience: "Entwickelt für größere Portfolios",
       savings: "Einmaliges Paket, kein Abonnement. Etwa {unit} pro Audit, mit {savings} € Ersparnis gegenüber {total} Einzelkäufen.",
@@ -486,7 +483,7 @@ const billingCopy = {
     planLoadingMessage:
       "Dein Tarif wird noch geladen. Bitte versuche es gleich noch einmal.",
     paymentValidationHoldMessage:
-      "Die Zahlung wird bestätigt. Deine Credits kommen in wenigen Sekunden an — warte bitte, bevor du einen weiteren Kauf startest.",
+      "Die Zahlung wird bestätigt. Deine Credits werden hinzugefügt, sobald die Zahlung bestätigt ist — warte bitte, bevor du einen weiteren Kauf startest.",
     paymentAlreadyInProgressMessage:
       "Eine Zahlung ist bereits im Gange. Bitte warte ein paar Sekunden.",
     incompletePaymentResponse:
@@ -499,27 +496,27 @@ const billingCopy = {
     duplicateAuditUnlockedPersisted:
       "Dieses Test-Audit wurde für dieses Inserat bereits gekauft.",
     behaviorUpsellStarterPurchaseMessage:
-      "Du kaufst häufig Einzel-Audits. Das Pro-Paket (5 Audits, Einmalzahlung) senkt die Kosten pro Audit und sichert dein Tempo.",
+      "Du kaufst häufig Einzel-Audits. Größere Pakete kosten pro Audit weniger: Pro (5 Audits, Einmalzahlung). Du kannst jederzeit jedes Angebot kaufen.",
     behaviorUpsellHighPaceMessage:
-      "Dein Nutzungstempo ist hoch: Das Scale-Paket (15 Audits, Einmalzahlung — dasselbe Angebot wie auf der Karte) sichert das Volumen mit besseren Kosten pro Audit.",
+      "Dein Nutzungstempo ist hoch. Scale (15 Audits, Einmalzahlung) kostet pro Audit weniger, und du kannst jederzeit jedes Angebot kaufen.",
     behaviorUpsellScaleDepletedMessage:
-      "Deine Scale-Credits sind aufgebraucht. Lade jetzt nach, um laufende Optimierungen nicht zu unterbrechen.",
+      "Deine Credits sind aufgebraucht. Kaufe weitere Audit-Credits, wann immer du sie brauchst.",
     paymentSuccessAuditTest:
       "Zahlung erfolgreich. Dein Test-Audit ist jetzt freigeschaltet.",
     viewListings: "Inserate ansehen",
     behaviorUpsellFooter:
-      "Basierend auf deiner jüngsten Nutzung (Guthaben für neue Audits: {remaining}/{total}), um die Nutzungskontinuität zu sichern.",
+      "Basierend auf deiner letzten Nutzung (Guthaben für neue Audits: {remaining} Credits).",
     behaviorUpsellFooterScaleNote:
       "Die Schaltfläche oben startet denselben Kauf wie die Scale-Karte (Paket, Einmalzahlung).",
   },
   it: {
     checkoutLoading: "Apertura del pagamento...",
     heading: "Fatturazione",
-    conversionReading: "Lettura immediata della conversione",
+    conversionReading: "Analisi della conversione dell’annuncio",
     subtitle:
-      "Scegli il pacchetto adatto al tuo volume di audit: meno acquisti singoli, costo per audit ridotto e uso continuo.",
+      "Acquista 1, 5 o 15 crediti audit quando ti servono. Ogni acquisto si aggiunge al tuo saldo esistente. Pagamenti unici, nessun abbonamento.",
     paymentProcessing:
-      "Pagamento in fase di convalida… i tuoi crediti arriveranno tra pochi secondi.",
+      "Pagamento in fase di convalida… i tuoi crediti saranno aggiunti una volta confermato il pagamento.",
     adminUnlimited: "Amministratore della piattaforma — audit illimitati",
     availableCredits: "Crediti disponibili",
     averageBookings: "Analisi del potenziale di conversione",
@@ -549,17 +546,17 @@ const billingCopy = {
     checkoutOpenGenericError:
       "Non è stato possibile aprire la pagina di pagamento in questo momento. Riprova tra qualche istante.",
     upsellSoftMessage:
-      "Ti restano solo 2 audit. Anticipa ora per mantenere il tuo ritmo di ottimizzazione.",
+      "Ti restano solo 2 audit. Puoi acquistare altri crediti audit in qualsiasi momento.",
     upsellCriticalMessage:
-      "Ultimo audit disponibile. Passa all’offerta superiore per evitare un’interruzione delle tue analisi.",
+      "Ultimo audit disponibile. Puoi acquistare altri crediti audit quando ti servono.",
     upsellEmptyFreeMessage:
-      "Non hai più crediti. Il pacchetto Pro (5 audit, pagamento unico) ti permette di continuare con un costo per audit migliore rispetto all’acquisto singolo.",
+      "Non hai più crediti. Acquista crediti audit quando ti servono: Starter (1 audit), Pro (5 audit) o Scale (15 audit). I pacchetti più grandi costano meno per audit.",
     upsellEmptyProMessage:
-      "Non hai più crediti. Il pacchetto Scale (15 audit, pagamento unico — la stessa offerta mostrata sulla card) riduce il costo per audit rispetto all’acquisto singolo.",
+      "Non hai più crediti. Acquista crediti audit quando ti servono: Starter (1 audit), Pro (5 audit) o Scale (15 audit). I pacchetti più grandi costano meno per audit.",
     upsellEmptyScaleMessage:
-      "Non hai più audit disponibili. Ricarica per mantenere la continuità d’uso.",
+      "Non hai più audit disponibili. Acquista altri crediti audit quando ti servono.",
     upsellBalanceText:
-      "Saldo per nuovi audit: {remaining}/{total} (crediti rimanenti sul tetto della tua offerta, non il numero di report già presenti nello storico). Anticipa ora per evitare qualsiasi interruzione degli audit.",
+      "Saldo per nuovi audit: {remaining} crediti (non il numero di report già presenti nello storico). Ogni acquisto si aggiunge al tuo saldo esistente.",
     starter: {
       name: "Starter",
       audience: "Ideale per testare la piattaforma",
@@ -567,7 +564,7 @@ const billingCopy = {
       description:
         "Ideale per un’esigenza occasionale, ma rapidamente costoso se esegui audit regolarmente.",
       bulletOne: "1 audit sull’annuncio che preferisci",
-      conversionReading: "Lettura immediata della conversione",
+      conversionReading: "Analisi della conversione dell’annuncio",
       bulletThree: "Raccomandazioni prioritarie",
       bulletTwo: "Acquisto singolo",
       cta: "Acquista 1 audit",
@@ -577,7 +574,7 @@ const billingCopy = {
       subtitle: "Pacchetto da 5 audit (pagamento unico)",
       description: "Pacchetto una tantum, senza abbonamento.",
       bulletOne: "5 audit da utilizzare dopo l’acquisto",
-      conversionReading: "Lettura immediata della conversione",
+      conversionReading: "Analisi della conversione dell’annuncio",
       cta: "Acquista pacchetto Pro (5 audit)",
       audience: "Il miglior equilibrio per confrontare più annunci",
       savings: "Pacchetto una tantum, senza abbonamento. Circa {unit} per audit, con {savings} € risparmiati rispetto a {total} acquisti singoli.",
@@ -590,7 +587,7 @@ const billingCopy = {
       subtitle: "Pacchetto da 15 audit (pagamento unico)",
       description: "Pacchetto una tantum, senza abbonamento.",
       bulletOne: "15 audit da utilizzare dopo l’acquisto",
-      conversionReading: "Lettura immediata della conversione",
+      conversionReading: "Analisi della conversione dell’annuncio",
       cta: "Acquista pacchetto Scale (15 audit)",
       audience: "Pensato per portafogli più ampi",
       savings: "Pacchetto una tantum, senza abbonamento. Circa {unit} per audit, con {savings} € risparmiati rispetto a {total} acquisti singoli.",
@@ -610,7 +607,7 @@ const billingCopy = {
     planLoadingMessage:
       "Il tuo piano è ancora in caricamento. Riprova tra un momento.",
     paymentValidationHoldMessage:
-      "Il pagamento è in fase di convalida. I tuoi crediti arriveranno tra pochi secondi — attendi prima di effettuare un altro acquisto.",
+      "Il pagamento è in fase di convalida. I tuoi crediti saranno aggiunti una volta confermato il pagamento — attendi prima di effettuare un altro acquisto.",
     paymentAlreadyInProgressMessage:
       "È già in corso un pagamento. Attendi qualche secondo.",
     incompletePaymentResponse:
@@ -623,27 +620,27 @@ const billingCopy = {
     duplicateAuditUnlockedPersisted:
       "Questo audit di prova è già stato acquistato per questo annuncio.",
     behaviorUpsellStarterPurchaseMessage:
-      "Acquisti spesso audit singoli. Il pacchetto Pro (5 audit, pagamento unico) riduce il costo per audit e protegge il tuo ritmo.",
+      "Acquisti spesso audit singoli. I pacchetti più grandi costano meno per audit: Pro (5 audit, pagamento unico). Puoi acquistare qualsiasi offerta in qualsiasi momento.",
     behaviorUpsellHighPaceMessage:
-      "Il tuo ritmo di utilizzo è elevato: il pacchetto Scale (15 audit, pagamento unico — la stessa offerta mostrata sulla card) garantisce volume con un costo per audit migliore.",
+      "Il tuo ritmo di utilizzo è elevato. Scale (15 audit, pagamento unico) costa meno per audit, e puoi acquistare qualsiasi offerta in qualsiasi momento.",
     behaviorUpsellScaleDepletedMessage:
-      "I tuoi crediti Scale sono esauriti. Ricarica ora per non interrompere le ottimizzazioni in corso.",
+      "I tuoi crediti sono esauriti. Acquista altri crediti audit quando ti servono.",
     paymentSuccessAuditTest:
       "Pagamento riuscito. Il tuo audit di prova è ora sbloccato.",
     viewListings: "Vedi annunci",
     behaviorUpsellFooter:
-      "Basato sull’utilizzo recente (saldo per nuovi audit: {remaining}/{total}) per preservare la continuità d’uso.",
+      "In base al tuo utilizzo recente (saldo per nuovi audit: {remaining} crediti).",
     behaviorUpsellFooterScaleNote:
       "Il pulsante qui sopra attiva lo stesso acquisto della card Scale (pacchetto, pagamento unico).",
   },
   pt: {
     checkoutLoading: "A abrir o pagamento...",
     heading: "Faturação",
-    conversionReading: "Leitura imediata da conversão",
+    conversionReading: "Análise de conversão do anúncio",
     subtitle:
-      "Escolha o pack certo para o seu volume de auditorias: menos compras unitárias, menor custo por auditoria e utilização contínua.",
+      "Compre 1, 5 ou 15 créditos de auditoria sempre que precisar. Cada compra soma-se ao seu saldo existente. Pagamentos únicos, sem subscrição.",
     paymentProcessing:
-      "Pagamento em validação… os seus créditos chegarão dentro de alguns segundos.",
+      "Pagamento em validação… os seus créditos serão adicionados assim que o pagamento for confirmado.",
     adminUnlimited: "Administrador da plataforma — auditorias ilimitadas",
     availableCredits: "Créditos disponíveis",
     averageBookings: "Análise do potencial de conversão",
@@ -673,17 +670,17 @@ const billingCopy = {
     checkoutOpenGenericError:
       "Não foi possível abrir a página de pagamento neste momento. Tente novamente dentro de instantes.",
     upsellSoftMessage:
-      "Restam apenas 2 auditorias. Antecipe-se agora para manter o seu ritmo de otimização.",
+      "Restam apenas 2 auditorias. Pode comprar mais créditos de auditoria a qualquer momento.",
     upsellCriticalMessage:
-      "Última auditoria disponível. Passe para a oferta superior para evitar uma interrupção das suas análises.",
+      "Última auditoria disponível. Pode comprar mais créditos de auditoria sempre que precisar.",
     upsellEmptyFreeMessage:
-      "Já não tem créditos. O pack Pro (5 auditorias, pagamento único) permite continuar com um custo por auditoria melhor do que a compra unitária.",
+      "Já não tem créditos. Compre créditos de auditoria sempre que precisar: Starter (1 auditoria), Pro (5 auditorias) ou Scale (15 auditorias). Os packs maiores custam menos por auditoria.",
     upsellEmptyProMessage:
-      "Já não tem créditos. O pack Scale (15 auditorias, pagamento único — a mesma oferta do cartão) reduz o custo por auditoria em comparação com a compra unitária.",
+      "Já não tem créditos. Compre créditos de auditoria sempre que precisar: Starter (1 auditoria), Pro (5 auditorias) ou Scale (15 auditorias). Os packs maiores custam menos por auditoria.",
     upsellEmptyScaleMessage:
-      "Já não tem auditorias disponíveis. Recarregue para manter a continuidade de utilização.",
+      "Já não tem auditorias disponíveis. Compre mais créditos de auditoria sempre que precisar.",
     upsellBalanceText:
-      "Saldo para novas auditorias: {remaining}/{total} (créditos restantes no limite da sua oferta — e não o número de relatórios já presentes no histórico). Antecipe-se para evitar qualquer interrupção das auditorias.",
+      "Saldo para novas auditorias: {remaining} créditos (e não o número de relatórios já presentes no histórico). Cada compra soma-se ao seu saldo existente.",
     starter: {
       name: "Starter",
       audience: "Ideal para testar a plataforma",
@@ -691,7 +688,7 @@ const billingCopy = {
       description:
         "Ideal para uma necessidade pontual, mas rapidamente caro se fizer auditorias com regularidade.",
       bulletOne: "1 auditoria no anúncio à sua escolha",
-      conversionReading: "Leitura imediata da conversão",
+      conversionReading: "Análise de conversão do anúncio",
       bulletThree: "Recomendações prioritárias",
       bulletTwo: "Compra unitária",
       cta: "Comprar 1 auditoria",
@@ -701,7 +698,7 @@ const billingCopy = {
       subtitle: "Pack de 5 auditorias (pagamento único)",
       description: "Pack pontual, sem subscrição.",
       bulletOne: "5 auditorias para utilizar após a compra",
-      conversionReading: "Leitura imediata da conversão",
+      conversionReading: "Análise de conversão do anúncio",
       cta: "Comprar pack Pro (5 auditorias)",
       audience: "O melhor equilíbrio para comparar vários anúncios",
       savings: "Pack pontual, sem subscrição. Cerca de {unit} por auditoria, com {savings} € poupados face a {total} compras unitárias.",
@@ -714,7 +711,7 @@ const billingCopy = {
       subtitle: "Pack de 15 auditorias (pagamento único)",
       description: "Pack pontual, sem subscrição.",
       bulletOne: "15 auditorias para utilizar após a compra",
-      conversionReading: "Leitura imediata da conversão",
+      conversionReading: "Análise de conversão do anúncio",
       cta: "Comprar pack Scale (15 auditorias)",
       audience: "Pensado para portefólios maiores",
       savings: "Pack pontual, sem subscrição. Cerca de {unit} por auditoria, com {savings} € poupados face a {total} compras unitárias.",
@@ -734,7 +731,7 @@ const billingCopy = {
     planLoadingMessage:
       "O seu plano ainda está a carregar. Tente novamente dentro de instantes.",
     paymentValidationHoldMessage:
-      "O pagamento está em validação. Os seus créditos chegarão dentro de alguns segundos — aguarde antes de fazer outra compra.",
+      "O pagamento está em validação. Os seus créditos serão adicionados assim que o pagamento for confirmado — aguarde antes de fazer outra compra.",
     paymentAlreadyInProgressMessage:
       "Já existe um pagamento em curso. Aguarde alguns segundos.",
     incompletePaymentResponse:
@@ -747,27 +744,27 @@ const billingCopy = {
     duplicateAuditUnlockedPersisted:
       "Esta auditoria de teste já foi comprada para este anúncio.",
     behaviorUpsellStarterPurchaseMessage:
-      "Compra auditorias unitárias com frequência. O pack Pro (5 auditorias, pagamento único) reduz o custo por auditoria e protege o seu ritmo.",
+      "Compra auditorias unitárias com frequência. Os packs maiores custam menos por auditoria: Pro (5 auditorias, pagamento único). Pode comprar qualquer oferta a qualquer momento.",
     behaviorUpsellHighPaceMessage:
-      "O seu ritmo de utilização é elevado: o pack Scale (15 auditorias, pagamento único — a mesma oferta do cartão) garante volume com um melhor custo por auditoria.",
+      "O seu ritmo de utilização é elevado. O Scale (15 auditorias, pagamento único) custa menos por auditoria, e pode comprar qualquer oferta a qualquer momento.",
     behaviorUpsellScaleDepletedMessage:
-      "Os seus créditos Scale esgotaram-se. Recarregue agora para evitar interromper as suas otimizações em curso.",
+      "Os seus créditos esgotaram-se. Compre mais créditos de auditoria sempre que precisar.",
     paymentSuccessAuditTest:
       "Pagamento efetuado com sucesso. A sua auditoria de teste está agora desbloqueada.",
     viewListings: "Ver anúncios",
     behaviorUpsellFooter:
-      "Baseado na sua utilização recente (saldo para novas auditorias: {remaining}/{total}) para preservar a continuidade de utilização.",
+      "Com base na sua utilização recente (saldo para novas auditorias: {remaining} créditos).",
     behaviorUpsellFooterScaleNote:
       "O botão acima aciona a mesma compra do cartão Scale (pack, pagamento único).",
   },
   nl: {
     checkoutLoading: "Betaling openen...",
     heading: "Facturatie",
-    conversionReading: "Onmiddellijke conversie-inzichten",
+    conversionReading: "Conversieanalyse van de advertentie",
     subtitle:
-      "Kies het juiste pakket voor je auditvolume: minder losse aankopen, lagere kosten per audit en doorlopend gebruik.",
+      "Koop 1, 5 of 15 auditcredits wanneer je ze nodig hebt. Elke aankoop wordt toegevoegd aan je bestaande saldo. Eenmalige betalingen, geen abonnement.",
     paymentProcessing:
-      "Betaling wordt gevalideerd… je credits komen binnen enkele seconden aan.",
+      "Betaling wordt gevalideerd… je credits worden toegevoegd zodra de betaling is bevestigd.",
     adminUnlimited: "Platformbeheerder — onbeperkte audits",
     availableCredits: "Beschikbare credits",
     averageBookings: "Analyse van conversiepotentieel",
@@ -797,17 +794,17 @@ const billingCopy = {
     checkoutOpenGenericError:
       "De betaalpagina kon op dit moment niet worden geopend. Probeer het over enkele ogenblikken opnieuw.",
     upsellSoftMessage:
-      "Je hebt nog maar 2 audits over. Anticipeer nu om je optimalisatieritme te behouden.",
+      "Je hebt nog maar 2 audits over. Je kunt op elk moment extra auditcredits kopen.",
     upsellCriticalMessage:
-      "Laatste audit beschikbaar. Stap over naar het hogere aanbod om een onderbreking van je analyses te vermijden.",
+      "Laatste audit beschikbaar. Je kunt extra auditcredits kopen wanneer je ze nodig hebt.",
     upsellEmptyFreeMessage:
-      "Je hebt geen credits meer. Het Pro-pakket (5 audits, eenmalige betaling) laat je doorgaan met een betere kost per audit dan losse aankopen.",
+      "Je hebt geen credits meer. Koop auditcredits wanneer je ze nodig hebt: Starter (1 audit), Pro (5 audits) of Scale (15 audits). Grotere pakketten kosten minder per audit.",
     upsellEmptyProMessage:
-      "Je hebt geen credits meer. Het Scale-pakket (15 audits, eenmalige betaling — dezelfde aanbieding als op de kaart) verlaagt de kost per audit ten opzichte van losse aankopen.",
+      "Je hebt geen credits meer. Koop auditcredits wanneer je ze nodig hebt: Starter (1 audit), Pro (5 audits) of Scale (15 audits). Grotere pakketten kosten minder per audit.",
     upsellEmptyScaleMessage:
-      "Je hebt geen audits meer beschikbaar. Laad bij om de continuiteit van het gebruik te behouden.",
+      "Je hebt geen audits meer beschikbaar. Koop extra auditcredits wanneer je ze nodig hebt.",
     upsellBalanceText:
-      "Saldo voor nieuwe audits: {remaining}/{total} (resterende credits binnen de limiet van je aanbod — niet het aantal rapporten dat al in je geschiedenis staat). Anticipeer om elke onderbreking van audits te vermijden.",
+      "Saldo voor nieuwe audits: {remaining} credits (niet het aantal rapporten dat al in je geschiedenis staat). Elke aankoop wordt toegevoegd aan je bestaande saldo.",
     starter: {
       name: "Starter",
       audience: "Ideaal om het platform te testen",
@@ -815,7 +812,7 @@ const billingCopy = {
       description:
         "Ideaal voor een eenmalige behoefte, maar snel duur als je regelmatig audits uitvoert.",
       bulletOne: "1 audit voor de advertentie van jouw keuze",
-      conversionReading: "Onmiddellijke conversie-inzichten",
+      conversionReading: "Conversieanalyse van de advertentie",
       bulletThree: "Prioritaire aanbevelingen",
       bulletTwo: "Losse aankoop",
       cta: "Koop 1 audit",
@@ -825,7 +822,7 @@ const billingCopy = {
       subtitle: "Pakket van 5 audits (eenmalige betaling)",
       description: "Eenmalig pakket, zonder abonnement.",
       bulletOne: "5 audits te gebruiken na aankoop",
-      conversionReading: "Onmiddellijke conversie-inzichten",
+      conversionReading: "Conversieanalyse van de advertentie",
       cta: "Koop Pro-pakket (5 audits)",
       audience: "De beste balans om meerdere advertenties te vergelijken",
       savings: "Eenmalig pakket, zonder abonnement. Ongeveer {unit} per audit, met {savings} € besparing ten opzichte van {total} losse aankopen.",
@@ -838,7 +835,7 @@ const billingCopy = {
       subtitle: "Pakket van 15 audits (eenmalige betaling)",
       description: "Eenmalig pakket, zonder abonnement.",
       bulletOne: "15 audits te gebruiken na aankoop",
-      conversionReading: "Onmiddellijke conversie-inzichten",
+      conversionReading: "Conversieanalyse van de advertentie",
       cta: "Koop Scale-pakket (15 audits)",
       audience: "Ontworpen voor grotere portefeuilles",
       savings: "Eenmalig pakket, zonder abonnement. Ongeveer {unit} per audit, met {savings} € besparing ten opzichte van {total} losse aankopen.",
@@ -858,7 +855,7 @@ const billingCopy = {
     planLoadingMessage:
       "Je plan is nog aan het laden. Probeer het zo meteen opnieuw.",
     paymentValidationHoldMessage:
-      "De betaling wordt gevalideerd. Je credits komen binnen enkele seconden aan — wacht even voordat je opnieuw koopt.",
+      "De betaling wordt gevalideerd. Je credits worden toegevoegd zodra de betaling is bevestigd — wacht even voordat je opnieuw koopt.",
     paymentAlreadyInProgressMessage:
       "Er is al een betaling bezig. Wacht een paar seconden.",
     incompletePaymentResponse:
@@ -871,27 +868,27 @@ const billingCopy = {
     duplicateAuditUnlockedPersisted:
       "Deze testaudit werd al gekocht voor deze listing.",
     behaviorUpsellStarterPurchaseMessage:
-      "Je koopt vaak losse audits. Het Pro-pakket (5 audits, eenmalige betaling) verlaagt de kost per audit en houdt je tempo veilig.",
+      "Je koopt vaak losse audits. Grotere pakketten kosten minder per audit: Pro (5 audits, eenmalige betaling). Je kunt op elk moment elk aanbod kopen.",
     behaviorUpsellHighPaceMessage:
-      "Je gebruiksritme ligt hoog: het Scale-pakket (15 audits, eenmalige betaling — dezelfde aanbieding als op de kaart) verzekert volume met een betere kost per audit.",
+      "Je gebruiksritme ligt hoog. Scale (15 audits, eenmalige betaling) kost minder per audit, en je kunt op elk moment elk aanbod kopen.",
     behaviorUpsellScaleDepletedMessage:
-      "Je Scale-credits zijn opgebruikt. Laad nu bij om je lopende optimalisaties niet te onderbreken.",
+      "Je credits zijn opgebruikt. Koop extra auditcredits wanneer je ze nodig hebt.",
     paymentSuccessAuditTest:
       "Betaling geslaagd. Je testaudit is nu ontgrendeld.",
     viewListings: "Bekijk listings",
     behaviorUpsellFooter:
-      "Gebaseerd op je recente gebruik (saldo voor nieuwe audits: {remaining}/{total}) om de gebruikscontinuïteit te bewaren.",
+      "Op basis van je recente gebruik (saldo voor nieuwe audits: {remaining} credits).",
     behaviorUpsellFooterScaleNote:
       "De knop hierboven start dezelfde aankoop als op de Scale-kaart (pakket, eenmalige betaling).",
   },
   ja: {
     checkoutLoading: "決済を開いています...",
     heading: "請求",
-    conversionReading: "即時コンバージョン診断",
+    conversionReading: "掲載のコンバージョン分析",
     subtitle:
-      "監査ボリュームに合ったパックを選びましょう。単発購入を減らし、1監査あたりのコストを抑え、継続的に利用できます。",
+      "必要なときに、1・5・15件分の監査クレジットを購入できます。購入のたびに既存の残高に追加されます。単発決済で、サブスクリプションはありません。",
     paymentProcessing:
-      "決済を確認中です… 数秒以内にクレジットが反映されます。",
+      "決済を確認中です… 決済が確認され次第、クレジットが追加されます。",
     adminUnlimited: "プラットフォーム管理者 — 無制限の監査",
     availableCredits: "利用可能なクレジット",
     averageBookings: "コンバージョン可能性の分析",
@@ -924,17 +921,17 @@ const billingCopy = {
     checkoutOpenGenericError:
       "決済ページを現在開けません。しばらくしてからもう一度お試しください。",
     upsellSoftMessage:
-      "残り監査数はあと 2 件です。最適化のペースを保つため、今のうちに準備しましょう。",
+      "残り監査数はあと 2 件です。監査クレジットはいつでも追加購入できます。",
     upsellCriticalMessage:
-      "利用可能な監査はあと 1 件です。分析を止めないために上位オファーへ切り替えましょう。",
+      "利用可能な監査はあと 1 件です。必要なときに監査クレジットを追加購入できます。",
     upsellEmptyFreeMessage:
-      "クレジットがありません。Pro パック（5件の監査、単発決済）なら、単発購入より良い単価で継続できます。",
+      "クレジットがありません。必要なときに監査クレジットを購入できます：Starter（1件）、Pro（5件）、Scale（15件）。大きいパックほど1件あたりの価格は下がります。",
     upsellEmptyProMessage:
-      "クレジットがありません。Scale パック（15件の監査、単発決済 — カードと同じオファー）なら、単発購入より監査単価を下げられます。",
+      "クレジットがありません。必要なときに監査クレジットを購入できます：Starter（1件）、Pro（5件）、Scale（15件）。大きいパックほど1件あたりの価格は下がります。",
     upsellEmptyScaleMessage:
-      "利用可能な監査がありません。継続利用を保つためにチャージしてください。",
+      "利用可能な監査がありません。必要なときに監査クレジットを追加購入できます。",
     upsellBalanceText:
-      "新しい監査向け残高: {remaining}/{total}（オファー上限内の残クレジットであり、履歴内にあるレポート数ではありません）。監査が止まらないよう事前に準備しましょう。",
+      "新しい監査向け残高: {remaining} クレジット（履歴内にあるレポート数ではありません）。購入のたびに既存の残高に追加されます。",
     starter: {
       name: "Starter",
       audience: "プラットフォームを試すのに最適",
@@ -942,7 +939,7 @@ const billingCopy = {
       description:
         "一時的なニーズには最適ですが、頻繁に監査するとすぐに高コストになります。",
       bulletOne: "選択した掲載に対して 1 件の監査",
-      conversionReading: "即時コンバージョン診断",
+      conversionReading: "掲載のコンバージョン分析",
       bulletThree: "優先度の高い提案",
       bulletTwo: "単発購入",
       cta: "1件の監査を購入",
@@ -952,7 +949,7 @@ const billingCopy = {
       subtitle: "5件監査パック（単発決済）",
       description: "サブスクリプションなしの単発パックです。",
       bulletOne: "購入後に利用できる 5 件の監査",
-      conversionReading: "即時コンバージョン診断",
+      conversionReading: "掲載のコンバージョン分析",
       cta: "Pro パックを購入（5件の監査）",
       audience: "複数の掲載を比較するのに最適なバランス",
       savings:
@@ -966,7 +963,7 @@ const billingCopy = {
       subtitle: "15件監査パック（単発決済）",
       description: "サブスクリプションなしの単発パックです。",
       bulletOne: "購入後に利用できる 15 件の監査",
-      conversionReading: "即時コンバージョン診断",
+      conversionReading: "掲載のコンバージョン分析",
       cta: "Scale パックを購入（15件の監査）",
       audience: "より大きなポートフォリオ向け",
       savings:
@@ -987,7 +984,7 @@ const billingCopy = {
     planLoadingMessage:
       "プランを読み込み中です。しばらくしてからもう一度お試しください。",
     paymentValidationHoldMessage:
-      "決済を確認中です。クレジットは数秒以内に反映されます。次の購入の前に少しお待ちください。",
+      "決済を確認中です。決済が確認され次第、クレジットが追加されます。次の購入の前に少しお待ちください。",
     paymentAlreadyInProgressMessage:
       "すでに決済処理が進行中です。数秒お待ちください。",
     incompletePaymentResponse:
@@ -1000,27 +997,27 @@ const billingCopy = {
     duplicateAuditUnlockedPersisted:
       "この掲載のテスト監査はすでに購入されています。",
     behaviorUpsellStarterPurchaseMessage:
-      "単発監査を頻繁に購入しています。Pro パック（5件の監査、単発決済）は 1 件あたりのコストを下げ、利用ペースを安定させます。",
+      "単発監査を頻繁に購入しています。大きいパックほど1件あたりの価格は下がります：Pro（5件の監査、単発決済）。どのオファーもいつでも購入できます。",
     behaviorUpsellHighPaceMessage:
-      "利用ペースが高いため、Scale パック（15件の監査、単発決済 — カードと同じオファー）なら、より良い単価で必要なボリュームを確保できます。",
+      "利用ペースが高めです。Scale（15件の監査、単発決済）は1件あたりの価格が下がります。どのオファーもいつでも購入できます。",
     behaviorUpsellScaleDepletedMessage:
-      "Scale クレジットが使い切られました。進行中の最適化を止めないため、今すぐチャージしてください。",
+      "クレジットを使い切りました。必要なときに監査クレジットを追加購入できます。",
     paymentSuccessAuditTest:
       "決済が完了しました。テスト監査がアンロックされました。",
     viewListings: "掲載を見る",
     behaviorUpsellFooter:
-      "最近の利用状況（新しい監査向け残高: {remaining}/{total}）に基づき、利用の継続性を保つために表示しています。",
+      "最近の利用状況に基づく表示です（新しい監査向け残高: {remaining} クレジット）。",
     behaviorUpsellFooterScaleNote:
       "上のボタンは Scale カードと同じ購入（パック、単発決済）を開始します。",
   },
   zh: {
     checkoutLoading: "正在打开支付...",
     heading: "账单",
-    conversionReading: "即时转化解读",
+    conversionReading: "房源转化分析",
     subtitle:
-      "选择适合你审计量的套餐：减少单次购买，降低单次审计成本，并保持持续使用。",
+      "需要时可购买 1、5 或 15 次审计额度。每次购买都会累加到你现有的余额中。一次性付款，无需订阅。",
     paymentProcessing:
-      "支付正在验证中… 你的额度将在几秒钟内到账。",
+      "支付正在验证中… 支付确认后，你的额度将被添加。",
     adminUnlimited: "平台管理员 — 无限审计",
     availableCredits: "可用额度",
     averageBookings: "转化潜力分析",
@@ -1050,17 +1047,17 @@ const billingCopy = {
     checkoutOpenGenericError:
       "目前无法打开支付页面。请稍后再试。",
     upsellSoftMessage:
-      "你只剩下 2 次审计。现在提前准备，保持你的优化节奏。",
+      "你只剩下 2 次审计。你可以随时购买更多审计额度。",
     upsellCriticalMessage:
-      "只剩最后一次审计。升级到更高方案，避免分析中断。",
+      "只剩最后一次审计。需要时可购买更多审计额度。",
     upsellEmptyFreeMessage:
-      "你已没有额度。Pro 套餐（5 次审计，一次性支付）可让你以比单次购买更低的成本继续使用。",
+      "你已没有额度。需要时可购买审计额度：Starter（1 次审计）、Pro（5 次审计）或 Scale（15 次审计）。套餐越大，单次审计成本越低。",
     upsellEmptyProMessage:
-      "你已没有额度。Scale 套餐（15 次审计，一次性支付——与卡片上的方案相同）可比单次购买进一步降低单次审计成本。",
+      "你已没有额度。需要时可购买审计额度：Starter（1 次审计）、Pro（5 次审计）或 Scale（15 次审计）。套餐越大，单次审计成本越低。",
     upsellEmptyScaleMessage:
-      "你已没有可用审计。请充值以保持持续使用。",
+      "你已没有可用审计。需要时可购买更多审计额度。",
     upsellBalanceText:
-      "新审计余额：{remaining}/{total}（这是你当前方案上限内剩余的额度，并非历史中已有的报告数量）。请提前准备，避免任何审计中断。",
+      "新审计余额：{remaining} 次额度（并非历史中已有的报告数量）。每次购买都会累加到你现有的余额中。",
     starter: {
       name: "Starter",
       audience: "适合测试平台",
@@ -1068,7 +1065,7 @@ const billingCopy = {
       description:
         "适合一次性需求，但如果你经常审计，很快就会变贵。",
       bulletOne: "对你选择的房源进行 1 次审计",
-      conversionReading: "即时转化解读",
+      conversionReading: "房源转化分析",
       bulletThree: "优先建议",
       bulletTwo: "单次购买",
       cta: "购买 1 次审计",
@@ -1078,7 +1075,7 @@ const billingCopy = {
       subtitle: "5 次审计套餐（一次性支付）",
       description: "一次性套餐，无订阅。",
       bulletOne: "购买后可使用 5 次审计",
-      conversionReading: "即时转化解读",
+      conversionReading: "房源转化分析",
       cta: "购买 Pro 套餐（5 次审计）",
       audience: "比较多个房源的最佳平衡方案",
       savings:
@@ -1092,7 +1089,7 @@ const billingCopy = {
       subtitle: "15 次审计套餐（一次性支付）",
       description: "一次性套餐，无订阅。",
       bulletOne: "购买后可使用 15 次审计",
-      conversionReading: "即时转化解读",
+      conversionReading: "房源转化分析",
       cta: "购买 Scale 套餐（15 次审计）",
       audience: "为更大规模的资产组合而设计",
       savings:
@@ -1113,7 +1110,7 @@ const billingCopy = {
     planLoadingMessage:
       "你的套餐仍在加载中。请稍后再试。",
     paymentValidationHoldMessage:
-      "支付正在验证中。你的额度将在几秒钟内到账，请稍等后再进行新的购买。",
+      "支付正在验证中。支付确认后，你的额度将被添加，请稍等后再进行新的购买。",
     paymentAlreadyInProgressMessage:
       "已有支付正在进行中。请等待几秒钟。",
     incompletePaymentResponse:
@@ -1126,27 +1123,27 @@ const billingCopy = {
     duplicateAuditUnlockedPersisted:
       "该房源的测试审计已购买。",
     behaviorUpsellStarterPurchaseMessage:
-      "你经常购买单次审计。Pro 套餐（5 次审计，一次性支付）可降低单次审计成本并保持你的节奏。",
+      "你经常购买单次审计。套餐越大，单次审计成本越低：Pro（5 次审计，一次性支付）。你可以随时购买任意方案。",
     behaviorUpsellHighPaceMessage:
-      "你的使用节奏较高：Scale 套餐（15 次审计，一次性支付——与卡片上的方案相同）可用更优的单价确保足够的量。",
+      "你的使用节奏较高。Scale（15 次审计，一次性支付）单次审计成本更低，你也可以随时购买任意方案。",
     behaviorUpsellScaleDepletedMessage:
-      "你的 Scale 额度已用尽。请立即充值，以免中断正在进行的优化。",
+      "你的额度已用尽。需要时可购买更多审计额度。",
     paymentSuccessAuditTest:
       "支付成功。你的测试审计现已解锁。",
     viewListings: "查看房源",
     behaviorUpsellFooter:
-      "基于你最近的使用情况（新审计余额：{remaining}/{total}）显示，以保持使用连续性。",
+      "基于你最近的使用情况（新审计余额：{remaining} 次额度）。",
     behaviorUpsellFooterScaleNote:
       "上方按钮触发的购买与 Scale 卡片相同（套餐，一次性支付）。",
   },
   ko: {
     checkoutLoading: "결제를 여는 중...",
     heading: "청구",
-    conversionReading: "즉시 전환 진단",
+    conversionReading: "숙소 전환 분석",
     subtitle:
-      "감사 볼륨에 맞는 패키지를 선택하세요. 단건 구매를 줄이고, 감사당 비용을 낮추며, 지속적으로 사용할 수 있습니다.",
+      "필요할 때 감사 크레딧 1, 5 또는 15개를 구매하세요. 구매할 때마다 기존 잔액에 추가됩니다. 일회성 결제이며 구독은 없습니다.",
     paymentProcessing:
-      "결제를 확인하는 중입니다… 몇 초 안에 크레딧이 반영됩니다.",
+      "결제를 확인하는 중입니다… 결제가 확인되면 크레딧이 추가됩니다.",
     adminUnlimited: "플랫폼 관리자 — 무제한 감사",
     availableCredits: "사용 가능한 크레딧",
     averageBookings: "전환 잠재력 분석",
@@ -1176,17 +1173,17 @@ const billingCopy = {
     checkoutOpenGenericError:
       "현재 결제 페이지를 열 수 없습니다. 잠시 후 다시 시도해 주세요.",
     upsellSoftMessage:
-      "감사가 2회만 남았습니다. 최적화 리듬을 유지하려면 지금 미리 준비하세요.",
+      "감사가 2회만 남았습니다. 감사 크레딧은 언제든지 추가로 구매할 수 있습니다.",
     upsellCriticalMessage:
-      "마지막 감사만 남았습니다. 분석 중단을 피하려면 상위 오퍼로 전환하세요.",
+      "마지막 감사만 남았습니다. 필요할 때 감사 크레딧을 추가로 구매할 수 있습니다.",
     upsellEmptyFreeMessage:
-      "크레딧이 없습니다. Pro 팩(감사 5회, 일회성 결제)은 단건 구매보다 더 좋은 단가로 계속 사용할 수 있게 해줍니다.",
+      "크레딧이 없습니다. 필요할 때 감사 크레딧을 구매하세요: Starter(감사 1회), Pro(감사 5회) 또는 Scale(감사 15회). 큰 패키지일수록 감사당 비용이 낮아집니다.",
     upsellEmptyProMessage:
-      "크레딧이 없습니다. Scale 팩(감사 15회, 일회성 결제 — 카드와 같은 오퍼)은 단건 구매 대비 감사당 비용을 더 낮춰줍니다.",
+      "크레딧이 없습니다. 필요할 때 감사 크레딧을 구매하세요: Starter(감사 1회), Pro(감사 5회) 또는 Scale(감사 15회). 큰 패키지일수록 감사당 비용이 낮아집니다.",
     upsellEmptyScaleMessage:
-      "사용 가능한 감사가 없습니다. 사용 연속성을 유지하려면 충전하세요.",
+      "사용 가능한 감사가 없습니다. 필요할 때 감사 크레딧을 추가로 구매하세요.",
     upsellBalanceText:
-      "새 감사용 잔액: {remaining}/{total} (히스토리에 이미 있는 보고서 수가 아니라 현재 오퍼 한도 내 남은 크레딧입니다). 감사가 멈추지 않도록 미리 대비하세요.",
+      "새 감사용 잔액: 크레딧 {remaining}개 (히스토리에 이미 있는 보고서 수가 아닙니다). 구매할 때마다 기존 잔액에 추가됩니다.",
     starter: {
       name: "Starter",
       audience: "플랫폼을 테스트하기에 적합",
@@ -1194,7 +1191,7 @@ const billingCopy = {
       description:
         "일회성 필요에는 적합하지만, 자주 감사를 하면 금방 비싸집니다.",
       bulletOne: "선택한 숙소에 대한 감사 1회",
-      conversionReading: "즉시 전환 진단",
+      conversionReading: "숙소 전환 분석",
       bulletThree: "우선 권장사항",
       bulletTwo: "단건 구매",
       cta: "감사 1회 구매",
@@ -1204,7 +1201,7 @@ const billingCopy = {
       subtitle: "감사 5회 팩(일회성 결제)",
       description: "구독 없는 일회성 팩입니다.",
       bulletOne: "구매 후 사용할 수 있는 감사 5회",
-      conversionReading: "즉시 전환 진단",
+      conversionReading: "숙소 전환 분석",
       cta: "Pro 팩 구매(감사 5회)",
       audience: "여러 숙소를 비교하기에 가장 좋은 균형",
       savings:
@@ -1218,7 +1215,7 @@ const billingCopy = {
       subtitle: "감사 15회 팩(일회성 결제)",
       description: "구독 없는 일회성 팩입니다.",
       bulletOne: "구매 후 사용할 수 있는 감사 15회",
-      conversionReading: "즉시 전환 진단",
+      conversionReading: "숙소 전환 분석",
       cta: "Scale 팩 구매(감사 15회)",
       audience: "더 큰 포트폴리오를 위해 설계",
       savings:
@@ -1239,7 +1236,7 @@ const billingCopy = {
     planLoadingMessage:
       "요금제를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.",
     paymentValidationHoldMessage:
-      "결제를 확인하는 중입니다. 몇 초 안에 크레딧이 반영되니, 다음 구매 전 잠시만 기다려 주세요.",
+      "결제를 확인하는 중입니다. 결제가 확인되면 크레딧이 추가되니, 다음 구매 전 잠시만 기다려 주세요.",
     paymentAlreadyInProgressMessage:
       "이미 결제가 진행 중입니다. 몇 초만 기다려 주세요.",
     incompletePaymentResponse:
@@ -1252,27 +1249,27 @@ const billingCopy = {
     duplicateAuditUnlockedPersisted:
       "이 숙소의 테스트 감사는 이미 구매되었습니다.",
     behaviorUpsellStarterPurchaseMessage:
-      "단건 감사를 자주 구매하고 있습니다. Pro 팩(감사 5회, 일회성 결제)은 감사당 비용을 낮추고 현재 속도를 안정적으로 유지해 줍니다.",
+      "단건 감사를 자주 구매하고 있습니다. 큰 패키지일수록 감사당 비용이 낮아집니다: Pro(감사 5회, 일회성 결제). 어떤 상품이든 언제든지 구매할 수 있습니다.",
     behaviorUpsellHighPaceMessage:
-      "사용 속도가 높습니다. Scale 팩(감사 15회, 일회성 결제 — 카드와 동일한 오퍼)은 더 나은 단가로 필요한 볼륨을 확보해 줍니다.",
+      "사용 속도가 높습니다. Scale(감사 15회, 일회성 결제)은 감사당 비용이 더 낮으며, 어떤 상품이든 언제든지 구매할 수 있습니다.",
     behaviorUpsellScaleDepletedMessage:
-      "Scale 크레딧이 모두 소진되었습니다. 진행 중인 최적화가 멈추지 않도록 지금 충전하세요.",
+      "크레딧을 모두 사용했습니다. 필요할 때 감사 크레딧을 추가로 구매하세요.",
     paymentSuccessAuditTest:
       "결제가 완료되었습니다. 테스트 감사가 이제 잠금 해제되었습니다.",
     viewListings: "숙소 보기",
     behaviorUpsellFooter:
-      "최근 사용량(새 감사용 잔액: {remaining}/{total})을 기준으로 사용 연속성을 유지할 수 있도록 안내합니다.",
+      "최근 사용 내역 기준입니다 (새 감사용 잔액: 크레딧 {remaining}개).",
     behaviorUpsellFooterScaleNote:
       "위 버튼은 Scale 카드와 동일한 구매(팩, 일회성 결제)를 실행합니다.",
   },
   ar: {
     checkoutLoading: "جارٍ فتح الدفع...",
     heading: "الفوترة",
-    conversionReading: "قراءة تحويل فورية",
+    conversionReading: "تحليل تحويل الإعلان",
     subtitle:
-      "اختر الباقة المناسبة لحجم التدقيق لديك: مشتريات فردية أقل، تكلفة أقل لكل تدقيق، واستخدام مستمر.",
+      "اشترِ 1 أو 5 أو 15 رصيد تدقيق متى احتجت إليه. كل عملية شراء تُضاف إلى رصيدك الحالي. دفعات لمرة واحدة، بدون اشتراك.",
     paymentProcessing:
-      "يتم التحقق من الدفع… ستصل أرصدتك خلال بضع ثوانٍ.",
+      "يتم التحقق من الدفع… ستُضاف أرصدتك بمجرد تأكيد الدفع.",
     adminUnlimited: "مسؤول المنصة — عمليات تدقيق غير محدودة",
     availableCredits: "الأرصدة المتاحة",
     averageBookings: "تحليل إمكانات التحويل",
@@ -1302,17 +1299,17 @@ const billingCopy = {
     checkoutOpenGenericError:
       "تعذر فتح صفحة الدفع في الوقت الحالي. يُرجى إعادة المحاولة بعد لحظات.",
     upsellSoftMessage:
-      "لم يتبقَّ سوى عمليتي تدقيق. استبق الأمر الآن للحفاظ على وتيرة التحسين لديك.",
+      "لم يتبقَّ سوى عمليتي تدقيق. يمكنك شراء المزيد من رصيد التدقيق في أي وقت.",
     upsellCriticalMessage:
-      "آخر عملية تدقيق متاحة. انتقل إلى العرض الأعلى لتجنب انقطاع تحليلاتك.",
+      "آخر عملية تدقيق متاحة. يمكنك شراء المزيد من رصيد التدقيق متى احتجت إليه.",
     upsellEmptyFreeMessage:
-      "لم يعد لديك أي أرصدة. تتيح لك باقة Pro (5 عمليات تدقيق، دفع لمرة واحدة) المتابعة بتكلفة أفضل لكل تدقيق مقارنة بالشراء الفردي.",
+      "لم يعد لديك أي أرصدة. اشترِ رصيد تدقيق متى احتجت إليه: Starter (تدقيق واحد) أو Pro (5 عمليات تدقيق) أو Scale (15 عملية تدقيق). كلما كبرت الباقة انخفضت تكلفة التدقيق الواحد.",
     upsellEmptyProMessage:
-      "لم يعد لديك أي أرصدة. تخفّض باقة Scale (15 عملية تدقيق، دفع لمرة واحدة — نفس العرض الظاهر على البطاقة) تكلفة كل تدقيق مقارنة بالشراء الفردي.",
+      "لم يعد لديك أي أرصدة. اشترِ رصيد تدقيق متى احتجت إليه: Starter (تدقيق واحد) أو Pro (5 عمليات تدقيق) أو Scale (15 عملية تدقيق). كلما كبرت الباقة انخفضت تكلفة التدقيق الواحد.",
     upsellEmptyScaleMessage:
-      "لم تعد لديك عمليات تدقيق متاحة. أعد الشحن للحفاظ على استمرارية الاستخدام.",
+      "لم تعد لديك عمليات تدقيق متاحة. اشترِ المزيد من رصيد التدقيق متى احتجت إليه.",
     upsellBalanceText:
-      "الرصيد المخصص لعمليات التدقيق الجديدة: {remaining}/{total} (الأرصدة المتبقية ضمن سقف عرضك، وليس عدد التقارير الموجودة بالفعل في السجل). خطط مسبقًا لتجنب أي توقف في التدقيق.",
+      "الرصيد المخصص لعمليات التدقيق الجديدة: {remaining} رصيد (وليس عدد التقارير الموجودة بالفعل في السجل). كل عملية شراء تُضاف إلى رصيدك الحالي.",
     starter: {
       name: "Starter",
       audience: "مثالي لتجربة المنصة",
@@ -1320,7 +1317,7 @@ const billingCopy = {
       description:
         "مثالي لاحتياج لمرة واحدة، لكنه يصبح مكلفًا سريعًا إذا كنت تُجري عمليات تدقيق بانتظام.",
       bulletOne: "عملية تدقيق واحدة للإعلان الذي تختاره",
-      conversionReading: "قراءة تحويل فورية",
+      conversionReading: "تحليل تحويل الإعلان",
       bulletThree: "التوصيات ذات الأولوية",
       bulletTwo: "شراء فردي",
       cta: "شراء عملية تدقيق واحدة",
@@ -1330,7 +1327,7 @@ const billingCopy = {
       subtitle: "باقة 5 عمليات تدقيق (دفع لمرة واحدة)",
       description: "باقة لمرة واحدة، من دون اشتراك.",
       bulletOne: "5 عمليات تدقيق للاستخدام بعد الشراء",
-      conversionReading: "قراءة تحويل فورية",
+      conversionReading: "تحليل تحويل الإعلان",
       cta: "شراء باقة Pro (5 عمليات تدقيق)",
       audience: "أفضل توازن لمقارنة عدة إعلانات",
       savings:
@@ -1344,7 +1341,7 @@ const billingCopy = {
       subtitle: "باقة 15 عملية تدقيق (دفع لمرة واحدة)",
       description: "باقة لمرة واحدة، من دون اشتراك.",
       bulletOne: "15 عملية تدقيق للاستخدام بعد الشراء",
-      conversionReading: "قراءة تحويل فورية",
+      conversionReading: "تحليل تحويل الإعلان",
       cta: "شراء باقة Scale (15 عملية تدقيق)",
       audience: "مصممة للمحافظ الأكبر",
       savings:
@@ -1365,7 +1362,7 @@ const billingCopy = {
     planLoadingMessage:
       "لا يزال تحميل خطتك جاريًا. حاول مرة أخرى بعد لحظات.",
     paymentValidationHoldMessage:
-      "يتم التحقق من الدفع. ستصل أرصدتك خلال بضع ثوانٍ، لذا انتظر قليلًا قبل إجراء عملية شراء أخرى.",
+      "يتم التحقق من الدفع. ستُضاف أرصدتك بمجرد تأكيد الدفع، لذا انتظر قليلًا قبل إجراء عملية شراء أخرى.",
     paymentAlreadyInProgressMessage:
       "توجد عملية دفع جارية بالفعل. انتظر بضع ثوانٍ.",
     incompletePaymentResponse:
@@ -1378,16 +1375,16 @@ const billingCopy = {
     duplicateAuditUnlockedPersisted:
       "تم شراء هذا التدقيق التجريبي لهذا الإعلان بالفعل.",
     behaviorUpsellStarterPurchaseMessage:
-      "أنت تشتري عمليات تدقيق فردية كثيرًا. باقة Pro (5 عمليات تدقيق، دفع لمرة واحدة) تخفض تكلفة كل تدقيق وتحافظ على وتيرتك.",
+      "أنت تشتري عمليات تدقيق فردية كثيرًا. كلما كبرت الباقة انخفضت تكلفة التدقيق الواحد: Pro (5 عمليات تدقيق، دفع لمرة واحدة). يمكنك شراء أي عرض في أي وقت.",
     behaviorUpsellHighPaceMessage:
-      "وتيرة استخدامك مرتفعة: باقة Scale (15 عملية تدقيق، دفع لمرة واحدة — نفس العرض الظاهر على البطاقة) تؤمّن الحجم بتكلفة أفضل لكل تدقيق.",
+      "وتيرة استخدامك مرتفعة. تكلفة التدقيق الواحد أقل مع Scale (15 عملية تدقيق، دفع لمرة واحدة)، ويمكنك شراء أي عرض في أي وقت.",
     behaviorUpsellScaleDepletedMessage:
-      "تم استنفاد أرصدة Scale لديك. أعد الشحن الآن لتجنب إيقاف عمليات التحسين الجارية.",
+      "نفدت أرصدتك. اشترِ المزيد من رصيد التدقيق متى احتجت إليه.",
     paymentSuccessAuditTest:
       "تم الدفع بنجاح. أصبح التدقيق التجريبي الآن مفتوحًا.",
     viewListings: "عرض الإعلانات",
     behaviorUpsellFooter:
-      "استنادًا إلى استخدامك الأخير (الرصيد المخصص لعمليات التدقيق الجديدة: {remaining}/{total}) للحفاظ على استمرارية الاستخدام.",
+      "استنادًا إلى استخدامك الأخير (الرصيد المخصص لعمليات التدقيق الجديدة: {remaining} رصيد).",
     behaviorUpsellFooterScaleNote:
       "الزر أعلاه يطلق نفس عملية الشراء الموجودة على بطاقة Scale (باقة، دفع لمرة واحدة).",
   },
@@ -1487,7 +1484,8 @@ function normalizeCheckoutErrorMessage(
 
 const PACK_CHECKOUT_PLANS = new Set(["starter", "pro", "scale"]);
 const PENDING_INTENT_MAX_AGE_MS = 120_000;
-const POST_SUCCESS_VALIDATION_MS = 8_000;
+/** Pause between two confirmation checks after the Stripe redirect. */
+const POST_PAYMENT_POLL_MS = 2_500;
 
 type PackCheckoutIntentSnapshot = {
   status: string;
@@ -1589,6 +1587,12 @@ export default function BillingPage() {
 
   const isPaymentProcessing = paymentValidationHold;
 
+  // Offer chosen on /pricing (kept through sign-in): highlighted only, the customer still confirms the payment.
+  const preselectedOffer = searchParams.get("offer");
+  const preselectedPlan =
+    preselectedOffer === "audit_test" ? "starter" : preselectedOffer === "pack_5" ? "pro" : preselectedOffer === "pack_15" ? "scale" : null;
+  const offerRing = (plan: "starter" | "pro" | "scale") =>
+    preselectedPlan === plan ? " ring-4 ring-blue-500/70" : "";
   const checkoutLocked = loadingPlan || checkoutInFlight !== null || isPaymentProcessing;
   const upsellState = getBillingUpsellState(
     activePlanCode,
@@ -1887,6 +1891,26 @@ export default function BillingPage() {
     };
   }, [currentWorkspaceId, billingSearchSignature, paymentValidationHold, pendingPackIntentRecent]);
 
+  async function fetchPostPaymentState(checkoutSessionId: string): Promise<PostPaymentState> {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) return "pending";
+      const response = await fetch(
+        `/api/billing/checkout-intent-status?session_id=${encodeURIComponent(checkoutSessionId)}`,
+        { headers: { Authorization: `Bearer ${session.access_token}` }, cache: "no-store" }
+      );
+      if (!response.ok) return "pending";
+      const body = (await response.json().catch(() => null)) as {
+        intent?: { status?: string | null; completed_at?: string | null } | null;
+      } | null;
+      return resolvePostPaymentState(body?.intent);
+    } catch {
+      return "pending";
+    }
+  }
+
   useEffect(() => {
     let mounted = true;
 
@@ -1906,66 +1930,44 @@ export default function BillingPage() {
         if (paymentValidationHoldTimeoutRef.current) {
           window.clearTimeout(paymentValidationHoldTimeoutRef.current);
         }
-        if (plan === "audit_test") {
-          if (!checkoutSessionId) {
-            if (!mounted) return;
-            setPaymentValidationHold(false);
-            setFreeNotice("Impossible de verifier ce paiement. Rechargez la page Facturation dans quelques instants.");
-            router.replace("/dashboard/billing");
-            return;
-          }
 
-          if (processedCheckoutSessionRef.current === checkoutSessionId) {
-            return;
-          }
-          processedCheckoutSessionRef.current = checkoutSessionId;
-
-          const deadline = Date.now() + POST_SUCCESS_VALIDATION_MS;
-          let finalMessage: string | null = null;
-
-          while (mounted && Date.now() <= deadline) {
-            const persistence = await persistGuestAuditDraftAfterPayment(checkoutSessionId);
-
-            if (!mounted) return;
-
-            if (persistence.persisted) {
-              setCheckoutStatus("success");
-              setFreeNotice(null);
-              setPaymentValidationHold(false);
-              router.replace("/dashboard/billing");
-              return;
-            }
-
-            if (persistence.status !== "payment_not_confirmed") {
-              finalMessage =
-                persistence.error ?? "Impossible de confirmer votre paiement pour le moment.";
-              break;
-            }
-
-            finalMessage =
-              persistence.error ?? "Le paiement est encore en cours de confirmation.";
-
-            await new Promise<void>((resolve) => {
-              window.setTimeout(resolve, 1500);
-            });
-          }
-
+        // The purchase is announced as successful only once the webhook has finished (credit granted, intent completed).
+        // No audit is created or restored here: the customer launches a real audit from the dashboard.
+        if (!checkoutSessionId) {
           if (!mounted) return;
-
           setPaymentValidationHold(false);
-          setFreeNotice(
-            finalMessage ?? "Le paiement est encore en cours de confirmation."
-          );
+          setFreeNotice(copy.paymentValidationHoldMessage);
           router.replace("/dashboard/billing");
           return;
         }
 
-        setCheckoutStatus("success");
-        paymentValidationHoldTimeoutRef.current = window.setTimeout(() => {
+        if (processedCheckoutSessionRef.current === checkoutSessionId) {
+          return;
+        }
+        processedCheckoutSessionRef.current = checkoutSessionId;
+
+        const outcome = await waitForPostPaymentConfirmation({
+          fetchState: () => fetchPostPaymentState(checkoutSessionId),
+          sleep: (ms) => new Promise<void>((resolve) => window.setTimeout(resolve, ms)),
+          now: Date.now,
+          isActive: () => mounted,
+          pollMs: POST_PAYMENT_POLL_MS,
+        });
+
+        if (outcome === "credit_available") {
+          setCheckoutStatus("success");
+          setFreeNotice(null);
           setPaymentValidationHold(false);
-          paymentValidationHoldTimeoutRef.current = null;
-        }, POST_SUCCESS_VALIDATION_MS);
-        router.replace("/dashboard/billing");
+          router.replace("/dashboard/billing");
+        } else if (outcome === "failed") {
+          setCheckoutStatus("cancel");
+          setPaymentValidationHold(false);
+          router.replace("/dashboard/billing");
+        } else if (outcome === "still_pending") {
+          setPaymentValidationHold(false);
+          setFreeNotice(copy.paymentValidationHoldMessage);
+          router.replace("/dashboard/billing");
+        }
         return;
       }
 
@@ -1980,7 +1982,7 @@ export default function BillingPage() {
     return () => {
       mounted = false;
     };
-  }, [router, searchParams]);
+  }, [router, searchParams, copy.paymentValidationHoldMessage]);
 
   function releaseCheckoutLock() {
     checkoutActivePlanRef.current = null;
@@ -2290,17 +2292,15 @@ export default function BillingPage() {
       {checkoutStatus === "success" && (
         <div className="nk-card-accent nk-card-accent-emerald nk-card-hover flex flex-col items-start justify-between gap-2 rounded-2xl border border-emerald-200/85 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 shadow-[0_10px_24px_rgba(5,150,105,0.12),0_1px_0_rgba(255,255,255,0.62)_inset] sm:flex-row sm:items-center">
           <span>
-            {checkoutPlan === "audit_test"
-              ? copy.paymentSuccessAuditTest
-              : checkoutPlan === "starter"
-                ? copy.paymentSuccessStarter
+            {checkoutPlan === "audit_test" || checkoutPlan === "starter"
+              ? copy.paymentSuccessStarter
               : checkoutPlan === "scale"
               ? copy.paymentSuccessScale
               : checkoutPlan === "pro"
               ? copy.paymentSuccessPro
               : copy.paymentSuccessGeneric}
           </span>
-          {(checkoutPlan === "pro" || checkoutPlan === "scale" || checkoutPlan === "starter") && (
+          {(checkoutPlan === "pro" || checkoutPlan === "scale" || checkoutPlan === "starter" || checkoutPlan === "audit_test") && (
             <Link
               href="/dashboard/listings"
               className="nk-ghost-btn text-[11px] font-semibold uppercase tracking-[0.16em]"
@@ -2405,7 +2405,7 @@ export default function BillingPage() {
       ) : null}
 
       <div className="mt-5 grid gap-6 md:grid-cols-3 md:gap-7 xl:gap-8">
-        <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_18px_50px_rgba(15,23,42,0.15)]">
+        <div className={`flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_12px_28px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_18px_50px_rgba(15,23,42,0.15)]${offerRing("starter")}`}>
           <div className="flex items-start justify-between gap-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
               {copy.starter.name}
@@ -2454,7 +2454,7 @@ export default function BillingPage() {
           strategicRecommendedOfferCode === "pro"
             ? "ring-2 ring-emerald-300/80"
             : "ring-1 ring-orange-200/70"
-        }`}>
+        }${offerRing("pro")}`}>
           <div className="flex items-start justify-between gap-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-700">
               {copy.pro.name}
@@ -2511,7 +2511,7 @@ export default function BillingPage() {
           strategicRecommendedOfferCode === "scale"
             ? "ring-2 ring-violet-300/75"
             : ""
-        }`}>
+        }${offerRing("scale")}`}>
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-700">
             {copy.scale.name}
           </p>

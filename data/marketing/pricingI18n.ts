@@ -2,10 +2,10 @@ export const pricingI18n = {
   en: {
     hero: {
       eyebrow: "PRICING",
-      titleLine1: "Pricing",
-      titleLine2: "adapted to your listing volume",
+      titleLine1: "Flexible audit credits.",
+      titleLine2: "No subscription.",
       subtitle:
-        "Start with a test audit, then switch to a more cost-effective pack when you want to optimize several listings.",
+        "Buy 1, 5 or 15 audit credits whenever you need them. Each purchase adds to your existing balance.",
       legendFastAction: "Orange = quick action",
       legendImpact: "Green = estimated impact",
       legendBenchmark: "Blue = benchmark / structure",
@@ -14,8 +14,8 @@ export const pricingI18n = {
       comparisonTitle: "Three simple offers to compare",
       comparisonText: "Same report level on every offer. Only the audit volume changes.",
       comparisonHelper:
-        "Start with one audit, then move to a more cost-effective pack if needed.",
-      volumeFlexNote: "Adjust your volume whenever you want.",
+        "Larger packs cost less per audit. You are never required to move to a bigger offer.",
+      volumeFlexNote: "Buy more audit credits whenever you need them.",
       audience:
         "Already designed for hosts, investors and concierge teams who want to prioritize their highest-impact actions.",
     },
@@ -31,7 +31,7 @@ export const pricingI18n = {
         savings: "",
         features: [
           "1 audit on the listing of your choice",
-          "Immediate conversion reading",
+          "Listing conversion analysis",
           "Priority recommendations",
           "No commitment",
         ],
@@ -44,7 +44,7 @@ export const pricingI18n = {
         period: "5 audits · €7.80/audit",
         cta: "Choose the best-value pack",
         tag: "Best balance",
-        savings: "Save ~€13 vs single audits",
+        savings: "Save ~€6 vs single audits",
         features: [
           "5 audits to use freely",
           "Compare several listings",
@@ -70,7 +70,7 @@ export const pricingI18n = {
       },
     ],
     caseStudy: {
-      eyebrow: "REAL CASE",
+      eyebrow: "ILLUSTRATIVE EXAMPLE",
       title: "Illustrative before / after on a comparable listing",
       subtitle:
         "Comparable short-term rental example used to show how clearer priorities can change a listing presentation.",
@@ -87,7 +87,7 @@ export const pricingI18n = {
         "• Better alignment between photos and selling points",
         "• Priority actions implemented quickly",
       ],
-      note: "Anonymized example from a comparable client case, used for illustration.",
+      note: "Illustrative example. It does not represent a specific customer or a guaranteed result.",
     },
     offerDetails: {
       eyebrow: "WHAT YOU BUY",
@@ -155,7 +155,7 @@ export const pricingI18n = {
       eyebrow: "SCOPE",
       title: "What is included in every paid offer",
       text:
-        "All three offers unlock the same audit depth. Only audit quantity changes from one plan to another.",
+        "All three offers unlock the same audit depth. Only audit quantity changes from one offer to another.",
       includedTitle: "Included",
       includedItems: [
         "Personalized audit for a real listing",
@@ -214,9 +214,9 @@ export const pricingI18n = {
     },
     cta: {
       title: "Ready to launch your first audit?",
-      subtitle: "Choose your pack and turn your listings into higher-performing assets.",
+      subtitle: "Choose the number of audit credits that fits your listings.",
       note: "One-time payment in EUR. Sign in, choose your offer, then continue securely to checkout.",
-      reassurance: "Immediate result • No commitment",
+      reassurance: "One-time payment • No subscription",
       primary: "Start my audit",
       secondary: "View demo",
     },
@@ -225,10 +225,10 @@ export const pricingI18n = {
   fr: {
     hero: {
       eyebrow: "TARIFICATION",
-      titleLine1: "Tarifs",
-      titleLine2: "adaptée à votre volume d’annonces",
+      titleLine1: "Crédits d’audit flexibles.",
+      titleLine2: "Sans abonnement.",
       subtitle:
-        "Démarrez avec un audit test, puis passez sur un pack plus rentable quand vous voulez optimiser plusieurs annonces.",
+        "Achetez 1, 5 ou 15 crédits d’audit quand vous en avez besoin. Chaque achat s’ajoute à votre solde existant.",
       legendFastAction: "Orange = action rapide",
       legendImpact: "Vert = impact estimé",
       legendBenchmark: "Bleu = benchmark / structure",
@@ -237,8 +237,8 @@ export const pricingI18n = {
       comparisonTitle: "Trois offres simples à comparer",
       comparisonText: "Même niveau de rapport sur chaque offre. Seul le volume d’audits évolue.",
       comparisonHelper:
-        "Commencez par un audit, puis passez sur un pack plus rentable si besoin",
-      volumeFlexNote: "Ajustez votre volume quand vous le souhaitez.",
+        "Les packs plus grands coûtent moins cher par audit. Vous n’êtes jamais obligé de passer à une offre supérieure.",
+      volumeFlexNote: "Achetez de nouveaux crédits d’audit quand vous en avez besoin.",
       audience:
         "Déjà pensé pour les hôtes, investisseurs et conciergeries qui veulent prioriser leurs actions à plus fort impact.",
     },
@@ -254,7 +254,7 @@ export const pricingI18n = {
         savings: "",
         features: [
           "1 audit sur l’annonce de votre choix",
-          "Lecture conversion immédiate",
+          "Analyse de conversion de l’annonce",
           "Recommandations prioritaires",
           "Sans engagement",
         ],
@@ -265,9 +265,9 @@ export const pricingI18n = {
         price: "39 €",
         priceNote: "Soit ~7,80 € par audit",
         period: "5 audits · 7,80 €/audit",
-        cta: "Passer au pack le plus rentable",
+        cta: "Choisir le pack le plus rentable",
         tag: "Meilleur équilibre",
-        savings: "Économisez ~13€ vs audits unitaires",
+        savings: "Économisez ~6€ vs audits unitaires",
         features: [
           "5 audits utilisables librement",
           "Comparaison entre plusieurs annonces",
@@ -293,7 +293,7 @@ export const pricingI18n = {
       },
     ],
     caseStudy: {
-      eyebrow: "CAS RÉEL",
+      eyebrow: "EXEMPLE ILLUSTRATIF",
       title: "Avant / Après illustratif sur une annonce comparable",
       subtitle:
         "Exemple comparable en location courte durée utilisé pour montrer comment des priorités plus claires peuvent faire évoluer la présentation d’une annonce.",
@@ -310,7 +310,7 @@ export const pricingI18n = {
         "• Meilleur alignement entre les photos et les points forts",
         "• Actions prioritaires mises en oeuvre rapidement",
       ],
-      note: "Exemple anonymisé issu d’un cas client comparable, utilisé à titre illustratif.",
+      note: "Exemple illustratif. Il ne représente ni un client précis ni un résultat garanti.",
     },
     offerDetails: {
       eyebrow: "CE QUE VOUS ACHETEZ",
@@ -378,7 +378,7 @@ export const pricingI18n = {
       eyebrow: "PÉRIMÈTRE",
       title: "Ce qui est inclus dans chaque offre payante",
       text:
-        "Les trois offres débloquent le même niveau d’audit. Seule la quantité d’audits évolue d’un plan à l’autre.",
+        "Les trois offres débloquent le même niveau d’audit. Seule la quantité d’audits évolue d’une offre à l’autre.",
       includedTitle: "Inclus",
       includedItems: [
         "Audit personnalisé sur une annonce réelle",
@@ -437,9 +437,9 @@ export const pricingI18n = {
     },
     cta: {
       title: "Prêt à lancer votre premier audit ?",
-      subtitle: "Choisissez votre pack et transformez vos annonces en actifs plus performants.",
+      subtitle: "Choisissez le nombre de crédits d’audit adapté à vos annonces.",
       note: "Paiement unique en EUR. Connectez-vous, choisissez votre offre, puis poursuivez vers le checkout sécurisé.",
-      reassurance: "Résultat immédiat • Aucun engagement",
+      reassurance: "Paiement unique • Sans abonnement",
       primary: "Lancer mon audit",
       secondary: "Voir la démo",
     },
@@ -448,10 +448,10 @@ export const pricingI18n = {
   es: {
     hero: {
       eyebrow: "PRECIOS",
-      titleLine1: "Precios",
-      titleLine2: "adaptados a tu volumen de anuncios",
+      titleLine1: "Créditos de auditoría flexibles.",
+      titleLine2: "Sin suscripción.",
       subtitle:
-        "Empieza con una auditoría de prueba y pasa después a un pack más rentable cuando quieras optimizar varios anuncios.",
+        "Compra 1, 5 o 15 créditos de auditoría cuando los necesites. Cada compra se suma a tu saldo existente.",
       legendFastAction: "Naranja = acción rápida",
       legendImpact: "Verde = impacto estimado",
       legendBenchmark: "Azul = benchmark / estructura",
@@ -460,8 +460,8 @@ export const pricingI18n = {
       comparisonTitle: "Tres ofertas simples para comparar",
       comparisonText: "El mismo nivel de informe en cada oferta. Solo cambia el volumen de auditorías.",
       comparisonHelper:
-        "Empieza con una auditoría y después pasa a un pack más rentable si lo necesitas.",
-      volumeFlexNote: "Ajusta tu volumen cuando quieras.",
+        "Los packs más grandes cuestan menos por auditoría. Nunca estás obligado a pasar a una oferta superior.",
+      volumeFlexNote: "Compra más créditos de auditoría cuando los necesites.",
       audience:
         "Pensado para anfitriones, inversores y gestores que quieren priorizar sus acciones de mayor impacto.",
     },
@@ -477,7 +477,7 @@ export const pricingI18n = {
         savings: "",
         features: [
           "1 auditoría sobre el anuncio que elijas",
-          "Lectura inmediata de conversión",
+          "Análisis de conversión del anuncio",
           "Recomendaciones prioritarias",
           "Sin compromiso",
         ],
@@ -490,7 +490,7 @@ export const pricingI18n = {
         period: "5 auditorías · 7,80 €/auditoría",
         cta: "Elegir el pack más rentable",
         tag: "Mejor equilibrio",
-        savings: "Ahorra ~13 € frente a auditorías unitarias",
+        savings: "Ahorra ~6 € frente a auditorías unitarias",
         features: [
           "5 auditorías para usar libremente",
           "Comparación entre varios anuncios",
@@ -516,7 +516,7 @@ export const pricingI18n = {
       },
     ],
     caseStudy: {
-      eyebrow: "CASO REAL",
+      eyebrow: "EJEMPLO ILUSTRATIVO",
       title: "Antes / Después ilustrativo en un anuncio comparable",
       subtitle:
         "Ejemplo comparable de alquiler de corta estancia usado para mostrar cómo prioridades más claras pueden cambiar la presentación de un anuncio.",
@@ -533,7 +533,7 @@ export const pricingI18n = {
         "• Mejor alineación entre fotos y puntos de valor",
         "• Acciones prioritarias ejecutadas con rapidez",
       ],
-      note: "Ejemplo anonimizado basado en un caso comparable, usado con fines ilustrativos.",
+      note: "Ejemplo ilustrativo. No representa a un cliente concreto ni un resultado garantizado.",
     },
     offerDetails: {
       eyebrow: "QUÉ COMPRAS",
@@ -601,7 +601,7 @@ export const pricingI18n = {
       eyebrow: "ALCANCE",
       title: "Qué se incluye en cada oferta de pago",
       text:
-        "Las tres ofertas desbloquean la misma profundidad de auditoría. Solo cambia la cantidad de auditorías de un plan a otro.",
+        "Las tres ofertas desbloquean la misma profundidad de auditoría. Solo cambia la cantidad de auditorías de una oferta a otra.",
       includedTitle: "Incluido",
       includedItems: [
         "Auditoría personalizada sobre un anuncio real",
@@ -660,9 +660,9 @@ export const pricingI18n = {
     },
     cta: {
       title: "¿Listo para lanzar tu primera auditoría?",
-      subtitle: "Elige tu pack y convierte tus anuncios en activos con mejor rendimiento.",
+      subtitle: "Elige el número de créditos de auditoría que se adapte a tus anuncios.",
       note: "Pago único en EUR. Inicia sesión, elige tu oferta y continúa hacia el checkout seguro.",
-      reassurance: "Resultado inmediato • Sin compromiso",
+      reassurance: "Pago único • Sin suscripción",
       primary: "Iniciar mi auditoría",
       secondary: "Ver la demo",
     },
@@ -670,10 +670,10 @@ export const pricingI18n = {
   de: {
     hero: {
       eyebrow: "PREISE",
-      titleLine1: "Preise",
-      titleLine2: "angepasst an Ihr Inseratsvolumen",
+      titleLine1: "Flexible Audit-Guthaben.",
+      titleLine2: "Kein Abonnement.",
       subtitle:
-        "Starten Sie mit einem Test-Audit und wechseln Sie anschließend zu einem kosteneffizienteren Paket, wenn Sie mehrere Inserate optimieren möchten.",
+        "Kaufen Sie 1, 5 oder 15 Audit-Guthaben, wann immer Sie sie brauchen. Jeder Kauf wird Ihrem bestehenden Guthaben hinzugefügt.",
       legendFastAction: "Orange = schnelle Maßnahme",
       legendImpact: "Grün = geschätzter Effekt",
       legendBenchmark: "Blau = Benchmark / Struktur",
@@ -682,8 +682,8 @@ export const pricingI18n = {
       comparisonTitle: "Drei einfache Angebote zum Vergleichen",
       comparisonText: "Das gleiche Berichtsniveau bei jedem Angebot. Nur das Audit-Volumen ändert sich.",
       comparisonHelper:
-        "Beginnen Sie mit einem Audit und wechseln Sie bei Bedarf zu einem kosteneffizienteren Paket.",
-      volumeFlexNote: "Passen Sie Ihr Volumen jederzeit an.",
+        "Größere Pakete kosten pro Audit weniger. Sie müssen nie zu einem größeren Angebot wechseln.",
+      volumeFlexNote: "Kaufen Sie weitere Audit-Guthaben, wann immer Sie sie brauchen.",
       audience:
         "Bereits entwickelt für Gastgeber, Investoren und Concierge-Teams, die ihre wirkungsvollsten Maßnahmen priorisieren möchten.",
     },
@@ -699,7 +699,7 @@ export const pricingI18n = {
         savings: "",
         features: [
           "1 Audit für ein Inserat Ihrer Wahl",
-          "Sofortige Conversion-Analyse",
+          "Conversion-Analyse des Inserats",
           "Priorisierte Empfehlungen",
           "Keine Verpflichtung",
         ],
@@ -712,7 +712,7 @@ export const pricingI18n = {
         period: "5 Audits · 7,80 €/Audit",
         cta: "Paket mit bestem Preis-Leistungs-Verhältnis wählen",
         tag: "Beste Balance",
-        savings: "Sparen Sie ca. 13 € gegenüber Einzel-Audits",
+        savings: "Sparen Sie ca. 6 € gegenüber Einzel-Audits",
         features: [
           "5 Audits frei nutzbar",
           "Vergleich mehrerer Inserate",
@@ -738,7 +738,7 @@ export const pricingI18n = {
       },
     ],
     caseStudy: {
-      eyebrow: "ECHTER FALL",
+      eyebrow: "BEISPIEL ZUR VERANSCHAULICHUNG",
       title: "Illustratives Vorher / Nachher bei einem vergleichbaren Inserat",
       subtitle:
         "Vergleichbares Kurzzeitvermietungsbeispiel, das zeigt, wie klarere Prioritäten die Darstellung eines Inserats verändern können.",
@@ -755,7 +755,7 @@ export const pricingI18n = {
         "• Bessere Abstimmung zwischen Fotos und Verkaufsargumenten",
         "• Priorisierte Maßnahmen schnell umgesetzt",
       ],
-      note: "Anonymisiertes Beispiel aus einem vergleichbaren Kundenfall, zu Illustrationszwecken.",
+      note: "Illustratives Beispiel. Es steht weder für einen bestimmten Kunden noch für ein garantiertes Ergebnis.",
     },
     offerDetails: {
       eyebrow: "WAS SIE KAUFEN",
@@ -882,9 +882,9 @@ export const pricingI18n = {
     },
     cta: {
       title: "Bereit, Ihr erstes Audit zu starten?",
-      subtitle: "Wählen Sie Ihr Paket und machen Sie Ihre Inserate zu leistungsstärkeren Assets.",
+      subtitle: "Wählen Sie die Anzahl an Audit-Guthaben, die zu Ihren Inseraten passt.",
       note: "Einmalige Zahlung in EUR. Melden Sie sich an, wählen Sie Ihr Angebot und gehen Sie dann sicher zum Checkout weiter.",
-      reassurance: "Sofortiges Ergebnis • Keine Verpflichtung",
+      reassurance: "Einmalzahlung • Kein Abonnement",
       primary: "Audit starten",
       secondary: "Demo ansehen",
     },
@@ -892,10 +892,10 @@ export const pricingI18n = {
   it: {
     hero: {
       eyebrow: "PREZZI",
-      titleLine1: "Prezzi",
-      titleLine2: "adatti al volume dei tuoi annunci",
+      titleLine1: "Crediti audit flessibili.",
+      titleLine2: "Nessun abbonamento.",
       subtitle:
-        "Inizia con un audit di prova e passa poi a un pacchetto più conveniente quando vuoi ottimizzare più annunci.",
+        "Acquista 1, 5 o 15 crediti audit quando ti servono. Ogni acquisto si aggiunge al tuo saldo esistente.",
       legendFastAction: "Arancione = azione rapida",
       legendImpact: "Verde = impatto stimato",
       legendBenchmark: "Blu = benchmark / struttura",
@@ -904,8 +904,8 @@ export const pricingI18n = {
       comparisonTitle: "Tre offerte semplici da confrontare",
       comparisonText: "Lo stesso livello di report per ogni offerta. Cambia solo il volume di audit.",
       comparisonHelper:
-        "Inizia con un audit, poi passa a un pacchetto più conveniente se necessario.",
-      volumeFlexNote: "Adatta il tuo volume quando vuoi.",
+        "I pacchetti più grandi costano meno per audit. Non sei mai obbligato a passare a un'offerta superiore.",
+      volumeFlexNote: "Acquista altri crediti audit quando ti servono.",
       audience:
         "Pensato per host, investitori e team di concierge che vogliono dare priorità alle azioni con il maggiore impatto.",
     },
@@ -921,7 +921,7 @@ export const pricingI18n = {
         savings: "",
         features: [
           "1 audit sull'annuncio che scegli",
-          "Lettura immediata della conversione",
+          "Analisi della conversione dell'annuncio",
           "Raccomandazioni prioritarie",
           "Senza impegno",
         ],
@@ -934,7 +934,7 @@ export const pricingI18n = {
         period: "5 audit · 7,80 €/audit",
         cta: "Scegli il pacchetto più conveniente",
         tag: "Miglior equilibrio",
-        savings: "Risparmia circa 13 € rispetto agli audit singoli",
+        savings: "Risparmia circa 6 € rispetto agli audit singoli",
         features: [
           "5 audit da usare liberamente",
           "Confronta più annunci",
@@ -960,7 +960,7 @@ export const pricingI18n = {
       },
     ],
     caseStudy: {
-      eyebrow: "CASO REALE",
+      eyebrow: "ESEMPIO ILLUSTRATIVO",
       title: "Prima / Dopo illustrativo su un annuncio comparabile",
       subtitle:
         "Esempio comparabile di affitto breve usato per mostrare come priorità più chiare possano cambiare la presentazione di un annuncio.",
@@ -977,7 +977,7 @@ export const pricingI18n = {
         "• Migliore allineamento tra foto e punti di forza",
         "• Azioni prioritarie eseguite rapidamente",
       ],
-      note: "Esempio anonimizzato basato su un caso cliente comparabile, a solo scopo illustrativo.",
+      note: "Esempio illustrativo. Non rappresenta un cliente specifico né un risultato garantito.",
     },
     offerDetails: {
       eyebrow: "COSA ACQUISTI",
@@ -1104,9 +1104,9 @@ export const pricingI18n = {
     },
     cta: {
       title: "Pronto a lanciare il tuo primo audit?",
-      subtitle: "Scegli il tuo pacchetto e trasforma i tuoi annunci in asset più performanti.",
+      subtitle: "Scegli il numero di crediti audit adatto ai tuoi annunci.",
       note: "Pagamento una tantum in EUR. Accedi, scegli la tua offerta e continua verso il checkout sicuro.",
-      reassurance: "Risultato immediato • Nessun impegno",
+      reassurance: "Pagamento unico • Nessun abbonamento",
       primary: "Lancia il mio audit",
       secondary: "Guarda la demo",
     },
@@ -1114,10 +1114,10 @@ export const pricingI18n = {
   pt: {
     hero: {
       eyebrow: "PREÇOS",
-      titleLine1: "Preços",
-      titleLine2: "adaptados ao volume dos seus anúncios",
+      titleLine1: "Créditos de auditoria flexíveis.",
+      titleLine2: "Sem subscrição.",
       subtitle:
-        "Comece com uma auditoria de teste e depois passe para um pack mais vantajoso quando quiser otimizar vários anúncios.",
+        "Compre 1, 5 ou 15 créditos de auditoria sempre que precisar. Cada compra soma-se ao seu saldo existente.",
       legendFastAction: "Laranja = ação rápida",
       legendImpact: "Verde = impacto estimado",
       legendBenchmark: "Azul = benchmark / estrutura",
@@ -1126,8 +1126,8 @@ export const pricingI18n = {
       comparisonTitle: "Três ofertas simples para comparar",
       comparisonText: "O mesmo nível de relatório em cada oferta. Só muda o volume de auditorias.",
       comparisonHelper:
-        "Comece com uma auditoria e depois passe para um pack mais vantajoso se precisar.",
-      volumeFlexNote: "Ajuste o seu volume quando quiser.",
+        "Os packs maiores custam menos por auditoria. Nunca é obrigado a passar para uma oferta superior.",
+      volumeFlexNote: "Compre mais créditos de auditoria sempre que precisar.",
       audience:
         "Já pensado para anfitriões, investidores e equipas de concierge que querem dar prioridade às ações com maior impacto.",
     },
@@ -1143,7 +1143,7 @@ export const pricingI18n = {
         savings: "",
         features: [
           "1 auditoria ao anúncio da sua escolha",
-          "Leitura imediata da conversão",
+          "Análise de conversão do anúncio",
           "Recomendações prioritárias",
           "Sem compromisso",
         ],
@@ -1156,7 +1156,7 @@ export const pricingI18n = {
         period: "5 auditorias · 7,80 €/auditoria",
         cta: "Escolher o pack mais vantajoso",
         tag: "Melhor equilíbrio",
-        savings: "Poupe cerca de 13 € face a auditorias avulsas",
+        savings: "Poupe cerca de 6 € face a auditorias avulsas",
         features: [
           "5 auditorias para usar livremente",
           "Comparação entre vários anúncios",
@@ -1182,7 +1182,7 @@ export const pricingI18n = {
       },
     ],
     caseStudy: {
-      eyebrow: "CASO REAL",
+      eyebrow: "EXEMPLO ILUSTRATIVO",
       title: "Antes / Depois ilustrativo num anúncio comparável",
       subtitle:
         "Exemplo comparável de alojamento de curta duração usado para mostrar como prioridades mais claras podem mudar a apresentação de um anúncio.",
@@ -1199,7 +1199,7 @@ export const pricingI18n = {
         "• Melhor alinhamento entre as fotos e os pontos fortes",
         "• Ações prioritárias executadas com rapidez",
       ],
-      note: "Exemplo anonimizado baseado num caso de cliente comparável, usado apenas para ilustração.",
+      note: "Exemplo ilustrativo. Não representa um cliente específico nem um resultado garantido.",
     },
     offerDetails: {
       eyebrow: "O QUE COMPRA",
@@ -1326,9 +1326,9 @@ export const pricingI18n = {
     },
     cta: {
       title: "Pronto para lançar a sua primeira auditoria?",
-      subtitle: "Escolha o seu pack e transforme os seus anúncios em ativos com melhor desempenho.",
+      subtitle: "Escolha o número de créditos de auditoria adequado aos seus anúncios.",
       note: "Pagamento único em EUR. Inicie sessão, escolha a sua oferta e continue para o checkout seguro.",
-      reassurance: "Resultado imediato • Sem compromisso",
+      reassurance: "Pagamento único • Sem subscrição",
       primary: "Lançar a minha auditoria",
       secondary: "Ver a demonstração",
     },
@@ -1336,10 +1336,10 @@ export const pricingI18n = {
   nl: {
     hero: {
       eyebrow: "PRIJZEN",
-      titleLine1: "Prijzen",
-      titleLine2: "afgestemd op het volume van uw advertenties",
+      titleLine1: "Flexibele auditcredits.",
+      titleLine2: "Geen abonnement.",
       subtitle:
-        "Begin met een proefaudit en stap daarna over op een voordeliger pakket wanneer u meerdere advertenties wilt optimaliseren.",
+        "Koop 1, 5 of 15 auditcredits wanneer u ze nodig hebt. Elke aankoop wordt toegevoegd aan uw bestaande saldo.",
       legendFastAction: "Oranje = snelle actie",
       legendImpact: "Groen = geschatte impact",
       legendBenchmark: "Blauw = benchmark / structuur",
@@ -1348,8 +1348,8 @@ export const pricingI18n = {
       comparisonTitle: "Drie eenvoudige pakketten om te vergelijken",
       comparisonText: "Hetzelfde rapportniveau voor elk pakket. Alleen het aantal audits verschilt.",
       comparisonHelper:
-        "Begin met één audit en stap daarna over op een voordeliger pakket als dat nodig is.",
-      volumeFlexNote: "Pas uw volume aan wanneer u wilt.",
+        "Grotere pakketten kosten minder per audit. U bent nooit verplicht over te stappen op een groter aanbod.",
+      volumeFlexNote: "Koop extra auditcredits wanneer u ze nodig hebt.",
       audience:
         "Ontworpen voor hosts, investeerders en conciërgeteams die prioriteit willen geven aan acties met de grootste impact.",
     },
@@ -1365,7 +1365,7 @@ export const pricingI18n = {
         savings: "",
         features: [
           "1 audit voor de advertentie van uw keuze",
-          "Direct inzicht in de conversie",
+          "Conversieanalyse van de advertentie",
           "Prioritaire aanbevelingen",
           "Geen verplichtingen",
         ],
@@ -1378,7 +1378,7 @@ export const pricingI18n = {
         period: "5 audits · €7,80/audit",
         cta: "Kies het voordeligste pakket",
         tag: "Beste balans",
-        savings: "Bespaar ongeveer €13 ten opzichte van losse audits",
+        savings: "Bespaar ongeveer €6 ten opzichte van losse audits",
         features: [
           "5 audits vrij te gebruiken",
           "Vergelijk meerdere advertenties",
@@ -1404,7 +1404,7 @@ export const pricingI18n = {
       },
     ],
     caseStudy: {
-      eyebrow: "PRAKTIJKVOORBEELD",
+      eyebrow: "ILLUSTRATIEF VOORBEELD",
       title: "Illustratieve voor / na bij een vergelijkbare advertentie",
       subtitle:
         "Vergelijkbaar voorbeeld uit kortetermijnverhuur om te laten zien hoe duidelijkere prioriteiten de presentatie van een advertentie kunnen veranderen.",
@@ -1421,7 +1421,7 @@ export const pricingI18n = {
         "• Betere afstemming tussen foto's en sterke punten",
         "• Prioritaire acties snel uitgevoerd",
       ],
-      note: "Geanonimiseerd voorbeeld gebaseerd op een vergelijkbare klantcase.",
+      note: "Illustratief voorbeeld. Het vertegenwoordigt geen specifieke klant en geen gegarandeerd resultaat.",
     },
     offerDetails: {
       eyebrow: "WAT JE KOOPT",
@@ -1548,9 +1548,9 @@ export const pricingI18n = {
     },
     cta: {
       title: "Klaar om uw eerste audit te starten?",
-      subtitle: "Kies uw pakket en maak van uw advertenties beter presterende assets.",
+      subtitle: "Kies het aantal auditcredits dat bij uw advertenties past.",
       note: "Eenmalige betaling in EUR. Meld je aan, kies je aanbieding en ga daarna veilig verder naar checkout.",
-      reassurance: "Direct resultaat • Geen verplichtingen",
+      reassurance: "Eenmalige betaling • Geen abonnement",
       primary: "Start mijn audit",
       secondary: "Bekijk de demo",
     },
@@ -1558,10 +1558,10 @@ export const pricingI18n = {
   ja: {
     hero: {
       eyebrow: "料金",
-      titleLine1: "料金プラン",
-      titleLine2: "掲載件数に合わせて最適化",
+      titleLine1: "柔軟な監査クレジット。",
+      titleLine2: "サブスクリプションなし。",
       subtitle:
-        "まずはお試し監査から始め、複数の掲載を最適化したくなったら、よりお得なパックに切り替えましょう。",
+        "必要なときに、1・5・15件分の監査クレジットを購入できます。購入のたびに、既存の残高に追加されます。",
       legendFastAction: "オレンジ = すぐに実行できる施策",
       legendImpact: "グリーン = 推定インパクト",
       legendBenchmark: "ブルー = ベンチマーク / 構造",
@@ -1570,8 +1570,8 @@ export const pricingI18n = {
       comparisonTitle: "比較しやすい3つのシンプルなプラン",
       comparisonText: "どのプランでもレポートの品質は同じです。変わるのは監査件数だけです。",
       comparisonHelper:
-        "まずは1件の監査から始め、必要になったらよりお得なパックに移行できます。",
-      volumeFlexNote: "件数はいつでも調整できます。",
+        "大きいパックほど1件あたりの価格は下がります。上位のオファーへ移行する義務はありません。",
+      volumeFlexNote: "必要なときに、監査クレジットを追加購入できます。",
       audience:
         "すでに、最も効果の高い施策を優先したいホスト、投資家、コンシェルジュチーム向けに設計されています。",
     },
@@ -1587,7 +1587,7 @@ export const pricingI18n = {
         savings: "",
         features: [
           "お好きな掲載1件を監査",
-          "すぐにコンバージョンを把握",
+          "掲載のコンバージョン分析",
           "優先順位付きの提案",
           "契約不要",
         ],
@@ -1600,7 +1600,7 @@ export const pricingI18n = {
         period: "5件の監査 · €7.80/監査",
         cta: "最もお得なパックを選ぶ",
         tag: "ベストバランス",
-        savings: "単発監査より約€13お得",
+        savings: "単発監査より約€6お得",
         features: [
           "5件の監査を自由に利用",
           "複数掲載を比較",
@@ -1626,7 +1626,7 @@ export const pricingI18n = {
       },
     ],
     caseStudy: {
-      eyebrow: "実例",
+      eyebrow: "参考例",
       title: "類似掲載での参考ビフォー / アフター",
       subtitle:
         "より明確な優先順位によって掲載の見せ方がどう変わるかを示す、短期賃貸の比較可能な参考例です。",
@@ -1643,7 +1643,7 @@ export const pricingI18n = {
         "• 写真と訴求ポイントの整合性が向上",
         "• 優先アクションを素早く実行",
       ],
-      note: "比較可能な顧客事例を匿名化した、参考用の例です。",
+      note: "参考用の例です。特定の顧客や保証された結果を示すものではありません。",
     },
     offerDetails: {
       eyebrow: "購入内容",
@@ -1770,9 +1770,9 @@ export const pricingI18n = {
     },
     cta: {
       title: "最初の監査を始める準備はできましたか？",
-      subtitle: "プランを選んで、あなたの掲載をより高パフォーマンスな資産に変えましょう。",
+      subtitle: "掲載に合った監査クレジット数を選んでください。",
       note: "EUR での一回払いです。サインインし、オファーを選び、安全な checkout に進みます。",
-      reassurance: "すぐに結果 • 契約不要",
+      reassurance: "一回払い • サブスクリプションなし",
       primary: "監査を始める",
       secondary: "デモを見る",
     },
@@ -1780,10 +1780,10 @@ export const pricingI18n = {
   zh: {
     hero: {
       eyebrow: "价格",
-      titleLine1: "价格方案",
-      titleLine2: "根据你的房源数量调整",
+      titleLine1: "灵活的审计额度。",
+      titleLine2: "无需订阅。",
       subtitle:
-        "先从一次测试审计开始，当你想优化多个房源时，再切换到更划算的套餐。",
+        "需要时可购买 1、5 或 15 次审计额度。每次购买都会累加到你现有的余额中。",
       legendFastAction: "橙色 = 快速行动",
       legendImpact: "绿色 = 预估影响",
       legendBenchmark: "蓝色 = 基准 / 结构",
@@ -1792,8 +1792,8 @@ export const pricingI18n = {
       comparisonTitle: "三个简单方案，便于比较",
       comparisonText: "每个方案的报告级别相同，变化的只有审计数量。",
       comparisonHelper:
-        "先从一次审计开始，如有需要再升级到更划算的套餐。",
-      volumeFlexNote: "你可以随时调整数量。",
+        "套餐越大，单次审计成本越低。你无需升级到更高的方案。",
+      volumeFlexNote: "需要时可随时购买更多审计额度。",
       audience:
         "专为希望优先处理最高影响行动的房东、投资者和托管团队设计。",
     },
@@ -1809,7 +1809,7 @@ export const pricingI18n = {
         savings: "",
         features: [
           "对你选择的 1 个房源进行审计",
-          "立即获得转化解读",
+          "房源转化分析",
           "优先级建议",
           "无承诺",
         ],
@@ -1822,7 +1822,7 @@ export const pricingI18n = {
         period: "5 次审计 · €7.80/次",
         cta: "选择最划算的套餐",
         tag: "最佳平衡",
-        savings: "相比单次审计节省约 €13",
+        savings: "相比单次审计节省约 €6",
         features: [
           "5 次审计可自由使用",
           "比较多个房源",
@@ -1848,7 +1848,7 @@ export const pricingI18n = {
       },
     ],
     caseStudy: {
-      eyebrow: "真实案例",
+      eyebrow: "示意例子",
       title: "可比房源的示意前后对比",
       subtitle:
         "这是一个可比的短租示例，用来说明更清晰的优先级如何改变房源呈现方式。",
@@ -1865,7 +1865,7 @@ export const pricingI18n = {
         "• 图片与卖点之间更一致",
         "• 优先行动得到快速执行",
       ],
-      note: "基于可比客户案例的匿名示例，仅用于说明。",
+      note: "仅为示意例子，不代表某位具体客户，也不代表有保证的结果。",
     },
     offerDetails: {
       eyebrow: "你购买的是什么",
@@ -1992,9 +1992,9 @@ export const pricingI18n = {
     },
     cta: {
       title: "准备好开始你的第一次审计了吗？",
-      subtitle: "选择你的套餐，把房源变成表现更强的资产。",
+      subtitle: "选择适合你房源数量的审计额度。",
       note: "以 EUR 一次性付款。先登录，选择方案，然后安全进入 checkout。",
-      reassurance: "即时结果 • 无承诺",
+      reassurance: "一次性付款 • 无订阅",
       primary: "开始我的审计",
       secondary: "查看演示",
     },
@@ -2002,10 +2002,10 @@ export const pricingI18n = {
   ko: {
     hero: {
       eyebrow: "요금",
-      titleLine1: "가격 플랜",
-      titleLine2: "숙소 수에 맞게 조정",
+      titleLine1: "유연한 감사 크레딧.",
+      titleLine2: "구독 없음.",
       subtitle:
-        "먼저 테스트 감사를 시작하고, 여러 숙소를 최적화하고 싶을 때 더 효율적인 패키지로 전환하세요.",
+        "필요할 때 감사 크레딧 1, 5 또는 15개를 구매하세요. 구매할 때마다 기존 잔액에 추가됩니다.",
       legendFastAction: "주황 = 빠른 실행",
       legendImpact: "초록 = 예상 영향",
       legendBenchmark: "파랑 = 벤치마크 / 구조",
@@ -2014,8 +2014,8 @@ export const pricingI18n = {
       comparisonTitle: "비교하기 쉬운 3가지 간단한 플랜",
       comparisonText: "모든 플랜은 같은 수준의 보고서를 제공합니다. 달라지는 것은 감사 수량뿐입니다.",
       comparisonHelper:
-        "먼저 1회 감사를 시작하고, 필요하면 더 효율적인 패키지로 전환하세요.",
-      volumeFlexNote: "수량은 언제든지 조정할 수 있습니다.",
+        "패키지가 클수록 감사 1회당 비용이 낮아집니다. 상위 상품으로 변경할 의무는 없습니다.",
+      volumeFlexNote: "필요할 때 감사 크레딧을 더 구매할 수 있습니다.",
       audience:
         "가장 영향력 있는 액션에 우선순위를 두고 싶은 호스트, 투자자, 컨시어지 팀을 위해 설계되었습니다.",
     },
@@ -2031,7 +2031,7 @@ export const pricingI18n = {
         savings: "",
         features: [
           "원하는 숙소 1건 감사",
-          "즉시 전환 진단",
+          "숙소 전환 분석",
           "우선순위 권장사항",
           "약정 없음",
         ],
@@ -2044,7 +2044,7 @@ export const pricingI18n = {
         period: "감사 5회 · 회당 €7.80",
         cta: "가성비 최고의 패키지 선택",
         tag: "최고의 균형",
-        savings: "단일 감사 대비 약 €13 절약",
+        savings: "단일 감사 대비 약 €6 절약",
         features: [
           "감사 5회를 자유롭게 사용",
           "여러 숙소 비교",
@@ -2070,7 +2070,7 @@ export const pricingI18n = {
       },
     ],
     caseStudy: {
-      eyebrow: "실제 사례",
+      eyebrow: "참고 예시",
       title: "유사 숙소의 참고 전 / 후 비교",
       subtitle:
         "더 명확한 우선순위가 숙소 표현 방식을 어떻게 바꿀 수 있는지 보여 주는 단기 임대 비교 사례입니다.",
@@ -2087,7 +2087,7 @@ export const pricingI18n = {
         "• 사진과 핵심 강점의 정렬이 더 좋아짐",
         "• 우선 실행 항목을 빠르게 적용",
       ],
-      note: "비교 가능한 고객 사례를 익명화한 예시로, 설명 목적으로 사용됩니다.",
+      note: "설명을 위한 예시입니다. 특정 고객이나 보장된 결과를 나타내지 않습니다.",
     },
     offerDetails: {
       eyebrow: "무엇을 구매하나요",
@@ -2214,9 +2214,9 @@ export const pricingI18n = {
     },
     cta: {
       title: "첫 번째 감사를 시작할 준비가 되셨나요?",
-      subtitle: "패키지를 선택하고 숙소를 더 높은 성과를 내는 자산으로 바꾸세요.",
+      subtitle: "숙소에 맞는 감사 크레딧 수를 선택하세요.",
       note: "EUR 기준 일회성 결제입니다. 로그인 후 상품을 선택하고 안전한 checkout으로 이동합니다.",
-      reassurance: "즉시 결과 • 약정 없음",
+      reassurance: "일회성 결제 • 구독 없음",
       primary: "내 감사 시작하기",
       secondary: "데모 보기",
     },
@@ -2224,10 +2224,10 @@ export const pricingI18n = {
   ar: {
     hero: {
       eyebrow: "الأسعار",
-      titleLine1: "الأسعار",
-      titleLine2: "المناسبة لحجم إعلاناتك",
+      titleLine1: "رصيد تدقيق مرن.",
+      titleLine2: "بدون اشتراك.",
       subtitle:
-        "ابدأ بتدقيق تجريبي، ثم انتقل إلى باقة أكثر جدوى عندما تريد تحسين عدة إعلانات.",
+        "اشترِ 1 أو 5 أو 15 رصيد تدقيق متى احتجت إليه. كل عملية شراء تُضاف إلى رصيدك الحالي.",
       legendFastAction: "البرتقالي = إجراء سريع",
       legendImpact: "الأخضر = أثر تقديري",
       legendBenchmark: "الأزرق = مرجع / هيكلة",
@@ -2236,8 +2236,8 @@ export const pricingI18n = {
       comparisonTitle: "ثلاثة عروض بسيطة للمقارنة",
       comparisonText: "نفس مستوى التقرير في كل عرض. الاختلاف الوحيد هو عدد التدقيقات.",
       comparisonHelper:
-        "ابدأ بتدقيق واحد، ثم انتقل إلى باقة أكثر جدوى إذا احتجت إلى ذلك.",
-      volumeFlexNote: "يمكنك تعديل الحجم متى شئت.",
+        "كلما كبرت الباقة انخفضت تكلفة التدقيق الواحد. لست ملزمًا بالانتقال إلى عرض أعلى.",
+      volumeFlexNote: "اشترِ المزيد من رصيد التدقيق متى احتجت إليه.",
       audience:
         "مصمم بالفعل للمضيفين والمستثمرين وفرق الكونسيرج الذين يريدون إعطاء الأولوية لأعلى الإجراءات أثرًا.",
     },
@@ -2253,7 +2253,7 @@ export const pricingI18n = {
         savings: "",
         features: [
           "تدقيق واحد للإعلان الذي تختاره",
-          "قراءة فورية للتحويل",
+          "تحليل تحويل الإعلان",
           "توصيات ذات أولوية",
           "من دون التزام",
         ],
@@ -2266,7 +2266,7 @@ export const pricingI18n = {
         period: "5 تدقيقات · €7.80/تدقيق",
         cta: "اختر الباقة الأعلى قيمة",
         tag: "أفضل توازن",
-        savings: "وفّر حوالي €13 مقارنة بالتدقيقات الفردية",
+        savings: "وفّر حوالي €6 مقارنة بالتدقيقات الفردية",
         features: [
           "5 تدقيقات للاستخدام بحرية",
           "مقارنة عدة إعلانات",
@@ -2292,7 +2292,7 @@ export const pricingI18n = {
       },
     ],
     caseStudy: {
-      eyebrow: "حالة واقعية",
+      eyebrow: "مثال توضيحي",
       title: "قبل / بعد توضيحي على إعلان مشابه",
       subtitle:
         "مثال مشابه في الإيجار قصير الأجل يوضح كيف يمكن لأولويات أوضح أن تغيّر طريقة تقديم الإعلان.",
@@ -2309,7 +2309,7 @@ export const pricingI18n = {
         "• مواءمة أفضل بين الصور ونقاط القوة",
         "• تنفيذ سريع للإجراءات ذات الأولوية",
       ],
-      note: "مثال مجهول الهوية مستند إلى حالة عميل مشابهة، لأغراض توضيحية.",
+      note: "مثال توضيحي. لا يمثّل عميلًا بعينه ولا نتيجة مضمونة.",
     },
     offerDetails: {
       eyebrow: "ما الذي تشتريه",
@@ -2436,9 +2436,9 @@ export const pricingI18n = {
     },
     cta: {
       title: "هل أنت جاهز لإطلاق أول تدقيق لك؟",
-      subtitle: "اختر باقتك وحوّل إعلاناتك إلى أصول ذات أداء أعلى.",
+      subtitle: "اختر عدد أرصدة التدقيق المناسب لإعلاناتك.",
       note: "دفع لمرة واحدة بعملة EUR. سجّل الدخول، اختر عرضك، ثم تابع إلى checkout الآمن.",
-      reassurance: "نتيجة فورية • دون التزام",
+      reassurance: "دفعة واحدة • بدون اشتراك",
       primary: "ابدأ تدقيقي",
       secondary: "شاهد العرض التجريبي",
     },

@@ -25,7 +25,7 @@ async function getUsageEventCredits(
 ): Promise<WorkspaceAuditCredits | null> {
   const { data, error } = await client
     .from("usage_events")
-    .select("event_type, quantity")
+    .select("event_type, quantity, metadata")
     .eq("workspace_id", workspaceId)
     .in("event_type", [
       "audit_test_purchased",
@@ -41,10 +41,18 @@ async function getUsageEventCredits(
     return null;
   }
 
+  // A purchase is one grant per Stripe session: a duplicated usage event for the same session (replayed webhook) must not
+  // raise the displayed balance. Events without a session id (consumptions, manual grants) are all counted.
+  const seenGrantSessions = new Set<string>();
   const granted = (data ?? []).reduce((sum, row) => {
-    return row.event_type === "audit_test_purchased" || row.event_type === "audit_credit_granted"
-      ? sum + (row.quantity ?? 1)
-      : sum;
+    if (row.event_type !== "audit_test_purchased" && row.event_type !== "audit_credit_granted") return sum;
+    const sessionId = (row.metadata as { stripe_session_id?: unknown } | null)?.stripe_session_id;
+    if (typeof sessionId === "string" && sessionId) {
+      const key = `${row.event_type}:${sessionId}`;
+      if (seenGrantSessions.has(key)) return sum;
+      seenGrantSessions.add(key);
+    }
+    return sum + (row.quantity ?? 1);
   }, 0);
 
   const consumed = (data ?? []).reduce((sum, row) => {

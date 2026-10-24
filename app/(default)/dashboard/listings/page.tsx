@@ -4,6 +4,7 @@ import Link from "next/link";
 import { runAuditForListing } from "@/components/RunAuditForListingButton";
 import { canCreateAudit } from "@/lib/billing/canCreateAudit";
 import { getWorkspaceAuditCredits } from "@/lib/billing/getWorkspaceAuditCredits";
+import { shouldShowCreditBalanceOnFreePlan } from "@/lib/billing/listingsCreditStatus";
 import { normalizeSourceUrl } from "@/lib/listings/normalizeSourceUrl";
 import { supabase } from "@/lib/supabase";
 import { getOrCreateWorkspaceForUser } from "@/lib/workspaces/ensureWorkspaceForUser";
@@ -199,6 +200,7 @@ function getListingsCopy(locale: Locale) {
       auditsUsedPlural: "audits used",
       unlimitedAudits: "Unlimited audits",
       auditTestActive: "Test audit active",
+      auditCreditsTitle: "Audit credits",
       pack5Active: "5-audit pack active",
       pack15Active: "15-audit pack active",
       singleAuditOneOff: "1 one-off audit",
@@ -287,6 +289,7 @@ function getListingsCopy(locale: Locale) {
       auditsUsedPlural: "使用済み監査",
       unlimitedAudits: "無制限の監査",
       auditTestActive: "テスト監査有効",
+      auditCreditsTitle: "監査クレジット",
       pack5Active: "5件監査パック有効",
       pack15Active: "15件監査パック有効",
       singleAuditOneOff: "単発監査 1件",
@@ -376,6 +379,7 @@ function getListingsCopy(locale: Locale) {
       auditsUsedPlural: "已用审计",
       unlimitedAudits: "无限审计",
       auditTestActive: "测试审计已激活",
+      auditCreditsTitle: "审计额度",
       pack5Active: "5次审计包已激活",
       pack15Active: "15次审计包已激活",
       singleAuditOneOff: "1次单次审计",
@@ -464,6 +468,7 @@ function getListingsCopy(locale: Locale) {
       auditsUsedPlural: "사용된 감사",
       unlimitedAudits: "무제한 감사",
       auditTestActive: "테스트 감사 활성",
+      auditCreditsTitle: "감사 크레딧",
       pack5Active: "5회 감사 팩 활성",
       pack15Active: "15회 감사 팩 활성",
       singleAuditOneOff: "단일 감사 1회",
@@ -553,6 +558,7 @@ function getListingsCopy(locale: Locale) {
       auditsUsedPlural: "عمليات تدقيق مستخدمة",
       unlimitedAudits: "عمليات تدقيق غير محدودة",
       auditTestActive: "تدقيق تجريبي نشط",
+      auditCreditsTitle: "رصيد التدقيق",
       pack5Active: "باقة 5 تدقيقات نشطة",
       pack15Active: "باقة 15 تدقيقًا نشطة",
       singleAuditOneOff: "عملية تدقيق واحدة",
@@ -640,6 +646,7 @@ function getListingsCopy(locale: Locale) {
       auditsUsedPlural: "Audits verwendet",
       unlimitedAudits: "Unbegrenzte Audits",
       auditTestActive: "Test-Audit aktiv",
+      auditCreditsTitle: "Audit-Credits",
       pack5Active: "5-Audit-Paket aktiv",
       pack15Active: "15-Audit-Paket aktiv",
       singleAuditOneOff: "1 einmaliges Audit",
@@ -724,6 +731,7 @@ function getListingsCopy(locale: Locale) {
       auditsUsedPlural: "audit usati",
       unlimitedAudits: "Audit illimitati",
       auditTestActive: "Audit test attivo",
+      auditCreditsTitle: "Crediti audit",
       pack5Active: "Pack 5 audit attivo",
       pack15Active: "Pack 15 audit attivo",
       singleAuditOneOff: "1 audit singolo",
@@ -808,6 +816,7 @@ function getListingsCopy(locale: Locale) {
       auditsUsedPlural: "auditorias usadas",
       unlimitedAudits: "Auditorias ilimitadas",
       auditTestActive: "Auditoria de teste ativa",
+      auditCreditsTitle: "Créditos de auditoria",
       pack5Active: "Pack de 5 auditorias ativo",
       pack15Active: "Pack de 15 auditorias ativo",
       singleAuditOneOff: "1 auditoria pontual",
@@ -892,6 +901,7 @@ function getListingsCopy(locale: Locale) {
       auditsUsedPlural: "audits gebruikt",
       unlimitedAudits: "Onbeperkte audits",
       auditTestActive: "Testaudit actief",
+      auditCreditsTitle: "Auditcredits",
       pack5Active: "5-auditpakket actief",
       pack15Active: "15-auditpakket actief",
       singleAuditOneOff: "1 losse audit",
@@ -978,6 +988,7 @@ function getListingsCopy(locale: Locale) {
       auditsUsedPlural: "auditorías usadas",
       unlimitedAudits: "Auditorías ilimitadas",
       auditTestActive: "Auditoría de prueba activa",
+      auditCreditsTitle: "Créditos de auditoría",
       pack5Active: "Pack de 5 auditorías activo",
       pack15Active: "Pack de 15 auditorías activo",
       singleAuditOneOff: "1 auditoría puntual",
@@ -1066,6 +1077,7 @@ function getListingsCopy(locale: Locale) {
     auditsUsedPlural: "audits utilisés",
     unlimitedAudits: "Audits illimités",
     auditTestActive: "Audit test actif",
+    auditCreditsTitle: "Crédits d’audit",
     pack5Active: "Pack 5 audits actif",
     pack15Active: "Pack 15 audits actif",
     singleAuditOneOff: "1 audit ponctuel",
@@ -1485,7 +1497,16 @@ export default function ListingsPage() {
   let planTitle: string | null = null;
   let planDetail: string | null = null;
 
-  if (hasFreePlanWithQuota) {
+  // Free plan whose purchased credits exceed what the free allowance still offers: show the real credit balance instead of
+  // "no audits available" (the plan label stays "free" after a Starter purchase, but the credits are usable).
+  const showFreePlanCreditBalance =
+    hasFreePlanWithQuota &&
+    shouldShowCreditBalanceOnFreePlan({ remainingFreeAudits, creditsAvailable });
+
+  if (showFreePlanCreditBalance && typeof creditsAvailable === "number") {
+    planTitle = copy.auditCreditsTitle;
+    planDetail = `${creditsAvailable} ${creditsAvailable === 1 ? copy.auditAvailableSingular : copy.auditsAvailable}`;
+  } else if (hasFreePlanWithQuota) {
     // Cas "Audit test" gratuit, limite codee a 1 via canCreateAudit
     planTitle = copy.auditTestActive;
 
@@ -1690,7 +1711,7 @@ export default function ListingsPage() {
             href="/dashboard/billing"
             className="inline-flex items-center justify-center rounded-lg border border-emerald-300/75 bg-emerald-50 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-700 shadow-[0_8px_18px_rgba(16,185,129,0.14)] transition-all duration-200 hover:bg-emerald-100 hover:text-emerald-800"
           >
-            {isProStatusCard ? copy.viewOffers : copy.managePlan}
+            {isProStatusCard || showFreePlanCreditBalance ? copy.viewOffers : copy.managePlan}
           </Link>
         </div>
       )}

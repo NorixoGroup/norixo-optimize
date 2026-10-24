@@ -493,7 +493,8 @@ export async function POST(request: NextRequest) {
       targetKind: "listing_id",
       targetRef: listingRow.id,
       billingAdminBypass,
-      enforceFreePlanLimit: quota?.planCode === "free",
+      // the free-plan allowance does not apply to a workspace that holds purchased credits (one credit is still consumed per audit)
+      enforceFreePlanLimit: quota?.planCode === "free" && !quota.hasAvailableCredits,
     });
 
     if (entitlementReservation.status === "insufficient_entitlement") {
