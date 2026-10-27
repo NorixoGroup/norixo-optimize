@@ -26,6 +26,7 @@ export async function createAutomationRun(input: CreateAutomationRunInput, depen
   validate(input);
   const control = await dependencies.getWorkspaceControl(input.workspaceId);
   if (control == null || !control.backlinksEnabled) return { kind: "rejected", reason: "automation_disabled" };
-  if (!control.dryRunOnly) return { kind: "rejected", reason: "dry_run_required" };
+  // dry_run_only gates external sends only. Runs are always mode "dry_run" (validated above and
+  // enforced by automation_runs_mode_check), so creating one never authorizes an outbound action.
   return dependencies.createOrGetRun(input);
 }

@@ -1,0 +1,160 @@
+name: Backlinks dry_run_only decoupling PostgreSQL 17
+
+# Verifies migration 20261027120000 on a PostgreSQL 17 cluster that is local to the runner:
+# before / after behavior, refusal cases, kill switch, owner and ACL parity, concurrency (pgbench,
+# 20 simultaneous clients), rollback and re-apply, plus the TypeScript non-regression and send-gate smokes.
+# No secret, no production service, no external API is used. Not a deployment workflow.
+
+on:
+  push:
+    branches: [fix/backlinks-dry-run-decoupling]
+    paths:
+      - "supabase/migrations/20261027120000_decouple_automation_preview_claims_from_dry_run_only.sql"
+      - "supabase/migrations/20260803030000_add_automation_task_dependencies.sql"
+      - "supabase/migrations/20261015130000_add_claim_backlink_discovery_task_by_id.sql"
+      - "scripts/backlink-dry-run-decoupling-rollback.sql"
+      - "scripts/backlink-dry-run-decoupling-verification.sql"
+      - "scripts/backlink-dry-run-decoupling-postgres-harness.sh"
+      - "scripts/backlink-dry-run-decoupling-smoke.ts"
+      - "scripts/automation-run-service-smoke.ts"
+      - "scripts/automation-backlink-outreach-maintenance-orchestrator-smoke.ts"
+      - "scripts/backlink-autonomy-runtime-controls-smoke.ts"
+      - "lib/automation/run-service.ts"
+      - "lib/automation/repositories/automationWorkspaceControlsRepository.ts"
+      - "lib/automation/backlink-outreach-schedule-apply-runner.ts"
+      - "lib/automation/backlink-outreach-schedule-apply-orchestrator.ts"
+      - "lib/automation/backlink-outreach-maintenance-orchestrator.ts"
+      - "app/api/internal/automation/backlinks/outreach/schedule/status/route.ts"
+      - "app/api/internal/automation/backlinks/outreach/tick/route.ts"
+      - ".github/workflows/dry-run-decoupling-postgres.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "supabase/migrations/20261027120000_decouple_automation_preview_claims_from_dry_run_only.sql"
+      - "supabase/migrations/20260803030000_add_automation_task_dependencies.sql"
+      - "supabase/migrations/20261015130000_add_claim_backlink_discovery_task_by_id.sql"
+      - "scripts/backlink-dry-run-decoupling-rollback.sql"
+      - "scripts/backlink-dry-run-decoupling-verification.sql"
+      - "scripts/backlink-dry-run-decoupling-postgres-harness.sh"
+      - "scripts/backlink-dry-run-decoupling-smoke.ts"
+      - "scripts/automation-run-service-smoke.ts"
+      - "scripts/automation-backlink-outreach-maintenance-orchestrator-smoke.ts"
+      - "scripts/backlink-autonomy-runtime-controls-smoke.ts"
+      - "lib/automation/run-service.ts"
+      - "lib/automation/repositories/automationWorkspaceControlsRepository.ts"
+      - "lib/automation/backlink-outreach-schedule-apply-runner.ts"
+      - "lib/automation/backlink-outreach-schedule-apply-orchestrator.ts"
+      - "lib/automation/backlink-outreach-maintenance-orchestrator.ts"
+      - "app/api/internal/automation/backlinks/outreach/schedule/status/route.ts"
+      - "app/api/internal/automation/backlinks/outreach/tick/route.ts"
+      - ".github/workflows/dry-run-decoupling-postgres.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  dry-run-decoupling-postgres:
+    # The pull-request event is intentionally limited to the decoupling branch.
+    if: github.event_name == 'push' || github.head_ref == 'fix/backlinks-dry-run-decoupling'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      PG_BIN: /usr/lib/postgresql/17/bin
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install PostgreSQL 17 from the signed PGDG repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends ca-certificates curl
+          sudo install -d -m 0755 /usr/share/postgresql-common/pgdg
+          sudo curl --fail --silent --show-error --location \
+            --output /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          . /etc/os-release
+          printf 'Types: deb\nURIs: https://apt.postgresql.org/pub/repos/apt\nSuites: %s-pgdg\nComponents: main\nArchitectures: %s\nSigned-By: /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc\n' \
+            "$VERSION_CODENAME" "$(dpkg --print-architecture)" | \
+            sudo tee /etc/apt/sources.list.d/pgdg.sources >/dev/null
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+            postgresql-17 postgresql-client-17 postgresql-contrib-17
+
+      - name: Verify PostgreSQL 17 toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" -ne 0
+          for binary in initdb pg_ctl postgres psql createdb dropdb pgbench; do
+            test -x "$PG_BIN/$binary"
+          done
+          "$PG_BIN/postgres" --version | grep -q "PostgreSQL) 17\."
+
+      - name: Start a private PostgreSQL 17 cluster (unix socket only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          export LC_ALL=C LANG=C
+          PGROOT="$RUNNER_TEMP/pg17"
+          mkdir -p "$PGROOT/sock"
+          "$PG_BIN/initdb" --pgdata="$PGROOT/data" --auth=trust --encoding=UTF8 --locale=C >/dev/null
+          "$PG_BIN/pg_ctl" --pgdata="$PGROOT/data" --log="$PGROOT/server.log" --wait \
+            -o "-c listen_addresses='' -c unix_socket_directories=$PGROOT/sock -c port=5432 -c max_connections=100 -c fsync=off" \
+            start
+          echo "PGROOT=$PGROOT" >> "$GITHUB_ENV"
+          # Supabase-like roles expected by the migrations and by the harness.
+          for role in anon authenticated service_role; do
+            "$PG_BIN/psql" -h "$PGROOT/sock" -p 5432 -d postgres -X -q -v ON_ERROR_STOP=1 \
+              -c "create role $role nologin"
+          done
+
+      - name: Run the PostgreSQL decoupling harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/backlink-dry-run-decoupling-postgres-harness.sh
+          PGSOCKET_DIR="$PGROOT/sock" bash scripts/backlink-dry-run-decoupling-postgres-harness.sh
+
+      - name: Install Node dependencies (no lifecycle scripts)
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --version
+          npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Run TypeScript non-regression and send-gate smokes
+        shell: bash
+        run: |
+          set -euo pipefail
+          for smoke in \
+            backlink-dry-run-decoupling-smoke \
+            automation-run-service-smoke \
+            automation-backlink-outreach-maintenance-orchestrator-smoke \
+            automation-backlink-outreach-schedule-apply-all-orchestrator-smoke \
+            automation-backlink-outreach-schedule-apply-service-smoke \
+            backlink-autonomy-runtime-controls-smoke \
+            automation-backlinks-live-auto-send-service-smoke \
+            automation-backlinks-live-follow-up-service-smoke \
+            backlink-outreach-email-send-service-smoke \
+            backlink-outreach-approved-initial-send-service-smoke \
+            backlink-send-gates-a2-smoke; do
+            echo "::group::$smoke"
+            npx --no-install tsx "scripts/$smoke.ts"
+            echo "::endgroup::"
+          done
+
+      - name: Show server log on failure
+        if: failure()
+        shell: bash
+        run: tail -n 80 "$PGROOT/server.log" || true
+
+      - name: Stop the private cluster
+        if: always()
+        shell: bash
+        run: |
+          if [ -n "${PGROOT:-}" ] && [ -d "$PGROOT/data" ]; then
+            "$PG_BIN/pg_ctl" --pgdata="$PGROOT/data" --mode=immediate stop || true
+          fi

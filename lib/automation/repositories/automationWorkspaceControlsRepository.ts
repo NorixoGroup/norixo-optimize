@@ -84,7 +84,6 @@ export async function listAutomationWorkspaceControlsForBacklinkOutreachSchedule
       "workspace_id, backlinks_enabled, backlink_autonomy_enabled, backlink_outreach_schedule_apply_enabled, dry_run_only, disabled_reason, last_schedule_apply_attempt_at, created_at, updated_at",
     )
     .eq("backlinks_enabled", true)
-    .eq("dry_run_only", true)
     .eq("backlink_outreach_schedule_apply_enabled", true)
     .is("disabled_reason", null)
     .order("last_schedule_apply_attempt_at", { ascending: true, nullsFirst: true })

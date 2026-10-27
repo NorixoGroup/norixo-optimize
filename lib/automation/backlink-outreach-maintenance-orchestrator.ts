@@ -115,7 +115,6 @@ function normalizeWorkspaces(
     .filter(
       (workspace) =>
         workspace.backlinksEnabled === true &&
-        workspace.dryRunOnly === true &&
         workspace.disabledReason == null,
     )
     .sort((left, right) => left.workspaceId.localeCompare(right.workspaceId))

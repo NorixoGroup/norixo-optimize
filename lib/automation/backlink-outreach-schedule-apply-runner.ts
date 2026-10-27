@@ -89,7 +89,6 @@ export async function runBacklinkOutreachScheduleApply(
             control == null ||
             control.backlinks_enabled !== true ||
             control.backlink_outreach_schedule_apply_enabled !== true ||
-            control.dry_run_only !== true ||
             control.disabled_reason != null
           ) {
             throw new Error("APPLY_NOT_ENABLED");

@@ -131,7 +131,6 @@ export async function POST(request: NextRequest) {
             .from("automation_workspace_controls")
             .select("workspace_id, backlinks_enabled, dry_run_only, disabled_reason")
             .eq("backlinks_enabled", true)
-            .eq("dry_run_only", true)
             .is("disabled_reason", null)
             .order("workspace_id", { ascending: true })
             .limit(limit);
