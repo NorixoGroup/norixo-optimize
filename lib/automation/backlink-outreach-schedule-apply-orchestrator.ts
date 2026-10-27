@@ -93,7 +93,6 @@ function normalizeEligibleWorkspaces(
       (workspace) =>
         workspace.backlinksEnabled === true &&
         workspace.backlinkOutreachScheduleApplyEnabled === true &&
-        workspace.dryRunOnly === true &&
         workspace.disabledReason == null,
     )
     .sort((left, right) => {

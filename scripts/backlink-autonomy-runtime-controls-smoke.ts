@@ -45,7 +45,8 @@ async function main() {
   const rejected = await closed.dispatchClaimedTask({ task: task(), mode: "apply", actorUserId: id.actor });
   assert.deepEqual(rejected, { kind: "rejected", reason: "BACKLINK_AUTONOMY_DISABLED" }); assert.equal(counters.handlerCalls, 0);
   const scheduleSource = await readFile("lib/automation/backlink-outreach-schedule-apply-runner.ts", "utf8");
-  assert(scheduleSource.includes("control.dry_run_only !== true"), "Legacy schedule apply dry_run_only=true behavior must remain unchanged");
+  assert(!scheduleSource.includes("dry_run_only !== true"), "Schedule apply must no longer require dry_run_only=true (it only writes follow-up dates)");
+  assert(scheduleSource.includes("control.backlinks_enabled !== true") && scheduleSource.includes("control.backlink_outreach_schedule_apply_enabled !== true") && scheduleSource.includes("control.disabled_reason != null"), "Schedule apply must keep its backlinks / capability / kill-switch gates");
   console.log("PASS — Backlink autonomy runtime controls smoke");
 }
 void main();

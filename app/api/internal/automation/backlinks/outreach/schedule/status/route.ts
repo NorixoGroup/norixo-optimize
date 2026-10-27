@@ -46,7 +46,6 @@ export async function GET(request: NextRequest) {
     .from("automation_workspace_controls")
     .select("workspace_id, backlink_outreach_schedule_apply_enabled, dry_run_only, backlinks_enabled, updated_at")
     .eq("backlink_outreach_schedule_apply_enabled", true)
-    .eq("dry_run_only", true)
     .eq("backlinks_enabled", true)
     .order("workspace_id", { ascending: true });
 

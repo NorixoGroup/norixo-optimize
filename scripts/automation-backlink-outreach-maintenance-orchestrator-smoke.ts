@@ -39,8 +39,8 @@ async function main(): Promise<void> {
         {
           workspaceId: "00000000-0000-4000-8000-000000000002",
           backlinksEnabled: true,
-          dryRunOnly: false,
-          disabledReason: null,
+          dryRunOnly: true,
+          disabledReason: "paused",
         },
       ];
     },
@@ -136,6 +136,33 @@ async function main(): Promise<void> {
   assert(
     failing.issues[0]?.workspaceId !== failing.issues[1]?.workspaceId,
     "Failures must be tracked independently per workspace.",
+  );
+
+  // dry_run_only gates external sends only: a workspace that can send is still maintained.
+  const maintenanceEvents: string[] = [];
+  const liveSend = await runBacklinkOutreachMaintenanceOrchestration(
+    {
+      now: () => "2026-08-13T10:15:00.000Z",
+      listEligibleWorkspaces: async () => [
+        { workspaceId: "00000000-0000-4000-8000-000000000004", backlinksEnabled: true, dryRunOnly: false, disabledReason: null },
+        { workspaceId: "00000000-0000-4000-8000-000000000005", backlinksEnabled: false, dryRunOnly: false, disabledReason: null },
+        { workspaceId: "00000000-0000-4000-8000-000000000006", backlinksEnabled: true, dryRunOnly: false, disabledReason: "paused" },
+      ],
+      previewScheduleReconciliation: async (input) => {
+        maintenanceEvents.push(`schedule:${input.workspaceId}`);
+        return { disposition: "created", result: { scanned: 0, wouldScheduleFollowUp: 0, wouldScheduleFinalResponse: 0, existing: 0, notApplicable: 0, conflicts: 0, items: [] } };
+      },
+      previewSignalDetection: async (input) => {
+        maintenanceEvents.push(`signal:${input.workspaceId}`);
+        return { disposition: "created", result: { dueDetected: 0, dueTaskCreated: 0, dueTaskExisting: 0, expiredDetected: 0, expiredTaskCreated: 0, expiredTaskExisting: 0, failed: 0 } };
+      },
+    },
+    { workspaceLimit: 25 },
+  );
+  assert(liveSend.workspacesScanned === 1, "Only the enabled, non-disabled workspace is maintained, whatever dry_run_only is.");
+  assert(
+    maintenanceEvents.join(",") === "schedule:00000000-0000-4000-8000-000000000004,signal:00000000-0000-4000-8000-000000000004",
+    "A dry_run_only=false workspace must be maintained; disabled workspaces must not.",
   );
 
   console.log("PASS — Automation backlinks outreach maintenance orchestrator smoke");
