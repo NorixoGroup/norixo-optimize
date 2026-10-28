@@ -46,8 +46,8 @@ async function main(): Promise<void> {
   }
 
   assert(
-    repo.includes("reserve_backlink_approved_initial_attempt_v2"),
-    "Missing reserve_backlink_approved_initial_attempt_v2",
+    repo.includes("reserve_backlink_approved_initial_attempt_v3"),
+    "Missing reserve_backlink_approved_initial_attempt_v3",
   );
   assert(!repo.includes("reserve_backlink_outreach_initial_attempt_for_approved_auto_send"), "The app must not use the truncated long RPC name.");
   assert(!repo.includes("reserve_backlink_outreach_initial_attempt_for_approved_auto_sen"), "The app must not use the truncated database RPC name directly.");
