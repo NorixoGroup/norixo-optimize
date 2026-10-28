@@ -237,6 +237,9 @@ export type BacklinkOutreachLiveAutoSendCandidateRow = Pick<
   | "current_attempt"
   | "max_attempts"
   | "updated_at"
+  | "auto_send_approved_at"
+  | "auto_send_approved_by"
+  | "auto_send_approval_fingerprint"
 >;
 
 export async function listBacklinkOutreachScheduleApplyCandidates(
@@ -274,7 +277,7 @@ export async function listBacklinkOutreachLiveAutoSendCandidates(
   const operation = "listBacklinkOutreachLiveAutoSendCandidates";
   const { data, error } = await client
     .from("backlink_outreach")
-    .select("id, workspace_id, status, channel, current_attempt, max_attempts, updated_at")
+    .select("id, workspace_id, status, channel, current_attempt, max_attempts, updated_at, auto_send_approved_at, auto_send_approved_by, auto_send_approval_fingerprint")
     .eq("workspace_id", workspaceId)
     .eq("status", "ready")
     .eq("channel", "email")
@@ -297,7 +300,7 @@ export async function getBacklinkOutreachLiveAutoSendCandidateById(
   const operation = "getBacklinkOutreachLiveAutoSendCandidateById";
   const { data, error } = await client
     .from("backlink_outreach")
-    .select("id, workspace_id, status, channel, current_attempt, max_attempts, updated_at")
+    .select("id, workspace_id, status, channel, current_attempt, max_attempts, updated_at, auto_send_approved_at, auto_send_approved_by, auto_send_approval_fingerprint")
     .eq("workspace_id", workspaceId)
     .eq("id", outreachId)
     .eq("status", "ready")

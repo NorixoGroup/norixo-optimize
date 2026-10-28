@@ -3,12 +3,13 @@ name: Backlinks production gate V3 PostgreSQL 17
 # Verifies migration 20261028090000 (reserve_backlink_approved_initial_attempt_v3) on a PostgreSQL 17
 # cluster that is local to the runner: production eligibility, latest and fresh mailbox verification,
 # suppression, recipient history, gated idempotent replay and 16-client races, plus the TypeScript
-# admission and send smokes. No secret, no production service, no external API is used.
+# admission and send smokes (PR 2 adds the cron smokes) and the local end-to-end test of the live
+# auto-send cron (real route, services and SQL; simulated email provider; every other outbound request blocked). No secret, no production service, no external API is used.
 # Not a deployment workflow.
 
 on:
   push:
-    branches: [codex/backlinks-production-gate-pr1-clean]
+    branches: [codex/backlinks-production-gate-pr1-clean, codex/backlinks-auto-send-engine-pr2-clean]
     paths:
       - "supabase/migrations/20261028090000_add_backlink_production_eligibility_gate.sql"
       - "supabase/migrations/20260831150000_add_stable_backlink_v2_reservation_rpc.sql"
@@ -21,6 +22,17 @@ on:
       - "scripts/automation-backlinks-live-auto-send-route-smoke.ts"
       - "lib/backlinks/repositories/outreachAttemptsRepository.ts"
       - "lib/backlinks/services/outreachApprovedAutoSendService.ts"
+      - "lib/automation/backlink-outreach-live-auto-send-cron-config.ts"
+      - "lib/automation/backlink-outreach-live-auto-send-cron-service.ts"
+      - "lib/automation/backlink-outreach-live-auto-send-service.ts"
+      - "lib/automation/repositories/automationWorkspaceControlsRepository.ts"
+      - "lib/backlinks/repositories/outreachRepository.ts"
+      - "app/api/internal/cron/backlinks/outreach/send-one/route.ts"
+      - "scripts/automation-backlinks-live-auto-send-cron-smoke.ts"
+      - "scripts/automation-backlinks-live-auto-send-cron-route-smoke.ts"
+      - "scripts/automation-backlinks-live-auto-send-service-smoke.ts"
+      - "scripts/e2e-backlinks-live-auto-send-cron-local.sh"
+      - "scripts/e2e-backlinks-live-auto-send-cron-local.ts"
       - ".github/workflows/backlink-production-gate-v3-postgres.yml"
   pull_request:
     branches: [main]
@@ -36,6 +48,17 @@ on:
       - "scripts/automation-backlinks-live-auto-send-route-smoke.ts"
       - "lib/backlinks/repositories/outreachAttemptsRepository.ts"
       - "lib/backlinks/services/outreachApprovedAutoSendService.ts"
+      - "lib/automation/backlink-outreach-live-auto-send-cron-config.ts"
+      - "lib/automation/backlink-outreach-live-auto-send-cron-service.ts"
+      - "lib/automation/backlink-outreach-live-auto-send-service.ts"
+      - "lib/automation/repositories/automationWorkspaceControlsRepository.ts"
+      - "lib/backlinks/repositories/outreachRepository.ts"
+      - "app/api/internal/cron/backlinks/outreach/send-one/route.ts"
+      - "scripts/automation-backlinks-live-auto-send-cron-smoke.ts"
+      - "scripts/automation-backlinks-live-auto-send-cron-route-smoke.ts"
+      - "scripts/automation-backlinks-live-auto-send-service-smoke.ts"
+      - "scripts/e2e-backlinks-live-auto-send-cron-local.sh"
+      - "scripts/e2e-backlinks-live-auto-send-cron-local.ts"
       - ".github/workflows/backlink-production-gate-v3-postgres.yml"
 
 permissions:
@@ -43,8 +66,8 @@ permissions:
 
 jobs:
   backlink-production-gate-v3-postgres:
-    # The pull-request event is intentionally limited to the production-gate branch.
-    if: github.event_name == 'push' || github.head_ref == 'codex/backlinks-production-gate-pr1-clean'
+    # The pull-request event is intentionally limited to the production-gate (PR 1) and auto-send engine (PR 2) branches.
+    if: github.event_name == 'push' || github.head_ref == 'codex/backlinks-production-gate-pr1-clean' || github.head_ref == 'codex/backlinks-auto-send-engine-pr2-clean'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
@@ -125,11 +148,22 @@ jobs:
             backlink-outreach-email-send-route-smoke \
             automation-backlinks-live-auto-send-route-smoke \
             automation-backlinks-live-auto-send-service-smoke \
+            automation-backlinks-live-auto-send-cron-smoke \
+            automation-backlinks-live-auto-send-cron-route-smoke \
             backlink-send-gates-a2-smoke; do
             echo "::group::$smoke"
             npx --no-install tsx "scripts/$smoke.ts"
             echo "::endgroup::"
           done
+
+      - name: Run the cron end-to-end test (simulated email provider, disposable databases)
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/e2e-backlinks-live-auto-send-cron-local.sh
+          # The script starts the test with an empty environment (env -i): no secret can leak in, and the
+          # test only reaches the private runner cluster through its unix socket. No real email is possible.
+          PGSOCKET_DIR="$PGROOT/sock" bash scripts/e2e-backlinks-live-auto-send-cron-local.sh
 
       - name: Show server log on failure
         if: failure()

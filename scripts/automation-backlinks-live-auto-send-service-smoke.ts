@@ -29,6 +29,9 @@ function candidate(
     current_attempt: 0,
     max_attempts: 3,
     updated_at: "2026-08-20T08:00:00.000Z",
+    auto_send_approved_at: "2026-08-20T07:55:00.000Z",
+    auto_send_approved_by: "actor-1",
+    auto_send_approval_fingerprint: "approval-fingerprint-1",
     ...overrides,
   };
 }

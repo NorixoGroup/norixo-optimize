@@ -109,6 +109,35 @@ export async function listAutomationWorkspaceControlsForBacklinkOutreachSchedule
   );
 }
 
+/**
+ * Selects only workspaces whose persisted controls permit a real initial
+ * outreach send. The endpoint still has its own disabled-by-default gate and
+ * V3 re-checks every condition inside its reservation transaction.
+ */
+export async function listAutomationWorkspaceControlsForBacklinkLiveAutoSend(
+  client: BacklinkRepositoryClient,
+  limit: number,
+): Promise<AutomationWorkspaceControl[]> {
+  const operation = "listAutomationWorkspaceControlsForBacklinkLiveAutoSend";
+  const { data, error } = await client
+    .from("automation_workspace_controls")
+    .select(
+      "workspace_id, backlinks_enabled, backlink_autonomy_enabled, backlink_outreach_schedule_apply_enabled, dry_run_only, disabled_reason, last_schedule_apply_attempt_at, created_at, updated_at, updated_by",
+    )
+    .eq("backlinks_enabled", true)
+    .eq("dry_run_only", false)
+    .eq("backlink_outreach_schedule_apply_enabled", true)
+    .is("disabled_reason", null)
+    .order("workspace_id", { ascending: true })
+    .limit(limit);
+
+  if (error != null) {
+    throw normalizeBacklinkRepositoryError(operation, error);
+  }
+
+  return (data ?? []).map(mapAutomationWorkspaceControl);
+}
+
 /** Dedicated autonomy selector; deliberately independent from legacy dry-run scheduling. */
 export async function listAutomationWorkspaceControlsForBacklinkAutonomy(
   client: BacklinkRepositoryClient,
