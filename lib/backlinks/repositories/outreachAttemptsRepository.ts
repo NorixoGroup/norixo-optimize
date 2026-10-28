@@ -12,7 +12,7 @@ type ReserveBacklinkOutreachInitialAttemptRpcName = "reserve_backlink_outreach_i
 type ReserveBacklinkOutreachInitialAttemptRpcArgs = Database["public"]["Functions"][ReserveBacklinkOutreachInitialAttemptRpcName]["Args"];
 type ReserveBacklinkOutreachInitialAttemptRpcRow = Database["public"]["Functions"][ReserveBacklinkOutreachInitialAttemptRpcName]["Returns"][number];
 type ReserveBacklinkOutreachApprovedInitialAttemptRpcName =
-  "reserve_backlink_approved_initial_attempt_v2";
+  "reserve_backlink_approved_initial_attempt_v3";
 type ReserveBacklinkOutreachApprovedInitialAttemptRpcArgs =
   Database["public"]["Functions"][ReserveBacklinkOutreachApprovedInitialAttemptRpcName]["Args"];
 type ReserveBacklinkOutreachApprovedInitialAttemptRpcRow =
@@ -58,6 +58,11 @@ export type BacklinkOutreachApprovedInitialAttemptResult =
         | "invalid_recipient"
         | "missing_approved_content"
         | "ineligible"
+        | "production_eligibility_required"
+        | "mailbox_not_deliverable"
+        | "recipient_suppressed"
+        | "recipient_previously_attempted"
+        | "recipient_unknown_attempt"
         | "workspace_controls_missing"
         | "workspace_backlinks_disabled"
         | "workspace_dry_run"
@@ -179,7 +184,12 @@ function mapApprovedInitialAttemptReservation(value: unknown): {
     | "not_ready"
     | "invalid_recipient"
     | "missing_approved_content"
-    | "ineligible";
+    | "ineligible"
+    | "production_eligibility_required"
+    | "mailbox_not_deliverable"
+    | "recipient_suppressed"
+    | "recipient_previously_attempted"
+    | "recipient_unknown_attempt";
   attemptId: string | null;
   rateLimitReason: BacklinkOutreachAttemptRateLimitReason | null;
 } {
@@ -219,7 +229,12 @@ function mapApprovedInitialAttemptReservation(value: unknown): {
     disposition !== "not_ready" &&
     disposition !== "invalid_recipient" &&
     disposition !== "missing_approved_content" &&
-    disposition !== "ineligible"
+    disposition !== "ineligible" &&
+    disposition !== "production_eligibility_required" &&
+    disposition !== "mailbox_not_deliverable" &&
+    disposition !== "recipient_suppressed" &&
+    disposition !== "recipient_previously_attempted" &&
+    disposition !== "recipient_unknown_attempt"
   ) {
     throw new BacklinkRepositoryError({
       code: "DATABASE",
@@ -298,7 +313,7 @@ export async function reserveBacklinkOutreachApprovedInitialAttempt(
   },
 ): Promise<BacklinkOutreachApprovedInitialAttemptResult> {
   const { data, error } = await client.rpc(
-    "reserve_backlink_approved_initial_attempt_v2",
+    "reserve_backlink_approved_initial_attempt_v3",
     {
       p_workspace_id: required(input.workspaceId, "workspaceId"),
       p_campaign_id: required(input.campaignId, "campaignId"),
@@ -354,7 +369,12 @@ export async function reserveBacklinkOutreachApprovedInitialAttempt(
     mapped.disposition === "not_ready" ||
     mapped.disposition === "invalid_recipient" ||
     mapped.disposition === "missing_approved_content" ||
-    mapped.disposition === "ineligible"
+    mapped.disposition === "ineligible" ||
+    mapped.disposition === "production_eligibility_required" ||
+    mapped.disposition === "mailbox_not_deliverable" ||
+    mapped.disposition === "recipient_suppressed" ||
+    mapped.disposition === "recipient_previously_attempted" ||
+    mapped.disposition === "recipient_unknown_attempt"
   ) {
     return { attempt: null, snapshot: null, disposition: mapped.disposition, rateLimitReason: null };
   }

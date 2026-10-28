@@ -5052,6 +5052,24 @@ export type Database = {
           rate_limit_reason: string | null
         }[]
       }
+      reserve_backlink_approved_initial_attempt_v3: {
+        Args: {
+          p_actor_user_id: string
+          p_attempt_id: string
+          p_campaign_id: string
+          p_idempotency_key: string
+          p_outreach_id: string
+          p_requested_at: string
+          p_reply_token_hash: string
+          p_reply_token_key_version: string
+          p_workspace_id: string
+        }
+        Returns: {
+          attempt_id: string | null
+          disposition: string
+          rate_limit_reason: string | null
+        }[]
+      }
       reserve_backlink_outreach_key: {
         Args: { p_workspace_id: string }
         Returns: string

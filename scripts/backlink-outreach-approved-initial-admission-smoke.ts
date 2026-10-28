@@ -12,7 +12,7 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 async function main(): Promise<void> {
-  const [v2Migration, wrapperMigration, repo] = await Promise.all([
+  const [v2Migration, wrapperMigration, v3Migration, repo] = await Promise.all([
     readFile(
       "supabase/migrations/20260831130000_harden_backlink_v2_approval_fingerprint.sql",
       "utf8",
@@ -21,6 +21,7 @@ async function main(): Promise<void> {
       "supabase/migrations/20260831150000_add_stable_backlink_v2_reservation_rpc.sql",
       "utf8",
     ),
+    readFile("supabase/migrations/20261028090000_add_backlink_production_eligibility_gate.sql", "utf8"),
     readFile("lib/backlinks/repositories/outreachAttemptsRepository.ts", "utf8"),
   ]);
 
@@ -53,9 +54,29 @@ async function main(): Promise<void> {
     assert(wrapperMigration.includes(value), `Missing stable approved-admission wrapper invariant: ${value}`);
   }
 
+  for (const value of [
+    "backlink_production_eligibility",
+    "origin_kind <> 'real'",
+    "status <> 'approved'",
+    "backlink_contact_mailbox_verifications",
+    "order by v.checked_at desc, v.created_at desc, v.id desc",
+    "mailbox.result <> 'deliverable'",
+    "interval '30 days'",
+    "backlink_email_suppressions",
+    "recipient_unknown_attempt",
+    "recipient_previously_attempted",
+    "backlink_production_recipient:",
+    "Idempotent replay, phase A",
+    "Idempotent replay, phase B",
+    "replay.status in ('accepted', 'failed', 'unknown')",
+    "a.id is distinct from replay.id",
+    "idempotency_key = trim(coalesce(p_idempotency_key, ''))",
+    "reserve_backlink_approved_initial_attempt_v3",
+  ]) assert(v3Migration.includes(value), `Missing V3 production-gate invariant: ${value}`);
+
   assert(
-    repo.includes("reserve_backlink_approved_initial_attempt_v2"),
-    "Repository must use the approved initial admission RPC.",
+    repo.includes("reserve_backlink_approved_initial_attempt_v3"),
+    "Repository must use the V3 production admission RPC.",
   );
   assert(!repo.includes("reserve_backlink_outreach_initial_attempt_for_approved_auto_send"), "Repository must not use the long RPC name.");
   assert(!repo.includes("reserve_backlink_outreach_initial_attempt_for_approved_auto_sen"), "Repository must not use the truncated RPC name.");
@@ -111,7 +132,7 @@ async function main(): Promise<void> {
   const client = {
     rpc: async (functionName: string, args: Record<string, unknown>) => {
       assert(
-        functionName === "reserve_backlink_approved_initial_attempt_v2",
+        functionName === "reserve_backlink_approved_initial_attempt_v3",
         "Approved initial admission must call the dedicated RPC.",
       );
       assert(

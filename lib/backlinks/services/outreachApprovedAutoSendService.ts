@@ -242,7 +242,12 @@ export function sendApprovedBacklinkOutreachEmail(
       reservation.disposition === "not_ready" ||
       reservation.disposition === "invalid_recipient" ||
       reservation.disposition === "missing_approved_content" ||
-      reservation.disposition === "ineligible"
+      reservation.disposition === "ineligible" ||
+      reservation.disposition === "production_eligibility_required" ||
+      reservation.disposition === "mailbox_not_deliverable" ||
+      reservation.disposition === "recipient_suppressed" ||
+      reservation.disposition === "recipient_previously_attempted" ||
+      reservation.disposition === "recipient_unknown_attempt"
     ) {
       throw new BacklinkOutreachEmailSendError(
         reservation.disposition === "campaign_disabled"

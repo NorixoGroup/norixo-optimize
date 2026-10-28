@@ -1,0 +1,145 @@
+name: Backlinks production gate V3 PostgreSQL 17
+
+# Verifies migration 20261028090000 (reserve_backlink_approved_initial_attempt_v3) on a PostgreSQL 17
+# cluster that is local to the runner: production eligibility, latest and fresh mailbox verification,
+# suppression, recipient history, gated idempotent replay and 16-client races, plus the TypeScript
+# admission and send smokes. No secret, no production service, no external API is used.
+# Not a deployment workflow.
+
+on:
+  push:
+    branches: [codex/backlinks-production-gate-pr1-clean]
+    paths:
+      - "supabase/migrations/20261028090000_add_backlink_production_eligibility_gate.sql"
+      - "supabase/migrations/20260831150000_add_stable_backlink_v2_reservation_rpc.sql"
+      - "supabase/migrations/20260831130000_harden_backlink_v2_approval_fingerprint.sql"
+      - "supabase/migrations/20261001150000_enforce_backlink_initial_email_send_gates.sql"
+      - "scripts/backlink-production-gate-v3-verification.sql"
+      - "scripts/backlink-production-gate-v3-postgres-harness.sh"
+      - "scripts/backlink-outreach-approved-initial-admission-smoke.ts"
+      - "scripts/backlink-outreach-email-send-route-smoke.ts"
+      - "scripts/automation-backlinks-live-auto-send-route-smoke.ts"
+      - "lib/backlinks/repositories/outreachAttemptsRepository.ts"
+      - "lib/backlinks/services/outreachApprovedAutoSendService.ts"
+      - ".github/workflows/backlink-production-gate-v3-postgres.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "supabase/migrations/20261028090000_add_backlink_production_eligibility_gate.sql"
+      - "supabase/migrations/20260831150000_add_stable_backlink_v2_reservation_rpc.sql"
+      - "supabase/migrations/20260831130000_harden_backlink_v2_approval_fingerprint.sql"
+      - "supabase/migrations/20261001150000_enforce_backlink_initial_email_send_gates.sql"
+      - "scripts/backlink-production-gate-v3-verification.sql"
+      - "scripts/backlink-production-gate-v3-postgres-harness.sh"
+      - "scripts/backlink-outreach-approved-initial-admission-smoke.ts"
+      - "scripts/backlink-outreach-email-send-route-smoke.ts"
+      - "scripts/automation-backlinks-live-auto-send-route-smoke.ts"
+      - "lib/backlinks/repositories/outreachAttemptsRepository.ts"
+      - "lib/backlinks/services/outreachApprovedAutoSendService.ts"
+      - ".github/workflows/backlink-production-gate-v3-postgres.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  backlink-production-gate-v3-postgres:
+    # The pull-request event is intentionally limited to the production-gate branch.
+    if: github.event_name == 'push' || github.head_ref == 'codex/backlinks-production-gate-pr1-clean'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      PG_BIN: /usr/lib/postgresql/17/bin
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install PostgreSQL 17 from the signed PGDG repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends ca-certificates curl
+          sudo install -d -m 0755 /usr/share/postgresql-common/pgdg
+          sudo curl --fail --silent --show-error --location \
+            --output /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          . /etc/os-release
+          printf 'Types: deb\nURIs: https://apt.postgresql.org/pub/repos/apt\nSuites: %s-pgdg\nComponents: main\nArchitectures: %s\nSigned-By: /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc\n' \
+            "$VERSION_CODENAME" "$(dpkg --print-architecture)" | \
+            sudo tee /etc/apt/sources.list.d/pgdg.sources >/dev/null
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+            postgresql-17 postgresql-client-17 postgresql-contrib-17
+
+      - name: Verify PostgreSQL 17 toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" -ne 0
+          for binary in initdb pg_ctl postgres psql createdb dropdb pgbench; do
+            test -x "$PG_BIN/$binary"
+          done
+          "$PG_BIN/postgres" --version | grep -q "PostgreSQL) 17\."
+
+      - name: Start a private PostgreSQL 17 cluster (unix socket only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          export LC_ALL=C LANG=C
+          PGROOT="$RUNNER_TEMP/pg17"
+          mkdir -p "$PGROOT/sock"
+          "$PG_BIN/initdb" --pgdata="$PGROOT/data" --auth=trust --encoding=UTF8 --locale=C >/dev/null
+          "$PG_BIN/pg_ctl" --pgdata="$PGROOT/data" --log="$PGROOT/server.log" --wait \
+            -o "-c listen_addresses='' -c unix_socket_directories=$PGROOT/sock -c port=5432 -c max_connections=100 -c fsync=off" \
+            start
+          echo "PGROOT=$PGROOT" >> "$GITHUB_ENV"
+          # Supabase-like roles expected by the migrations and by the harness.
+          for role in anon authenticated service_role; do
+            "$PG_BIN/psql" -h "$PGROOT/sock" -p 5432 -d postgres -X -q -v ON_ERROR_STOP=1 \
+              -c "create role $role nologin"
+          done
+
+      - name: Run the PostgreSQL V3 production-gate harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/backlink-production-gate-v3-postgres-harness.sh
+          PGSOCKET_DIR="$PGROOT/sock" bash scripts/backlink-production-gate-v3-postgres-harness.sh
+
+      - name: Install Node dependencies (no lifecycle scripts)
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --version
+          npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Run TypeScript non-regression and send-gate smokes
+        shell: bash
+        run: |
+          set -euo pipefail
+          for smoke in \
+            backlink-outreach-approved-initial-admission-smoke \
+            backlink-outreach-approved-initial-send-service-smoke \
+            backlink-outreach-email-send-service-smoke \
+            backlink-outreach-email-send-route-smoke \
+            automation-backlinks-live-auto-send-route-smoke \
+            automation-backlinks-live-auto-send-service-smoke \
+            backlink-send-gates-a2-smoke; do
+            echo "::group::$smoke"
+            npx --no-install tsx "scripts/$smoke.ts"
+            echo "::endgroup::"
+          done
+
+      - name: Show server log on failure
+        if: failure()
+        shell: bash
+        run: tail -n 80 "$PGROOT/server.log" || true
+
+      - name: Stop the private cluster
+        if: always()
+        shell: bash
+        run: |
+          if [ -n "${PGROOT:-}" ] && [ -d "$PGROOT/data" ]; then
+            "$PG_BIN/pg_ctl" --pgdata="$PGROOT/data" --mode=immediate stop || true
+          fi
