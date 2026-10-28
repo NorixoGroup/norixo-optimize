@@ -3,7 +3,8 @@ name: Backlinks production gate V3 PostgreSQL 17
 # Verifies migration 20261028090000 (reserve_backlink_approved_initial_attempt_v3) on a PostgreSQL 17
 # cluster that is local to the runner: production eligibility, latest and fresh mailbox verification,
 # suppression, recipient history, gated idempotent replay and 16-client races, plus the TypeScript
-# admission and send smokes (PR 2 adds the cron smokes). No secret, no production service, no external API is used.
+# admission and send smokes (PR 2 adds the cron smokes) and the local end-to-end test of the live
+# auto-send cron (real route, services and SQL; simulated email provider; every other outbound request blocked). No secret, no production service, no external API is used.
 # Not a deployment workflow.
 
 on:
@@ -30,6 +31,8 @@ on:
       - "scripts/automation-backlinks-live-auto-send-cron-smoke.ts"
       - "scripts/automation-backlinks-live-auto-send-cron-route-smoke.ts"
       - "scripts/automation-backlinks-live-auto-send-service-smoke.ts"
+      - "scripts/e2e-backlinks-live-auto-send-cron-local.sh"
+      - "scripts/e2e-backlinks-live-auto-send-cron-local.ts"
       - ".github/workflows/backlink-production-gate-v3-postgres.yml"
   pull_request:
     branches: [main]
@@ -54,6 +57,8 @@ on:
       - "scripts/automation-backlinks-live-auto-send-cron-smoke.ts"
       - "scripts/automation-backlinks-live-auto-send-cron-route-smoke.ts"
       - "scripts/automation-backlinks-live-auto-send-service-smoke.ts"
+      - "scripts/e2e-backlinks-live-auto-send-cron-local.sh"
+      - "scripts/e2e-backlinks-live-auto-send-cron-local.ts"
       - ".github/workflows/backlink-production-gate-v3-postgres.yml"
 
 permissions:
@@ -150,6 +155,15 @@ jobs:
             npx --no-install tsx "scripts/$smoke.ts"
             echo "::endgroup::"
           done
+
+      - name: Run the cron end-to-end test (simulated email provider, disposable databases)
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/e2e-backlinks-live-auto-send-cron-local.sh
+          # The script starts the test with an empty environment (env -i): no secret can leak in, and the
+          # test only reaches the private runner cluster through its unix socket. No real email is possible.
+          PGSOCKET_DIR="$PGROOT/sock" bash scripts/e2e-backlinks-live-auto-send-cron-local.sh
 
       - name: Show server log on failure
         if: failure()
