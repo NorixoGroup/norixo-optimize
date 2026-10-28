@@ -80,7 +80,10 @@ export function canRunBacklinkOutreachLiveAutoSend(
 function isCandidateEligible(candidate: BacklinkOutreachLiveAutoSendCandidateRow): boolean {
   return candidate.status === "ready" &&
     candidate.channel === "email" &&
-    candidate.current_attempt < candidate.max_attempts;
+    candidate.current_attempt < candidate.max_attempts &&
+    candidate.auto_send_approved_at != null &&
+    candidate.auto_send_approved_by != null &&
+    candidate.auto_send_approval_fingerprint != null;
 }
 
 function isSkippableSendError(code: BacklinkOutreachEmailSendError["code"]): boolean {
