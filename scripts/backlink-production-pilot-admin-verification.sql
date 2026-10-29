@@ -3,21 +3,23 @@
 create schema tt;
 create table tt.results (name text, ok boolean);
 create function tt.expect(n text, ok boolean) returns void language sql as $$ insert into tt.results values (n, coalesce(ok,false)) $$;
+create sequence tt.fixture_key_seq start with 100000;
 
 -- Each fixture is self-contained and uses a non-example, fictional local address.
 create function tt.mk(label text, with_requested_follow_up boolean default false)
 returns table(ws uuid, actor uuid, contact uuid, opportunity uuid, campaign uuid, outreach uuid, follow_attempt uuid)
 language plpgsql as $$
-declare d uuid; a uuid; c uuid; o uuid; ca uuid; out_id uuid; fu uuid; asset uuid; h text;
+declare d uuid; a uuid; c uuid; o uuid; ca uuid; out_id uuid; fu uuid; asset uuid; h text; fixture_key text;
 begin
   ws := gen_random_uuid(); actor := gen_random_uuid(); ca := gen_random_uuid(); out_id := gen_random_uuid(); fu := gen_random_uuid();
+  fixture_key := nextval('tt.fixture_key_seq')::text;
   insert into auth.users values(actor, label || '@admin.local');
   insert into workspaces values(ws, label);
   insert into workspace_members values(ws, actor, 'owner');
   insert into backlink_assets(workspace_id,asset_key,display_name,asset_type) values(ws,'asset-'||label,'Asset','calculator') returning id into asset;
-  insert into backlink_domains(workspace_id,domain_key,hostname) values(ws,'BK-'||substr(replace(ws::text,'-',''),1,8),label||'.local') returning id into d;
-  insert into backlink_opportunities(workspace_id,opportunity_key,domain_id,asset_id,opportunity_type,target_page_url,target_page_title,page_type,evidence_summary) values(ws,'OP-'||substr(replace(ws::text,'-',''),1,8),d,asset,'resource','https://target.local/'||label,'Target','Blog Article','evidence') returning id into o;
-  insert into backlink_contacts(workspace_id,domain_id,contact_key,email_normalized,contact_status,source_type,source_reference) values(ws,d,'CT-'||substr(replace(ws::text,'-',''),1,8),'person-'||label||'@pilot.local','verified','editorial','https://source.local/'||label) returning id into c;
+  insert into backlink_domains(workspace_id,domain_key,hostname) values(ws,'BK-'||fixture_key,label||'.local') returning id into d;
+  insert into backlink_opportunities(workspace_id,opportunity_key,domain_id,asset_id,opportunity_type,target_page_url,target_page_title,page_type,evidence_summary) values(ws,'OP-'||fixture_key,d,asset,'resource','https://target.local/'||label,'Target','Blog Article','evidence') returning id into o;
+  insert into backlink_contacts(workspace_id,domain_id,contact_key,email_normalized,contact_status,source_type,source_reference) values(ws,d,'CT-'||fixture_key,'person-'||label||'@pilot.local','verified','editorial','https://source.local/'||label) returning id into c;
   h := encode(extensions.digest('person-'||label||'@pilot.local','sha256'),'hex');
   insert into backlink_contact_mailbox_verifications(workspace_id,contact_id,verification_key,email_fingerprint,provider,result,checked_at) values(ws,c,'v-'||label,h,'fake','deliverable',now());
   insert into backlink_campaigns(id,workspace_id,campaign_key,name,objective,owner_id,status,live_initial_send_enabled) values(ca,ws,'BL-CAM-2026-001','Pilot','test',actor,'active',true);
