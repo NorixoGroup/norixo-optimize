@@ -28,7 +28,7 @@ begin
   if with_requested_follow_up then
     update backlink_outreach set status='active',current_attempt=1,first_contact_at=now(),last_attempt_at=now() where id=out_id;
     insert into backlink_outreach_attempts(id,workspace_id,outreach_id,actor_user_id,channel,provider,recipient,idempotency_key,attempt_kind,status,requested_at,reply_token_hash,reply_token_key_version) values(fu,ws,out_id,actor,'email','fake','person-'||label||'@pilot.local','fu-'||label,'follow_up','requested',now(),repeat('a',64),'v1');
-    insert into backlink_outreach_follow_up_drafts(workspace_id,outreach_id,attempt_id,subject,body) values(ws,out_id,fu,'Follow','Follow body');
+    insert into backlink_outreach_follow_up_drafts(workspace_id,outreach_id,attempt_id,follow_up_number,subject,body,prepared_at,updated_at,updated_by) values(ws,out_id,fu,1,'Follow','Follow body',now(),now(),actor);
   else fu := null; end if;
   contact:=c; opportunity:=o; campaign:=ca; outreach:=out_id; follow_attempt:=fu; return next;
 end $$;
@@ -96,5 +96,5 @@ update backlink_outreach set status='active',current_attempt=1,first_contact_at=
 update tt.follow_race set follow_attempt=gen_random_uuid();
 insert into backlink_outreach_attempts(id,workspace_id,outreach_id,actor_user_id,channel,provider,recipient,idempotency_key,attempt_kind,status,reply_token_hash,reply_token_key_version)
 select follow_attempt,ws,outreach,actor,'email','fake','person-follow-race@pilot.local','race-follow','follow_up','prepared',repeat('d',64),'v1' from tt.follow_race;
-insert into backlink_outreach_follow_up_drafts(workspace_id,outreach_id,attempt_id,subject,body)
-select ws,outreach,follow_attempt,'Follow','Follow body' from tt.follow_race;
+insert into backlink_outreach_follow_up_drafts(workspace_id,outreach_id,attempt_id,follow_up_number,subject,body,prepared_at,updated_at,updated_by)
+select ws,outreach,follow_attempt,1,'Follow','Follow body',now(),now(),actor from tt.follow_race;
