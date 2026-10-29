@@ -5,17 +5,17 @@ import { runManualMailboxVerification, ManualMailboxVerificationError } from "..
 type Contact = { id: string; workspace_id: string; email_normalized: string | null; contact_status: string; archived_at: string | null; do_not_contact_at: string | null };
 const workspaceId = "workspace"; const contactId = "contact";
 function harness(result: "deliverable" | "risky" | "undeliverable" | "unknown" | "provider_error", contact: Contact = { id: contactId, workspace_id: workspaceId, email_normalized: "owner@example.test", contact_status: "unverified", archived_at: null, do_not_contact_at: null }) {
-  let calls = 0; let claimed = false; const completed: Array<Record<string, unknown>> = []; let canonical: { result: string; email_fingerprint: string } | null = null;
+  let calls = 0; let claimed = false; const completed: Array<Record<string, unknown>> = []; let canonical: { result: string; email_fingerprint: string; checked_at: string } | null = null;
   const deps = {
     getContact: async () => contact,
     getProvider: () => ({ verify: async () => { calls += 1; return { status: result, provider: "fake", safeReason: `FAKE_${result}` }; } }),
     claim: async (): Promise<{ request_id: string; request_status: string; request_attempt_count: number; request_last_result: string | null; reservation_held: boolean }> => { if (claimed) return { request_id: "request", request_status: "running", request_attempt_count: 1, request_last_result: null, reservation_held: false }; claimed = true; return { request_id: "request", request_status: "running", request_attempt_count: 1, request_last_result: null, reservation_held: true }; },
     complete: async (input: Record<string, unknown>) => { completed.push(input); },
     getCanonicalVerification: async () => canonical,
-    record: async (input: { result: string }) => { canonical = { result: input.result, email_fingerprint: "b2096dbc5111b6305225657ffdfab205aaff1dfb30d71805aea56922b2cbb24f" }; if (input.result === "deliverable") contact.contact_status = "verified"; return { verificationId: "verification", disposition: "created" as const, contactStatus: contact.contact_status, verifiedAt: contact.contact_status === "verified" ? "2026-01-01T00:00:00.000Z" : null }; },
+    record: async (input: { result: string }) => { canonical = { result: input.result, email_fingerprint: "b2096dbc5111b6305225657ffdfab205aaff1dfb30d71805aea56922b2cbb24f", checked_at: "2026-01-01T00:00:00.000Z" }; if (input.result === "deliverable") contact.contact_status = "verified"; return { verificationId: "verification", disposition: "created" as const, contactStatus: contact.contact_status, verifiedAt: contact.contact_status === "verified" ? "2026-01-01T00:00:00.000Z" : null }; },
     now: () => new Date("2026-01-01T00:00:00.000Z"),
   };
-  return { deps, get calls() { return calls; }, get completed() { return completed; }, set canonical(value: { result: string; email_fingerprint: string } | null) { canonical = value; } };
+  return { deps, get calls() { return calls; }, get completed() { return completed; }, set canonical(value: { result: string; email_fingerprint: string; checked_at: string } | null) { canonical = value; } };
 }
 
 async function main() {
@@ -23,9 +23,15 @@ for (const result of ["deliverable", "risky", "undeliverable", "unknown", "provi
   const h = harness(result); const output = await runManualMailboxVerification(h.deps, { workspaceId, contactId });
   assert.equal(h.calls, 1); assert.equal(output.state, result === "deliverable" ? "verified" : result);
 }
-for (const overrides of [{ archived_at: "2026-01-01" }, { do_not_contact_at: "2026-01-01" }, { email_normalized: null }, { contact_status: "verified" }]) {
+for (const overrides of [{ archived_at: "2026-01-01" }, { do_not_contact_at: "2026-01-01" }, { email_normalized: null }]) {
   const h = harness("deliverable", { id: contactId, workspace_id: workspaceId, email_normalized: "owner@example.test", contact_status: "unverified", archived_at: null, do_not_contact_at: null, ...overrides });
   await assert.rejects(() => runManualMailboxVerification(h.deps, { workspaceId, contactId }), ManualMailboxVerificationError); assert.equal(h.calls, 0);
+}
+{
+  // Validated behavior: a verified contact with no fresh deliverable proof is reverified, not rejected.
+  const h = harness("deliverable", { id: contactId, workspace_id: workspaceId, email_normalized: "owner@example.test", contact_status: "verified", archived_at: null, do_not_contact_at: null });
+  const output = await runManualMailboxVerification(h.deps, { workspaceId, contactId });
+  assert.equal(h.calls, 1); assert.equal(output.state, "verified");
 }
 const concurrent = harness("deliverable");
 await Promise.all([runManualMailboxVerification(concurrent.deps, { workspaceId, contactId }), runManualMailboxVerification(concurrent.deps, { workspaceId, contactId })]);
@@ -68,7 +74,7 @@ assert.equal(concurrent.calls, 1);
 }
 for (const [attempt, expectedState, expectedCompletion] of [[1, "provider_error", "retryable"], [2, "provider_error", "retryable"], [3, "exhausted", "terminal"]] as const) {
   const h = harness("deliverable");
-  h.canonical = { result: "provider_error", email_fingerprint: "b2096dbc5111b6305225657ffdfab205aaff1dfb30d71805aea56922b2cbb24f" };
+  h.canonical = { result: "provider_error", email_fingerprint: "b2096dbc5111b6305225657ffdfab205aaff1dfb30d71805aea56922b2cbb24f", checked_at: "2026-01-01T00:00:00.000Z" };
   h.deps.claim = async () => ({ request_id: "request", request_status: "running", request_attempt_count: attempt, request_last_result: null, reservation_held: false });
   const output = await runManualMailboxVerification(h.deps, { workspaceId, contactId });
   assert.equal(output.state, expectedState); assert.equal(h.completed.at(-1)?.status, expectedCompletion); assert.equal(h.calls, 0);
