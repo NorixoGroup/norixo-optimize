@@ -1,0 +1,67 @@
+name: Backlinks pilot-admin V3 PostgreSQL 17
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "supabase/migrations/20261028110000_add_backlink_v3_pilot_admin_control.sql"
+      - "scripts/backlink-production-pilot-admin-postgres-harness.sh"
+      - "scripts/backlink-production-pilot-admin-verification.sql"
+      - "scripts/backlink-production-pilot-eligibility-repository-smoke.ts"
+      - "scripts/backlink-production-pilot-eligibility-safety-smoke.ts"
+      - "scripts/backlink-outreach-follow-up-pre-send-rpc-smoke.ts"
+      - "scripts/backlink-dry-run-decoupling-smoke.ts"
+      - "scripts/backlink-outreach-follow-up-send-service-smoke.ts"
+      - ".github/workflows/backlink-production-pilot-admin-postgres.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  pilot-admin-postgres:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      PG_BIN: /usr/lib/postgresql/17/bin
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Install PostgreSQL 17
+        run: |
+          set -euo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends ca-certificates curl
+          sudo install -d -m 0755 /usr/share/postgresql-common/pgdg
+          sudo curl --fail --silent --show-error --location --output /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          . /etc/os-release
+          printf 'Types: deb\nURIs: https://apt.postgresql.org/pub/repos/apt\nSuites: %s-pgdg\nComponents: main\nArchitectures: %s\nSigned-By: /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc\n' "$VERSION_CODENAME" "$(dpkg --print-architecture)" | sudo tee /etc/apt/sources.list.d/pgdg.sources >/dev/null
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends postgresql-17 postgresql-client-17 postgresql-contrib-17
+      - name: Start private socket-only cluster and roles
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/pilot-pg17"; mkdir -p "$root/sock"
+          "$PG_BIN/initdb" -D "$root/data" --auth=trust --encoding=UTF8 --locale=C >/dev/null
+          "$PG_BIN/pg_ctl" -D "$root/data" -l "$root/server.log" -w -o "-c listen_addresses='' -c unix_socket_directories=$root/sock -c port=5432" start
+          for role in anon authenticated service_role; do "$PG_BIN/psql" -h "$root/sock" -d postgres -X -q -v ON_ERROR_STOP=1 -c "create role $role nologin"; done
+          echo "PGROOT=$root" >> "$GITHUB_ENV"
+      - name: Run disposable pilot-admin harness
+        run: |
+          set -euo pipefail
+          bash -n scripts/backlink-production-pilot-admin-postgres-harness.sh
+          PGSOCKET_DIR="$PGROOT/sock" bash scripts/backlink-production-pilot-admin-postgres-harness.sh
+      - name: Run V3 and historical send-gate smokes
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+          for smoke in \
+            backlink-production-pilot-eligibility-repository-smoke \
+            backlink-production-pilot-eligibility-safety-smoke \
+            backlink-outreach-follow-up-pre-send-rpc-smoke \
+            backlink-dry-run-decoupling-smoke \
+            backlink-outreach-follow-up-send-service-smoke; do
+            npx --no-install tsx "scripts/$smoke.ts"
+          done
+      - name: Stop private cluster
+        if: always()
+        run: "$PG_BIN/pg_ctl -D \"$PGROOT/data\" -m immediate stop || true"
