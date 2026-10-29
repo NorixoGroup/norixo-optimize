@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
@@ -53,8 +54,11 @@ function TopNavbar({
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
   const [isMobileAdminOpen, setIsMobileAdminOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const [adminMenuPosition, setAdminMenuPosition] = useState({ top: 0, left: 0 });
   const menuRef = useRef<HTMLDivElement | null>(null);
   const adminMenuRef = useRef<HTMLDivElement | null>(null);
+  const adminMenuPanelRef = useRef<HTMLDivElement | null>(null);
   const adminMenuButtonRef = useRef<HTMLButtonElement | null>(null);
   const navbarContainerRef = useRef<HTMLDivElement | null>(null);
   const { copy } = useTranslation(dashboardCopy);
@@ -140,11 +144,18 @@ function TopNavbar({
   }, []);
 
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
       if (!menuRef.current?.contains(event.target as Node)) {
         setMenuOpen(false);
       }
-      if (!adminMenuRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      const isInsideAdminTrigger = adminMenuRef.current?.contains(target);
+      const isInsideAdminPanel = adminMenuPanelRef.current?.contains(target);
+      if (!isInsideAdminTrigger && !isInsideAdminPanel) {
         setIsAdminMenuOpen(false);
       }
     }
@@ -154,6 +165,25 @@ function TopNavbar({
       document.removeEventListener("mousedown", handlePointerDown);
     };
   }, []);
+
+  useEffect(() => {
+    if (!isAdminMenuOpen) return;
+
+    function updateAdminMenuPosition() {
+      const buttonEl = adminMenuButtonRef.current;
+      if (!buttonEl) return;
+      const rect = buttonEl.getBoundingClientRect();
+      setAdminMenuPosition({ top: rect.bottom + 8, left: rect.left });
+    }
+
+    updateAdminMenuPosition();
+    window.addEventListener("resize", updateAdminMenuPosition);
+    window.addEventListener("scroll", updateAdminMenuPosition, true);
+    return () => {
+      window.removeEventListener("resize", updateAdminMenuPosition);
+      window.removeEventListener("scroll", updateAdminMenuPosition, true);
+    };
+  }, [isAdminMenuOpen]);
 
   useEffect(() => {
     if (!isAdminMenuOpen) return;
@@ -322,28 +352,34 @@ function TopNavbar({
                   </span>
                 </button>
 
-                <div
-                  id="admin-nav-submenu"
-                  hidden={!isAdminMenuOpen}
-                  className="nk-dashboard-topbar-menu absolute left-0 top-[calc(100%+0.5rem)] min-w-[220px] max-w-[min(280px,calc(100vw-2rem))] rounded-2xl p-1.5"
-                >
-                  {ADMIN_NAV_SECTIONS.map((section) => {
-                    const active = isAdminSectionActive(pathname, section.href);
+                {isMounted &&
+                  createPortal(
+                    <div
+                      ref={adminMenuPanelRef}
+                      id="admin-nav-submenu"
+                      hidden={!isAdminMenuOpen}
+                      style={{ position: "fixed", top: adminMenuPosition.top, left: adminMenuPosition.left }}
+                      className="nk-dashboard-topbar-menu z-[100] min-w-[220px] max-w-[min(280px,calc(100vw-2rem))] rounded-2xl p-1.5"
+                    >
+                      {ADMIN_NAV_SECTIONS.map((section) => {
+                        const active = isAdminSectionActive(pathname, section.href);
 
-                    return (
-                      <Link
-                        key={section.href}
-                        href={section.href}
-                        onClick={() => setIsAdminMenuOpen(false)}
-                        className={`nk-dashboard-topbar-menu-action flex w-full items-center rounded-xl px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.16em] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300 ${
-                          active ? "nk-dashboard-topbar-link-active" : ""
-                        }`}
-                      >
-                        {section.label}
-                      </Link>
-                    );
-                  })}
-                </div>
+                        return (
+                          <Link
+                            key={section.href}
+                            href={section.href}
+                            onClick={() => setIsAdminMenuOpen(false)}
+                            className={`nk-dashboard-topbar-menu-action flex w-full items-center rounded-xl px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.16em] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300 ${
+                              active ? "nk-dashboard-topbar-link-active" : ""
+                            }`}
+                          >
+                            {section.label}
+                          </Link>
+                        );
+                      })}
+                    </div>,
+                    document.body
+                  )}
               </div>
             )}
           </nav>
