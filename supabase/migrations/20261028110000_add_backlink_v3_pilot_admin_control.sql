@@ -60,11 +60,11 @@ declare
   mailbox public.backlink_contact_mailbox_verifications;
   email_hash text;
   source_ref text := trim(coalesce(p_source_reference, ''));
-  review_reason text := trim(coalesce(p_reason, ''));
+  review_reason_value text := trim(coalesce(p_reason, ''));
 begin
   if p_workspace_id is null or p_contact_id is null or p_opportunity_id is null or p_actor_user_id is null
     or p_reviewed_at is null or char_length(source_ref) not between 10 and 2000
-    or char_length(review_reason) not between 10 and 2000 then
+    or char_length(review_reason_value) not between 10 and 2000 then
     raise exception 'BACKLINK_PILOT_ELIGIBILITY_INVALID_INPUT';
   end if;
   if source_ref ~* '(^|[^[:alnum:]])(test|demo|fixture|seed|canary)([^[:alnum:]]|$)' then
@@ -139,7 +139,7 @@ begin
   if found then
     update public.backlink_production_eligibility set
       email_fingerprint = email_hash, origin_kind = 'real', status = 'approved', source_reference = source_ref,
-      reviewed_by = p_actor_user_id, reviewed_at = p_reviewed_at, review_reason = review_reason,
+      reviewed_by = p_actor_user_id, reviewed_at = p_reviewed_at, review_reason = review_reason_value,
       created_by = coalesce(created_by, p_actor_user_id), updated_at = timezone('utc', now())
     where id = eligibility.id returning * into eligibility;
   else
@@ -148,7 +148,7 @@ begin
       source_reference, reviewed_by, reviewed_at, review_reason, created_by
     ) values (
       p_workspace_id, p_contact_id, p_opportunity_id, email_hash, 'real', 'approved',
-      source_ref, p_actor_user_id, p_reviewed_at, review_reason, p_actor_user_id
+      source_ref, p_actor_user_id, p_reviewed_at, review_reason_value, p_actor_user_id
     ) returning * into eligibility;
   end if;
 
@@ -157,7 +157,7 @@ begin
     email_fingerprint, source_reference, reason, actor_user_id, created_at
   ) values (
     eligibility.id, p_workspace_id, p_contact_id, p_opportunity_id, 'approved', 'real',
-    email_hash, source_ref, review_reason, p_actor_user_id, p_reviewed_at
+    email_hash, source_ref, review_reason_value, p_actor_user_id, p_reviewed_at
   );
   return query select eligibility.id, eligibility.status, 'approved'::text;
 end;
@@ -242,42 +242,184 @@ for each row execute function public.backlink_block_follow_up_during_production_
 -- provider after a pilot becomes active. The shared advisory lock serializes
 -- this check with pilot approval.
 create or replace function public.mark_backlink_outreach_follow_up_attempt_requested(
-  p_workspace_id uuid, p_outreach_id uuid, p_attempt_id uuid, p_actor_user_id uuid, p_requested_at timestamptz
-) returns table (disposition text, attempt_id uuid, outreach_id uuid, recipient text, subject text, body text, reply_token_hash text, reply_token_key_version text, requested_at timestamptz)
+  p_workspace_id uuid,
+  p_outreach_id uuid,
+  p_attempt_id uuid,
+  p_actor_user_id uuid,
+  p_requested_at timestamptz
+)
+returns table (
+  disposition text,
+  attempt_id uuid,
+  outreach_id uuid,
+  recipient text,
+  subject text,
+  body text,
+  reply_token_hash text,
+  reply_token_key_version text,
+  requested_at timestamptz
+)
 language plpgsql security definer set search_path = public as $$
-declare outreach public.backlink_outreach; contact public.backlink_contacts; attempt public.backlink_outreach_attempts;
-  draft public.backlink_outreach_follow_up_drafts; inbound_stop_effect public.backlink_outreach_inbound_effects;
+declare
+  outreach public.backlink_outreach;
+  workspace_control public.automation_workspace_controls;
+  campaign public.backlink_campaigns;
+  contact public.backlink_contacts;
+  opportunity public.backlink_opportunities;
+  attempt public.backlink_outreach_attempts;
+  draft public.backlink_outreach_follow_up_drafts;
+  inbound_stop_effect public.backlink_outreach_inbound_effects;
+  daily_cutoff timestamptz := p_requested_at - interval '24 hours';
+  hourly_cutoff timestamptz := p_requested_at - interval '1 hour';
+  workspace_count integer := 0;
+  hourly_count integer := 0;
+  domain_count integer := 0;
+  contact_count integer := 0;
 begin
-  if p_workspace_id is null or p_outreach_id is null or p_attempt_id is null or p_actor_user_id is null or p_requested_at is null then raise exception 'FOLLOW_UP_SEND_INVALID'; end if;
-  if not exists (select 1 from auth.users where id = p_actor_user_id) then raise exception 'FOLLOW_UP_SEND_ACTOR_REQUIRED'; end if;
+  if p_workspace_id is null or p_outreach_id is null or p_attempt_id is null or p_actor_user_id is null or p_requested_at is null then
+    raise exception 'FOLLOW_UP_SEND_INVALID';
+  end if;
+  if not exists (select 1 from auth.users where id = p_actor_user_id) then
+    raise exception 'FOLLOW_UP_SEND_ACTOR_REQUIRED';
+  end if;
+
+  -- Pilot approval and follow-up admission share this lock. It is deliberately
+  -- acquired before the historic global-admission lock so approval never races a
+  -- prepared/requested follow-up transition.
   perform pg_advisory_xact_lock(hashtextextended('backlink_production_pilot:' || p_workspace_id::text, 0));
-  if exists (select 1 from public.backlink_production_eligibility e where e.workspace_id = p_workspace_id and e.origin_kind = 'real' and e.status = 'approved') then
+  if exists (
+    select 1 from public.backlink_production_eligibility e
+    where e.workspace_id = p_workspace_id and e.origin_kind = 'real' and e.status = 'approved'
+  ) then
     raise exception 'BACKLINK_PILOT_FOLLOW_UPS_BLOCKED';
   end if;
-  select * into outreach from public.backlink_outreach where id = p_outreach_id and workspace_id = p_workspace_id for update;
+
+  -- Preserve the historic lock and all historic admission gates.
+  perform pg_advisory_xact_lock(hashtextextended('backlink_outreach_initial_attempt:' || p_workspace_id::text, 0));
+
+  select * into outreach
+  from public.backlink_outreach as outreach_row
+  where outreach_row.id = p_outreach_id and outreach_row.workspace_id = p_workspace_id
+  for update;
   if not found or outreach.status <> 'active' then raise exception 'FOLLOW_UP_SEND_OUTREACH_NOT_ACTIVE'; end if;
   if outreach.channel <> 'email' then raise exception 'FOLLOW_UP_SEND_CHANNEL_NOT_SUPPORTED'; end if;
   if outreach.current_attempt >= outreach.max_attempts then raise exception 'FOLLOW_UP_SEND_ATTEMPT_LIMIT_REACHED'; end if;
-  select * into contact from public.backlink_contacts where id = outreach.contact_id and workspace_id = p_workspace_id for update;
+
+  select * into workspace_control
+  from public.automation_workspace_controls as workspace_control_row
+  where workspace_control_row.workspace_id = outreach.workspace_id
+  for update;
+  if not found then raise exception 'FOLLOW_UP_SEND_WORKSPACE_CONTROL_MISSING'; end if;
+  if workspace_control.backlinks_enabled is not true then raise exception 'FOLLOW_UP_SEND_BACKLINKS_DISABLED'; end if;
+  if workspace_control.dry_run_only is not false then raise exception 'FOLLOW_UP_SEND_DRY_RUN'; end if;
+
+  select * into campaign
+  from public.backlink_campaigns as campaign_row
+  where campaign_row.id = outreach.campaign_id
+  for update;
+  if not found then raise exception 'FOLLOW_UP_SEND_CAMPAIGN_MISSING'; end if;
+  if campaign.workspace_id <> outreach.workspace_id then raise exception 'FOLLOW_UP_SEND_CAMPAIGN_MISMATCH'; end if;
+  if campaign.status <> 'active' then raise exception 'FOLLOW_UP_SEND_CAMPAIGN_NOT_ACTIVE'; end if;
+
+  select * into contact
+  from public.backlink_contacts as contact_row
+  where contact_row.id = outreach.contact_id and contact_row.workspace_id = p_workspace_id
+  for update;
   if not found or contact.contact_status in ('do_not_contact', 'archived') or nullif(trim(contact.email_normalized), '') is null then
-    update public.backlink_outreach_attempts set status = 'cancelled', cancelled_at = p_requested_at, cancel_reason = 'contact_unavailable'
-    where id = p_attempt_id and workspace_id = p_workspace_id and outreach_id = outreach.id and attempt_kind = 'follow_up' and status = 'prepared';
+    update public.backlink_outreach_attempts as attempt_row
+    set status = 'cancelled', cancelled_at = p_requested_at, cancel_reason = 'contact_unavailable'
+    where attempt_row.id = p_attempt_id and attempt_row.workspace_id = p_workspace_id
+      and attempt_row.outreach_id = outreach.id and attempt_row.attempt_kind = 'follow_up'
+      and attempt_row.status = 'prepared';
     raise exception 'FOLLOW_UP_SEND_CONTACT_UNAVAILABLE';
   end if;
-  select * into attempt from public.backlink_outreach_attempts where id = p_attempt_id and workspace_id = p_workspace_id and outreach_id = outreach.id for update;
+
+  select * into opportunity
+  from public.backlink_opportunities as opportunity_row
+  where opportunity_row.id = outreach.opportunity_id and opportunity_row.workspace_id = p_workspace_id
+  for update;
+  if not found then raise exception 'FOLLOW_UP_SEND_OUTREACH_INVALID'; end if;
+
+  select * into attempt
+  from public.backlink_outreach_attempts as attempt_row
+  where attempt_row.id = p_attempt_id and attempt_row.workspace_id = p_workspace_id
+    and attempt_row.outreach_id = outreach.id
+  for update;
   if not found or attempt.attempt_kind <> 'follow_up' then raise exception 'FOLLOW_UP_SEND_ATTEMPT_INVALID'; end if;
   if attempt.status = 'requested' then
-    select * into draft from public.backlink_outreach_follow_up_drafts where workspace_id = p_workspace_id and outreach_id = outreach.id and attempt_id = attempt.id for update;
+    select * into draft
+    from public.backlink_outreach_follow_up_drafts as draft_row
+    where draft_row.workspace_id = p_workspace_id and draft_row.outreach_id = outreach.id
+      and draft_row.attempt_id = attempt.id
+    for update;
     if not found then raise exception 'FOLLOW_UP_SEND_DRAFT_INVALID'; end if;
-    return query select 'existing', attempt.id, attempt.outreach_id, attempt.recipient, draft.subject, draft.body, attempt.reply_token_hash, attempt.reply_token_key_version, attempt.requested_at; return;
+    return query select 'existing', attempt.id, attempt.outreach_id, attempt.recipient, draft.subject, draft.body, attempt.reply_token_hash, attempt.reply_token_key_version, attempt.requested_at;
+    return;
   end if;
   if attempt.status <> 'prepared' then raise exception 'FOLLOW_UP_SEND_ATTEMPT_INVALID'; end if;
-  if nullif(trim(coalesce(attempt.reply_token_hash, '')), '') is null or nullif(trim(coalesce(attempt.reply_token_key_version, '')), '') is null or attempt.reply_token_hash !~ '^[0-9a-f]{64}$' or attempt.reply_token_key_version !~ '^v[1-9][0-9]{0,15}$' then raise exception 'FOLLOW_UP_SEND_LEGACY_IDENTITY'; end if;
-  select * into draft from public.backlink_outreach_follow_up_drafts where workspace_id = p_workspace_id and outreach_id = outreach.id and attempt_id = attempt.id for update;
+  if nullif(trim(coalesce(attempt.reply_token_hash, '')), '') is null or nullif(trim(coalesce(attempt.reply_token_key_version, '')), '') is null then raise exception 'FOLLOW_UP_SEND_LEGACY_IDENTITY'; end if;
+  if attempt.reply_token_hash !~ '^[0-9a-f]{64}$' or attempt.reply_token_key_version !~ '^v[1-9][0-9]{0,15}$' then raise exception 'FOLLOW_UP_SEND_LEGACY_IDENTITY'; end if;
+
+  select * into draft
+  from public.backlink_outreach_follow_up_drafts as draft_row
+  where draft_row.workspace_id = p_workspace_id and draft_row.outreach_id = outreach.id
+    and draft_row.attempt_id = attempt.id
+  for update;
   if not found or char_length(trim(draft.subject)) not between 1 and 300 or char_length(trim(draft.body)) not between 1 and 10000 then raise exception 'FOLLOW_UP_SEND_DRAFT_INVALID'; end if;
-  select * into inbound_stop_effect from public.backlink_outreach_inbound_effects as effect where effect.workspace_id = p_workspace_id and effect.outreach_id = outreach.id and effect.effect_kind = 'reply_received_stop' and effect.status = 'applied' for update;
+
+  select * into inbound_stop_effect
+  from public.backlink_outreach_inbound_effects as effect
+  where effect.workspace_id = p_workspace_id and effect.outreach_id = outreach.id
+    and effect.effect_kind = 'reply_received_stop' and effect.status = 'applied'
+  for update;
   if found then raise exception 'FOLLOW_UP_SEND_INBOUND_REPLY_STOPPED'; end if;
-  update public.backlink_outreach_attempts set status = 'requested', requested_at = p_requested_at where id = attempt.id and workspace_id = p_workspace_id and status = 'prepared' returning * into attempt;
+
+  select count(*)::integer into workspace_count
+  from public.backlink_outreach_attempts as item
+  where item.workspace_id = p_workspace_id and item.channel = 'email'
+    and item.status in ('requested', 'accepted', 'failed', 'unknown')
+    and item.requested_at >= p_requested_at - interval '30 days';
+  if workspace_count >= 100 then raise exception 'FOLLOW_UP_SEND_WORKSPACE_30_DAY_RATE_LIMIT'; end if;
+
+  select count(*)::integer into workspace_count
+  from public.backlink_outreach_attempts as item
+  where item.workspace_id = p_workspace_id and item.channel = 'email'
+    and item.status in ('requested', 'accepted', 'failed', 'unknown')
+    and item.requested_at >= daily_cutoff;
+  if workspace_count >= 5 then raise exception 'FOLLOW_UP_SEND_WORKSPACE_DAILY_RATE_LIMIT'; end if;
+
+  select count(*)::integer into hourly_count
+  from public.backlink_outreach_attempts as item
+  where item.workspace_id = p_workspace_id and item.channel = 'email'
+    and item.status in ('requested', 'accepted', 'failed', 'unknown')
+    and item.requested_at >= hourly_cutoff;
+  if hourly_count >= 2 then raise exception 'FOLLOW_UP_SEND_WORKSPACE_HOURLY_RATE_LIMIT'; end if;
+
+  select count(*)::integer into domain_count
+  from public.backlink_outreach_attempts as item
+  join public.backlink_outreach as item_outreach
+    on item_outreach.id = item.outreach_id and item_outreach.workspace_id = p_workspace_id
+  join public.backlink_opportunities as item_opportunity
+    on item_opportunity.id = item_outreach.opportunity_id and item_opportunity.workspace_id = p_workspace_id
+  where item.workspace_id = p_workspace_id and item.channel = 'email'
+    and item.status in ('requested', 'accepted', 'failed', 'unknown')
+    and item.requested_at >= daily_cutoff and item_opportunity.domain_id = opportunity.domain_id;
+  if domain_count >= 1 then raise exception 'FOLLOW_UP_SEND_DOMAIN_DAILY_RATE_LIMIT'; end if;
+
+  select count(*)::integer into contact_count
+  from public.backlink_outreach_attempts as item
+  join public.backlink_outreach as item_outreach
+    on item_outreach.id = item.outreach_id and item_outreach.workspace_id = p_workspace_id
+  where item.workspace_id = p_workspace_id and item.channel = 'email'
+    and item.status in ('requested', 'accepted', 'failed', 'unknown')
+    and item.requested_at >= daily_cutoff and item_outreach.contact_id = outreach.contact_id;
+  if contact_count >= 1 then raise exception 'FOLLOW_UP_SEND_CONTACT_DAILY_RATE_LIMIT'; end if;
+
+  update public.backlink_outreach_attempts as attempt_row
+  set status = 'requested', requested_at = p_requested_at
+  where attempt_row.id = attempt.id and attempt_row.workspace_id = p_workspace_id
+    and attempt_row.status = 'prepared'
+  returning attempt_row.* into attempt;
   if not found then raise exception 'FOLLOW_UP_SEND_ATTEMPT_INVALID'; end if;
   return query select 'requested_now', attempt.id, attempt.outreach_id, attempt.recipient, draft.subject, draft.body, attempt.reply_token_hash, attempt.reply_token_key_version, attempt.requested_at;
 end;

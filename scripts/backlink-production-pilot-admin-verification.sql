@@ -16,6 +16,7 @@ begin
   insert into auth.users values(actor, label || '@admin.local');
   insert into workspaces values(ws, label);
   insert into workspace_members values(ws, actor, 'owner');
+  insert into automation_workspace_controls(workspace_id,backlinks_enabled,dry_run_only,updated_by) values(ws,true,false,actor);
   insert into backlink_assets(workspace_id,asset_key,display_name,asset_type) values(ws,'asset-'||label,'Asset','calculator') returning id into asset;
   insert into backlink_domains(workspace_id,domain_key,hostname) values(ws,'BK-'||fixture_key,label||'.local') returning id into d;
   insert into backlink_opportunities(workspace_id,opportunity_key,domain_id,asset_id,opportunity_type,target_page_url,target_page_title,page_type,evidence_summary) values(ws,'OP-'||fixture_key,d,asset,'resource','https://target.local/'||label,'Target','Blog Article','evidence') returning id into o;
@@ -35,6 +36,20 @@ begin
     insert into backlink_outreach_follow_up_drafts(workspace_id,outreach_id,attempt_id,follow_up_number,subject,body,prepared_at,updated_at,updated_by) values(ws,out2,fu,1,'Follow','Follow body',now(),now(),actor);
   else fu := null; end if;
   contact:=c; opportunity:=o; campaign:=ca; outreach:=out_id; follow_attempt:=fu; return next;
+end $$;
+
+create function tt.prepare_follow_up(label text)
+returns table(ws uuid, actor uuid, contact uuid, opportunity uuid, campaign uuid, outreach uuid, attempt uuid)
+language plpgsql as $$
+declare f record; prepared_attempt uuid := gen_random_uuid();
+begin
+  select * into f from tt.mk(label);
+  update backlink_outreach set status='active',current_attempt=1,first_contact_at=now(),last_attempt_at=now() where id=f.outreach;
+  insert into backlink_outreach_attempts(id,workspace_id,outreach_id,actor_user_id,channel,provider,recipient,idempotency_key,attempt_kind,status,prepared_at,reply_token_hash,reply_token_key_version)
+  values(prepared_attempt,f.ws,f.outreach,f.actor,'email','fake','person-'||label||'@pilot.local','prepared-'||label,'follow_up','prepared',now(),repeat('f',64),'v1');
+  insert into backlink_outreach_follow_up_drafts(workspace_id,outreach_id,attempt_id,follow_up_number,subject,body,prepared_at,updated_at,updated_by)
+  values(f.ws,f.outreach,prepared_attempt,1,'Follow','Follow body',now(),now(),f.actor);
+  return query select f.ws,f.actor,f.contact,f.opportunity,f.campaign,f.outreach,prepared_attempt;
 end $$;
 
 do $$
@@ -70,11 +85,43 @@ begin
   select * into r from reserve_backlink_approved_initial_attempt_v3(f.ws,f.campaign,f.outreach,f.actor,gen_random_uuid(),'after-revoke',repeat('c',64),'v1',now());
   perform tt.expect('revocation blocks V3 reservation',r.disposition='production_eligibility_required');
 
+  select * into f from tt.mk('reapprove');
+  perform * from approve_backlink_production_pilot_eligibility(f.ws,f.contact,f.opportunity,f.actor,'https://source.local/reapprove','Reason long enough to approve the pilot.');
+  perform * from revoke_backlink_production_pilot_eligibility(f.ws,f.contact,f.opportunity,f.actor,'Reason long enough to revoke the pilot.');
+  perform * from approve_backlink_production_pilot_eligibility(f.ws,f.contact,f.opportunity,f.actor,'https://source.local/reapproved','Reason long enough to reapprove the pilot.');
+  perform tt.expect('reapproval records new reason', (select review_reason='Reason long enough to reapprove the pilot.' from backlink_production_eligibility where workspace_id=f.ws and contact_id=f.contact and opportunity_id=f.opportunity));
+  perform tt.expect('reapproval appends audit', (select count(*)=3 from backlink_production_eligibility_audit where workspace_id=f.ws));
+
   -- Independent workspaces can each hold one pilot approval.
   select * into f from tt.mk('workspace-a'); select * into g from tt.mk('workspace-b');
   perform * from approve_backlink_production_pilot_eligibility(f.ws,f.contact,f.opportunity,f.actor,'https://source.local/a','Reason long enough for audit.');
   perform * from approve_backlink_production_pilot_eligibility(g.ws,g.contact,g.opportunity,g.actor,'https://source.local/b','Reason long enough for audit.');
   perform tt.expect('workspace isolation', (select count(*)=2 from backlink_production_eligibility where status='approved' and workspace_id in (f.ws,g.ws)));
+end $$;
+
+do $$
+declare f record; denied boolean;
+begin
+  select * into f from tt.prepare_follow_up('dry-run');
+  update automation_workspace_controls set dry_run_only=true where workspace_id=f.ws;
+  begin perform * from mark_backlink_outreach_follow_up_attempt_requested(f.ws,f.outreach,f.attempt,f.actor,now()); exception when others then denied := sqlerrm like '%FOLLOW_UP_SEND_DRY_RUN%'; end;
+  perform tt.expect('follow-up dry-run gate',denied);
+
+  select * into f from tt.prepare_follow_up('disabled');
+  update automation_workspace_controls set backlinks_enabled=false where workspace_id=f.ws;
+  begin perform * from mark_backlink_outreach_follow_up_attempt_requested(f.ws,f.outreach,f.attempt,f.actor,now()); exception when others then denied := sqlerrm like '%FOLLOW_UP_SEND_BACKLINKS_DISABLED%'; end;
+  perform tt.expect('follow-up backlinks-disabled gate',denied);
+
+  select * into f from tt.prepare_follow_up('campaign-inactive');
+  update backlink_campaigns set status='paused' where id=f.campaign;
+  begin perform * from mark_backlink_outreach_follow_up_attempt_requested(f.ws,f.outreach,f.attempt,f.actor,now()); exception when others then denied := sqlerrm like '%FOLLOW_UP_SEND_CAMPAIGN_NOT_ACTIVE%'; end;
+  perform tt.expect('follow-up campaign-active gate',denied);
+
+  select * into f from tt.prepare_follow_up('domain-cap');
+  insert into backlink_outreach_attempts(id,workspace_id,outreach_id,actor_user_id,channel,provider,recipient,idempotency_key,attempt_kind,status,requested_at,accepted_at,resolved_at,reply_token_hash,reply_token_key_version)
+  values(gen_random_uuid(),f.ws,f.outreach,f.actor,'email','fake','historic-domain-cap@pilot.local','domain-cap-history','follow_up','accepted',now(),now(),now(),repeat('9',64),'v1');
+  begin perform * from mark_backlink_outreach_follow_up_attempt_requested(f.ws,f.outreach,f.attempt,f.actor,now()); exception when others then denied := sqlerrm like '%FOLLOW_UP_SEND_DOMAIN_DAILY_RATE_LIMIT%'; end;
+  perform tt.expect('follow-up domain cap gate',denied);
 end $$;
 
 -- SQL ACL: authenticated cannot execute the admin mutation; service_role can.
