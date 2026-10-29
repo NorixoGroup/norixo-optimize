@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAdminPrivateEmail } from "@/lib/auth/isAdminEmail";
+import { isAdminPrivateUser } from "@/lib/auth/isAdminEmail";
 import { isMarketingCampaignBundle } from "@/lib/marketing-ai/bundle/marketingCampaignBundle";
 import { createRequestSupabaseClient } from "@/lib/server/routeAuth";
 
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!isAdminPrivateEmail(user.email)) {
+    if (!isAdminPrivateUser(user)) {
       return NextResponse.json(
         { ok: false, error: "Forbidden." },
         { status: 403 },

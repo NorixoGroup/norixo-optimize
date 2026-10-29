@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAdminPrivateEmail } from "@/lib/auth/isAdminEmail";
+import { isAdminPrivateUser } from "@/lib/auth/isAdminEmail";
 import { readLinkedInConnectionStatus } from "@/lib/marketing-ai/linkedin/linkedinConnectionStore";
 import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (auth.status === "workspace_forbidden" || !isAdminPrivateEmail(auth.user.email)) {
+    if (auth.status === "workspace_forbidden" || !isAdminPrivateUser(auth.user)) {
       return NextResponse.json(
         { ok: false, error: "Forbidden." },
         { status: 403 },

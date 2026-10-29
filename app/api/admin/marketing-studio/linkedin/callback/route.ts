@@ -1,16 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  ADMIN_SESSION_COOKIE_NAME,
+  isOAuthCallbackAdminAuthorized,
+} from "@/lib/auth/adminAccess";
+import { isAdminPrivateEmail } from "@/lib/auth/isAdminEmail";
+import {
   exchangeLinkedInCodeForAccessToken,
   resolveLinkedInOrganization,
 } from "@/lib/marketing-ai/linkedin/linkedinApi";
 import { persistLinkedInConnection } from "@/lib/marketing-ai/linkedin/linkedinConnectionStore";
+import {
+  MARKETING_STUDIO_NON_PRODUCTION_ERROR,
+  isVercelProductionEnvironment,
+} from "@/lib/marketing-ai/safety/providerProductionGate";
 import {
   LINKEDIN_OAUTH_ACTOR_COOKIE_NAME,
   LINKEDIN_OAUTH_FLOW_COOKIE_NAME,
   LINKEDIN_OAUTH_FLOW_COOKIE_VALUE,
   LINKEDIN_OAUTH_STATE_COOKIE_NAME,
   parseLinkedInOAuthState,
-  parseLinkedInOAuthActor,
   readLinkedInOAuthServerEnv,
 } from "@/lib/marketing-ai/linkedin/linkedinOAuth";
 
@@ -46,6 +54,14 @@ function createNoStoreRedirect(url: URL) {
 }
 
 export async function GET(request: NextRequest) {
+  if (!isVercelProductionEnvironment()) {
+    return createNoStoreRedirect(
+      buildDashboardRedirect(request, "oauth_error", {
+        reason: MARKETING_STUDIO_NON_PRODUCTION_ERROR,
+      }),
+    );
+  }
+
   const callbackError = request.nextUrl.searchParams.get("error");
   const callbackCode = request.nextUrl.searchParams.get("code")?.trim() ?? "";
   const callbackState = request.nextUrl.searchParams.get("state")?.trim() ?? "";
@@ -53,9 +69,6 @@ export async function GET(request: NextRequest) {
     request.cookies.get(LINKEDIN_OAUTH_STATE_COOKIE_NAME)?.value?.trim() ?? "";
   const storedFlow =
     request.cookies.get(LINKEDIN_OAUTH_FLOW_COOKIE_NAME)?.value?.trim() ?? "";
-  const actor = parseLinkedInOAuthActor(
-    request.cookies.get(LINKEDIN_OAUTH_ACTOR_COOKIE_NAME)?.value?.trim() ?? "",
-  );
 
   if (callbackError) {
     return createNoStoreRedirect(
@@ -120,7 +133,16 @@ export async function GET(request: NextRequest) {
 
   const callbackBinding = parseLinkedInOAuthState(callbackState, envValidation.config.clientSecret);
   const storedBinding = parseLinkedInOAuthState(storedState, envValidation.config.clientSecret);
-  if (!callbackBinding || !storedBinding || storedState !== callbackState || callbackBinding.userId !== storedBinding.userId || callbackBinding.workspaceId !== storedBinding.workspaceId) {
+  if (
+    !callbackBinding ||
+    !storedBinding ||
+    storedState !== callbackState ||
+    callbackBinding.userId !== storedBinding.userId ||
+    callbackBinding.workspaceId !== storedBinding.workspaceId ||
+    !callbackBinding.email ||
+    callbackBinding.email !== storedBinding.email ||
+    !isAdminPrivateEmail(callbackBinding.email)
+  ) {
     return NextResponse.json(
       {
         ok: false,
@@ -128,6 +150,15 @@ export async function GET(request: NextRequest) {
       },
       { status: 400 },
     );
+  }
+
+  if (
+    !(await isOAuthCallbackAdminAuthorized(
+      request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value,
+      callbackBinding.userId,
+    ))
+  ) {
+    return NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 });
   }
 
   const tokenExchange = await exchangeLinkedInCodeForAccessToken(
@@ -159,7 +190,7 @@ export async function GET(request: NextRequest) {
       organizationId: null,
       grantedScopes: tokenExchange.grantedScopes,
       lastConnectedByUserId: callbackBinding.userId,
-      lastConnectedByEmail: actor?.userId === callbackBinding.userId ? actor.email : null,
+      lastConnectedByEmail: callbackBinding.email,
     });
 
     return createNoStoreRedirect(
@@ -179,7 +210,7 @@ export async function GET(request: NextRequest) {
     organizationId: organizationResolution.organization.organizationId,
     grantedScopes: tokenExchange.grantedScopes,
     lastConnectedByUserId: callbackBinding.userId,
-    lastConnectedByEmail: actor?.userId === callbackBinding.userId ? actor.email : null,
+    lastConnectedByEmail: callbackBinding.email,
   });
 
   return createNoStoreRedirect(buildDashboardRedirect(request, "connected"));

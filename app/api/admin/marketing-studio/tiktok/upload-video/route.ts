@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAdminPrivateEmail } from "@/lib/auth/isAdminEmail";
+import { isAdminPrivateUser } from "@/lib/auth/isAdminEmail";
 import { isMarketingCampaignBundle } from "@/lib/marketing-ai/bundle/marketingCampaignBundle";
 import {
   buildTikTokAwaitingCompletionResult,
@@ -12,6 +12,10 @@ import {
 } from "@/lib/marketing-ai/tiktok/tiktokApi";
 import { readTikTokConnectionForUpload } from "@/lib/marketing-ai/tiktok/tiktokConnectionStore";
 import { readTikTokOAuthServerEnv } from "@/lib/marketing-ai/tiktok/tiktokOAuth";
+import {
+  MARKETING_STUDIO_NON_PRODUCTION_MESSAGE,
+  isVercelProductionEnvironment,
+} from "@/lib/marketing-ai/safety/providerProductionGate";
 import { createRequestSupabaseClient } from "@/lib/server/routeAuth";
 
 export const runtime = "nodejs";
@@ -20,6 +24,14 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+// SSRF note (documented per Mission 3B, not enforced here): sourceUrl comes
+// from the campaign bundle's media asset, which today is always populated by
+// supabaseMediaStorageAdapter.ts from the project's own Supabase Storage
+// (NEXT_PUBLIC_SUPABASE_URL). There is no current path for an attacker- or
+// provider-controlled host to reach this fetch. If that ever changes (a new
+// media/storage provider, or an admin-editable asset URL), this fetch must
+// first validate that sourceUrl's origin equals the configured Supabase
+// storage origin before fetching it. No allowlist is added here.
 async function downloadFinalVideoBinary(asset: {
   previewUrl?: string | null;
   downloadUrl?: string | null;
@@ -80,10 +92,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!isAdminPrivateEmail(user.email)) {
+    if (!isAdminPrivateUser(user)) {
       return NextResponse.json(
         { ok: false, error: "Forbidden." },
         { status: 403 },
+      );
+    }
+
+    if (!isVercelProductionEnvironment()) {
+      return NextResponse.json(
+        { ok: false, error: MARKETING_STUDIO_NON_PRODUCTION_MESSAGE },
+        { status: 503 },
       );
     }
 

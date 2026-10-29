@@ -1,6 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
 import type { User } from "@supabase/supabase-js";
-import type { NextRequest } from "next/server";
 import {
   getOrCreateWorkspaceForUser,
   type Workspace,
@@ -30,7 +29,7 @@ export type RequestUserAndWorkspaceResult =
       workspace: null;
     };
 
-function getAccessTokenFromRequest(request: NextRequest): string | null {
+function getAccessTokenFromRequest(request: Request): string | null {
   const authorization = request.headers.get("authorization");
 
   if (!authorization?.toLowerCase().startsWith("bearer ")) {
@@ -41,7 +40,7 @@ function getAccessTokenFromRequest(request: NextRequest): string | null {
   return token || null;
 }
 
-export function createRequestSupabaseClient(request: NextRequest) {
+export function createRequestSupabaseClient(request: Request) {
   const accessToken = getAccessTokenFromRequest(request);
 
   return createClient(
@@ -92,7 +91,7 @@ async function getRequestedWorkspaceForUser(
 }
 
 export async function getRequestUserAndWorkspace(
-  request: NextRequest,
+  request: Request,
 ): Promise<RequestUserAndWorkspaceResult> {
   const accessToken = getAccessTokenFromRequest(request);
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAdminPrivateEmail } from "@/lib/auth/isAdminEmail";
+import { isAdminPrivateUser } from "@/lib/auth/isAdminEmail";
 import { isMarketingCampaignBundle } from "@/lib/marketing-ai/bundle/marketingCampaignBundle";
 import type { MarketingCampaignBundle } from "@/lib/marketing-ai/bundle/marketingCampaignBundle";
 import { publishMetaFacebookTextPost } from "@/lib/marketing-ai/meta/metaGraph";
@@ -7,6 +7,10 @@ import {
   readMetaConnectionForPublish,
 } from "@/lib/marketing-ai/meta/metaConnectionStore";
 import { readMetaOAuthServerEnv } from "@/lib/marketing-ai/meta/metaOAuth";
+import {
+  MARKETING_STUDIO_NON_PRODUCTION_MESSAGE,
+  isVercelProductionEnvironment,
+} from "@/lib/marketing-ai/safety/providerProductionGate";
 import { createRequestSupabaseClient } from "@/lib/server/routeAuth";
 
 export const runtime = "nodejs";
@@ -146,10 +150,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!isAdminPrivateEmail(user.email)) {
+    if (!isAdminPrivateUser(user)) {
       return NextResponse.json(
         { ok: false, error: "Forbidden." },
         { status: 403 },
+      );
+    }
+
+    if (!isVercelProductionEnvironment()) {
+      return NextResponse.json(
+        { ok: false, error: MARKETING_STUDIO_NON_PRODUCTION_MESSAGE },
+        { status: 503 },
       );
     }
 

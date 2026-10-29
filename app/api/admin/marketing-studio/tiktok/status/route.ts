@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAdminPrivateEmail } from "@/lib/auth/isAdminEmail";
+import { isAdminPrivateUser } from "@/lib/auth/isAdminEmail";
 import { readTikTokConnectionStatus } from "@/lib/marketing-ai/tiktok/tiktokConnectionStore";
 import { createRequestSupabaseClient } from "@/lib/server/routeAuth";
 
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (!isAdminPrivateEmail(user.email)) {
+    if (!isAdminPrivateUser(user)) {
       return NextResponse.json(
         { ok: false, error: "Forbidden." },
         { status: 403 },

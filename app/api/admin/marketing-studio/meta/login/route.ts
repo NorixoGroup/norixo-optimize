@@ -1,15 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAdminPrivateEmail } from "@/lib/auth/isAdminEmail";
 import {
-  META_OAUTH_ACTOR_COOKIE_NAME,
+  attachAdminSessionCookie,
+  createMarketingStudioOAuthState,
+  getAdminOAuthStateSecret,
+  getBearerAccessToken,
+} from "@/lib/auth/adminAccess";
+import { isAdminPrivateUser } from "@/lib/auth/isAdminEmail";
+import {
   META_OAUTH_FLOW_COOKIE_NAME,
   META_OAUTH_FLOW_COOKIE_VALUE,
   META_OAUTH_STATE_COOKIE_NAME,
   buildMetaOAuthLoginUrl,
-  createMetaOAuthState,
   readMetaOAuthEnv,
-  serializeMetaOAuthActor,
 } from "@/lib/marketing-ai/meta/metaOAuth";
+import {
+  MARKETING_STUDIO_NON_PRODUCTION_MESSAGE,
+  isVercelProductionEnvironment,
+} from "@/lib/marketing-ai/safety/providerProductionGate";
 import { createRequestSupabaseClient } from "@/lib/server/routeAuth";
 
 export const runtime = "nodejs";
@@ -18,8 +25,6 @@ function setMetaOAuthCookies(
   response: NextResponse,
   params: {
     state: string;
-    userId: string;
-    email: string | null;
   },
 ) {
   response.headers.set("Cache-Control", "no-store");
@@ -41,18 +46,6 @@ function setMetaOAuthCookies(
     path: "/",
     maxAge: 60 * 10,
   });
-  response.cookies.set({
-    name: META_OAUTH_ACTOR_COOKIE_NAME,
-    value: serializeMetaOAuthActor({
-      userId: params.userId,
-      email: params.email,
-    }),
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 60 * 10,
-  });
 }
 
 export async function GET(request: NextRequest) {
@@ -66,8 +59,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 });
   }
 
-  if (!isAdminPrivateEmail(user.email)) {
+  if (!isAdminPrivateUser(user)) {
     return NextResponse.json({ ok: false, error: "Forbidden." }, { status: 403 });
+  }
+
+  if (!isVercelProductionEnvironment()) {
+    return NextResponse.json(
+      { ok: false, error: MARKETING_STUDIO_NON_PRODUCTION_MESSAGE },
+      { status: 503 },
+    );
   }
 
   const envValidation = readMetaOAuthEnv();
@@ -83,7 +83,19 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const state = createMetaOAuthState();
+  const oauthSecret = getAdminOAuthStateSecret();
+  const state = oauthSecret
+    ? createMarketingStudioOAuthState(
+        { provider: "meta", userId: user.id, email: user.email },
+        oauthSecret,
+      )
+    : null;
+  if (!state) {
+    return NextResponse.json(
+      { ok: false, error: "Admin OAuth configuration unavailable." },
+      { status: 503 },
+    );
+  }
   const loginUrl = buildMetaOAuthLoginUrl(envValidation.config, state);
   const wantsJson =
     request.headers.get("x-meta-oauth-mode")?.trim().toLowerCase() === "json";
@@ -96,9 +108,16 @@ export async function GET(request: NextRequest) {
 
   setMetaOAuthCookies(response, {
     state,
-    userId: user.id,
-    email: user.email ?? null,
   });
+
+  // Keep the admin session cookie alive for the whole OAuth round trip: the
+  // callback re-verifies it before any provider token is exchanged or stored.
+  if (!attachAdminSessionCookie(response, user, getBearerAccessToken(request))) {
+    return NextResponse.json(
+      { ok: false, error: "Admin session configuration unavailable." },
+      { status: 503 },
+    );
+  }
 
   return response;
 }

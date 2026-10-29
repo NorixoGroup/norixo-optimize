@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  ADMIN_SESSION_COOKIE_NAME,
+  getAdminOAuthStateSecret,
+  isOAuthCallbackAdminAuthorized,
+  parseMarketingStudioOAuthState,
+} from "@/lib/auth/adminAccess";
+import {
   META_OAUTH_ACTOR_COOKIE_NAME,
   META_OAUTH_FLOW_COOKIE_NAME,
   META_OAUTH_FLOW_COOKIE_VALUE,
   META_OAUTH_STATE_COOKIE_NAME,
   META_MARKETING_STUDIO_SCOPES,
-  isMetaOAuthState,
-  parseMetaOAuthActor,
   readMetaOAuthServerEnv,
 } from "@/lib/marketing-ai/meta/metaOAuth";
 import {
@@ -23,6 +27,10 @@ import {
   toMetaFacebookPageSummary,
 } from "@/lib/marketing-ai/meta/metaGraph";
 import { persistMetaConnection } from "@/lib/marketing-ai/meta/metaConnectionStore";
+import {
+  MARKETING_STUDIO_NON_PRODUCTION_ERROR,
+  isVercelProductionEnvironment,
+} from "@/lib/marketing-ai/safety/providerProductionGate";
 
 export const runtime = "nodejs";
 
@@ -118,7 +126,7 @@ async function persistDetectedMetaConnection(params: {
     username: string;
   }>;
   grantedScopes: string[];
-  actor: ReturnType<typeof parseMetaOAuthActor>;
+  actor: { userId: string; email: string } | null;
 }) {
   const primaryPage = pickPrimaryMetaPage(params.pages, params.instagramAccounts);
 
@@ -152,6 +160,14 @@ async function persistDetectedMetaConnection(params: {
 }
 
 export async function GET(request: NextRequest) {
+  if (!isVercelProductionEnvironment()) {
+    return createNoStoreRedirect(
+      buildDashboardRedirect(request, "oauth_error", {
+        reason: MARKETING_STUDIO_NON_PRODUCTION_ERROR,
+      }),
+    );
+  }
+
   const callbackError = request.nextUrl.searchParams.get("error");
   const callbackCode = request.nextUrl.searchParams.get("code")?.trim() ?? "";
   const callbackState = request.nextUrl.searchParams.get("state")?.trim() ?? "";
@@ -159,9 +175,6 @@ export async function GET(request: NextRequest) {
     request.cookies.get(META_OAUTH_STATE_COOKIE_NAME)?.value?.trim() ?? "";
   const storedFlow =
     request.cookies.get(META_OAUTH_FLOW_COOKIE_NAME)?.value?.trim() ?? "";
-  const actor = parseMetaOAuthActor(
-    request.cookies.get(META_OAUTH_ACTOR_COOKIE_NAME)?.value?.trim() ?? "",
-  );
 
   if (callbackError) {
     return createNoStoreRedirect(
@@ -214,6 +227,11 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const oauthSecret = getAdminOAuthStateSecret();
+  const actor = oauthSecret
+    ? parseMarketingStudioOAuthState(callbackState, "meta", oauthSecret)
+    : null;
+
   if (storedFlow !== META_OAUTH_FLOW_COOKIE_VALUE) {
     return NextResponse.json(
       {
@@ -225,8 +243,8 @@ export async function GET(request: NextRequest) {
   }
 
   if (
-    !isMetaOAuthState(callbackState) ||
-    !isMetaOAuthState(storedState) ||
+    !actor ||
+    !parseMarketingStudioOAuthState(storedState, "meta", oauthSecret ?? "") ||
     storedState !== callbackState
   ) {
     return NextResponse.json(
@@ -236,6 +254,15 @@ export async function GET(request: NextRequest) {
       },
       { status: 400 },
     );
+  }
+
+  if (
+    !(await isOAuthCallbackAdminAuthorized(
+      request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value,
+      actor.userId,
+    ))
+  ) {
+    return NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 });
   }
 
   const tokenExchange = await exchangeMetaCodeForUserAccessToken(

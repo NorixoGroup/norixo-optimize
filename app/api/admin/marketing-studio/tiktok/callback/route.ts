@@ -1,13 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  ADMIN_SESSION_COOKIE_NAME,
+  getAdminOAuthStateSecret,
+  isOAuthCallbackAdminAuthorized,
+  parseMarketingStudioOAuthState,
+} from "@/lib/auth/adminAccess";
 import { exchangeTikTokCodeForTokens } from "@/lib/marketing-ai/tiktok/tiktokApi";
 import { persistTikTokConnection } from "@/lib/marketing-ai/tiktok/tiktokConnectionStore";
+import {
+  MARKETING_STUDIO_NON_PRODUCTION_ERROR,
+  isVercelProductionEnvironment,
+} from "@/lib/marketing-ai/safety/providerProductionGate";
 import {
   TIKTOK_OAUTH_ACTOR_COOKIE_NAME,
   TIKTOK_OAUTH_FLOW_COOKIE_NAME,
   TIKTOK_OAUTH_FLOW_COOKIE_VALUE,
   TIKTOK_OAUTH_STATE_COOKIE_NAME,
-  isTikTokOAuthState,
-  parseTikTokOAuthActor,
   readTikTokOAuthServerEnv,
 } from "@/lib/marketing-ai/tiktok/tiktokOAuth";
 
@@ -43,6 +51,14 @@ function createNoStoreRedirect(url: URL) {
 }
 
 export async function GET(request: NextRequest) {
+  if (!isVercelProductionEnvironment()) {
+    return createNoStoreRedirect(
+      buildDashboardRedirect(request, "oauth_error", {
+        reason: MARKETING_STUDIO_NON_PRODUCTION_ERROR,
+      }),
+    );
+  }
+
   const callbackError = request.nextUrl.searchParams.get("error");
   const callbackCode = request.nextUrl.searchParams.get("code")?.trim() ?? "";
   const callbackState = request.nextUrl.searchParams.get("state")?.trim() ?? "";
@@ -50,9 +66,6 @@ export async function GET(request: NextRequest) {
     request.cookies.get(TIKTOK_OAUTH_STATE_COOKIE_NAME)?.value?.trim() ?? "";
   const storedFlow =
     request.cookies.get(TIKTOK_OAUTH_FLOW_COOKIE_NAME)?.value?.trim() ?? "";
-  const actor = parseTikTokOAuthActor(
-    request.cookies.get(TIKTOK_OAUTH_ACTOR_COOKIE_NAME)?.value?.trim() ?? "",
-  );
 
   if (callbackError) {
     return createNoStoreRedirect(
@@ -105,6 +118,11 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const oauthSecret = getAdminOAuthStateSecret();
+  const actor = oauthSecret
+    ? parseMarketingStudioOAuthState(callbackState, "tiktok", oauthSecret)
+    : null;
+
   if (storedFlow !== TIKTOK_OAUTH_FLOW_COOKIE_VALUE) {
     return NextResponse.json(
       {
@@ -116,8 +134,8 @@ export async function GET(request: NextRequest) {
   }
 
   if (
-    !isTikTokOAuthState(callbackState) ||
-    !isTikTokOAuthState(storedState) ||
+    !actor ||
+    !parseMarketingStudioOAuthState(storedState, "tiktok", oauthSecret ?? "") ||
     storedState !== callbackState
   ) {
     return NextResponse.json(
@@ -127,6 +145,15 @@ export async function GET(request: NextRequest) {
       },
       { status: 400 },
     );
+  }
+
+  if (
+    !(await isOAuthCallbackAdminAuthorized(
+      request.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value,
+      actor.userId,
+    ))
+  ) {
+    return NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 });
   }
 
   const tokenExchange = await exchangeTikTokCodeForTokens(

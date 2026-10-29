@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAdminPrivateEmail } from "@/lib/auth/isAdminEmail";
+import { isAdminPrivateUser } from "@/lib/auth/isAdminEmail";
 import { isMarketingCampaignBundle } from "@/lib/marketing-ai/bundle/marketingCampaignBundle";
 import {
   buildLinkedInLockedResult,
@@ -14,6 +14,10 @@ import {
   readLinkedInConnectionForPublish,
 } from "@/lib/marketing-ai/linkedin/linkedinConnectionStore";
 import { readLinkedInOAuthServerEnv } from "@/lib/marketing-ai/linkedin/linkedinOAuth";
+import {
+  MARKETING_STUDIO_NON_PRODUCTION_MESSAGE,
+  isVercelProductionEnvironment,
+} from "@/lib/marketing-ai/safety/providerProductionGate";
 import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 
 export const runtime = "nodejs";
@@ -45,10 +49,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (auth.status === "workspace_forbidden" || !isAdminPrivateEmail(auth.user.email)) {
+    if (auth.status === "workspace_forbidden" || !isAdminPrivateUser(auth.user)) {
       return NextResponse.json(
         { ok: false, error: "Forbidden." },
         { status: 403 },
+      );
+    }
+
+    if (!isVercelProductionEnvironment()) {
+      return NextResponse.json(
+        { ok: false, error: MARKETING_STUDIO_NON_PRODUCTION_MESSAGE },
+        { status: 503 },
       );
     }
 

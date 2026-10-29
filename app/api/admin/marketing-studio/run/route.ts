@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAdminPrivateEmail } from "@/lib/auth/isAdminEmail";
+import { isAdminPrivateUser } from "@/lib/auth/isAdminEmail";
 import {
   buildMarketingStudioMediaPreflight,
   MARKETING_STUDIO_PRODUCTION_MEDIA_RUNTIME_ERROR,
@@ -201,7 +201,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!isAdminPrivateEmail(user.email)) {
+    if (!isAdminPrivateUser(user)) {
       return NextResponse.json(
         { ok: false, requestId, error: "Forbidden." },
         {

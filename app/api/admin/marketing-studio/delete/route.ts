@@ -1,22 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-function createRouteClient(request: Request) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error("Missing Supabase public environment variables.");
-  }
-
-  const authorization = request.headers.get("authorization") ?? "";
-
-  return createClient(supabaseUrl, supabaseAnonKey, {
-    global: {
-      headers: authorization ? { Authorization: authorization } : {},
-    },
-  });
-}
+import { requireMarketingStudioAdmin } from "@/lib/auth/adminAccess";
 
 export async function POST(request: Request) {
   try {
@@ -33,36 +16,15 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = createRouteClient(request);
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 });
-    }
-
-    const { data: member, error: memberError } = await supabase
-      .from("workspace_members")
-      .select("workspace_id")
-      .eq("user_id", user.id)
-      .limit(1)
-      .maybeSingle();
-
-    if (memberError || !member?.workspace_id) {
-      return NextResponse.json(
-        { ok: false, error: "Workspace not found." },
-        { status: 400 }
-      );
-    }
+    const admin = await requireMarketingStudioAdmin(request);
+    if (!admin.ok) return admin.response;
+    const { client: supabase, workspace } = admin.access;
 
     const { error } = await supabase
       .from("marketing_campaigns")
       .delete()
       .eq("id", campaignId)
-      .eq("workspace_id", member.workspace_id);
+      .eq("workspace_id", workspace.id);
 
     if (error) {
       console.error("[marketing-studio] delete failed", error);

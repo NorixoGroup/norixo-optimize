@@ -23,6 +23,10 @@ import {
   uploadTikTokVideoFile,
 } from "../lib/marketing-ai/tiktok/tiktokApi";
 
+// This test exercises the real TikTok OAuth/upload logic (stubbed fetch), so
+// the Marketing Studio provider-production gate must see a Production signal.
+process.env.VERCEL_ENV = "production";
+
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
     throw new Error(message);

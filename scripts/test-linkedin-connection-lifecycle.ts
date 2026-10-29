@@ -11,6 +11,10 @@ import {
   publishLinkedInTextPost,
 } from "../lib/marketing-ai/linkedin/linkedinApi";
 
+// This test exercises the real LinkedIn publish logic (stubbed fetch), so the
+// Marketing Studio provider-production gate must see a Production signal.
+process.env.VERCEL_ENV = "production";
+
 const now = new Date("2026-09-02T12:00:00.000Z");
 const usable = {
   status: "connected" as const,

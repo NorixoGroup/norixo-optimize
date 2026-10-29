@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createRequestSupabaseClient } from "@/lib/server/routeAuth";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { isAdminPrivateEmail } from "@/lib/auth/isAdminEmail";
+import { isAdminPrivateUser } from "@/lib/auth/isAdminEmail";
 
 export const runtime = "nodejs";
 
@@ -110,7 +110,7 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!isAdminPrivateEmail(user.email)) {
+  if (!isAdminPrivateUser(user)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

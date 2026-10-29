@@ -4,6 +4,7 @@ import type {
   MetaInstagramBusinessSummary,
 } from "@/lib/marketing-ai/meta/metaAccountSelection";
 import type { MetaOAuthServerConfig } from "@/lib/marketing-ai/meta/metaOAuth";
+import { isVercelProductionEnvironment } from "@/lib/marketing-ai/safety/providerProductionGate";
 
 export type MetaDiscoveredFacebookPage = {
   pageId: string;
@@ -19,7 +20,8 @@ type MetaGraphErrorResult = {
     | "token_exchange_failed"
     | "pages_fetch_failed"
     | "instagram_fetch_failed"
-    | "invalid_graph_response";
+    | "invalid_graph_response"
+    | "non_production_environment";
 };
 
 type MetaTokenExchangeResult =
@@ -118,6 +120,10 @@ export async function exchangeMetaCodeForUserAccessToken(
   config: MetaOAuthServerConfig,
   code: string,
 ): Promise<MetaTokenExchangeResult> {
+  if (!isVercelProductionEnvironment()) {
+    return { ok: false, error: "non_production_environment" };
+  }
+
   const url = new URL(
     `https://graph.facebook.com/${config.graphApiVersion}/oauth/access_token`,
   );
@@ -162,6 +168,10 @@ export async function fetchMetaFacebookPages(
   config: MetaOAuthServerConfig,
   accessToken: string,
 ): Promise<MetaPagesDiscoveryResult> {
+  if (!isVercelProductionEnvironment()) {
+    return { ok: false, error: "non_production_environment" };
+  }
+
   const url = new URL(
     `https://graph.facebook.com/${config.graphApiVersion}/me/accounts`,
   );
@@ -207,6 +217,10 @@ export async function enrichMetaFacebookPagesWithInstagramAccounts(
   accessToken: string,
   pages: MetaDiscoveredFacebookPage[],
 ): Promise<MetaInstagramDiscoveryResult> {
+  if (!isVercelProductionEnvironment()) {
+    return { ok: false, error: "non_production_environment" };
+  }
+
   if (pages.length === 0) {
     return {
       ok: true,
@@ -339,6 +353,10 @@ export async function fetchMetaGrantedScopes(
   config: MetaOAuthServerConfig,
   accessToken: string,
 ): Promise<string[]> {
+  if (!isVercelProductionEnvironment()) {
+    return [];
+  }
+
   const url = new URL(
     `https://graph.facebook.com/${config.graphApiVersion}/me/permissions`,
   );
@@ -374,6 +392,10 @@ export async function publishMetaFacebookTextPost(
     message: string;
   },
 ): Promise<MetaPublishFacebookPostResult> {
+  if (!isVercelProductionEnvironment()) {
+    return { ok: false, error: "non_production_environment" };
+  }
+
   const pageId = input.pageId.trim();
   const pageAccessToken = input.pageAccessToken.trim();
   const message = input.message.trim();
