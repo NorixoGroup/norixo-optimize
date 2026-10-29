@@ -23,6 +23,8 @@ export type MailboxVerificationCoordinatorInput = {
   workspaceId: string;
   contactId: string;
   currentNormalizedEmail: string;
+  /** Set only by the manual admin reverification path; never by automation. */
+  allowVerifiedReverification?: boolean;
 };
 
 export type MailboxVerificationCoordinatorOutcome = {
@@ -65,8 +67,8 @@ export async function coordinateMailboxVerification(
   if (currentEmail !== expectedEmail) return { ...blocked("MAILBOX_VERIFICATION_STALE_EMAIL", contact.contact_status), kind: "stale" };
   if (contact.contact_status === "do_not_contact" || contact.do_not_contact_at != null) return blocked("MAILBOX_VERIFICATION_CONTACT_DNC", contact.contact_status);
   if (contact.contact_status === "archived" || contact.archived_at != null) return blocked("MAILBOX_VERIFICATION_CONTACT_ARCHIVED", contact.contact_status);
-  if (contact.contact_status === "verified") return blocked("MAILBOX_VERIFICATION_CONTACT_ALREADY_VERIFIED", contact.contact_status);
-  if (contact.contact_status !== "unverified") return blocked("MAILBOX_VERIFICATION_CONTACT_STATUS_INVALID", contact.contact_status);
+  if (contact.contact_status === "verified" && !input.allowVerifiedReverification) return blocked("MAILBOX_VERIFICATION_CONTACT_ALREADY_VERIFIED", contact.contact_status);
+  if (contact.contact_status !== "unverified" && contact.contact_status !== "verified") return blocked("MAILBOX_VERIFICATION_CONTACT_STATUS_INVALID", contact.contact_status);
 
   const result = await dependencies.provider.verify({ email: currentEmail, domain: currentEmail.slice(currentEmail.lastIndexOf("@") + 1) });
   const provider = providerName(result);
