@@ -112,8 +112,13 @@ begin
   end if;
   -- A requested follow-up is already eligible to reach the provider through the
   -- follow-up service. Refuse the pilot rather than leaving a second send path open.
-  if exists (select 1 from public.backlink_outreach_attempts
-    where workspace_id = p_workspace_id and attempt_kind = 'follow_up' and status = 'requested') then
+  if exists (
+    select 1
+    from public.backlink_outreach_attempts a
+    where a.workspace_id = p_workspace_id
+      and a.attempt_kind = 'follow_up'
+      and a.status = 'requested'
+  ) then
     raise exception 'BACKLINK_PILOT_ELIGIBILITY_FOLLOW_UP_ALREADY_REQUESTED';
   end if;
 
