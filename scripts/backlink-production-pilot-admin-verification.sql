@@ -9,7 +9,7 @@ create sequence tt.fixture_key_seq start with 100000;
 create function tt.mk(label text, with_requested_follow_up boolean default false)
 returns table(ws uuid, actor uuid, contact uuid, opportunity uuid, campaign uuid, outreach uuid, follow_attempt uuid)
 language plpgsql as $$
-declare d uuid; a uuid; c uuid; o uuid; ca uuid; out_id uuid; fu uuid; asset uuid; h text; fixture_key text;
+declare d uuid; a uuid; c uuid; c2 uuid; o uuid; ca uuid; out_id uuid; out2 uuid; fu uuid; asset uuid; h text; fixture_key text;
 begin
   ws := gen_random_uuid(); actor := gen_random_uuid(); ca := gen_random_uuid(); out_id := gen_random_uuid(); fu := gen_random_uuid();
   fixture_key := nextval('tt.fixture_key_seq')::text;
@@ -26,20 +26,32 @@ begin
   insert into backlink_outreach(id,workspace_id,campaign_id,opportunity_id,contact_id,outreach_key,channel,status,subject,body) values(out_id,ws,ca,o,c,'BL-OUT-2026-001','email','draft','Subject','Body');
   perform * from approve_backlink_outreach_initial_send(ws,out_id,actor);
   if with_requested_follow_up then
-    update backlink_outreach set status='active',current_attempt=1,first_contact_at=now(),last_attempt_at=now() where id=out_id;
-    insert into backlink_outreach_attempts(id,workspace_id,outreach_id,actor_user_id,channel,provider,recipient,idempotency_key,attempt_kind,status,requested_at,reply_token_hash,reply_token_key_version) values(fu,ws,out_id,actor,'email','fake','person-'||label||'@pilot.local','fu-'||label,'follow_up','requested',now(),repeat('a',64),'v1');
-    insert into backlink_outreach_follow_up_drafts(workspace_id,outreach_id,attempt_id,follow_up_number,subject,body,prepared_at,updated_at,updated_by) values(ws,out_id,fu,1,'Follow','Follow body',now(),now(),actor);
+    c2 := gen_random_uuid(); out2 := gen_random_uuid();
+    insert into backlink_contacts(id,workspace_id,domain_id,contact_key,email_normalized,contact_status,source_type,source_reference) values(c2,ws,d,'CT-'||fixture_key||'1','follow-up-'||label||'@pilot.local','verified','editorial','https://source.local/follow-up/'||label);
+    insert into backlink_outreach(id,workspace_id,campaign_id,opportunity_id,contact_id,outreach_key,channel,status,subject,body) values(out2,ws,ca,o,c2,'BL-OUT-2026-002','email','draft','Subject','Body');
+    perform * from approve_backlink_outreach_initial_send(ws,out2,actor);
+    update backlink_outreach set status='active',current_attempt=1,first_contact_at=now(),last_attempt_at=now() where id=out2;
+    insert into backlink_outreach_attempts(id,workspace_id,outreach_id,actor_user_id,channel,provider,recipient,idempotency_key,attempt_kind,status,requested_at,reply_token_hash,reply_token_key_version) values(fu,ws,out2,actor,'email','fake','follow-up-'||label||'@pilot.local','fu-'||label,'follow_up','requested',now(),repeat('a',64),'v1');
+    insert into backlink_outreach_follow_up_drafts(workspace_id,outreach_id,attempt_id,follow_up_number,subject,body,prepared_at,updated_at,updated_by) values(ws,out2,fu,1,'Follow','Follow body',now(),now(),actor);
   else fu := null; end if;
   contact:=c; opportunity:=o; campaign:=ca; outreach:=out_id; follow_attempt:=fu; return next;
 end $$;
 
 do $$
-declare f record; g record; r record; denied boolean;
+declare f record; g record; r record; history_attempt uuid; denied boolean;
 begin
   -- requested follow-up blocks approval before any pilot row exists.
   select * into f from tt.mk('requested',true);
   begin perform * from approve_backlink_production_pilot_eligibility(f.ws,f.contact,f.opportunity,f.actor,'https://source.local/requested','Reason long enough for audit.'); exception when others then denied := sqlerrm like '%FOLLOW_UP_ALREADY_REQUESTED%'; end;
   perform tt.expect('requested follow-up blocks approval',denied);
+
+  -- Recipient history remains a separate, earlier refusal condition.
+  select * into f from tt.mk('history');
+  update backlink_outreach set status='active',current_attempt=1,first_contact_at=now(),last_attempt_at=now() where id=f.outreach;
+  insert into backlink_outreach_attempts(id,workspace_id,outreach_id,actor_user_id,channel,provider,recipient,idempotency_key,attempt_kind,status,requested_at,reply_token_hash,reply_token_key_version) values(gen_random_uuid(),f.ws,f.outreach,f.actor,'email','fake','person-history@pilot.local','history-requested','follow_up','requested',now(),repeat('e',64),'v1') returning id into history_attempt;
+  insert into backlink_outreach_follow_up_drafts(workspace_id,outreach_id,attempt_id,follow_up_number,subject,body,prepared_at,updated_at,updated_by) values(f.ws,f.outreach,history_attempt,1,'Follow','Follow body',now(),now(),f.actor);
+  begin perform * from approve_backlink_production_pilot_eligibility(f.ws,f.contact,f.opportunity,f.actor,'https://source.local/history','Reason long enough for audit.'); exception when others then denied := sqlerrm like '%RECIPIENT_PREVIOUSLY_ATTEMPTED%'; end;
+  perform tt.expect('recipient history blocks approval',denied);
 
   select * into f from tt.mk('pilot');
   perform * from approve_backlink_production_pilot_eligibility(f.ws,f.contact,f.opportunity,f.actor,'https://source.local/pilot','Reason long enough for audit.');
@@ -94,7 +106,7 @@ create table tt.concurrent as select * from tt.mk('concurrent');
 create table tt.follow_race as select * from tt.mk('follow-race');
 update backlink_outreach set status='active',current_attempt=1,first_contact_at=now(),last_attempt_at=now() where id=(select outreach from tt.follow_race);
 update tt.follow_race set follow_attempt=gen_random_uuid();
-insert into backlink_outreach_attempts(id,workspace_id,outreach_id,actor_user_id,channel,provider,recipient,idempotency_key,attempt_kind,status,reply_token_hash,reply_token_key_version)
-select follow_attempt,ws,outreach,actor,'email','fake','person-follow-race@pilot.local','race-follow','follow_up','prepared',repeat('d',64),'v1' from tt.follow_race;
+insert into backlink_outreach_attempts(id,workspace_id,outreach_id,actor_user_id,channel,provider,recipient,idempotency_key,attempt_kind,status,prepared_at,reply_token_hash,reply_token_key_version)
+select follow_attempt,ws,outreach,actor,'email','fake','person-follow-race@pilot.local','race-follow','follow_up','prepared',now(),repeat('d',64),'v1' from tt.follow_race;
 insert into backlink_outreach_follow_up_drafts(workspace_id,outreach_id,attempt_id,follow_up_number,subject,body,prepared_at,updated_at,updated_by)
 select ws,outreach,follow_attempt,1,'Follow','Follow body',now(),now(),actor from tt.follow_race;
