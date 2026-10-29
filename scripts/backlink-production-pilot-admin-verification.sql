@@ -46,7 +46,7 @@ begin
   select * into f from tt.mk(label);
   update backlink_outreach set status='active',current_attempt=1,first_contact_at=now(),last_attempt_at=now() where id=f.outreach;
   insert into backlink_outreach_attempts(id,workspace_id,outreach_id,actor_user_id,channel,provider,recipient,idempotency_key,attempt_kind,status,prepared_at,reply_token_hash,reply_token_key_version)
-  values(prepared_attempt,f.ws,f.outreach,f.actor,'email','fake','person-'||label||'@pilot.local','prepared-'||label,'follow_up','prepared',now(),repeat('f',64),'v1');
+  values(prepared_attempt,f.ws,f.outreach,f.actor,'email','fake','person-'||label||'@pilot.local','prepared-'||label,'follow_up','prepared',now(),encode(extensions.digest('prepared-' || label, 'sha256'), 'hex'),'v1');
   insert into backlink_outreach_follow_up_drafts(workspace_id,outreach_id,attempt_id,follow_up_number,subject,body,prepared_at,updated_at,updated_by)
   values(f.ws,f.outreach,prepared_attempt,1,'Follow','Follow body',now(),now(),f.actor);
   return query select f.ws,f.actor,f.contact,f.opportunity,f.campaign,f.outreach,prepared_attempt;
