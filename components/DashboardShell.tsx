@@ -20,6 +20,24 @@ const BASE_NAV_ITEMS = [
   { href: "/dashboard/settings", copyKey: "settings" },
 ] as const;
 
+const ADMIN_NAV_SECTIONS = [
+  { href: "/dashboard/admin", label: "Business Cockpit" },
+  { href: "/dashboard/backlinks", label: "Backlinks & SEO" },
+  { href: "/dashboard/admin/marketing-studio", label: "Norixo AI — Marketing Studio" },
+] as const;
+
+function isAdminSectionActive(pathname: string, href: string) {
+  if (href === "/dashboard/admin") {
+    return (
+      pathname === "/dashboard/admin" ||
+      (pathname.startsWith("/dashboard/admin/") &&
+        !pathname.startsWith("/dashboard/admin/marketing-studio"))
+    );
+  }
+
+  return pathname === href || pathname.startsWith(href + "/");
+}
+
 function TopNavbar({
   pathname,
   isAuditDetailRoute,
@@ -33,7 +51,11 @@ function TopNavbar({
   const [menuOpen, setMenuOpen] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
+  const [isAdminMenuOpen, setIsAdminMenuOpen] = useState(false);
+  const [isMobileAdminOpen, setIsMobileAdminOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const adminMenuRef = useRef<HTMLDivElement | null>(null);
+  const adminMenuButtonRef = useRef<HTMLButtonElement | null>(null);
   const navbarContainerRef = useRef<HTMLDivElement | null>(null);
   const { copy } = useTranslation(dashboardCopy);
 
@@ -122,6 +144,9 @@ function TopNavbar({
       if (!menuRef.current?.contains(event.target as Node)) {
         setMenuOpen(false);
       }
+      if (!adminMenuRef.current?.contains(event.target as Node)) {
+        setIsAdminMenuOpen(false);
+      }
     }
 
     document.addEventListener("mousedown", handlePointerDown);
@@ -131,8 +156,26 @@ function TopNavbar({
   }, []);
 
   useEffect(() => {
+    if (!isAdminMenuOpen) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsAdminMenuOpen(false);
+        adminMenuButtonRef.current?.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isAdminMenuOpen]);
+
+  useEffect(() => {
     setMenuOpen(false);
     setIsMobileNavOpen(false);
+    setIsAdminMenuOpen(false);
+    setIsMobileAdminOpen(false);
   }, [pathname]);
 
   useEffect(() => {
@@ -173,20 +216,17 @@ function TopNavbar({
   }, [userEmail]);
 
   const visibleNavItems = useMemo(
-    () => [
-      ...BASE_NAV_ITEMS.map((item) => ({
+    () =>
+      BASE_NAV_ITEMS.map((item) => ({
         href: item.href,
         label: copy.nav[item.copyKey],
       })),
-      ...(isPlatformAdmin
-        ? [
-            { href: "/dashboard/admin", label: copy.nav.admin },
-            { href: "/dashboard/backlinks", label: "Backlinks" },
-            { href: "/dashboard/admin/marketing-studio", label: "Norixo AI" },
-          ]
-        : []),
-    ],
-    [copy, isPlatformAdmin]
+    [copy]
+  );
+
+  const isAdminParentActive = useMemo(
+    () => ADMIN_NAV_SECTIONS.some((section) => isAdminSectionActive(pathname, section.href)),
+    [pathname]
   );
 
   async function handleLogout() {
@@ -240,10 +280,6 @@ function TopNavbar({
               const active =
                 item.href === "/dashboard"
                   ? pathname === "/dashboard"
-                  : item.href === "/dashboard/admin"
-                    ? pathname === "/dashboard/admin" ||
-                      (pathname.startsWith("/dashboard/admin/") &&
-                        !pathname.startsWith("/dashboard/admin/marketing-studio"))
                   : pathname === item.href || pathname.startsWith(item.href + "/");
 
               return (
@@ -260,6 +296,56 @@ function TopNavbar({
                 </Link>
               );
             })}
+
+            {isPlatformAdmin && (
+              <div ref={adminMenuRef} className="relative">
+                <button
+                  ref={adminMenuButtonRef}
+                  type="button"
+                  onClick={() => setIsAdminMenuOpen((open) => !open)}
+                  aria-expanded={isAdminMenuOpen}
+                  aria-controls="admin-nav-submenu"
+                  className={`nk-dashboard-topbar-link inline-flex items-center justify-center gap-1 rounded-full px-3 py-1.5 leading-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300 md:px-3.5 md:py-2 ${
+                    isAdminParentActive
+                      ? "nk-dashboard-topbar-link-active"
+                      : "nk-dashboard-topbar-link-inactive"
+                  }`}
+                >
+                  {copy.nav.admin}
+                  <span
+                    aria-hidden="true"
+                    className={`inline-block text-[10px] transition-transform ${
+                      isAdminMenuOpen ? "rotate-180" : ""
+                    }`}
+                  >
+                    ▾
+                  </span>
+                </button>
+
+                <div
+                  id="admin-nav-submenu"
+                  hidden={!isAdminMenuOpen}
+                  className="nk-dashboard-topbar-menu absolute left-0 top-[calc(100%+0.5rem)] min-w-[220px] max-w-[min(280px,calc(100vw-2rem))] rounded-2xl p-1.5"
+                >
+                  {ADMIN_NAV_SECTIONS.map((section) => {
+                    const active = isAdminSectionActive(pathname, section.href);
+
+                    return (
+                      <Link
+                        key={section.href}
+                        href={section.href}
+                        onClick={() => setIsAdminMenuOpen(false)}
+                        className={`nk-dashboard-topbar-menu-action flex w-full items-center rounded-xl px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.16em] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300 ${
+                          active ? "nk-dashboard-topbar-link-active" : ""
+                        }`}
+                      >
+                        {section.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </nav>
 
           <div className="ml-auto flex flex-none items-center gap-2 md:gap-4">
@@ -355,6 +441,57 @@ function TopNavbar({
                   </Link>
                 );
               })}
+
+              {isPlatformAdmin && (
+                <div className="flex flex-col gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setIsMobileAdminOpen((open) => !open)}
+                    aria-expanded={isMobileAdminOpen}
+                    aria-controls="admin-nav-mobile-submenu"
+                    className={`inline-flex w-full items-center justify-between rounded-2xl px-3.5 py-2.5 transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300 ${
+                      isAdminParentActive
+                        ? "border border-cyan-300/35 bg-[var(--nk-gradient-main)] text-slate-50 shadow-[0_10px_24px_rgba(30,64,175,0.28)]"
+                        : "border border-slate-800/80 bg-slate-900/80 text-slate-100 hover:border-slate-600 hover:bg-slate-900"
+                    }`}
+                  >
+                    <span className="truncate">{copy.nav.admin}</span>
+                    <span
+                      aria-hidden="true"
+                      className={`inline-block text-[10px] transition-transform ${
+                        isMobileAdminOpen ? "rotate-180" : ""
+                      }`}
+                    >
+                      ▾
+                    </span>
+                  </button>
+
+                  <div id="admin-nav-mobile-submenu" hidden={!isMobileAdminOpen} className="flex flex-col gap-1.5 pl-3">
+                    {ADMIN_NAV_SECTIONS.map((section) => {
+                      const active = isAdminSectionActive(pathname, section.href);
+
+                      return (
+                        <Link
+                          key={section.href}
+                          href={section.href}
+                          onClick={() => {
+                            setIsMobileAdminOpen(false);
+                            setIsMobileNavOpen(false);
+                          }}
+                          className={`inline-flex w-full items-center justify-between rounded-2xl px-3.5 py-2.5 transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300 ${
+                            active
+                              ? "border border-cyan-300/35 bg-[var(--nk-gradient-main)] text-slate-50 shadow-[0_10px_24px_rgba(30,64,175,0.28)]"
+                              : "border border-slate-800/80 bg-slate-900/80 text-slate-100 hover:border-slate-600 hover:bg-slate-900"
+                          }`}
+                        >
+                          <span className="truncate">{section.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="mt-3 border-t border-slate-800/70 pt-3">
                 <LanguageSwitcher />
               </div>
