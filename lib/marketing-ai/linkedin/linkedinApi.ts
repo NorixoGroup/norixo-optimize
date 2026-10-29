@@ -1,5 +1,6 @@
 import type { MarketingCampaignBundle } from "@/lib/marketing-ai/bundle/marketingCampaignBundle";
 import type { LinkedInOAuthServerConfig } from "@/lib/marketing-ai/linkedin/linkedinOAuth";
+import { isVercelProductionEnvironment } from "@/lib/marketing-ai/safety/providerProductionGate";
 
 export const LINKEDIN_POSTS_ENDPOINT = "https://api.linkedin.com/rest/posts";
 const LINKEDIN_ORGANIZATION_ACLS_ENDPOINT =
@@ -17,7 +18,8 @@ export type LinkedInTokenExchangeResult =
       ok: false;
       error:
         | "token_exchange_failed"
-        | "invalid_linkedin_response";
+        | "invalid_linkedin_response"
+        | "non_production_environment";
     };
 
 export type LinkedInOrganizationSummary = {
@@ -35,7 +37,8 @@ export type LinkedInOrganizationResolutionResult =
       error:
         | "organization_lookup_failed"
         | "organization_not_found"
-        | "invalid_linkedin_response";
+        | "invalid_linkedin_response"
+        | "non_production_environment";
     };
 
 export type LinkedInPublishTextPostResult =
@@ -49,7 +52,8 @@ export type LinkedInPublishTextPostResult =
         | "unauthorized"
         | "publish_failed"
         | "access_denied"
-        | "invalid_linkedin_response";
+        | "invalid_linkedin_response"
+        | "non_production_environment";
     };
 
 type LinkedInPublishFailure = Extract<
@@ -358,6 +362,10 @@ export async function exchangeLinkedInCodeForAccessToken(
   config: LinkedInOAuthServerConfig,
   code: string,
 ): Promise<LinkedInTokenExchangeResult> {
+  if (!isVercelProductionEnvironment()) {
+    return { ok: false, error: "non_production_environment" };
+  }
+
   const body = new URLSearchParams();
   body.set("grant_type", "authorization_code");
   body.set("code", code);
@@ -426,6 +434,10 @@ export async function resolveLinkedInOrganization(
     };
   }
 
+  if (!isVercelProductionEnvironment()) {
+    return { ok: false, error: "non_production_environment" };
+  }
+
   const url = new URL(LINKEDIN_ORGANIZATION_ACLS_ENDPOINT);
   url.searchParams.set("q", "roleAssignee");
   url.searchParams.set("role", "ADMINISTRATOR");
@@ -491,6 +503,10 @@ export async function publishLinkedInTextPost(
     message: string;
   },
 ): Promise<LinkedInPublishTextPostResult> {
+  if (!isVercelProductionEnvironment()) {
+    return { ok: false, error: "non_production_environment" };
+  }
+
   const payload = buildLinkedInTextPostPayload(
     params.organizationUrn,
     params.message,

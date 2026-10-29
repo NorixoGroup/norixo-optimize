@@ -1,6 +1,7 @@
 import type { MarketingCampaignBundle } from "@/lib/marketing-ai/bundle/marketingCampaignBundle";
 import type { MediaAsset } from "@/lib/marketing-ai/media";
 import type { TikTokOAuthServerConfig } from "@/lib/marketing-ai/tiktok/tiktokOAuth";
+import { isVercelProductionEnvironment } from "@/lib/marketing-ai/safety/providerProductionGate";
 
 export const TIKTOK_TOKEN_ENDPOINT =
   "https://open.tiktokapis.com/v2/oauth/token/";
@@ -62,7 +63,10 @@ export type TikTokTokenExchangeResult =
     }
   | {
       ok: false;
-      error: "token_exchange_failed" | "invalid_tiktok_response";
+      error:
+        | "token_exchange_failed"
+        | "invalid_tiktok_response"
+        | "non_production_environment";
     };
 
 export type TikTokUploadPlan = {
@@ -80,7 +84,10 @@ export type TikTokUploadInitResult =
     }
   | {
       ok: false;
-      error: "upload_init_failed" | "invalid_tiktok_response";
+      error:
+        | "upload_init_failed"
+        | "invalid_tiktok_response"
+        | "non_production_environment";
     };
 
 export type TikTokUploadStatusResult =
@@ -93,7 +100,10 @@ export type TikTokUploadStatusResult =
     }
   | {
       ok: false;
-      error: "status_fetch_failed" | "invalid_tiktok_response";
+      error:
+        | "status_fetch_failed"
+        | "invalid_tiktok_response"
+        | "non_production_environment";
     };
 
 export type TikTokUploadReadinessResult =
@@ -393,6 +403,10 @@ export async function exchangeTikTokCodeForTokens(
   config: TikTokOAuthServerConfig,
   code: string,
 ): Promise<TikTokTokenExchangeResult> {
+  if (!isVercelProductionEnvironment()) {
+    return { ok: false, error: "non_production_environment" };
+  }
+
   const body = new URLSearchParams();
   body.set("client_key", config.clientKey);
   body.set("client_secret", config.clientSecret);
@@ -449,6 +463,10 @@ export async function refreshTikTokAccessToken(
   config: TikTokOAuthServerConfig,
   refreshToken: string,
 ): Promise<TikTokTokenExchangeResult> {
+  if (!isVercelProductionEnvironment()) {
+    return { ok: false, error: "non_production_environment" };
+  }
+
   const body = new URLSearchParams();
   body.set("client_key", config.clientKey);
   body.set("client_secret", config.clientSecret);
@@ -504,6 +522,10 @@ export async function initializeTikTokInboxUpload(params: {
   accessToken: string;
   videoSize: number;
 }): Promise<TikTokUploadInitResult> {
+  if (!isVercelProductionEnvironment()) {
+    return { ok: false, error: "non_production_environment" };
+  }
+
   const payload = buildTikTokUploadInitPayload(params.videoSize);
   const response = await fetch(TIKTOK_UPLOAD_INIT_ENDPOINT, {
     method: "POST",
@@ -550,6 +572,10 @@ export async function uploadTikTokVideoFile(params: {
   binary: Buffer;
   mimeType: string;
 }) {
+  if (!isVercelProductionEnvironment()) {
+    throw new Error("TikTok video upload is disabled outside Production.");
+  }
+
   const uploadPlan = resolveTikTokUploadPlan(params.binary.byteLength);
 
   for (let chunkIndex = 0; chunkIndex < uploadPlan.totalChunkCount; chunkIndex += 1) {
@@ -583,6 +609,10 @@ export async function fetchTikTokUploadStatus(params: {
   accessToken: string;
   publishId: string;
 }): Promise<TikTokUploadStatusResult> {
+  if (!isVercelProductionEnvironment()) {
+    return { ok: false, error: "non_production_environment" };
+  }
+
   const response = await fetch(TIKTOK_STATUS_FETCH_ENDPOINT, {
     method: "POST",
     headers: {

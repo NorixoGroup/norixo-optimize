@@ -86,7 +86,25 @@ function TopNavbar({
 
         const body = res.ok ? await res.json() : null;
 
-        if (mounted) setIsPlatformAdmin(Boolean(body?.isAdminPrivate));
+        if (!res.ok || !body?.isAdminPrivate) {
+          if (mounted) setIsPlatformAdmin(false);
+          return;
+        }
+
+        const sessionResponse = await fetch("/api/admin/session", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          cache: "no-store",
+        });
+        const sessionBody = sessionResponse.ok
+          ? await sessionResponse.json()
+          : null;
+
+        if (mounted) {
+          setIsPlatformAdmin(Boolean(sessionBody?.isAdminPrivate));
+        }
       } catch {
         if (mounted) setIsPlatformAdmin(false);
       }
@@ -174,6 +192,7 @@ function TopNavbar({
   async function handleLogout() {
     try {
       setIsSigningOut(true);
+      await fetch("/api/admin/session", { method: "DELETE", cache: "no-store" });
       await supabase.auth.signOut();
       router.push("/sign-in");
       router.refresh();

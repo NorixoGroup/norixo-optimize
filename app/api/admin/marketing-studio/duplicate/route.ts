@@ -1,51 +1,19 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-function client(req: Request) {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      global: {
-        headers: {
-          Authorization: req.headers.get("authorization") ?? "",
-        },
-      },
-    }
-  );
-}
+import { requireMarketingStudioAdmin } from "@/lib/auth/adminAccess";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    const supabase = client(request);
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user)
-      return NextResponse.json({ ok: false }, { status: 401 });
-
-    const { data: member, error: memberError } = await supabase
-      .from("workspace_members")
-      .select("workspace_id")
-      .eq("user_id", user.id)
-      .single();
-
-    if (memberError || !member?.workspace_id) {
-      return NextResponse.json(
-        { ok: false, error: "Workspace not found." },
-        { status: 400 }
-      );
-    }
+    const admin = await requireMarketingStudioAdmin(request);
+    if (!admin.ok) return admin.response;
+    const { client: supabase, user, workspace } = admin.access;
 
     const { data: campaign, error } = await supabase
       .from("marketing_campaigns")
       .select("*")
       .eq("id", body.campaignId)
-      .eq("workspace_id", member.workspace_id)
+      .eq("workspace_id", workspace.id)
       .single();
 
     if (error)

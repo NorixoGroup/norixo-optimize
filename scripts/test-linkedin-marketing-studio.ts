@@ -19,6 +19,10 @@ import {
   resolveLinkedInPublishMessage,
 } from "../lib/marketing-ai/linkedin/linkedinApi";
 
+// This test exercises the real LinkedIn OAuth/publish logic (stubbed fetch),
+// so the Marketing Studio provider-production gate must see a Production signal.
+process.env.VERCEL_ENV = "production";
+
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
     throw new Error(message);

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createRequestSupabaseClient } from "@/lib/server/routeAuth";
-import { isAdminPrivateEmail } from "@/lib/auth/isAdminEmail";
+import { isAdminPrivateUser } from "@/lib/auth/isAdminEmail";
 
 export const runtime = "nodejs";
 
@@ -16,6 +16,6 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json({
-    isAdminPrivate: isAdminPrivateEmail(user.email),
+    isAdminPrivate: isAdminPrivateUser(user),
   });
 }
