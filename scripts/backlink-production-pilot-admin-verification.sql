@@ -104,9 +104,20 @@ select case when bool_and(ok) then 'PILOT ADMIN SCENARIOS OK' else 'PILOT ADMIN 
 -- Export one independent fixture for two separate psql sessions in the harness.
 create table tt.concurrent as select * from tt.mk('concurrent');
 create table tt.follow_race as select * from tt.mk('follow-race');
-update backlink_outreach set status='active',current_attempt=1,first_contact_at=now(),last_attempt_at=now() where id=(select outreach from tt.follow_race);
-update tt.follow_race set follow_attempt=gen_random_uuid();
+alter table tt.follow_race add column follow_contact uuid, add column follow_outreach uuid;
+do $$
+declare f record; d uuid; follow_key text; follow_contact_id uuid := gen_random_uuid(); follow_outreach_id uuid := gen_random_uuid();
+begin
+  select * into f from tt.follow_race;
+  select domain_id into d from backlink_contacts where id=f.contact and workspace_id=f.ws;
+  follow_key := nextval('tt.fixture_key_seq')::text;
+  insert into backlink_contacts(id,workspace_id,domain_id,contact_key,email_normalized,contact_status,source_type,source_reference) values(follow_contact_id,f.ws,d,'CT-'||follow_key,'follow-up-race@pilot.local','verified','editorial','https://source.local/follow-up-race');
+  insert into backlink_outreach(id,workspace_id,campaign_id,opportunity_id,contact_id,outreach_key,channel,status,subject,body) values(follow_outreach_id,f.ws,f.campaign,f.opportunity,follow_contact_id,'BL-OUT-2026-002','email','draft','Subject','Body');
+  perform * from approve_backlink_outreach_initial_send(f.ws,follow_outreach_id,f.actor);
+  update backlink_outreach set status='active',current_attempt=1,first_contact_at=now(),last_attempt_at=now() where id=follow_outreach_id;
+  update tt.follow_race set follow_contact=follow_contact_id, follow_outreach=follow_outreach_id, follow_attempt=gen_random_uuid();
+end $$;
 insert into backlink_outreach_attempts(id,workspace_id,outreach_id,actor_user_id,channel,provider,recipient,idempotency_key,attempt_kind,status,prepared_at,reply_token_hash,reply_token_key_version)
-select follow_attempt,ws,outreach,actor,'email','fake','person-follow-race@pilot.local','race-follow','follow_up','prepared',now(),repeat('d',64),'v1' from tt.follow_race;
+select follow_attempt,ws,follow_outreach,actor,'email','fake','follow-up-race@pilot.local','race-follow','follow_up','prepared',now(),repeat('d',64),'v1' from tt.follow_race;
 insert into backlink_outreach_follow_up_drafts(workspace_id,outreach_id,attempt_id,follow_up_number,subject,body,prepared_at,updated_at,updated_by)
-select ws,outreach,follow_attempt,1,'Follow','Follow body',now(),now(),actor from tt.follow_race;
+select ws,follow_outreach,follow_attempt,1,'Follow','Follow body',now(),now(),actor from tt.follow_race;

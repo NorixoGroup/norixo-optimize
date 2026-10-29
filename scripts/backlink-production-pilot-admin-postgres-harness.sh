@@ -82,7 +82,7 @@ pass "concurrency: two PostgreSQL sessions serialize pilot approval"
 # Race approval against a prepared follow-up request. Exactly one branch may win:
 # pilot approved with follow-up still prepared, or follow-up requested with no pilot.
 approve_sql="select disposition from approve_backlink_production_pilot_eligibility((select ws from tt.follow_race),(select contact from tt.follow_race),(select opportunity from tt.follow_race),(select actor from tt.follow_race),'https://source.local/follow-race','Reason long enough for race audit.');"
-follow_sql="select disposition from mark_backlink_outreach_follow_up_attempt_requested((select ws from tt.follow_race),(select outreach from tt.follow_race),(select follow_attempt from tt.follow_race),(select actor from tt.follow_race),now());"
+follow_sql="select disposition from mark_backlink_outreach_follow_up_attempt_requested((select ws from tt.follow_race),(select follow_outreach from tt.follow_race),(select follow_attempt from tt.follow_race),(select actor from tt.follow_race),now());"
 (as_owner -Atc "$approve_sql" >/tmp/pilot-admin-race-approve.$$ 2>&1 || true) & first=$!
 (as_owner -Atc "$follow_sql" >/tmp/pilot-admin-race-follow.$$ 2>&1 || true) & second=$!
 wait "$first"; wait "$second"
