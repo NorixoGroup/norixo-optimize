@@ -335,7 +335,7 @@ function TopNavbar({
                   onClick={() => setIsAdminMenuOpen((open) => !open)}
                   aria-expanded={isAdminMenuOpen}
                   aria-controls="admin-nav-submenu"
-                  className={`nk-dashboard-topbar-link inline-flex items-center justify-center gap-1 rounded-full px-3 py-1.5 leading-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300 md:px-3.5 md:py-2 ${
+                  className={`nk-dashboard-topbar-link inline-flex items-center justify-center gap-1 rounded-full px-3 py-1.5 text-[13px] font-bold uppercase leading-none tracking-[0.16em] whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300 md:px-3.5 md:py-2 ${
                     isAdminParentActive
                       ? "nk-dashboard-topbar-link-active"
                       : "nk-dashboard-topbar-link-inactive"
