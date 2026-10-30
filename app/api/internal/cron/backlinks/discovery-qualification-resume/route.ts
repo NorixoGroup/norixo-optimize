@@ -20,10 +20,16 @@ import {
 } from "@/lib/automation/repositories/automationTasksRepository";
 import { listAutomationTasksForRun } from "@/lib/automation/repositories/automationRunResumeRepository";
 import {
+  cancelAutomationRun,
   completeAutomationRun,
   failAutomationRun,
   getAutomationRunById,
+  startAutomationRun,
 } from "@/lib/automation/repositories/automationRunsRepository";
+import {
+  completeAutomationRun as completeAutomationRunTransition,
+  failAutomationRun as failAutomationRunTransition,
+} from "@/lib/automation/transition-service";
 import { executeAutomationWorkerOnce, executeClaimedDiscoveryTask } from "@/lib/automation/worker";
 import { createDryRunAutomationTaskHandlers } from "@/lib/automation/dry-run-handlers";
 import { resumeBacklinksDryRun } from "@/lib/automation/run-resume";
@@ -38,7 +44,11 @@ import { isBacklinkDiscoveryDemoProviderEnabled } from "@/lib/automation/backlin
 import { DEFAULT_BACKLINK_QUALIFICATION_POLICY_V1 } from "@/lib/automation/backlink-qualification-policy";
 import { DEFAULT_BACKLINK_PROMOTION_POLICY_V1 } from "@/lib/automation/backlink-promotion-policy";
 import type { BacklinkDiscoveryProviderRegistry } from "@/lib/automation/backlink-discovery-provider-types";
-import type { AutomationTaskDependencies, DeadLetterAutomationTaskDependencies } from "@/lib/automation/types";
+import type {
+  AutomationRunTransitionDependencies,
+  AutomationTaskDependencies,
+  DeadLetterAutomationTaskDependencies,
+} from "@/lib/automation/types";
 import type { ExecuteAutomationTaskHandlerInput, ExecuteAutomationTaskHandlerResult } from "@/lib/automation/handler-types";
 
 /**
@@ -144,6 +154,17 @@ export async function GET(request: NextRequest) {
       cancelTask: (input) => cancelAutomationTask(client, input),
     };
 
+    // transition-service.ts owns the one correct null -> {kind:"rejected"} adaptation
+    // (fail-closed, never inferring success from a null row) that resumeDiscovery and
+    // resumeBacklinksDryRun both require from completeRun/failRun; this wires it instead of
+    // passing the raw repository functions (which return AutomationRun | null) directly.
+    const runTransitionDependencies: AutomationRunTransitionDependencies = {
+      startRun: (input) => startAutomationRun(client, input),
+      completeRun: (input) => completeAutomationRun(client, input),
+      failRun: (input) => failAutomationRun(client, input),
+      cancelRun: (input) => cancelAutomationRun(client, input),
+    };
+
     const result = await runBacklinkDiscoveryQualificationResumeCron({
       listCandidates: (input) => listBacklinkDiscoveryQualificationResumeCandidates(client, input),
       now: () => now,
@@ -157,7 +178,7 @@ export async function GET(request: NextRequest) {
             claimBacklinkDiscoveryTaskById: (claimInput) => claimBacklinkDiscoveryTaskById(client, claimInput),
             executeClaimed: (claimedInput) =>
               executeClaimedDiscoveryTask({ ...taskDependencies, executeHandler }, claimedInput),
-            failRun: (runInput) => failAutomationRun(client, runInput),
+            failRun: (runInput) => failAutomationRunTransition(runTransitionDependencies, runInput),
           },
           { ...input, workerId: WORKER_ID, now, leaseDurationSeconds: LEASE_DURATION_SECONDS },
         ),
@@ -169,8 +190,8 @@ export async function GET(request: NextRequest) {
             reclaimExpiredTasks: (reclaimInput) => reclaimExpiredAutomationTasks(client, reclaimInput),
             executeWorkerOnce: (workerInput) =>
               executeAutomationWorkerOnce({ ...taskDependencies, executeHandler }, workerInput),
-            completeRun: (runInput) => completeAutomationRun(client, runInput),
-            failRun: (runInput) => failAutomationRun(client, runInput),
+            completeRun: (runInput) => completeAutomationRunTransition(runTransitionDependencies, runInput),
+            failRun: (runInput) => failAutomationRunTransition(runTransitionDependencies, runInput),
           },
           { ...input, workerId: WORKER_ID, now, leaseDurationSeconds: LEASE_DURATION_SECONDS },
         ),

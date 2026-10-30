@@ -185,6 +185,24 @@ test("cron service: a discovery candidate always reclaims an expired lease befor
   assert.equal(result.discoveryResumed, 1);
 });
 
+// -- Contract regression: completeRun/failRun must go through the transition-service adapter ----
+// failAutomationRun/completeAutomationRun in automationRunsRepository.ts return
+// AutomationRun | null, but resumeDiscovery/resumeBacklinksDryRun require the
+// {kind:"transitioned"|"rejected"} shape that only transition-service.ts's null -> "rejected"
+// adaptation produces. Passing the raw repository function directly compiles in a worktree
+// without node_modules (tsx does not type-check) but fails `tsc` in CI/Vercel.
+
+test("static: the route adapts completeRun/failRun through transition-service, never the raw repository function", async () => {
+  const route = await readFile(
+    new URL("../app/api/internal/cron/backlinks/discovery-qualification-resume/route.ts", import.meta.url),
+    "utf8",
+  );
+  assert.doesNotMatch(route, /failRun:\s*\(runInput\)\s*=>\s*failAutomationRun\(client/);
+  assert.doesNotMatch(route, /completeRun:\s*\(runInput\)\s*=>\s*completeAutomationRun\(client/);
+  assert.match(route, /failAutomationRunTransition\(runTransitionDependencies/);
+  assert.match(route, /completeAutomationRunTransition\(runTransitionDependencies/);
+});
+
 // -- 8. Outbound executor protection --------------------------------------------------------------
 
 const OUTBOUND_EXECUTOR_PATTERN = /sendApprovedBacklinkOutreachEmail|runBacklinkOutreachLiveAutoSendCron|createEnvironmentOutreachEmailProvider|\bResend\b|markBacklinkOutreachFollowUpAttemptRequested|claimNextContactFormRun|transitionContactFormRun|confirmContactFormSubmission|retryContactFormPreSubmitRun|approveContactFormInitial/i;
