@@ -120,9 +120,22 @@ async function main() {
     assert.notEqual(result.task?.taskKind, "backlinks.mailbox_verification");
   }
 
-  // T19-T24: the closed composition still has no executor and the Hostfully ID is absent.
+  // T19-T24: the autonomy chain still wires no outbound executor (email send or contact-form
+  // submission), and the Hostfully ID is absent. Two words from the original blunt regex now
+  // have legitimate, non-executing uses and are checked as precise identifiers instead:
+  // - "contactForm": the read-only approval bridge (72c560d "bridge approved contact forms
+  //   into autonomy") only reads an existing human-created approval and queues a run for a
+  //   separate, unwired worker via getLatestContactFormApprovalCandidate/queueContactFormRun.
+  // - "linkedin": a channel-type literal in BacklinkAutonomyDispatchState (no LinkedIn sender
+  //   exists yet); dropped from this check entirely rather than guessed at, since there is no
+  //   concrete executor identifier for it yet — see residual risk in the fix report.
+  const OUTBOUND_EXECUTOR_PATTERN = /sendApprovedBacklinkOutreachEmail|runBacklinkOutreachLiveAutoSendCron|createEnvironmentOutreachEmailProvider|\bResend\b|markBacklinkOutreachFollowUpAttemptRequested|claimNextContactFormRun|transitionContactFormRun|confirmContactFormSubmission|retryContactFormPreSubmitRun|approveContactFormInitial/i;
   const composition = await readFile(new URL("../lib/automation/backlink-autonomy-production-composition.ts", import.meta.url), "utf8");
-  assert.doesNotMatch(composition, /ready|resend|contact[_-]?form|linkedin|follow.?up/i);
+  const orchestrator = await readFile(new URL("../lib/automation/backlink-master-autonomy-orchestrator.ts", import.meta.url), "utf8");
+  const dispatcher = await readFile(new URL("../lib/automation/backlink-autonomy-dispatcher.ts", import.meta.url), "utf8");
+  for (const file of [composition, orchestrator, dispatcher]) {
+    assert.doesNotMatch(file, OUTBOUND_EXECUTOR_PATTERN);
+  }
   assert.doesNotMatch(composition, /502f1a85-a308-4227-aa73-58332788f235/);
 
   // T25: the forward-only SQL extends both closed allowlists and nothing else is needed to claim/reclaim this task.
