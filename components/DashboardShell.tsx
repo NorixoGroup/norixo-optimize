@@ -25,6 +25,7 @@ const ADMIN_NAV_SECTIONS = [
   { href: "/dashboard/admin", label: "Business Cockpit" },
   { href: "/dashboard/backlinks", label: "Backlinks & SEO" },
   { href: "/dashboard/admin/marketing-studio", label: "Norixo AI — Marketing Studio" },
+  { href: "/dashboard/nomad-studio", label: "🎬 Nomad Studio" },
 ] as const;
 
 function isAdminSectionActive(pathname: string, href: string) {
