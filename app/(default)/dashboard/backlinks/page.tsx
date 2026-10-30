@@ -101,6 +101,17 @@ type AutomationWorkspaceControlView = {
 };
 type AutomationWorkspaceControlGetResponse = { ok: true; control: AutomationWorkspaceControlView; disposition: "created" | "existing" };
 type AutomationWorkspaceControlPatchResponse = { ok: true; control: AutomationWorkspaceControlView };
+type ProductionPilotEligibilityState = {
+  eligibilityId: string;
+  originKind: "real";
+  status: "pending" | "approved" | "rejected" | "revoked";
+  sourceReference: string;
+  reviewReason: string | null;
+  reviewedAt: string | null;
+  updatedAt: string;
+};
+type ProductionPilotEligibilityResponse = { eligibility: ProductionPilotEligibilityState | null };
+type ProductionPilotAccess = "unknown" | "authorized" | "unauthenticated" | "forbidden";
 
 type DiscoveryProviderOption = "mock" | "brave_search";
 
@@ -141,9 +152,11 @@ type CampaignMembershipApplyLimitedResult = { campaignId: string; runId: string;
 
 class ApiRequestError extends Error {
   readonly code: string | null;
-  constructor(message: string, code: string | null) {
+  readonly status: number;
+  constructor(message: string, code: string | null, status: number) {
     super(message);
     this.code = code;
+    this.status = status;
   }
 }
 
@@ -652,6 +665,19 @@ export default function BacklinksPage() {
   const [outreachFollowUpDraftSendSubmitting, setOutreachFollowUpDraftSendSubmitting] = useState(false);
   const [outreachFollowUpDraftSendError, setOutreachFollowUpDraftSendError] = useState<string | null>(null);
   const [outreachFollowUpDraftSendSuccess, setOutreachFollowUpDraftSendSuccess] = useState<string | null>(null);
+  const [productionPilotOpen, setProductionPilotOpen] = useState(false);
+  const [productionPilotContactId, setProductionPilotContactId] = useState("");
+  const [productionPilotOpportunityId, setProductionPilotOpportunityId] = useState("");
+  const [productionPilotAccess, setProductionPilotAccess] = useState<ProductionPilotAccess>("unknown");
+  const [productionPilotEligibility, setProductionPilotEligibility] = useState<ProductionPilotEligibilityState | null>(null);
+  const [productionPilotLoaded, setProductionPilotLoaded] = useState(false);
+  const [productionPilotLoading, setProductionPilotLoading] = useState(false);
+  const [productionPilotSubmitting, setProductionPilotSubmitting] = useState(false);
+  const [productionPilotError, setProductionPilotError] = useState<string | null>(null);
+  const [productionPilotSuccess, setProductionPilotSuccess] = useState<string | null>(null);
+  const [productionPilotSourceReference, setProductionPilotSourceReference] = useState("");
+  const [productionPilotReason, setProductionPilotReason] = useState("");
+  const [productionPilotConfirmed, setProductionPilotConfirmed] = useState(false);
   const discoveryConfigurationError = getDiscoveryConfigurationError(
     discoveryProvider,
     discoveryQuery,
@@ -694,11 +720,99 @@ export default function BacklinksPage() {
         typeof error === "object" && error != null && "code" in error && typeof error.code === "string"
           ? error.code
           : null;
-      throw new ApiRequestError(message, code);
+      throw new ApiRequestError(message, code, response.status);
     }
 
     return payload as T;
   }, [activeWorkspaceId]);
+
+  const resetProductionPilotState = () => {
+    setProductionPilotAccess("unknown");
+    setProductionPilotEligibility(null);
+    setProductionPilotLoaded(false);
+    setProductionPilotError(null);
+    setProductionPilotSuccess(null);
+    setProductionPilotConfirmed(false);
+  };
+
+  const loadProductionPilotEligibility = async () => {
+    if (!productionPilotContactId || !productionPilotOpportunityId || productionPilotLoading) return;
+    setProductionPilotLoading(true);
+    setProductionPilotError(null);
+    setProductionPilotSuccess(null);
+    try {
+      const response = await apiRequest<ProductionPilotEligibilityResponse>(
+        `/api/backlinks/production-pilot-eligibility?contactId=${encodeURIComponent(productionPilotContactId)}&opportunityId=${encodeURIComponent(productionPilotOpportunityId)}`,
+      );
+      setProductionPilotAccess("authorized");
+      setProductionPilotEligibility(response.eligibility);
+      setProductionPilotLoaded(true);
+    } catch (loadError) {
+      setProductionPilotEligibility(null);
+      setProductionPilotLoaded(false);
+      setProductionPilotConfirmed(false);
+      if (loadError instanceof ApiRequestError && loadError.status === 401) {
+        setProductionPilotAccess("unauthenticated");
+        setProductionPilotError("Connexion administrateur requise pour consulter le pilote.");
+      } else if (loadError instanceof ApiRequestError && loadError.status === 403) {
+        setProductionPilotAccess("forbidden");
+        setProductionPilotError("Ce contrôle est réservé à l’administrateur privé autorisé.");
+      } else {
+        setProductionPilotAccess("unknown");
+        setProductionPilotError(loadError instanceof Error ? loadError.message : "État du pilote indisponible.");
+      }
+    } finally {
+      setProductionPilotLoading(false);
+    }
+  };
+
+  const mutateProductionPilotEligibility = async (action: "approve" | "revoke") => {
+    if (
+      productionPilotSubmitting ||
+      productionPilotAccess !== "authorized" ||
+      !productionPilotLoaded ||
+      !productionPilotContactId ||
+      !productionPilotOpportunityId ||
+      !productionPilotConfirmed
+    ) return;
+    const reason = productionPilotReason.trim();
+    const sourceReference = productionPilotSourceReference.trim();
+    if (reason.length < 10 || reason.length > 2000 || (action === "approve" && (sourceReference.length < 10 || sourceReference.length > 2000))) {
+      setProductionPilotError("La source et la justification doivent contenir entre 10 et 2 000 caractères.");
+      return;
+    }
+    setProductionPilotSubmitting(true);
+    setProductionPilotError(null);
+    setProductionPilotSuccess(null);
+    try {
+      await apiRequest<{ ok: true }>("/api/backlinks/production-pilot-eligibility", {
+        method: "POST",
+        body: JSON.stringify({
+          action,
+          contactId: productionPilotContactId,
+          opportunityId: productionPilotOpportunityId,
+          reason,
+          ...(action === "approve" ? { sourceReference } : {}),
+          confirm: true,
+        }),
+      });
+      setProductionPilotConfirmed(false);
+      setProductionPilotSuccess(action === "approve" ? "Pilote approuvé. Aucun outreach ni email n’a été déclenché." : "Approbation du pilote révoquée.");
+      await loadProductionPilotEligibility();
+    } catch (mutationError) {
+      if (mutationError instanceof ApiRequestError && mutationError.status === 401) {
+        setProductionPilotAccess("unauthenticated");
+        setProductionPilotError("Connexion administrateur requise.");
+      } else if (mutationError instanceof ApiRequestError && mutationError.status === 403) {
+        setProductionPilotAccess("forbidden");
+        setProductionPilotError("Ce contrôle est réservé à l’administrateur privé autorisé.");
+      } else {
+        setProductionPilotError(mutationError instanceof Error ? mutationError.message : "Action du pilote indisponible.");
+      }
+    } finally {
+      setProductionPilotSubmitting(false);
+    }
+  };
 
   const loadAutomationControl = useCallback(async (requestVersion: number) => {
     if (!workspaceResolved || !activeWorkspaceId?.trim()) {
@@ -2423,6 +2537,63 @@ export default function BacklinksPage() {
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 md:text-base">Centralisez les opportunités, les campagnes d’outreach et les liens obtenus pour développer l’autorité SEO de Norixo.</p>
           </div>
         </div>
+      </section>
+
+      <section className="nk-card rounded-3xl border border-slate-200/80 bg-white/95 p-5 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset] md:p-6">
+        <details open={productionPilotOpen} onToggle={(event) => setProductionPilotOpen(event.currentTarget.open)}>
+          <summary className="cursor-pointer list-none text-sm font-semibold text-slate-950 marker:hidden">
+            <span className="flex items-center justify-between gap-4">
+              <span>Pilote réel V3</span>
+              <span className="text-xs font-medium text-slate-500">Contrôle administrateur privé</span>
+            </span>
+          </summary>
+          <div className="mt-5 border-t border-slate-200 pt-5">
+            <p className="max-w-3xl text-sm leading-6 text-slate-600">Sélectionnez explicitement un contact et une opportunité, puis consultez l’état d’éligibilité. Cette interface ne déclenche aucun outreach, envoi d’email ou changement du mode DRY-RUN.</p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <label>
+                <span className="mb-1.5 block text-sm font-semibold text-slate-700">Contact</span>
+                <select value={productionPilotContactId} onChange={(event) => { setProductionPilotContactId(event.target.value); resetProductionPilotState(); }} disabled={productionPilotLoading || productionPilotSubmitting} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50">
+                  <option value="">Sélectionnez un contact</option>
+                  {pages.contacts.items.map((contact) => <option key={contact.id} value={contact.id}>{contactLabel(pages.contacts.items, contact.id)}</option>)}
+                </select>
+              </label>
+              <label>
+                <span className="mb-1.5 block text-sm font-semibold text-slate-700">Opportunité</span>
+                <select value={productionPilotOpportunityId} onChange={(event) => { setProductionPilotOpportunityId(event.target.value); resetProductionPilotState(); }} disabled={productionPilotLoading || productionPilotSubmitting} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50">
+                  <option value="">Sélectionnez une opportunité</option>
+                  {pages.opportunities.items.map((opportunity) => <option key={opportunity.id} value={opportunity.id}>{opportunityLabel(pages.opportunities.items, pages.domains.items, opportunity.id)}</option>)}
+                </select>
+              </label>
+            </div>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <button type="button" onClick={() => void loadProductionPilotEligibility()} disabled={!productionPilotContactId || !productionPilotOpportunityId || productionPilotLoading || productionPilotSubmitting} className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50">{productionPilotLoading ? "Lecture de l’état…" : "Consulter l’éligibilité"}</button>
+              {productionPilotAccess === "unauthenticated" || productionPilotAccess === "forbidden" ? <span className="text-sm text-rose-800">Les actions d’approbation sont masquées.</span> : null}
+            </div>
+            {productionPilotError ? <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{productionPilotError}</p> : null}
+            {productionPilotSuccess ? <p role="status" aria-live="polite" className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">{productionPilotSuccess}</p> : null}
+            {productionPilotAccess === "authorized" && productionPilotLoaded ? <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-semibold text-slate-900">État actuel : {productionPilotEligibility == null ? "aucune éligibilité enregistrée" : productionPilotEligibility.status}</p>
+              {productionPilotEligibility != null ? <p className="mt-1 text-sm text-slate-600">Dernière mise à jour : {formatDate(productionPilotEligibility.updatedAt)}</p> : null}
+              <div className="mt-4 grid gap-4">
+                <label>
+                  <span className="mb-1.5 block text-sm font-semibold text-slate-700">Preuve de provenance</span>
+                  <input value={productionPilotSourceReference} onChange={(event) => { setProductionPilotSourceReference(event.target.value); setProductionPilotConfirmed(false); }} minLength={10} maxLength={2000} disabled={productionPilotSubmitting || productionPilotEligibility?.status === "approved"} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50" placeholder="URL ou référence justifiant la provenance réelle" />
+                </label>
+                <label>
+                  <span className="mb-1.5 block text-sm font-semibold text-slate-700">Justification</span>
+                  <textarea value={productionPilotReason} onChange={(event) => { setProductionPilotReason(event.target.value); setProductionPilotConfirmed(false); }} minLength={10} maxLength={2000} rows={3} disabled={productionPilotSubmitting} className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50" placeholder="Justification de l’approbation ou motif de révocation" />
+                </label>
+                <label className="flex items-start gap-2 text-sm text-slate-700">
+                  <input type="checkbox" checked={productionPilotConfirmed} onChange={(event) => setProductionPilotConfirmed(event.target.checked)} disabled={productionPilotSubmitting} className="mt-1" />
+                  <span>Je confirme cette action manuelle sur le pilote V3. Elle n’envoie aucun email.</span>
+                </label>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-3">
+                {productionPilotEligibility?.status === "approved" ? <button type="button" onClick={() => void mutateProductionPilotEligibility("revoke")} disabled={productionPilotSubmitting || !productionPilotConfirmed || productionPilotReason.trim().length < 10 || productionPilotReason.trim().length > 2000} className="rounded-full border border-rose-300 px-4 py-2 text-sm font-semibold text-rose-800 disabled:cursor-not-allowed disabled:opacity-50">{productionPilotSubmitting ? "Révocation…" : "Révoquer l’approbation"}</button> : <button type="button" onClick={() => void mutateProductionPilotEligibility("approve")} disabled={productionPilotSubmitting || !productionPilotConfirmed || productionPilotReason.trim().length < 10 || productionPilotReason.trim().length > 2000 || productionPilotSourceReference.trim().length < 10 || productionPilotSourceReference.trim().length > 2000} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{productionPilotSubmitting ? "Approbation…" : "Approuver le pilote"}</button>}
+              </div>
+            </div> : null}
+          </div>
+        </details>
       </section>
 
       <section className="nk-card rounded-3xl border border-slate-200/80 bg-white/95 p-5 shadow-[0_18px_48px_rgba(15,23,42,0.07),0_1px_0_rgba(255,255,255,0.75)_inset] md:p-6">
