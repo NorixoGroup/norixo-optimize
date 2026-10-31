@@ -4,7 +4,6 @@ import { BacklinkOutreachEmailSendError, type BacklinkOutreachEmailSendResult } 
 import type { BacklinkOutreachLiveAutoSendCandidateRow } from "@/lib/backlinks/repositories/outreachRepository";
 
 const MAX_LIVE_AUTO_SENDS_PER_RUN = 1 as const;
-const MAX_CANDIDATE_SCAN_LIMIT = 200;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export type BacklinkOutreachLiveAutoSendWorkspaceControl = {
@@ -24,7 +23,11 @@ export type BacklinkOutreachLiveAutoSendInput = {
   workspaceId: string;
   actorUserId: string;
   workspaceControl: BacklinkOutreachLiveAutoSendWorkspaceControl | null;
-  outreachId?: string | null;
+  /**
+   * Mandatory: this function must never select a candidate by scanning. A missing, empty, or
+   * malformed value is rejected before any lookup, reservation, or provider call — see G4-M1.
+   */
+  outreachId: string;
 };
 
 export type BacklinkOutreachLiveAutoSendDependencies = {
@@ -32,10 +35,6 @@ export type BacklinkOutreachLiveAutoSendDependencies = {
     workspaceId: string,
     outreachId: string,
   ) => Promise<BacklinkOutreachLiveAutoSendCandidateRow | null>;
-  listCandidates: (
-    workspaceId: string,
-    limit: number,
-  ) => Promise<BacklinkOutreachLiveAutoSendCandidateRow[]>;
   sendBacklinkOutreachEmail: (input: {
     workspaceId: string;
     actorUserId: string;
@@ -130,14 +129,16 @@ export async function runBacklinkOutreachLiveAutoSend(
   if (!canRunBacklinkOutreachLiveAutoSend(input.workspaceControl)) {
     throw new BacklinkOutreachLiveAutoSendError("LIVE_AUTO_SEND_NOT_ENABLED");
   }
-  assert(input.outreachId == null || (typeof input.outreachId === "string" && isValidUuid(input.outreachId)), "outreachId must be a valid UUID or null");
+  // Mandatory and strictly validated before any lookup: this function never scans for a
+  // candidate. A missing, empty, whitespace-only, wrongly-typed, or malformed outreachId is
+  // rejected here, before getCandidateById or the provider are ever reached.
+  assert(typeof input.outreachId === "string" && isValidUuid(input.outreachId.trim()), "outreachId must be a non-empty valid UUID");
+  const outreachId = input.outreachId.trim();
 
   const selectedAt = dependencies.now?.() ?? new Date().toISOString();
-  const selectedCandidates = input.outreachId == null
-    ? (await dependencies.listCandidates(input.workspaceId, MAX_CANDIDATE_SCAN_LIMIT)).filter(isCandidateEligible)
-    : await dependencies
-        .getCandidateById(input.workspaceId, input.outreachId)
-        .then((candidate) => (candidate != null && isCandidateEligible(candidate) ? [candidate] : []));
+  const selectedCandidates = await dependencies
+    .getCandidateById(input.workspaceId, outreachId)
+    .then((candidate) => (candidate != null && isCandidateEligible(candidate) ? [candidate] : []));
 
   for (const candidate of selectedCandidates) {
     const idempotencyKey = dependencies.createIdempotencyKey?.({

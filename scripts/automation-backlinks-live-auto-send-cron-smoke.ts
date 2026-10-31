@@ -255,7 +255,12 @@ async function main(): Promise<void> {
   const route = await readFile("app/api/internal/cron/backlinks/outreach/send-one/route.ts", "utf8");
   assert(route.includes("hasValidBacklinkOutreachLiveAutoSendCronAuthorization"), "Route must validate CRON_SECRET authorization.");
   assert(route.includes("isBacklinkOutreachLiveAutoSendCronEnabled"), "Route must require the explicit disabled-by-default activation gate.");
-  assert(route.includes("runBacklinkOutreachLiveAutoSendCron"), "Route must use the cron engine.");
+  // G4-M1: the route no longer uses the scan-based cron engine at all — it requires an explicit
+  // workspaceId and outreachId query parameter and calls the lower-level, targeted service
+  // directly. This cron-service (tested above) remains a standalone, currently-unused utility.
+  assert(!route.includes("runBacklinkOutreachLiveAutoSendCron"), "Route must no longer use the scan-based cron engine.");
+  assert(route.includes("runBacklinkOutreachLiveAutoSend("), "Route must call the targeted, single-outreach service directly.");
+  assert(route.includes("requiredUuidQueryParam"), "Route must require an explicit, validated query-parameter target.");
   assert(route.includes("reserveBacklinkOutreachApprovedInitialAttempt"), "Route must use the existing V3 reservation path.");
   assert(!route.includes("console.error(error"), "Route logs must not serialize error objects or secrets.");
 

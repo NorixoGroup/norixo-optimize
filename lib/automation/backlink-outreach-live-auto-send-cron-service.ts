@@ -113,7 +113,6 @@ export async function runBacklinkOutreachLiveAutoSendCron(
         const result = await runBacklinkOutreachLiveAutoSend(
           {
             getCandidateById: dependencies.getCandidateById,
-            listCandidates: dependencies.listCandidates,
             sendBacklinkOutreachEmail: dependencies.sendBacklinkOutreachEmail,
             now: dependencies.now,
             createIdempotencyKey: dependencies.createIdempotencyKey,
