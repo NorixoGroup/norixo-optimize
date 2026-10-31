@@ -11,6 +11,10 @@
     {
       "path": "/api/internal/cron/backlinks/autonomy",
       "schedule": "15 6 * * *"
+    },
+    {
+      "path": "/api/internal/cron/backlinks/discovery-qualification-resume",
+      "schedule": "30 6 * * *"
     }
   ]
 }
