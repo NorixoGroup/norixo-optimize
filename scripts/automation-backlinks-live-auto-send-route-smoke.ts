@@ -38,12 +38,18 @@ async function main(): Promise<void> {
     "getBacklinkOutreachReplyTokenKeyring()",
     "sendApprovedBacklinkOutreachEmail(",
     "getCandidateById:",
-    "listBacklinkOutreachLiveAutoSendCandidates(",
     "runBacklinkOutreachLiveAutoSend(",
     "BacklinkOutreachLiveAutoSendError",
   ]) {
     assert(route.includes(required) || service.includes(required), `Missing ${required}`);
   }
+
+  // G4-M1: outreachId must be mandatory end to end. The route must never be able to scan for a
+  // candidate, and the service's input type must no longer accept a null/optional outreachId.
+  assert(!route.includes("listBacklinkOutreachLiveAutoSendCandidates("), "The route must never list candidates to select one implicitly.");
+  assert(!service.includes("listCandidates"), "The service must not retain any candidate-scanning dependency.");
+  assert(!service.includes("outreachId?:"), "outreachId must not be optional on the service's input type.");
+  assert(!route.includes("body.outreachId ?? null"), "The route must never fall back to a null outreachId.");
 
   assert(
     repo.includes("reserve_backlink_approved_initial_attempt_v3"),

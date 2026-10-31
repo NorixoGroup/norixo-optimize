@@ -2,6 +2,7 @@ import type { BacklinkOutreachEmailSendResult } from "../lib/backlinks/services/
 import { BacklinkOutreachEmailSendError } from "../lib/backlinks/services/outreachEmailSendService";
 import type {
   BacklinkOutreachLiveAutoSendCandidateRow,
+  BacklinkOutreachLiveAutoSendDependencies,
   BacklinkOutreachLiveAutoSendWorkspaceControl,
 } from "../lib/automation/backlink-outreach-live-auto-send-service";
 import {
@@ -16,6 +17,8 @@ function assert(condition: boolean, message: string): asserts condition {
     throw new Error(message);
   }
 }
+
+const VALID_ID = "550e8400-e29b-41d4-a716-4466554400bb";
 
 function candidate(
   id: string,
@@ -64,6 +67,31 @@ function sendResult(
   };
 }
 
+/** No listCandidates: an explicit outreachId must never fall back to a scan (G4-M1). */
+function deps(overrides: Partial<BacklinkOutreachLiveAutoSendDependencies> = {}): BacklinkOutreachLiveAutoSendDependencies {
+  return {
+    getCandidateById: async () => null,
+    sendBacklinkOutreachEmail: async () => {
+      throw new Error("sendBacklinkOutreachEmail must not be called for this scenario.");
+    },
+    ...overrides,
+  };
+}
+
+async function expectInvalidInput(
+  operation: () => Promise<unknown>,
+): Promise<void> {
+  try {
+    await operation();
+    throw new Error("Expected LIVE_AUTO_SEND_INVALID_INPUT");
+  } catch (error) {
+    assert(
+      error instanceof BacklinkOutreachLiveAutoSendError && error.code === "LIVE_AUTO_SEND_INVALID_INPUT",
+      "Expected LIVE_AUTO_SEND_INVALID_INPUT",
+    );
+  }
+}
+
 async function expectReject(
   operation: () => Promise<unknown>,
   code: BacklinkOutreachLiveAutoSendError["code"],
@@ -84,229 +112,150 @@ async function main(): Promise<void> {
   assert(!canRunBacklinkOutreachLiveAutoSend(enabledControl({ backlinkOutreachScheduleApplyEnabled: false })), "Schedule-apply-disabled control must block live auto send.");
   assert(!canRunBacklinkOutreachLiveAutoSend(enabledControl({ disabledReason: "disabled" })), "Disabled workspace control must block live auto send.");
 
+  // --- G4-M1: outreachId is mandatory. Every rejection below must happen before any lookup. ---
+
   {
+    let getCandidateCalls = 0;
+    let sendCalls = 0;
+    const d = deps({
+      getCandidateById: async () => {
+        getCandidateCalls += 1;
+        return candidate(VALID_ID);
+      },
+      sendBacklinkOutreachEmail: async () => {
+        sendCalls += 1;
+        return sendResult("sent");
+      },
+    });
+    const base = { workspaceId: "workspace-1", actorUserId: "actor-1", workspaceControl: enabledControl() };
+
+    // Missing field (undefined).
+    await expectInvalidInput(() =>
+      runBacklinkOutreachLiveAutoSend(d, { ...base, outreachId: undefined as unknown as string }),
+    );
+    // Explicit null.
+    await expectInvalidInput(() =>
+      runBacklinkOutreachLiveAutoSend(d, { ...base, outreachId: null as unknown as string }),
+    );
+    // Empty string.
+    await expectInvalidInput(() => runBacklinkOutreachLiveAutoSend(d, { ...base, outreachId: "" }));
+    // Whitespace only.
+    await expectInvalidInput(() => runBacklinkOutreachLiveAutoSend(d, { ...base, outreachId: "   " }));
+    // Wrong type.
+    await expectInvalidInput(() =>
+      runBacklinkOutreachLiveAutoSend(d, { ...base, outreachId: 12345 as unknown as string }),
+    );
+    // Malformed (not a UUID).
+    await expectInvalidInput(() => runBacklinkOutreachLiveAutoSend(d, { ...base, outreachId: "BL-OUT-2026-019" }));
+
+    assert(getCandidateCalls === 0, "An invalid outreachId must never reach getCandidateById.");
+    assert(sendCalls === 0, "An invalid outreachId must never reach the provider.");
+  }
+
+  {
+    // Direct call to the service with no outreachId key at all (simulating a future caller that
+    // bypasses route-level validation entirely) must still be rejected, with no scan.
+    let sendCalls = 0;
+    const input = { workspaceId: "workspace-1", actorUserId: "actor-1", workspaceControl: enabledControl() } as unknown as Parameters<typeof runBacklinkOutreachLiveAutoSend>[1];
+    await expectInvalidInput(() =>
+      runBacklinkOutreachLiveAutoSend(
+        deps({ sendBacklinkOutreachEmail: async () => { sendCalls += 1; return sendResult("sent"); } }),
+        input,
+      ),
+    );
+    assert(sendCalls === 0, "A direct call without outreachId must never scan or send.");
+  }
+
+  {
+    // Valid, well-formed UUID, but no matching candidate: must resolve to no_candidate, never
+    // fall back to any other outreach.
     let sendCalls = 0;
     const result = await runBacklinkOutreachLiveAutoSend(
-      {
+      deps({
+        getCandidateById: async () => null,
+        sendBacklinkOutreachEmail: async () => { sendCalls += 1; return sendResult("sent"); },
+      }),
+      { workspaceId: "workspace-1", actorUserId: "actor-1", workspaceControl: enabledControl(), outreachId: VALID_ID },
+    );
+    assert(sendCalls === 0 && result.disposition === "no_candidate" && result.outreachId === null, "An unknown outreachId must never select another candidate.");
+  }
+
+  {
+    // Candidate exists but is ineligible (attempts exhausted): no_candidate, no send.
+    let sendCalls = 0;
+    const result = await runBacklinkOutreachLiveAutoSend(
+      deps({
         getCandidateById: async (_workspaceId, outreachId) =>
-          outreachId === "550e8400-e29b-41d4-a716-4466554400bb"
-            ? candidate("550e8400-e29b-41d4-a716-4466554400bb")
-            : null,
-        listCandidates: async () => {
-          throw new Error("Explicit outreachId must not depend on generic candidate scan.");
-        },
+          outreachId === VALID_ID ? candidate(VALID_ID, { current_attempt: 3 }) : null,
+        sendBacklinkOutreachEmail: async () => { sendCalls += 1; return sendResult("sent"); },
+      }),
+      { workspaceId: "workspace-1", actorUserId: "actor-1", workspaceControl: enabledControl(), outreachId: VALID_ID },
+    );
+    assert(sendCalls === 0 && result.disposition === "no_candidate", "An ineligible explicit outreachId must not be sent.");
+  }
+
+  {
+    // Valid, eligible, explicit outreachId: the targeted path must still work end-to-end.
+    let sendCalls = 0;
+    const result = await runBacklinkOutreachLiveAutoSend(
+      deps({
+        getCandidateById: async (_workspaceId, outreachId) =>
+          outreachId === VALID_ID ? candidate(VALID_ID) : null,
         sendBacklinkOutreachEmail: async (input) => {
           sendCalls += 1;
-          assert(input.idempotencyKey === `automation:backlinks:live-auto-send:workspace-1:550e8400-e29b-41d4-a716-4466554400bb:2026-08-20T08:00:00.000Z`, "Idempotency key must stay traceable and unique.");
+          assert(input.outreachId === VALID_ID, "The provider must only ever be called for the explicit outreachId.");
+          assert(
+            input.idempotencyKey === `automation:backlinks:live-auto-send:workspace-1:${VALID_ID}:2026-08-20T08:00:00.000Z`,
+            "Idempotency key must stay traceable and unique.",
+          );
           return sendResult("sent", "attempt-sent");
         },
         now: () => "2026-08-20T08:00:00.000Z",
         createIdempotencyKey: ({ workspaceId, outreachId, selectedAt }) => `automation:backlinks:live-auto-send:${workspaceId}:${outreachId}:${selectedAt}`,
-      },
-      {
-        workspaceId: "workspace-1",
-        actorUserId: "actor-1",
-        workspaceControl: enabledControl(),
-        outreachId: "550e8400-e29b-41d4-a716-4466554400bb",
-      },
+      }),
+      { workspaceId: "workspace-1", actorUserId: "actor-1", workspaceControl: enabledControl(), outreachId: VALID_ID },
     );
-    assert(sendCalls === 1, "Exactly one eligible outreach must be sent per invocation.");
-    assert(
-      result.disposition === "sent" &&
-      result.outreachId === "550e8400-e29b-41d4-a716-4466554400bb" &&
-      result.attemptId === "attempt-sent",
-      "Successful send must return the selected outreach and attempt.",
-    );
+    assert(sendCalls === 1, "The explicit, eligible outreach must be sent exactly once.");
+    assert(result.disposition === "sent" && result.outreachId === VALID_ID && result.attemptId === "attempt-sent", "A successful send must return the explicit outreach and attempt.");
   }
 
   {
+    // A skippable provider refusal on the single explicit candidate must resolve to
+    // no_candidate, not crash — and there is no "next candidate" to fall back to.
     let sendCalls = 0;
     const result = await runBacklinkOutreachLiveAutoSend(
-      {
-        getCandidateById: async (_workspaceId, outreachId) =>
-          outreachId === "550e8400-e29b-41d4-a716-4466554400cc"
-            ? candidate("550e8400-e29b-41d4-a716-4466554400cc", { current_attempt: 3 })
-            : null,
-        listCandidates: async () => {
-          throw new Error("Explicit outreachId must not depend on generic candidate scan.");
-        },
+      deps({
+        getCandidateById: async () => candidate(VALID_ID),
         sendBacklinkOutreachEmail: async () => {
           sendCalls += 1;
-          return sendResult("sent", "attempt-a");
+          throw new BacklinkOutreachEmailSendError("OUTREACH_NOT_READY");
         },
-      },
-      {
-        workspaceId: "workspace-1",
-        actorUserId: "actor-1",
-        workspaceControl: enabledControl(),
-        outreachId: "550e8400-e29b-41d4-a716-4466554400cc",
-      },
+      }),
+      { workspaceId: "workspace-1", actorUserId: "actor-1", workspaceControl: enabledControl(), outreachId: VALID_ID },
     );
-    assert(sendCalls === 0 && result.disposition === "no_candidate", "An ineligible explicit outreachId must not fall back to another candidate.");
+    assert(sendCalls === 1 && result.disposition === "no_candidate", "A skippable refusal on the explicit candidate must not crash.");
   }
 
   {
-    let sendCalls = 0;
     const result = await runBacklinkOutreachLiveAutoSend(
-      {
-        getCandidateById: async () => null,
-        listCandidates: async () => [candidate("outreach-a"), candidate("outreach-b")],
-        sendBacklinkOutreachEmail: async () => {
-          sendCalls += 1;
-          return sendResult("sent", "attempt-sent");
-        },
-      },
-      { workspaceId: "workspace-1", actorUserId: "actor-1", workspaceControl: enabledControl() },
+      deps({
+        getCandidateById: async () => candidate(VALID_ID),
+        sendBacklinkOutreachEmail: async () => sendResult("failed", "attempt-failed"),
+      }),
+      { workspaceId: "workspace-1", actorUserId: "actor-1", workspaceControl: enabledControl(), outreachId: VALID_ID },
     );
-    assert(sendCalls === 1, "The worker must stop after the first successful send.");
-    assert(result.outreachId === "outreach-a" && result.disposition === "sent", "The first eligible outreach should be selected deterministically.");
+    assert(result.disposition === "failed" && result.outreachId === VALID_ID, "A failed provider response must be reported, not retried.");
   }
 
   {
-    let sendCalls = 0;
     const result = await runBacklinkOutreachLiveAutoSend(
-      {
-        getCandidateById: async () => null,
-        listCandidates: async () => [candidate("draft-a", { status: "draft" })],
-        sendBacklinkOutreachEmail: async () => {
-          sendCalls += 1;
-          return sendResult("sent");
-        },
-      },
-      { workspaceId: "workspace-1", actorUserId: "actor-1", workspaceControl: enabledControl() },
+      deps({
+        getCandidateById: async () => candidate(VALID_ID),
+        sendBacklinkOutreachEmail: async () => sendResult("unknown", "attempt-unknown"),
+      }),
+      { workspaceId: "workspace-1", actorUserId: "actor-1", workspaceControl: enabledControl(), outreachId: VALID_ID },
     );
-    assert(sendCalls === 0 && result.disposition === "no_candidate", "Non-ready outreach must be excluded.");
-  }
-
-  for (const code of [
-    "OUTREACH_NOT_SENDABLE",
-    "OUTREACH_EMAIL_CHANNEL_UNSUPPORTED",
-    "OUTREACH_EMAIL_CONTENT_INCOMPLETE",
-    "OUTREACH_CONTACT_NOT_ELIGIBLE",
-    "OUTREACH_MAX_ATTEMPTS_REACHED",
-    "OUTREACH_SEND_RATE_LIMIT_EXCEEDED",
-    "OUTREACH_ATTEMPT_IDEMPOTENCY_CONFLICT",
-    "OUTREACH_SEND_ATTEMPT_IN_PROGRESS",
-    "OUTREACH_SEND_ATTEMPT_UNRESOLVED",
-    "OUTREACH_NOT_APPROVED",
-    "OUTREACH_APPROVAL_STALE",
-    "OUTREACH_CAMPAIGN_DISABLED",
-    "OUTREACH_NOT_READY",
-    "OUTREACH_INVALID_RECIPIENT",
-    "OUTREACH_MISSING_APPROVED_CONTENT",
-    "OUTREACH_INELIGIBLE",
-  ] as const) {
-    let sendCalls = 0;
-    const result = await runBacklinkOutreachLiveAutoSend(
-      {
-        getCandidateById: async () => null,
-        listCandidates: async () => [candidate(`skip-${code}`)],
-        sendBacklinkOutreachEmail: async () => {
-          sendCalls += 1;
-          throw new BacklinkOutreachEmailSendError(code);
-        },
-      },
-      { workspaceId: "workspace-1", actorUserId: "actor-1", workspaceControl: enabledControl() },
-    );
-    assert(sendCalls === 1 && result.disposition === "no_candidate", `${code} must be treated as a skip condition.`);
-  }
-
-  {
-    let sendCalls = 0;
-    const result = await runBacklinkOutreachLiveAutoSend(
-      {
-        getCandidateById: async () => null,
-        listCandidates: async () => [candidate("outreach-a"), candidate("outreach-b")],
-        sendBacklinkOutreachEmail: async (input) => {
-          sendCalls += 1;
-          if (input.outreachId === "outreach-a") {
-            throw new BacklinkOutreachEmailSendError("OUTREACH_SEND_ATTEMPT_IN_PROGRESS");
-          }
-          return sendResult("sent", "attempt-b");
-        },
-      },
-      { workspaceId: "workspace-1", actorUserId: "actor-1", workspaceControl: enabledControl() },
-    );
-    assert(sendCalls === 2 && result.disposition === "sent" && result.outreachId === "outreach-b", "The worker must continue after a skipped candidate.");
-  }
-
-  {
-    let sendCalls = 0;
-    const result = await runBacklinkOutreachLiveAutoSend(
-      {
-        getCandidateById: async () => null,
-        listCandidates: async () => [candidate("outreach-a"), candidate("outreach-b")],
-        sendBacklinkOutreachEmail: async () => {
-          sendCalls += 1;
-          return sendResult("failed", "attempt-failed");
-        },
-      },
-      { workspaceId: "workspace-1", actorUserId: "actor-1", workspaceControl: enabledControl() },
-    );
-    assert(sendCalls === 1 && result.disposition === "failed" && result.outreachId === "outreach-a", "A failed provider response must stop the run without retrying.");
-  }
-
-  {
-    let sendCalls = 0;
-    const result = await runBacklinkOutreachLiveAutoSend(
-      {
-        getCandidateById: async () => null,
-        listCandidates: async () => [candidate("outreach-a")],
-        sendBacklinkOutreachEmail: async () => {
-          sendCalls += 1;
-          return sendResult("unknown", "attempt-unknown");
-        },
-      },
-      { workspaceId: "workspace-1", actorUserId: "actor-1", workspaceControl: enabledControl() },
-    );
-    assert(sendCalls === 1 && result.disposition === "unknown" && result.outreachId === "outreach-a", "An unknown provider response must stop the run without retrying.");
-  }
-
-  {
-    let sendCalls = 0;
-    const result = await runBacklinkOutreachLiveAutoSend(
-      {
-        getCandidateById: async (_workspaceId, outreachId) =>
-          outreachId === "550e8400-e29b-41d4-a716-4466554400bb"
-            ? candidate("550e8400-e29b-41d4-a716-4466554400bb", { current_attempt: 3 })
-            : null,
-        listCandidates: async () => {
-          throw new Error("Explicit outreachId must not depend on generic candidate scan.");
-        },
-        sendBacklinkOutreachEmail: async () => {
-          sendCalls += 1;
-          return sendResult("sent", "attempt-a");
-        },
-      },
-      {
-        workspaceId: "workspace-1",
-        actorUserId: "actor-1",
-        workspaceControl: enabledControl(),
-        outreachId: "550e8400-e29b-41d4-a716-4466554400bb",
-      },
-    );
-    assert(sendCalls === 0 && result.disposition === "no_candidate", "An explicit outreachId must stay within the same guards.");
-  }
-
-  {
-    let sendCalls = 0;
-    const result = await runBacklinkOutreachLiveAutoSend(
-      {
-        getCandidateById: async () => null,
-        listCandidates: async () => [candidate("outreach-a")],
-        sendBacklinkOutreachEmail: async () => {
-          sendCalls += 1;
-          return sendResult("sent", "attempt-a");
-        },
-      },
-      {
-        workspaceId: "workspace-1",
-        actorUserId: "actor-1",
-        workspaceControl: enabledControl(),
-        outreachId: "00000000-0000-4000-8000-000000000099",
-      },
-    );
-    assert(sendCalls === 0 && result.disposition === "no_candidate", "An explicit outreachId must not bypass selection guards.");
+    assert(result.disposition === "unknown" && result.outreachId === VALID_ID, "An unknown provider response must be reported, not retried.");
   }
 
   for (const control of [
@@ -318,14 +267,33 @@ async function main(): Promise<void> {
     await expectReject(
       () =>
         runBacklinkOutreachLiveAutoSend(
-          {
-            getCandidateById: async () => null,
-            listCandidates: async () => [candidate("outreach-a")],
-            sendBacklinkOutreachEmail: async () => sendResult("sent"),
-          },
-          { workspaceId: "workspace-1", actorUserId: "actor-1", workspaceControl: control },
+          deps({ getCandidateById: async () => candidate(VALID_ID), sendBacklinkOutreachEmail: async () => sendResult("sent") }),
+          { workspaceId: "workspace-1", actorUserId: "actor-1", workspaceControl: control, outreachId: VALID_ID },
         ),
       "LIVE_AUTO_SEND_NOT_ENABLED",
+    );
+  }
+
+  // --- Concurrency: two calls targeting the same explicit outreachId must not double-send. ---
+  {
+    let reserved = false;
+    let providerCalls = 0;
+    const send = async (): Promise<BacklinkOutreachEmailSendResult> => {
+      if (reserved) throw new BacklinkOutreachEmailSendError("OUTREACH_SEND_ATTEMPT_IN_PROGRESS");
+      reserved = true;
+      providerCalls += 1;
+      return sendResult("sent", "attempt-concurrent");
+    };
+    const d = deps({ getCandidateById: async () => candidate(VALID_ID), sendBacklinkOutreachEmail: send });
+    const input = { workspaceId: "workspace-1", actorUserId: "actor-1", workspaceControl: enabledControl(), outreachId: VALID_ID };
+    const [first, second] = await Promise.all([
+      runBacklinkOutreachLiveAutoSend(d, input),
+      runBacklinkOutreachLiveAutoSend(d, input),
+    ]);
+    assert(providerCalls === 1, "Only one of two concurrent calls on the same explicit outreachId may reach the provider.");
+    assert(
+      [first.disposition, second.disposition].includes("sent") && [first.disposition, second.disposition].includes("no_candidate"),
+      "The losing concurrent call must be skipped, not silently redirected to another outreach.",
     );
   }
 

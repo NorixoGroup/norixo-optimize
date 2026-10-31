@@ -7,7 +7,6 @@ import { createEnvironmentOutreachEmailProvider } from "@/lib/backlinks/provider
 import {
   getBacklinkOutreachById,
   getBacklinkOutreachLiveAutoSendCandidateById,
-  listBacklinkOutreachLiveAutoSendCandidates,
   activateBacklinkOutreachAfterEmailAccepted,
 } from "@/lib/backlinks/repositories/outreachRepository";
 import {
@@ -35,7 +34,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3
 
 type LiveAutoSendBody = {
   confirm: true;
-  outreachId?: string;
+  outreachId: string;
 };
 
 type WorkspaceControlRow = {
@@ -50,18 +49,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value != null && !Array.isArray(value);
 }
 
-function parseBody(value: unknown): LiveAutoSendBody | null {
+export function parseBody(value: unknown): LiveAutoSendBody | null {
   if (value == null || !isRecord(value)) {
     return null;
   }
 
+  // Both keys are mandatory: outreachId is never optional, so there is no shape under which
+  // this parser can return a body without an explicit, validated target (G4-M1).
   const keys = Object.keys(value);
-  if (
-    keys.length > 2 ||
-    !keys.includes("confirm") ||
-    (keys.includes("outreachId") && keys.length !== 2) ||
-    (!keys.includes("outreachId") && keys.length !== 1)
-  ) {
+  if (keys.length !== 2 || !keys.includes("confirm") || !keys.includes("outreachId")) {
     return null;
   }
 
@@ -69,16 +65,16 @@ function parseBody(value: unknown): LiveAutoSendBody | null {
     return null;
   }
 
-  if (!("outreachId" in value)) {
-    return { confirm: true };
-  }
-
   const outreachId = value.outreachId;
-  if (typeof outreachId !== "string" || !UUID_PATTERN.test(outreachId.trim())) {
+  if (typeof outreachId !== "string") {
+    return null;
+  }
+  const trimmed = outreachId.trim();
+  if (!trimmed || !UUID_PATTERN.test(trimmed)) {
     return null;
   }
 
-  return { confirm: true, outreachId: outreachId.trim() };
+  return { confirm: true, outreachId: trimmed };
 }
 
 function invalidInputResponse() {
@@ -208,8 +204,6 @@ export async function POST(request: NextRequest) {
       {
         getCandidateById: (workspaceId, outreachId) =>
           getBacklinkOutreachLiveAutoSendCandidateById(adminClient, workspaceId, outreachId),
-        listCandidates: (workspaceId, limit) =>
-          listBacklinkOutreachLiveAutoSendCandidates(adminClient, workspaceId, limit),
         sendBacklinkOutreachEmail: sendBacklinkOutreach,
         now: () => new Date().toISOString(),
         createIdempotencyKey: ({ workspaceId, outreachId, selectedAt }) =>
@@ -224,7 +218,7 @@ export async function POST(request: NextRequest) {
           dryRunOnly: control.dry_run_only,
           disabledReason: control.disabled_reason,
         },
-        outreachId: body.outreachId ?? null,
+        outreachId: body.outreachId,
       },
     );
 
