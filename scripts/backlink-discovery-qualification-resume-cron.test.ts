@@ -20,6 +20,13 @@ function minutesFromNow(minutes: number): string {
   return new Date(NOW_MS + minutes * 60 * 1000).toISOString();
 }
 
+type ResumeCandidateTaskFixture = Parameters<typeof isBacklinkDiscoveryQualificationResumeCandidateTask>[0];
+function taskRow(
+  fields: Pick<ResumeCandidateTaskFixture, "status" | "available_at" | "lease_expires_at" | "attempt_count" | "max_attempts">,
+): ResumeCandidateTaskFixture {
+  return { id: "task-1", workspace_id: "ws-1", run_id: "run-1", task_kind: "backlinks.qualification.preview", ...fields };
+}
+
 // -- 1. Kill switch: absent/disabled/enabled --------------------------------------------------
 
 test("config: switch absent or any value other than the literal string 'true' is disabled", () => {
@@ -61,29 +68,29 @@ test("config: authentication accepts the exact Bearer secret", () => {
 // -- 3/4. Not-yet-due task vs. due (backoff elapsed) task -----------------------------------------
 
 test("candidate predicate: a queued task whose backoff has not elapsed is not a candidate", () => {
-  const notDue = { status: "queued", available_at: minutesFromNow(5), lease_expires_at: null, attempt_count: 1, max_attempts: 3 };
+  const notDue = taskRow({ status: "queued", available_at: minutesFromNow(5), lease_expires_at: null, attempt_count: 1, max_attempts: 3 });
   assert.equal(isBacklinkDiscoveryQualificationResumeCandidateTask(notDue, NOW_MS), false);
 });
 
 test("candidate predicate: a queued task whose backoff has elapsed is a candidate", () => {
-  const due = { status: "queued", available_at: minutesAgo(5), lease_expires_at: null, attempt_count: 1, max_attempts: 3 };
+  const due = taskRow({ status: "queued", available_at: minutesAgo(5), lease_expires_at: null, attempt_count: 1, max_attempts: 3 });
   assert.equal(isBacklinkDiscoveryQualificationResumeCandidateTask(due, NOW_MS), true);
 });
 
 test("candidate predicate: a queued task that has exhausted its attempts is never a candidate", () => {
-  const exhausted = { status: "queued", available_at: minutesAgo(5), lease_expires_at: null, attempt_count: 3, max_attempts: 3 };
+  const exhausted = taskRow({ status: "queued", available_at: minutesAgo(5), lease_expires_at: null, attempt_count: 3, max_attempts: 3 });
   assert.equal(isBacklinkDiscoveryQualificationResumeCandidateTask(exhausted, NOW_MS), false);
 });
 
 // -- 5. Expired lease vs. live lease --------------------------------------------------------------
 
 test("candidate predicate: a running task with an expired lease is a candidate", () => {
-  const expired = { status: "running", available_at: minutesAgo(30), lease_expires_at: minutesAgo(1), attempt_count: 1, max_attempts: 3 };
+  const expired = taskRow({ status: "running", available_at: minutesAgo(30), lease_expires_at: minutesAgo(1), attempt_count: 1, max_attempts: 3 });
   assert.equal(isBacklinkDiscoveryQualificationResumeCandidateTask(expired, NOW_MS), true);
 });
 
 test("candidate predicate: a running task with a live lease is never a candidate", () => {
-  const live = { status: "running", available_at: minutesAgo(30), lease_expires_at: minutesFromNow(1), attempt_count: 1, max_attempts: 3 };
+  const live = taskRow({ status: "running", available_at: minutesAgo(30), lease_expires_at: minutesFromNow(1), attempt_count: 1, max_attempts: 3 });
   assert.equal(isBacklinkDiscoveryQualificationResumeCandidateTask(live, NOW_MS), false);
 });
 
