@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # G4-M4 — validates the G4-M3 ambiguous-attempt query against a REAL PostgREST on a throwaway local PostgreSQL.
 #
-# Isolation: private PostgreSQL cluster in a unique /tmp directory, unix socket only (listen_addresses=''),
+# Isolation: private PostgreSQL cluster in a unique temporary directory, unix socket only (listen_addresses=''),
 # PostgREST bound to 127.0.0.1 only, synthetic fixtures, read-only DB role, minimal environment (env -i):
 # no Supabase/Resend/Brave variable is ever inherited. Cleanup removes only the directory this run created.
 #
@@ -20,7 +20,10 @@ case "$PGRST_BIN" in /*) ;; *) die "PGRST_BIN must be an absolute path" ;; esac
 for b in initdb pg_ctl postgres psql; do [ -x "$PG_BIN/$b" ] || die "missing $PG_BIN/$b"; done
 case "$("$PG_BIN/postgres" --version)" in "postgres (PostgreSQL) 17."*) ;; *) die "PG_BIN is not PostgreSQL 17" ;; esac
 
-AVAIL_KB=$(df -k /private/tmp | awk 'NR==2 {print $4}')
+TMP_BASE="${TMPDIR:-/tmp}"
+[ -d "$TMP_BASE" ] && [ -w "$TMP_BASE" ] && [ -x "$TMP_BASE" ] || die "temporary directory is not usable: $TMP_BASE"
+AVAIL_KB=$(df -Pk "$TMP_BASE" | awk 'NR==2 {print $4}')
+[ -n "$AVAIL_KB" ] && [ "$AVAIL_KB" -eq "$AVAIL_KB" ] 2>/dev/null || die "unable to determine free space in $TMP_BASE"
 [ "$AVAIL_KB" -gt 1048576 ] || die "less than 1 GiB free disk space ($AVAIL_KB KiB); aborting"
 
 REPO=$(cd "$(dirname "$0")/.." && pwd -P)
@@ -28,7 +31,7 @@ FIXTURES="$REPO/scripts/backlink-outreach-ambiguous-attempt-postgrest-fixtures.s
 TEST_TS="$REPO/scripts/backlink-outreach-ambiguous-attempt-postgrest-integration.ts"
 [ -f "$FIXTURES" ] && [ -f "$TEST_TS" ] || die "fixtures or test missing"
 
-ROOT_PREFIX=/tmp/norixo-g4m4-pg
+ROOT_PREFIX="$TMP_BASE/norixo-g4m4-pg"
 ROOT=$(mktemp -d "$ROOT_PREFIX.XXXXXX")
 case "$ROOT" in "$ROOT_PREFIX".??????) ;; *) die "unexpected temp path $ROOT" ;; esac
 NONCE="$$-$RANDOM-$RANDOM"; printf '%s\n' "$NONCE" >"$ROOT/.owner"
@@ -43,7 +46,7 @@ cleanup() {
   [ -z "$PGRST_PID" ] || { kill "$PGRST_PID" 2>/dev/null || true; wait "$PGRST_PID" 2>/dev/null || true; }
   [ "$STARTED" != 1 ] || "$PG_BIN/pg_ctl" -D "$DATA" -m immediate -w stop >/dev/null 2>&1 || true
   if [ "$(cat "$ROOT/.owner" 2>/dev/null)" = "$NONCE" ] && [ ! -f "$DATA/postmaster.pid" ]; then
-    if [ "$rc" != 0 ]; then mkdir -p /tmp/norixo-g4m4-logs && cp -f "$ROOT"/*.log /tmp/norixo-g4m4-logs/ 2>/dev/null || true; fi
+    if [ "$rc" != 0 ]; then mkdir -p "$TMP_BASE/norixo-g4m4-logs" && cp -f "$ROOT"/*.log "$TMP_BASE/norixo-g4m4-logs/" 2>/dev/null || true; fi
     rm -rf -- "$ROOT"
   else
     echo "WARNING: $ROOT left in place (cluster not confirmed stopped)" >&2
