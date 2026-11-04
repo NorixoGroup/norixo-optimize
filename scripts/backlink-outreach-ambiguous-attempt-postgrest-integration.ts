@@ -1,6 +1,6 @@
 // G4-M4: runs the real G4-M3 repository query through a real PostgREST over a throwaway local PostgreSQL.
 // Driven by scripts/backlink-outreach-ambiguous-attempt-postgrest-harness.sh (do not point at Supabase).
-import { PostgrestClient } from "@supabase/postgrest-js";
+import { createClient } from "@supabase/supabase-js";
 
 import { diagnoseBacklinkOutreachAmbiguousAttempts } from "../lib/backlinks/services/outreachAmbiguousAttemptDiagnosticsService";
 import { listAmbiguousBacklinkOutreachAttempts } from "../lib/backlinks/repositories/outreachAttemptsRepository";
@@ -10,7 +10,9 @@ function assert(value: unknown, message: string): asserts value { if (!value) th
 const url = process.env.POSTGREST_URL ?? "";
 assert(/^http:\/\/127\.0\.0\.1:\d+$/.test(url), "POSTGREST_URL must be a 127.0.0.1 URL");
 
-const client = new PostgrestClient(url) as unknown as BacklinkRepositoryClient;
+const client = createClient(url, "g4m4-anon-key", {
+  auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+}) as unknown as BacklinkRepositoryClient;
 const W_A = "aaaaaaaa-0000-4000-8000-00000000a001";
 const W_B = "bbbbbbbb-0000-4000-8000-00000000b001";
 const W_C = "cccccccc-0000-4000-8000-00000000c001";
