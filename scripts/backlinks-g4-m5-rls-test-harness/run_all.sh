@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# G4-M5 Backlinks RLS test harness: sequential runner. NOT executed
-# automatically by Claude/the agent in CI -- prepared for the operator to
-# run by hand after an explicit GO, entirely against a local, dedicated,
+# G4-M5 Backlinks RLS test harness: sequential runner. Run by the
+# backlinks-g4-m5-rls GitHub Actions workflow or by hand, entirely against a
+# local, dedicated,
 # isolated PostgreSQL database. Zero Production access, zero Resend/Brave
 # calls (nothing here performs network I/O at all).
 #
@@ -18,11 +18,30 @@
 
 set -euo pipefail
 
-PSQL_BIN="/usr/local/opt/postgresql@16/bin/psql"
+# Portable connection settings. Only host/port/user/psql path are overridable
+# (via PG_BIN, NORIXO_RLS_PGHOST/PORT/USER); the database name is fixed, and
+# the host must be loopback or a local unix-socket directory.
+PSQL_BIN="${PG_BIN:+$PG_BIN/}psql"
 DB_NAME="norixo_g4_m5_rls_test"
-DB_HOST="localhost"
-DB_PORT="5432"
-DB_USER="mac"
+DB_HOST="${NORIXO_RLS_PGHOST:-localhost}"
+DB_PORT="${NORIXO_RLS_PGPORT:-5432}"
+DB_USER="${NORIXO_RLS_PGUSER:-$(id -un)}"
+
+# Ignore any ambient libpq/Supabase configuration that could redirect psql.
+unset DATABASE_URL SUPABASE_DB_URL PGSERVICE PGSERVICEFILE PGDATABASE PGHOSTADDR \
+  PGPASSFILE PGSSLMODE PGOPTIONS PGSYSCONFDIR
+case "$DB_HOST" in
+  localhost|127.0.0.1|::1) ;;
+  /*) ;;
+  *)
+    echo "Refusing to run: host '$DB_HOST' is not loopback or a local socket directory." >&2
+    exit 1
+    ;;
+esac
+if [[ ! "$DB_PORT" =~ ^[0-9]+$ ]]; then
+  echo "Refusing to run: invalid port '$DB_PORT'." >&2
+  exit 1
+fi
 
 HARNESS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$HARNESS_DIR/../.." && pwd)"
@@ -120,12 +139,28 @@ run_sql() {
     -f "$file"
 }
 
-# Explicit guard before anything else, independent of the one embedded in
+# The target database must already exist (created by the operator or the CI
+# workflow). Explicit guard before anything else, independent of the one embedded in
 # each .sql file: refuse to proceed if this psql/host/port/user combination
 # does not resolve to norixo_g4_m5_rls_test.
 actual_db="$("$PSQL_BIN" -X -At -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c 'select current_database();')"
 if [[ "$actual_db" != "$DB_NAME" ]]; then
   echo "Refusing to run: connected to '$actual_db' instead of '$DB_NAME'." >&2
+  exit 1
+fi
+
+# Server-side check: the connection must be a unix socket (NULL) or loopback,
+# and the database must not already contain Supabase-managed schemas.
+server_addr="$("$PSQL_BIN" -X -At -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
+  -c "select coalesce(host(inet_server_addr()), 'socket');")"
+if [[ "$server_addr" != "socket" && "$server_addr" != "127.0.0.1" && "$server_addr" != "::1" ]]; then
+  echo "Refusing to run: server address '$server_addr' is not local." >&2
+  exit 1
+fi
+foreign="$("$PSQL_BIN" -X -At -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
+  -c "select count(*) from pg_namespace where nspname in ('storage','realtime','vault','supabase_functions','graphql');")"
+if [[ "$foreign" != "0" ]]; then
+  echo "Refusing to run: database looks like a Supabase instance." >&2
   exit 1
 fi
 

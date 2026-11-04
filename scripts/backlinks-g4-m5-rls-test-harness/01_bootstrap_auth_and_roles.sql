@@ -1,7 +1,7 @@
 -- G4-M5 Backlinks RLS test harness, step 1/5: minimal Supabase-equivalent
 -- primitives.
 --
--- Local-only, isolated database (norixo_g4_m5_rls_test on a plain Homebrew
+-- Local-only, isolated database (norixo_g4_m5_rls_test on a throwaway
 -- PostgreSQL 16 -- no Docker, no Supabase project, no network access).
 -- Copied verbatim from scripts/rls-test-harness/01_bootstrap_auth_and_roles.sql
 -- (same project convention, same reasoning) -- see that file's header for
@@ -60,7 +60,7 @@ as $$
 $$;
 
 -- GLOBAL OBJECTS WARNING: these three roles are cluster-wide, shared with
--- every other local test database on this Homebrew Postgres 16 instance.
+-- every other local test database on this throwaway Postgres instance.
 -- Created ONLY if truly absent; never altered if already present.
 do $$
 begin

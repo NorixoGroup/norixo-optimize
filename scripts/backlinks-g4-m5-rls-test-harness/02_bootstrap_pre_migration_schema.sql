@@ -105,5 +105,5 @@ grant select, insert, update, delete on public.workspace_members to anon, authen
 -- this script does not itself create. Without it, RLS enablement would be
 -- untestable: every SELECT would already fail with "permission denied",
 -- masking whether a policy exists at all.
-alter default privileges for role mac in schema public
+alter default privileges in schema public
   grant select, insert, update, delete on tables to anon, authenticated, service_role;
