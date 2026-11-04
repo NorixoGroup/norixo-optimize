@@ -1,0 +1,98 @@
+name: Backlinks G4-M4 PostgREST integration
+
+# Manual-only, disposable integration validation. It never targets Supabase or
+# any application service: PostgreSQL, PostgREST and all fixtures live on the
+# ephemeral GitHub-hosted runner.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  postgrest-integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      PG_BIN: /usr/lib/postgresql/17/bin
+      PGRST_VERSION: "16.5"
+      PGRST_ARCHIVE: postgrest-v16.5-linux-static-x86-64.tar.xz
+      PGRST_ARCHIVE_SHA256: 5099e7ada38f9f6846cd87c14c5f158b7c165f1e9959665ad412e61f4dceba95
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install PostgreSQL 17 from the signed PGDG repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends ca-certificates curl xz-utils
+          sudo install -d -m 0755 /usr/share/postgresql-common/pgdg
+          sudo curl --fail --silent --show-error --location \
+            --output /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          . /etc/os-release
+          printf 'Types: deb\nURIs: https://apt.postgresql.org/pub/repos/apt\nSuites: %s-pgdg\nComponents: main\nArchitectures: %s\nSigned-By: /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc\n' \
+            "$VERSION_CODENAME" "$(dpkg --print-architecture)" | \
+            sudo tee /etc/apt/sources.list.d/pgdg.sources >/dev/null
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+            postgresql-17 postgresql-client-17 postgresql-contrib-17
+
+      - name: Verify PostgreSQL 17 toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(id -u)" -ne 0
+          for binary in initdb pg_ctl postgres psql; do
+            test -x "$PG_BIN/$binary"
+          done
+          "$PG_BIN/postgres" --version | grep -q 'PostgreSQL) 17\.'
+
+      - name: Download and verify PostgREST 16.5
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 0700 "$RUNNER_TEMP/postgrest"
+          archive="$RUNNER_TEMP/$PGRST_ARCHIVE"
+          curl --fail --silent --show-error --location \
+            --output "$archive" \
+            "https://github.com/PostgREST/postgrest/releases/download/v${PGRST_VERSION}/${PGRST_ARCHIVE}"
+          printf '%s  %s\n' "$PGRST_ARCHIVE_SHA256" "$archive" | sha256sum --check --status
+          tar --extract --xz --file "$archive" --directory "$RUNNER_TEMP/postgrest"
+          test -x "$RUNNER_TEMP/postgrest/postgrest"
+          "$RUNNER_TEMP/postgrest/postgrest" --version | grep -q "PostgREST ${PGRST_VERSION}"
+          echo "PGRST_BIN=$RUNNER_TEMP/postgrest/postgrest" >> "$GITHUB_ENV"
+
+      - name: Install Node dependencies without lifecycle scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Run TypeScript G4-M3 smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --no-install tsx scripts/backlink-outreach-ambiguous-attempt-diagnostics-smoke.ts
+
+      - name: Run real PostgREST integration on synthetic fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/backlink-outreach-ambiguous-attempt-postgrest-harness.sh
+          PG_BIN="$PG_BIN" \
+          PGRST_BIN="$PGRST_BIN" \
+          HARNESS_TSX="$GITHUB_WORKSPACE/node_modules/.bin/tsx" \
+          HARNESS_NODE_PATH="$GITHUB_WORKSPACE/node_modules" \
+          bash scripts/backlink-outreach-ambiguous-attempt-postgrest-harness.sh
+
+      - name: Show disposable-service logs on failure
+        if: failure()
+        shell: bash
+        run: |
+          set -euo pipefail
+          find /tmp/norixo-g4m4-logs -maxdepth 1 -type f -name '*.log' -print -exec tail -n 120 {} \; 2>/dev/null || true
