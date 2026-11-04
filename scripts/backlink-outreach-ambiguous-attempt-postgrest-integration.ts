@@ -1,6 +1,7 @@
 // G4-M4: runs the real G4-M3 repository query through a real PostgREST over a throwaway local PostgreSQL.
 // Driven by scripts/backlink-outreach-ambiguous-attempt-postgrest-harness.sh (do not point at Supabase).
 import { createClient } from "@supabase/supabase-js";
+import { createHmac } from "node:crypto";
 
 import { diagnoseBacklinkOutreachAmbiguousAttempts } from "../lib/backlinks/services/outreachAmbiguousAttemptDiagnosticsService";
 import { listAmbiguousBacklinkOutreachAttempts } from "../lib/backlinks/repositories/outreachAttemptsRepository";
@@ -9,8 +10,18 @@ import type { BacklinkRepositoryClient } from "../lib/backlinks/repositories/rep
 function assert(value: unknown, message: string): asserts value { if (!value) throw new Error(`ASSERTION FAILED: ${message}`); }
 const url = process.env.POSTGREST_URL ?? "";
 assert(/^http:\/\/127\.0\.0\.1:\d+$/.test(url), "POSTGREST_URL must be a 127.0.0.1 URL");
+const jwtSecret = process.env.G4M4_JWT_SECRET ?? "";
+assert(jwtSecret.length >= 32, "G4M4_JWT_SECRET must be a synthetic HS256 key");
 
-const client = createClient(url, "g4m4-anon-key", {
+const encodeJwtPart = (value: Record<string, unknown>) =>
+  Buffer.from(JSON.stringify(value)).toString("base64url");
+const jwtHeader = encodeJwtPart({ alg: "HS256", typ: "JWT" });
+const jwtPayload = encodeJwtPart({ role: "web_anon", exp: 4102444800 });
+const accessToken = `${jwtHeader}.${jwtPayload}.${createHmac("sha256", jwtSecret)
+  .update(`${jwtHeader}.${jwtPayload}`)
+  .digest("base64url")}`;
+
+const client = createClient(url, accessToken, {
   auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
 }) as unknown as BacklinkRepositoryClient;
 const W_A = "aaaaaaaa-0000-4000-8000-00000000a001";

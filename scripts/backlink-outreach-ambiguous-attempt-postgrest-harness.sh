@@ -38,6 +38,7 @@ NONCE="$$-$RANDOM-$RANDOM"; printf '%s\n' "$NONCE" >"$ROOT/.owner"
 DATA="$ROOT/data"; SOCK="$ROOT/sock"; mkdir -m 700 "$DATA" "$SOCK"
 PG_PORT=55460
 REST_PORT=$(( 55470 + RANDOM % 100 ))
+JWT_SECRET="g4m4-synthetic-local-jwt-secret-not-for-production"
 STARTED=0; PGRST_PID=""
 
 cleanup() {
@@ -74,12 +75,13 @@ rows=$("${PSQL[@]}" -At -c "select count(*) from public.backlink_outreach_attemp
 "${CLEAN_ENV[@]}" \
   PGRST_DB_URI="postgresql://authenticator@/g4m4?host=$SOCK&port=$PG_PORT" \
   PGRST_DB_SCHEMAS=public PGRST_DB_ANON_ROLE=web_anon \
+  PGRST_JWT_SECRET="$JWT_SECRET" PGRST_SERVER_ROOT_PATH=/rest/v1 \
   PGRST_SERVER_HOST=127.0.0.1 PGRST_SERVER_PORT="$REST_PORT" PGRST_LOG_LEVEL=info \
   "$PGRST_BIN" >"$ROOT/postgrest.log" 2>&1 &
 PGRST_PID=$!
 ready=0
 for _ in $(seq 1 50); do
-  if /usr/bin/curl -fsS -o /dev/null "http://127.0.0.1:$REST_PORT/backlink_outreach_attempts?limit=1"; then ready=1; break; fi
+  if /usr/bin/curl -fsS -o /dev/null "http://127.0.0.1:$REST_PORT/rest/v1/backlink_outreach_attempts?limit=1"; then ready=1; break; fi
   kill -0 "$PGRST_PID" 2>/dev/null || { cat "$ROOT/postgrest.log" >&2; die "PostgREST exited early"; }
   sleep 0.2
 done
@@ -88,7 +90,7 @@ echo "PASS: PostgREST $("$PGRST_BIN" --version) listening on 127.0.0.1:$REST_POR
 : >"$ROOT/postgrest.log.mark"
 
 TSX=(${HARNESS_TSX:-npx tsx})
-"${CLEAN_ENV[@]}" NODE_PATH="${HARNESS_NODE_PATH:-}" POSTGREST_URL="http://127.0.0.1:$REST_PORT" \
+"${CLEAN_ENV[@]}" NODE_PATH="${HARNESS_NODE_PATH:-}" POSTGREST_URL="http://127.0.0.1:$REST_PORT" G4M4_JWT_SECRET="$JWT_SECRET" \
   PATH="$PATH" "${TSX[@]}" "$TEST_TS"
 
 after=$("${PSQL[@]}" -At -c "select md5(string_agg(t::text, '|' order by id)) from public.backlink_outreach_attempts t")
@@ -102,5 +104,5 @@ writes=$(grep -E '"(POST|PATCH|PUT|DELETE) ' "$ROOT/postgrest.log" || true)
   || { echo "$writes" >&2; die "unexpected non-GET requests (expected exactly the rejected PATCH negative control)"; }
 echo "PASS: only non-GET request was the rejected PATCH negative control"
 echo "--- sample PostgREST request lines (query string as received) ---"
-grep '"GET /backlink_outreach_attempts?select=' "$ROOT/postgrest.log" | grep -m1 'limit=201' | sed 's/%2C/,/g' | cut -c1-400 || true
+grep '"GET /rest/v1/backlink_outreach_attempts?select=' "$ROOT/postgrest.log" | grep -m1 'limit=201' | sed 's/%2C/,/g' | cut -c1-400 || true
 echo "G4-M4 HARNESS: OK"
