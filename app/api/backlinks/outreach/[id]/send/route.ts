@@ -8,7 +8,7 @@ import { markBacklinkOutreachAttemptAccepted, markBacklinkOutreachAttemptFailed,
 import { sendApprovedBacklinkOutreachEmail } from "@/lib/backlinks/services/outreachApprovedAutoSendService";
 import { BacklinkOutreachEmailSendError } from "@/lib/backlinks/services/outreachEmailSendService";
 import { getBacklinkOutreachReplyTokenKeyring } from "@/lib/backlinks/services/outreachReplyCorrelationIdentity";
-import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
+import { getRequestUserAndWorkspace, createStaffOutreachReadClient } from "@/lib/server/routeAuth";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 function extractSafeError(error: unknown): {
@@ -49,14 +49,15 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   if (!input) return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   const { id } = await context.params;
   const adminClient = createSupabaseAdminClient();
+  const readClient = createStaffOutreachReadClient();
   const transitions = {
-    getAttempt: (workspaceId: string, attemptId: string) => getBacklinkOutreachAttemptById(auth.client, workspaceId, attemptId),
+    getAttempt: (workspaceId: string, attemptId: string) => getBacklinkOutreachAttemptById(readClient, workspaceId, attemptId),
     updateAttempt: (workspaceId: string, attemptId: string, patch: Parameters<typeof updateBacklinkOutreachAttemptState>[3]) => updateBacklinkOutreachAttemptState(auth.client, workspaceId, attemptId, patch),
   };
   try {
     const result = await sendApprovedBacklinkOutreachEmail({
-      getWorkspaceControl: (workspaceId) => getAutomationWorkspaceControl(auth.client, workspaceId),
-      getOutreach: (workspaceId, outreachId) => getBacklinkOutreachById(auth.client, workspaceId, outreachId),
+      getWorkspaceControl: (workspaceId) => getAutomationWorkspaceControl(readClient, workspaceId),
+      getOutreach: (workspaceId, outreachId) => getBacklinkOutreachById(readClient, workspaceId, outreachId),
       reserveApprovedInitialAttempt: (input) => reserveBacklinkOutreachApprovedInitialAttempt(adminClient, input),
       markAttemptAccepted: markBacklinkOutreachAttemptAccepted(transitions),
       markAttemptFailed: markBacklinkOutreachAttemptFailed(transitions),

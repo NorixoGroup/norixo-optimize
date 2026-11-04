@@ -4,7 +4,7 @@ import { getBacklinkOutreachAttemptById } from "@/lib/backlinks/repositories/out
 import { getBacklinkOutreachFollowUpDraftByAttemptId, updateBacklinkOutreachFollowUpDraft as updateBacklinkOutreachFollowUpDraftRpc } from "@/lib/backlinks/repositories/outreachFollowUpDraftsRepository";
 import { getBacklinkOutreachById } from "@/lib/backlinks/repositories/outreachRepository";
 import { BacklinkRepositoryError } from "@/lib/backlinks/repositories/errors";
-import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
+import { getRequestUserAndWorkspace, createStaffOutreachReadClient } from "@/lib/server/routeAuth";
 
 type RouteProjection = {
   attemptId: string;
@@ -47,12 +47,13 @@ export async function GET(request: NextRequest, contextValue: { params: Promise<
   if (requestContext == null) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (requestContext === "forbidden") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try {
-    const outreach = await getBacklinkOutreachById(requestContext.client, requestContext.workspace.id, id);
-    const attempt = await getBacklinkOutreachAttemptById(requestContext.client, requestContext.workspace.id, attemptId);
+    const readClient = createStaffOutreachReadClient();
+    const outreach = await getBacklinkOutreachById(readClient, requestContext.workspace.id, id);
+    const attempt = await getBacklinkOutreachAttemptById(readClient, requestContext.workspace.id, attemptId);
     if (attempt.outreach_id !== outreach.id || attempt.attempt_kind !== "follow_up" || attempt.status !== "prepared") {
       return NextResponse.json({ error: "Follow-up draft unavailable." }, { status: 409 });
     }
-    const draft = await getBacklinkOutreachFollowUpDraftByAttemptId(requestContext.client, requestContext.workspace.id, attemptId);
+    const draft = await getBacklinkOutreachFollowUpDraftByAttemptId(readClient, requestContext.workspace.id, attemptId);
     if (draft == null) {
       return NextResponse.json({ error: "Follow-up draft unavailable." }, { status: 404 });
     }
@@ -73,9 +74,10 @@ export async function PATCH(request: NextRequest, contextValue: { params: Promis
   const input = parse(await request.json().catch(() => null));
   if (!input) return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   try {
-    const draft = await getBacklinkOutreachFollowUpDraftByAttemptId(requestContext.client, requestContext.workspace.id, attemptId);
+    const readClient = createStaffOutreachReadClient();
+    const draft = await getBacklinkOutreachFollowUpDraftByAttemptId(readClient, requestContext.workspace.id, attemptId);
     if (draft == null) return NextResponse.json({ error: "Le brouillon de relance est indisponible." }, { status: 404 });
-    const attempt = await getBacklinkOutreachAttemptById(requestContext.client, requestContext.workspace.id, attemptId);
+    const attempt = await getBacklinkOutreachAttemptById(readClient, requestContext.workspace.id, attemptId);
     if (attempt.outreach_id !== id || attempt.attempt_kind !== "follow_up" || attempt.status !== "prepared") {
       return NextResponse.json({ error: "Le brouillon de relance est indisponible." }, { status: 409 });
     }
