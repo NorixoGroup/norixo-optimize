@@ -7,7 +7,7 @@ import {
   createBacklinkOutreachReplyAssistantRouteService,
 } from "@/lib/backlinks/services/outreachReplyAssistantRouteService";
 import { BacklinkOutreachReplyAssistantError } from "@/lib/backlinks/services/outreachReplyAssistant";
-import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
+import { getRequestUserAndWorkspace, createStaffOutreachReadClient } from "@/lib/server/routeAuth";
 
 type LinkedInReplyAssistantBody = {
   inbound: {
@@ -95,8 +95,9 @@ export async function POST(
   const { id } = await context.params;
 
   try {
+    const readClient = createStaffOutreachReadClient();
     const outreach = await getBacklinkOutreachById(
-      auth.client,
+      readClient,
       auth.workspace.id,
       id,
     );
@@ -109,7 +110,7 @@ export async function POST(
     }
 
     const propose =
-      createBacklinkOutreachReplyAssistantRouteService(auth.client);
+      createBacklinkOutreachReplyAssistantRouteService(readClient);
 
     const result = await propose({
       workspaceId: auth.workspace.id,

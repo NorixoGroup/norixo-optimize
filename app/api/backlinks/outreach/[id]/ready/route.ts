@@ -7,7 +7,7 @@ import { getBacklinkOpportunityById } from "@/lib/backlinks/repositories/opportu
 import { listBacklinkContactsByDomain } from "@/lib/backlinks/repositories/contactsRepository";
 import { listCurrentVerifiedContactFormEvidenceContactIds } from "@/lib/backlinks/repositories/contactFormAutomationRepository";
 import { markBacklinkOutreachReady } from "@/lib/backlinks/services/outreachReadyService";
-import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
+import { getRequestUserAndWorkspace, createStaffOutreachReadClient } from "@/lib/server/routeAuth";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 type ReadyRequestBody = { confirm: true; reapprove?: true };
 function parseBody(value: unknown): ReadyRequestBody | null {
@@ -28,17 +28,18 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   const { id } = await context.params;
   try {
     const adminClient = createSupabaseAdminClient();
+    const readClient = createStaffOutreachReadClient();
     const result = await markBacklinkOutreachReady({
       eligibility: {
-        getMembership: (v) => getCampaignOpportunity(auth.client, v.workspaceId, v.campaignId, v.opportunityId),
-        getOpportunity: (w, o) => getBacklinkOpportunityById(auth.client, w, o),
-        listContactsByDomain: (w, d) => listBacklinkContactsByDomain(auth.client, w, d),
-        listOutreachByOpportunity: (w, o) => listBacklinkOutreachByOpportunity(auth.client, w, o),
-        listCurrentVerifiedContactFormEvidenceContactIds: (w, contacts) => listCurrentVerifiedContactFormEvidenceContactIds(auth.client, w, contacts),
+        getMembership: (v) => getCampaignOpportunity(readClient, v.workspaceId, v.campaignId, v.opportunityId),
+        getOpportunity: (w, o) => getBacklinkOpportunityById(readClient, w, o),
+        listContactsByDomain: (w, d) => listBacklinkContactsByDomain(readClient, w, d),
+        listOutreachByOpportunity: (w, o) => listBacklinkOutreachByOpportunity(readClient, w, o),
+        listCurrentVerifiedContactFormEvidenceContactIds: (w, contacts) => listCurrentVerifiedContactFormEvidenceContactIds(readClient, w, contacts),
       },
-      getOutreach: async (w, o) => getBacklinkOutreachById(auth.client, w, o) as any,
-      getActiveOutreach: async (v) => getActiveBacklinkOutreachByIdentity(auth.client, v) as any,
-      listAttemptsForOutreach: (w, o) => listBacklinkOutreachAttemptsForOutreach(auth.client, w, o),
+      getOutreach: async (w, o) => getBacklinkOutreachById(readClient, w, o) as any,
+      getActiveOutreach: async (v) => getActiveBacklinkOutreachByIdentity(readClient, v) as any,
+      listAttemptsForOutreach: (w, o) => listBacklinkOutreachAttemptsForOutreach(readClient, w, o),
       updateOutreach: async (w, o, v) => updateBacklinkOutreach(auth.client, w, o, v as any) as any,
       approveInitialSend: async ({ workspaceId, outreachId, actorUserId }) => {
         const { data, error } = await adminClient.rpc("approve_backlink_outreach_initial_send", {

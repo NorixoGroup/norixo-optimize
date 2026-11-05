@@ -6,7 +6,7 @@ import {
   updateOutreach,
   type UpdateOutreachInput,
 } from "@/lib/backlinks/services/outreachService";
-import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
+import { getRequestUserAndWorkspace, createStaffOutreachReadClient } from "@/lib/server/routeAuth";
 
 function responseForError(error: unknown) {
   const code =
@@ -43,7 +43,7 @@ export async function GET(
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
   try {
-    return NextResponse.json(await getOutreach(requestContext.client, requestContext.workspace.id, id));
+    return NextResponse.json(await getOutreach(createStaffOutreachReadClient(), requestContext.workspace.id, id));
   } catch (error) {
     return responseForError(error);
   }

@@ -6,7 +6,7 @@ import {
   listOutreach,
   type CreateOutreachInput,
 } from "@/lib/backlinks/services/outreachService";
-import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
+import { getRequestUserAndWorkspace, createStaffOutreachReadClient } from "@/lib/server/routeAuth";
 
 function responseForError(error: unknown) {
   const code =
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
   if (context === "forbidden") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   try {
-    return NextResponse.json(await listOutreach(context.client, context.workspace.id));
+    return NextResponse.json(await listOutreach(createStaffOutreachReadClient(), context.workspace.id));
   } catch (error) {
     return responseForError(error);
   }

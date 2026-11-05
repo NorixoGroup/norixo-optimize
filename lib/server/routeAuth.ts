@@ -4,6 +4,7 @@ import {
   getOrCreateWorkspaceForUser,
   type Workspace,
 } from "../workspaces/ensureWorkspaceForUser";
+import { createSupabaseAdminClient } from "../supabase-admin";
 
 const WORKSPACE_ID_HEADER = "X-Norixo-Workspace-Id";
 
@@ -38,6 +39,25 @@ function getAccessTokenFromRequest(request: Request): string | null {
 
   const token = authorization.slice(7).trim();
   return token || null;
+}
+
+/**
+ * Privileged read-only client for the isAdminPrivateEmail-gated
+ * app/api/backlinks/outreach/** route family (G4-M5 fix).
+ *
+ * Call ONLY after getRequestUserAndWorkspace() returned status "ok" AND
+ * isAdminPrivateEmail(user.email) is true: this entire route family's
+ * authority is the global staff allow-list, not the caller's
+ * workspace_members.role, so a staff caller holding only 'member' on the
+ * resolved workspace must still read the same data an 'admin'/'owner'
+ * caller would. Every query built with this client must keep filtering
+ * explicitly by the already-resolved workspace.id -- it bypasses RLS and
+ * provides no tenant isolation by itself. Do not use for write paths
+ * (unchanged, still gated by the authenticated client + RLS) or for any
+ * customer-facing route outside this family.
+ */
+export function createStaffOutreachReadClient() {
+  return createSupabaseAdminClient();
 }
 
 export function createRequestSupabaseClient(request: Request) {

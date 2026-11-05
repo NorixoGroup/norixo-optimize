@@ -12,7 +12,7 @@ import { getBacklinkOutreachFollowUpDraftByAttemptId, prepareBacklinkOutreachFol
 import { prepareBacklinkOutreachFollowUpDraft } from "@/lib/backlinks/services/outreachFollowUpDraftService";
 import { getBacklinkOutreachReplyTokenKeyring } from "@/lib/backlinks/services/outreachReplyCorrelationIdentity";
 import { prepareBacklinkOutreachFollowUp } from "@/lib/backlinks/services/outreachFollowUpPreparationService";
-import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
+import { getRequestUserAndWorkspace, createStaffOutreachReadClient } from "@/lib/server/routeAuth";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type ParseResult = { idempotencyKey: string } | null;
@@ -34,6 +34,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   if (!input) return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
 
   const { id } = await context.params;
+  const readClient = createStaffOutreachReadClient();
   const getTemplateData = async (
     workspaceId: string,
     outreach: {
@@ -45,13 +46,13 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     },
   ) => {
     const [campaign, contact, opportunity] = await Promise.all([
-      getBacklinkCampaignById(auth.client, workspaceId, outreach.campaign_id),
-      getBacklinkContactById(auth.client, workspaceId, outreach.contact_id),
-      getBacklinkOpportunityById(auth.client, workspaceId, outreach.opportunity_id),
+      getBacklinkCampaignById(readClient, workspaceId, outreach.campaign_id),
+      getBacklinkContactById(readClient, workspaceId, outreach.contact_id),
+      getBacklinkOpportunityById(readClient, workspaceId, outreach.opportunity_id),
     ]);
     const [domain, asset] = await Promise.all([
-      getBacklinkDomainById(auth.client, workspaceId, contact.domain_id),
-      getBacklinkAssetById(auth.client, workspaceId, opportunity.asset_id),
+      getBacklinkDomainById(readClient, workspaceId, contact.domain_id),
+      getBacklinkAssetById(readClient, workspaceId, opportunity.asset_id),
     ]);
     return {
       campaign: { name: campaign.name, objective: campaign.objective },
@@ -83,12 +84,12 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     const adminClient = createSupabaseAdminClient();
 
     const prepareDraft = prepareBacklinkOutreachFollowUpDraft({
-      getAttempt: (workspaceId, attemptId) => getBacklinkOutreachAttemptById(auth.client, workspaceId, attemptId),
-      getOutreach: (workspaceId, outreachId) => getBacklinkOutreachById(auth.client, workspaceId, outreachId),
-      listAttempts: (workspaceId, outreachId) => listBacklinkOutreachAttemptsForOutreach(auth.client, workspaceId, outreachId),
+      getAttempt: (workspaceId, attemptId) => getBacklinkOutreachAttemptById(readClient, workspaceId, attemptId),
+      getOutreach: (workspaceId, outreachId) => getBacklinkOutreachById(readClient, workspaceId, outreachId),
+      listAttempts: (workspaceId, outreachId) => listBacklinkOutreachAttemptsForOutreach(readClient, workspaceId, outreachId),
       getTemplateData,
       getDraft: async (workspaceId, attemptId) => {
-        const draft = await getBacklinkOutreachFollowUpDraftByAttemptId(auth.client, workspaceId, attemptId);
+        const draft = await getBacklinkOutreachFollowUpDraftByAttemptId(readClient, workspaceId, attemptId);
         return draft == null ? null : mapDraftRow(draft);
       },
       prepare: (value) => prepareBacklinkOutreachFollowUpDraftRpc(adminClient, value),
