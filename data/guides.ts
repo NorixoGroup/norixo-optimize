@@ -51,6 +51,7 @@ export type Guide = {
     title: string;
     description: string;
     label: string;
+    href?: string;
   };
 };
 
@@ -260,6 +261,13 @@ export const guides: Guide[] = [
           "Yes. Norixo helps identify weak titles, poor photo presentation, pricing issues, unclear descriptions, missing trust signals, and other conversion blockers, so you know what to fix first. It cannot guarantee a ranking or a number of bookings.",
       },
     ],
+    cta: {
+      title: "Go further with the Airbnb SEO solution",
+      description:
+        "See how Norixo's Airbnb SEO solution turns this guide's method into a structured, ongoing review of your own listing.",
+      label: "Explore the Airbnb SEO solution",
+      href: "/solutions/airbnb-seo",
+    },
   },
   {
     slug: "airbnb-listing-optimization",
@@ -363,6 +371,13 @@ export const guides: Guide[] = [
           "Yes. Norixo analyzes listing quality, pricing signals, photos, title, description, amenities, and market positioning to identify conversion blockers.",
       },
     ],
+    cta: {
+      title: "Go further with the Listing Optimization solution",
+      description:
+        "See how Norixo's listing optimization solution applies this guide's method to your own listing.",
+      label: "Explore the Listing Optimization solution",
+      href: "/solutions/airbnb-listing-optimization",
+    },
   },
   {
     slug: "airbnb-pricing-optimization",
@@ -567,6 +582,13 @@ export const guides: Guide[] = [
           "No. Pricing optimization can support better decisions and later observation, but it cannot guarantee ranking, impressions, visibility, clicks, CTR, conversion, bookings, occupancy, ADR, RevPAR, revenue, profit, ROI, or future demand.",
       },
     ],
+    cta: {
+      title: "Try the Airbnb Pricing Calculator",
+      description:
+        "Use Norixo's pricing calculator to apply this guide's pricing method to your own listing.",
+      label: "Open the Pricing Calculator",
+      href: "/tools/airbnb-pricing-calculator",
+    },
   },
   {
     slug: "airbnb-listing-audit",
