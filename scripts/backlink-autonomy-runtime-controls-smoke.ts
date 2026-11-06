@@ -23,7 +23,7 @@ async function main() {
 
   const counters = { taskWrites: 0, handlerCalls: 0, contactCreates: 0, campaignCreates: 0, draftCreates: 0, fetches: 0, sends: 0, forms: 0, linkedin: 0, ready: 0 };
   const entry = {
-    getDomain: async () => ({ id: id.domain, workspaceId: id.workspace }),
+    getDomain: async () => ({ id: id.domain, workspaceId: id.workspace, hostname: "stub-domain.com" }),
     getOpportunity: async () => ({ id: id.opportunity, workspaceId: id.workspace, domainId: id.domain }),
     createOrGetTask: async () => { counters.taskWrites++; throw new Error("preview must not persist"); },
   };

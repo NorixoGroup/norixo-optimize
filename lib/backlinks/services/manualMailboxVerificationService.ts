@@ -1,8 +1,13 @@
 import { createHash } from "node:crypto";
 import type { MailboxVerificationProvider } from "./mailboxVerificationService";
 import { coordinateMailboxVerification } from "./mailboxVerificationCoordinator";
+import {
+  BacklinkZeroBounceBudgetError,
+  createBudgetedMailboxVerificationProvider,
+  type ReserveZeroBounceVerification,
+} from "@/lib/automation/backlink-zerobounce-budget";
 
-export type ManualMailboxVerificationState = "unverified" | "running" | "indeterminate" | "verified" | "risky" | "undeliverable" | "unknown" | "provider_error" | "exhausted";
+export type ManualMailboxVerificationState = "unverified" | "running" | "indeterminate" | "verified" | "risky" | "undeliverable" | "unknown" | "provider_error" | "exhausted" | "deferred";
 type Contact = { id: string; workspace_id: string; email_normalized: string | null; contact_status: string; archived_at: string | null; do_not_contact_at: string | null };
 type Claim = { request_id: string; request_status: string; request_attempt_count: number; request_last_result: string | null; reservation_held: boolean };
 type CanonicalVerification = { result: string; email_fingerprint: string; checked_at: string } | null;
@@ -17,6 +22,11 @@ export type ManualMailboxVerificationDependencies = {
   complete(input: { workspaceId: string; requestId: string; status: "succeeded" | "terminal" | "retryable"; result: string | null; reason: string; completedAt: string }): Promise<unknown>;
   getCanonicalVerification(workspaceId: string, contactId: string, emailFingerprint: string): Promise<CanonicalVerification>;
   record: Parameters<typeof coordinateMailboxVerification>[0]["record"];
+  /** Atomic ZeroBounce budget reservation, shared with the autonomous mailbox_verification task. */
+  reserveVerification: ReserveZeroBounceVerification;
+  /** ISO date anchored to the ZeroBounce provider's actual billing cycle, never assumed. */
+  cyclePeriodStart: string;
+  budgetLimit?: number;
   now?: () => Date;
 };
 
@@ -88,10 +98,45 @@ export async function runManualMailboxVerification(deps: ManualMailboxVerificati
     }
     return { state: stateFromRequest(reservation.request_status, reservation.request_last_result), providerCalled: false, requestId: reservation.request_id, reason: "MAILBOX_VERIFICATION_ALREADY_REQUESTED", providerResult: null };
   }
+  const budgetedProvider = createBudgetedMailboxVerificationProvider(provider, deps.reserveVerification, {
+    workspaceId: input.workspaceId,
+    contactId: input.contactId,
+    cyclePeriodStart: deps.cyclePeriodStart,
+    limit: deps.budgetLimit,
+  });
   let result;
   try {
-    result = await coordinateMailboxVerification({ getContact: deps.getContact, provider, record: deps.record, now: () => now }, { workspaceId: input.workspaceId, contactId: input.contactId, currentNormalizedEmail: email, allowVerifiedReverification: decision.allowVerifiedReverification });
-  } catch {
+    result = await coordinateMailboxVerification(
+      {
+        getContact: deps.getContact,
+        provider: budgetedProvider,
+        record: deps.record,
+        now: () => now,
+      },
+      {
+        workspaceId: input.workspaceId,
+        contactId: input.contactId,
+        currentNormalizedEmail: email,
+        allowVerifiedReverification: decision.allowVerifiedReverification,
+      },
+    );
+  } catch (error) {
+    if (error instanceof BacklinkZeroBounceBudgetError) {
+      await deps.complete({
+        workspaceId: input.workspaceId,
+        requestId: reservation.request_id,
+        status: "retryable",
+        result: null,
+        reason: `MAILBOX_VERIFICATION_DEFERRED_${error.code}`,
+        completedAt: (deps.now ?? (() => new Date()))().toISOString(),
+      });
+      return {
+        state: "deferred" as const,
+        providerCalled: false,
+        requestId: reservation.request_id,
+        reason: `MAILBOX_VERIFICATION_DEFERRED_${error.code}`,
+      };
+    }
     await deps.complete({ workspaceId: input.workspaceId, requestId: reservation.request_id, status: "terminal", result: null, reason: "MAILBOX_VERIFICATION_EXECUTION_INDETERMINATE", completedAt: (deps.now ?? (() => new Date()))().toISOString() });
     return { state: "indeterminate" as const, providerCalled: true, requestId: reservation.request_id, reason: "MAILBOX_VERIFICATION_EXECUTION_INDETERMINATE", providerResult: null };
   }

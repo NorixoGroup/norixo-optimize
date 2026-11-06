@@ -49,6 +49,8 @@ function handlerFixture(input: { status?: MailboxVerificationStatus; contactStat
     counters: () => ({ providerCalls, recordCalls }),
     dependencies: {
       getProvider: () => input.configured === false ? null : { verify: async () => { providerCalls += 1; return { status: input.status ?? "deliverable", provider: "test-provider", safeReason: "TEST" }; } },
+      reserveVerification: async () => ({ outcome: "reserved" as const }),
+      cyclePeriodStart: "2026-11-01",
       getContact: async () => contact,
       record: async () => {
         recordCalls += 1;

@@ -23,6 +23,8 @@ import { claimNextBacklinkAutonomyTask, completeAutomationTask, createOrGetAutom
 import { listAutomationWorkspaceControlsForBacklinkAutonomy } from "./repositories/automationWorkspaceControlsRepository";
 import { listCanonicalAppliedPromotions } from "./backlink-autonomy-production-preview";
 import { readBacklinkAutonomyRuntimeConfig, type BacklinkAutonomyRuntimeConfig } from "./backlink-autonomy-runtime-config";
+import { readBacklinkZeroBounceBudgetRuntimeConfig } from "./backlink-zerobounce-budget-runtime-config";
+import { reserveBacklinkZeroBounceVerification } from "./repositories/zeroBounceVerificationBudgetRepository";
 import { runBacklinkAutonomyScheduler } from "./backlink-autonomy-scheduler";
 import { runOneBacklinkAutonomyWorkerTask } from "./backlink-autonomy-worker";
 import type { BacklinkAutonomyDispatcherDependencies } from "./backlink-autonomy-dispatcher";
@@ -100,8 +102,14 @@ function blockedHandlers(client: ReturnType<typeof createSupabaseAdminClient>): 
     },
     mailbox: {
       getContact: async (workspaceId, contactId) => getBacklinkContactById(client, workspaceId, contactId),
-      getProvider: () => getConfiguredMailboxVerificationProvider(),
+      // Fails closed: no ZeroBounce call is possible until the operator has confirmed the
+      // provider's billing-cycle anchor (BACKLINK_ZEROBOUNCE_CYCLE_PERIOD_START). A missing
+      // anchor must never fall back to an unprotected provider.
+      getProvider: () => (readBacklinkZeroBounceBudgetRuntimeConfig().cyclePeriodStart == null ? null : getConfiguredMailboxVerificationProvider()),
       record: (input) => recordMailboxVerificationAndMaybePromote(client, input),
+      reserveVerification: (input) => reserveBacklinkZeroBounceVerification(client, input),
+      cyclePeriodStart: readBacklinkZeroBounceBudgetRuntimeConfig().cyclePeriodStart ?? "",
+      budgetLimit: readBacklinkZeroBounceBudgetRuntimeConfig().limit,
     },
     campaign: {
       getDomain: async (workspaceId, domainId) =>
@@ -232,7 +240,7 @@ export function createBacklinkAutonomyProductionDependencies(): BacklinkAutonomy
     runtimeConfig: readBacklinkAutonomyRuntimeConfig,
     listWorkspaceControls: (limit: number) => listAutomationWorkspaceControlsForBacklinkAutonomy(client, limit),
     listAppliedPromotions: (workspaceId: string, limit: number) => listCanonicalAppliedPromotions(client, workspaceId, limit),
-    getDomain: async (workspaceId: string, domainId: string) => { const row = await getBacklinkDomainById(client, workspaceId, domainId); return { id: row.id, workspaceId: row.workspace_id, archivedAt: row.archived_at }; },
+    getDomain: async (workspaceId: string, domainId: string) => { const row = await getBacklinkDomainById(client, workspaceId, domainId); return { id: row.id, workspaceId: row.workspace_id, hostname: row.hostname, archivedAt: row.archived_at }; },
     getOpportunity: async (workspaceId: string, opportunityId: string) => { const row = await getBacklinkOpportunityById(client, workspaceId, opportunityId); return { id: row.id, workspaceId: row.workspace_id, domainId: row.domain_id, archivedAt: row.archived_at }; },
     createOrGetRun: (input: any) => createOrGetAutomationRun(client, input),
     createOrGetTask: (input: any) => createOrGetAutomationTask(client, input),

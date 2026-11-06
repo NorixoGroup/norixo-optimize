@@ -114,7 +114,7 @@ async function main() {
     runtimeConfig: () => ({ autonomyEnabled: true }),
     listWorkspaceControls: async () => [control],
     listAppliedPromotions: async () => [promotion],
-    getDomain: async () => ({ id: ids.domain, workspaceId: ids.workspace, archivedAt: null }),
+    getDomain: async () => ({ id: ids.domain, workspaceId: ids.workspace, hostname: "stub-domain.com", archivedAt: null }),
     getOpportunity: async () => ({ id: ids.opportunity, workspaceId: ids.workspace, domainId: ids.domain, archivedAt: null }),
     createOrGetRun: async (input: CreateAutomationRunInput) => {
       const existing = runs.get(input.idempotencyKey);

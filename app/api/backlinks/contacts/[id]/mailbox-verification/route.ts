@@ -7,6 +7,8 @@ import { getBacklinkContactById } from "@/lib/backlinks/repositories/contactsRep
 import { claimMailboxVerificationRequest, completeMailboxVerificationRequest, getCanonicalMailboxVerificationForEmail, getLatestMailboxVerificationRequest, type MailboxVerificationRequest } from "@/lib/backlinks/repositories/mailboxVerificationRequestsRepository";
 import { recordMailboxVerificationAndMaybePromote } from "@/lib/backlinks/repositories/mailboxVerificationsRepository";
 import { ManualMailboxVerificationError, runManualMailboxVerification } from "@/lib/backlinks/services/manualMailboxVerificationService";
+import { readBacklinkZeroBounceBudgetRuntimeConfig } from "@/lib/automation/backlink-zerobounce-budget-runtime-config";
+import { reserveBacklinkZeroBounceVerification } from "@/lib/automation/repositories/zeroBounceVerificationBudgetRepository";
 import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 import type { Database } from "@/types/database.types";
 
@@ -50,16 +52,22 @@ export async function POST(request: NextRequest, contextValue: { params: Promise
   try {
     await getBacklinkContactById(requestContext.client, requestContext.workspace.id, id);
     const adminClient = createSupabaseAdminClient();
+    const zeroBounceBudget = readBacklinkZeroBounceBudgetRuntimeConfig();
     const result = await runManualMailboxVerification({
       getContact: async (workspaceId, contactId) => {
         try { return await getBacklinkContactById(adminClient, workspaceId, contactId); }
         catch (error) { if (typeof error === "object" && error != null && "code" in error && error.code === "NOT_FOUND") return null; throw error; }
       },
-      getProvider: getConfiguredMailboxVerificationProvider,
+      // Fails closed: no ZeroBounce call is possible until the operator has confirmed the
+      // provider's billing-cycle anchor (BACKLINK_ZEROBOUNCE_CYCLE_PERIOD_START).
+      getProvider: () => (zeroBounceBudget.cyclePeriodStart == null ? null : getConfiguredMailboxVerificationProvider()),
       claim: (input) => claimMailboxVerificationRequest(adminClient, input),
       complete: (input) => completeMailboxVerificationRequest(adminClient, input),
       getCanonicalVerification: (workspaceId, contactId, emailFingerprint) => getCanonicalMailboxVerificationForEmail(adminClient, workspaceId, contactId, emailFingerprint),
       record: (input) => recordMailboxVerificationAndMaybePromote(adminClient, input),
+      reserveVerification: (input) => reserveBacklinkZeroBounceVerification(adminClient, input),
+      cyclePeriodStart: zeroBounceBudget.cyclePeriodStart ?? "",
+      budgetLimit: zeroBounceBudget.limit,
     }, { workspaceId: requestContext.workspace.id, contactId: id });
     return NextResponse.json(result, { status: result.state === "running" ? 202 : 200 });
   } catch (error) { return NextResponse.json({ error: publicError(error) }, { status: status(error) }); }

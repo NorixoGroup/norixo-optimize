@@ -1,5 +1,6 @@
 import type { CreateAutomationRunInput, CreateAutomationTaskInput } from "./types";
 import { buildContactResolutionTask } from "./backlink-autonomy-foundation";
+import { isBacklinkTestOrFixtureHostname } from "./backlink-test-domain-policy";
 
 export type BacklinkPromotionResolutionMode = "preview" | "apply" | "live";
 
@@ -28,7 +29,7 @@ export type BacklinkPromotionResolutionControl = {
 };
 
 export type BacklinkPromotionResolutionEntryDependencies = {
-  getDomain: (workspaceId: string, domainId: string) => Promise<{ id: string; workspaceId?: string; archivedAt?: string | null }>;
+  getDomain: (workspaceId: string, domainId: string) => Promise<{ id: string; workspaceId?: string; hostname: string; archivedAt?: string | null }>;
   getOpportunity: (workspaceId: string, opportunityId: string) => Promise<{ id: string; workspaceId?: string; domainId: string; archivedAt?: string | null }>;
   createOrGetTask?: (input: CreateAutomationTaskInput) => Promise<{ kind: "created" | "existing"; task: { id: string } }>;
 };
@@ -100,6 +101,7 @@ export async function enterPromotedOpportunityContactResolution(
     opportunity.workspaceId !== undefined && opportunity.workspaceId !== promotion.workspaceId ||
     domain.archivedAt != null || opportunity.archivedAt != null
   ) return stopped("blocked", "PROMOTION_DOMAIN_OPPORTUNITY_SCOPE_INVALID");
+  if (isBacklinkTestOrFixtureHostname(domain.hostname)) return stopped("blocked", "PROMOTION_DOMAIN_TEST_FIXTURE_EXCLUDED");
 
   const task = buildContactResolutionTask({
     workspaceId: promotion.workspaceId,
