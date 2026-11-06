@@ -54,6 +54,8 @@ function fakeDependencies(contact: ContactFixture, options: {
   return {
     getContact: async () => contact,
     getProvider: () => options.provider,
+    reserveVerification: async () => ({ outcome: "reserved" as const }),
+    cyclePeriodStart: "2026-11-01",
     claim: async () => ({ request_id: "req-1", request_status: "running", request_attempt_count: 1, request_last_result: null, reservation_held: true }),
     complete: async () => ({}),
     getCanonicalVerification: async () => options.canonical,

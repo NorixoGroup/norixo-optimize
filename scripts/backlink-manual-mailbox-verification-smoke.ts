@@ -9,6 +9,8 @@ function harness(result: "deliverable" | "risky" | "undeliverable" | "unknown" |
   const deps = {
     getContact: async () => contact,
     getProvider: () => ({ verify: async () => { calls += 1; return { status: result, provider: "fake", safeReason: `FAKE_${result}` }; } }),
+    reserveVerification: async () => ({ outcome: "reserved" as const }),
+    cyclePeriodStart: "2026-11-01",
     claim: async (): Promise<{ request_id: string; request_status: string; request_attempt_count: number; request_last_result: string | null; reservation_held: boolean }> => { if (claimed) return { request_id: "request", request_status: "running", request_attempt_count: 1, request_last_result: null, reservation_held: false }; claimed = true; return { request_id: "request", request_status: "running", request_attempt_count: 1, request_last_result: null, reservation_held: true }; },
     complete: async (input: Record<string, unknown>) => { completed.push(input); },
     getCanonicalVerification: async () => canonical,

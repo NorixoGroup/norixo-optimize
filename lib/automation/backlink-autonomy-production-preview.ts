@@ -36,7 +36,7 @@ export type BacklinkAutonomyProductionPreviewReads = {
   runtimeConfig: () => BacklinkAutonomyRuntimeConfig;
   listWorkspaceControls: (limit: number) => Promise<readonly AutomationWorkspaceControl[]>;
   listAppliedPromotions: (workspaceId: string, limit: number) => Promise<readonly AppliedBacklinkPromotion[]>;
-  getDomain: (workspaceId: string, domainId: string) => Promise<{ id: string; workspaceId?: string; archivedAt?: string | null }>;
+  getDomain: (workspaceId: string, domainId: string) => Promise<{ id: string; workspaceId?: string; hostname: string; archivedAt?: string | null }>;
   getOpportunity: (workspaceId: string, opportunityId: string) => Promise<{ id: string; workspaceId?: string; domainId: string; archivedAt?: string | null }>;
 };
 /** Preview composition deliberately accepts only read adapters; it has no task-write surface. */
@@ -64,7 +64,7 @@ export async function runBacklinkAutonomyProductionPreview(input: { workspaceId:
       return [control];
     },
     listAppliedPromotions: (workspaceId, limit) => listCanonicalAppliedPromotions(client, workspaceId, limit),
-    getDomain: async (workspaceId, domainId) => { const row = await getBacklinkDomainById(client, workspaceId, domainId); return { id: row.id, workspaceId: row.workspace_id, archivedAt: row.archived_at }; },
+    getDomain: async (workspaceId, domainId) => { const row = await getBacklinkDomainById(client, workspaceId, domainId); return { id: row.id, workspaceId: row.workspace_id, hostname: row.hostname, archivedAt: row.archived_at }; },
     getOpportunity: async (workspaceId, opportunityId) => { const row = await getBacklinkOpportunityById(client, workspaceId, opportunityId); return { id: row.id, workspaceId: row.workspace_id, domainId: row.domain_id, archivedAt: row.archived_at }; },
   })(input);
 }

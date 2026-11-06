@@ -4,6 +4,11 @@ import {
   type MailboxVerificationCoordinatorOutcome,
 } from "@/lib/backlinks/services/mailboxVerificationCoordinator";
 import type { MailboxVerificationProvider } from "@/lib/backlinks/services/mailboxVerificationService";
+import {
+  BacklinkZeroBounceBudgetError,
+  createBudgetedMailboxVerificationProvider,
+  type ReserveZeroBounceVerification,
+} from "./backlink-zerobounce-budget";
 
 export type BacklinkMailboxVerificationTaskInput = {
   workspaceId: string;
@@ -16,10 +21,15 @@ export type BacklinkMailboxVerificationTaskInput = {
 export type BacklinkMailboxVerificationTaskDependencies = Omit<MailboxVerificationCoordinatorDependencies, "provider"> & {
   /** Null is a static configuration stop, never a retryable provider call. */
   getProvider: () => MailboxVerificationProvider | null;
+  /** Atomic ZeroBounce budget reservation, shared with the manual verification route. */
+  reserveVerification: ReserveZeroBounceVerification;
+  /** ISO date anchored to the ZeroBounce provider's actual billing cycle, never assumed. */
+  cyclePeriodStart: string;
+  budgetLimit?: number;
 };
 
 export type BacklinkMailboxVerificationTaskResult = {
-  outcome: "verified" | "terminal";
+  outcome: "verified" | "terminal" | "deferred";
   status: MailboxVerificationCoordinatorOutcome["status"];
   contactStatus: string | null;
   verificationId: string | null;
@@ -45,12 +55,33 @@ export async function executeBacklinkMailboxVerificationTask(
   if (provider == null) {
     return { outcome: "terminal", status: null, contactStatus: null, verificationId: null, disposition: null, reason: "MAILBOX_VERIFICATION_PROVIDER_NOT_CONFIGURED", providerCalled: false };
   }
-  const result = await coordinateMailboxVerification({
-    getContact: dependencies.getContact,
-    provider,
-    record: dependencies.record,
-    now: dependencies.now,
-  }, { workspaceId: input.workspaceId, contactId: input.contactId, currentNormalizedEmail: input.currentNormalizedEmail });
+  const budgetedProvider = createBudgetedMailboxVerificationProvider(provider, dependencies.reserveVerification, {
+    workspaceId: input.workspaceId,
+    contactId: input.contactId,
+    cyclePeriodStart: dependencies.cyclePeriodStart,
+    limit: dependencies.budgetLimit,
+  });
+  let result;
+  try {
+    result = await coordinateMailboxVerification({
+      getContact: dependencies.getContact,
+      provider: budgetedProvider,
+      record: dependencies.record,
+      now: dependencies.now,
+    }, { workspaceId: input.workspaceId, contactId: input.contactId, currentNormalizedEmail: input.currentNormalizedEmail });
+  } catch (error) {
+    if (error instanceof BacklinkZeroBounceBudgetError) {
+      // Deferred cleanly: nothing is persisted, the contact stays exactly as
+      // eligible as before, and no other task in the pipeline is blocked.
+      const reason = error.code === "LIMIT_REACHED"
+        ? "MAILBOX_VERIFICATION_DEFERRED_BUDGET_EXHAUSTED"
+        : error.code === "ALREADY_RESERVED"
+          ? "MAILBOX_VERIFICATION_DEFERRED_ALREADY_RESERVED"
+          : "MAILBOX_VERIFICATION_DEFERRED_BUDGET_UNAVAILABLE";
+      return { outcome: "deferred", status: null, contactStatus: null, verificationId: null, disposition: null, reason, providerCalled: false };
+    }
+    throw error;
+  }
   if (result.kind === "persisted" && result.status === "provider_error") throw new BacklinkMailboxVerificationProviderError();
   const mayProceed = (result.kind === "persisted" && result.status === "deliverable" && result.contactStatus === "verified")
     || (result.kind === "blocked" && result.reason === "MAILBOX_VERIFICATION_CONTACT_ALREADY_VERIFIED" && result.contactStatus === "verified");

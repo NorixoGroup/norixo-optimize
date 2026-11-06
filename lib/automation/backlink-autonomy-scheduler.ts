@@ -3,6 +3,7 @@ import type { AppliedBacklinkPromotion, BacklinkPromotionResolutionEntryDependen
 import { buildBacklinkAutonomyRun, enterPromotedOpportunityContactResolution } from "./backlink-promotion-resolution-entry";
 import { normalizeBacklinkAutonomyRuntimeControl } from "./backlink-autonomy-runtime-controls";
 import type { BacklinkAutonomyRuntimeConfig } from "./backlink-autonomy-runtime-config";
+import { isBacklinkTestOrFixtureHostname } from "./backlink-test-domain-policy";
 
 export type BacklinkAutonomySchedulerMode = "preview" | "apply" | "live";
 export type BacklinkAutonomySchedulerDependencies = Omit<BacklinkPromotionResolutionEntryDependencies, "createOrGetTask"> & {
@@ -45,6 +46,14 @@ export async function runBacklinkAutonomyScheduler(
       promotionsScanned += 1;
       if (promotion.applied !== true || promotion.promotionTaskKind !== "backlinks.promotion.preview" || promotion.promotionTaskStatus !== "completed") {
         skipped.push(`PROMOTION_APPLICATION_NOT_COMPLETED:${promotion.applicationId}`);
+        continue;
+      }
+      // Scheduler-level guard, independent of and in addition to the same check inside
+      // enterPromotedOpportunityContactResolution: a scheduler bug must not be the only
+      // thing standing between a test/demo fixture and autonomous processing.
+      const schedulerDomain = await deps.getDomain(workspace.workspaceId, promotion.domainId);
+      if (isBacklinkTestOrFixtureHostname(schedulerDomain.hostname)) {
+        skipped.push(`PROMOTION_DOMAIN_TEST_FIXTURE_EXCLUDED:${promotion.applicationId}`);
         continue;
       }
       if (mode === "apply" && deps.createOrGetRun == null) {
