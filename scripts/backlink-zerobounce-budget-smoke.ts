@@ -4,6 +4,10 @@ import {
   createBudgetedMailboxVerificationProvider,
   fingerprintZeroBounceEmail,
 } from "@/lib/automation/backlink-zerobounce-budget";
+import {
+  computeBacklinkZeroBounceCyclePeriodStart,
+  readBacklinkZeroBounceBudgetRuntimeConfig,
+} from "@/lib/automation/backlink-zerobounce-budget-runtime-config";
 import { executeBacklinkMailboxVerificationTask } from "@/lib/automation/backlink-mailbox-verification-task-handler";
 import { runManualMailboxVerification } from "@/lib/backlinks/services/manualMailboxVerificationService";
 
@@ -202,6 +206,61 @@ async function main() {
   //     email-sending service. (Structural send-safety itself is already validated elsewhere
   //     and is not re-audited here.)
   assert.equal(/zeroBounceMailboxVerificationProvider|ZEROBOUNCE_EU_VALIDATE_ENDPOINT/.test(createBudgetedMailboxVerificationProvider.toString()), false);
+
+  // 11. BL-AUTO-04 Mission C: the cycle period start auto-renews from the confirmed anchor,
+  //     entirely in UTC, and never needs a monthly operator edit.
+  {
+    // Same calendar month as the anchor: the anchor itself is returned.
+    assert.equal(
+      computeBacklinkZeroBounceCyclePeriodStart("2026-11-01", new Date("2026-11-15T23:59:59.999Z")),
+      "2026-11-01",
+    );
+    // Explicit 30/11/2026 23:59:59.999 UTC -> 01/12/2026 00:00:00.000 UTC rollover.
+    assert.equal(
+      computeBacklinkZeroBounceCyclePeriodStart("2026-11-01", new Date("2026-11-30T23:59:59.999Z")),
+      "2026-11-01",
+    );
+    assert.equal(
+      computeBacklinkZeroBounceCyclePeriodStart("2026-11-01", new Date("2026-12-01T00:00:00.000Z")),
+      "2026-12-01",
+      "the cycle must roll over to December the instant UTC crosses midnight on the 1st",
+    );
+    // A local time straddling the UTC boundary must not affect the result: only UTC components count.
+    assert.equal(
+      computeBacklinkZeroBounceCyclePeriodStart("2026-11-01", new Date("2026-11-30T23:30:00.000-01:00")),
+      "2026-12-01",
+      "a non-UTC offset that crosses midnight UTC must roll the cycle over",
+    );
+    // Several months after the anchor: still just the 1st of now's month, no drift.
+    assert.equal(
+      computeBacklinkZeroBounceCyclePeriodStart("2026-11-01", new Date("2027-03-20T12:00:00.000Z")),
+      "2027-03-01",
+    );
+    // now before the anchor: fail-closed, never a negative/guessed cycle.
+    assert.equal(computeBacklinkZeroBounceCyclePeriodStart("2026-11-01", new Date("2026-10-31T23:59:59.999Z")), null);
+    // Anchor not on the 1st of a month: fail-closed, never silently normalized.
+    assert.equal(computeBacklinkZeroBounceCyclePeriodStart("2026-11-15", new Date("2026-11-20T00:00:00.000Z")), null);
+    // Anchor month out of range (calendar validity, not just regex shape): fail-closed.
+    assert.equal(computeBacklinkZeroBounceCyclePeriodStart("2026-13-01", new Date("2026-11-20T00:00:00.000Z")), null);
+    assert.equal(computeBacklinkZeroBounceCyclePeriodStart("2026-00-01", new Date("2026-11-20T00:00:00.000Z")), null);
+    // Malformed anchor entirely: fail-closed.
+    assert.equal(computeBacklinkZeroBounceCyclePeriodStart("not-a-date", new Date("2026-11-20T00:00:00.000Z")), null);
+    // Invalid Date for `now`: fail-closed, never a "NaN-NaN-01" period string.
+    assert.equal(computeBacklinkZeroBounceCyclePeriodStart("2026-11-01", new Date("not-a-date")), null);
+  }
+
+  // 12. The config reader recomputes the cycle on every call -- no cache freezes it across
+  //     a month boundary, so a long-lived warm process still rolls over correctly.
+  {
+    const env = { BACKLINK_ZEROBOUNCE_CYCLE_PERIOD_START: "2026-11-01" };
+    const beforeRollover = readBacklinkZeroBounceBudgetRuntimeConfig(env, () => new Date("2026-11-30T23:59:59.999Z"));
+    assert.equal(beforeRollover.cyclePeriodStart, "2026-11-01");
+    const afterRollover = readBacklinkZeroBounceBudgetRuntimeConfig(env, () => new Date("2026-12-01T00:00:00.000Z"));
+    assert.equal(afterRollover.cyclePeriodStart, "2026-12-01", "the same env anchor must yield a new period once UTC crosses the 1st");
+    // Unset anchor still fails closed exactly as before Mission C.
+    const unset = readBacklinkZeroBounceBudgetRuntimeConfig({}, () => new Date("2026-12-01T00:00:00.000Z"));
+    assert.equal(unset.cyclePeriodStart, null);
+  }
 
   console.log("PASS — Backlink ZeroBounce budget smoke (mocks only, no real Brave/ZeroBounce call)");
 }
