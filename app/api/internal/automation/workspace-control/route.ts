@@ -14,6 +14,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type UpdateWorkspaceControlRequestBody = {
   backlinksEnabled?: boolean;
+  backlinkAutonomyEnabled?: boolean;
   backlinkOutreachScheduleApplyEnabled?: boolean;
   dryRunOnly?: boolean;
 };
@@ -30,31 +31,34 @@ function parseUpdateWorkspaceControlRequestBody(
   }
 
   const keys = Object.keys(value);
-  if (keys.length < 1 || keys.length > 3) {
+  if (keys.length < 1 || keys.length > 4) {
     return null;
   }
 
-  const allowedKeys = new Set(["backlinksEnabled", "backlinkOutreachScheduleApplyEnabled", "dryRunOnly"]);
+  const allowedKeys = new Set(["backlinksEnabled", "backlinkAutonomyEnabled", "backlinkOutreachScheduleApplyEnabled", "dryRunOnly"]);
   if (!keys.every((key) => allowedKeys.has(key))) {
     return null;
   }
 
-  const { backlinksEnabled, backlinkOutreachScheduleApplyEnabled } = value;
+  const { backlinksEnabled, backlinkAutonomyEnabled, backlinkOutreachScheduleApplyEnabled } = value;
   const { dryRunOnly } = value;
   if (
     (typeof backlinksEnabled !== "boolean" && backlinksEnabled !== undefined) ||
+    (typeof backlinkAutonomyEnabled !== "boolean" && backlinkAutonomyEnabled !== undefined) ||
     (typeof backlinkOutreachScheduleApplyEnabled !== "boolean" && backlinkOutreachScheduleApplyEnabled !== undefined) ||
     (typeof dryRunOnly !== "boolean" && dryRunOnly !== undefined)
   ) {
     return null;
   }
 
-  if (backlinksEnabled === undefined && backlinkOutreachScheduleApplyEnabled === undefined && dryRunOnly === undefined) {
+  if (backlinksEnabled === undefined && backlinkAutonomyEnabled === undefined && backlinkOutreachScheduleApplyEnabled === undefined && dryRunOnly === undefined) {
     return null;
   }
 
   return {
     backlinksEnabled: typeof backlinksEnabled === "boolean" ? backlinksEnabled : undefined,
+    backlinkAutonomyEnabled:
+      typeof backlinkAutonomyEnabled === "boolean" ? backlinkAutonomyEnabled : undefined,
     backlinkOutreachScheduleApplyEnabled:
       typeof backlinkOutreachScheduleApplyEnabled === "boolean"
         ? backlinkOutreachScheduleApplyEnabled
@@ -150,6 +154,7 @@ export async function PATCH(request: NextRequest) {
       updateControl: (controlInput: {
         workspaceId: string;
         backlinksEnabled?: boolean;
+        backlinkAutonomyEnabled?: boolean;
         backlinkOutreachScheduleApplyEnabled?: boolean;
         dryRunOnly?: boolean;
       }) => updateAutomationWorkspaceControlRepository(client, controlInput),
@@ -160,6 +165,7 @@ export async function PATCH(request: NextRequest) {
     const result = await updateAutomationWorkspaceControl(dependencies, {
       workspaceId: context.workspace.id,
       backlinksEnabled: input.backlinksEnabled,
+      backlinkAutonomyEnabled: input.backlinkAutonomyEnabled,
       backlinkOutreachScheduleApplyEnabled: input.backlinkOutreachScheduleApplyEnabled,
       dryRunOnly: input.dryRunOnly,
     });

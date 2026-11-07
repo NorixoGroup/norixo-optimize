@@ -30,15 +30,17 @@ async function main(): Promise<void> {
     "Explicit capability gate for automated Outreach scheduling apply",
     "backlink_outreach_schedule_apply_enabled: boolean",
     "backlinkOutreachScheduleApplyEnabled: boolean",
+    "backlinkAutonomyEnabled: boolean",
     "dryRunOnly: boolean",
     "backlinkOutreachScheduleApplyEnabled?: boolean",
+    "backlinkAutonomyEnabled?: boolean",
     "dryRunOnly?: boolean",
     "canApplyBacklinkOutreachScheduling",
     "typeof input.backlinkOutreachScheduleApplyEnabled !== \"boolean\"",
     "typeof input.dryRunOnly !== \"boolean\"",
     "backlinkOutreachScheduleApplyEnabled: input.backlinkOutreachScheduleApplyEnabled",
     "dryRunOnly: input.dryRunOnly",
-    'keys.length < 1 || keys.length > 3',
+    'keys.length < 1 || keys.length > 4',
   ]) {
     assert(
       Object.values(files).some((source) => source.includes(required)),
@@ -56,6 +58,11 @@ async function main(): Promise<void> {
     "Repository must map the new capability column",
   );
   assert(
+    files.repository.includes("backlinkAutonomyEnabled") &&
+      files.repository.includes("backlink_autonomy_enabled"),
+    "Repository must map and update the explicit autonomy capability flag",
+  );
+  assert(
     files.repository.includes("update(patch)"),
     "Repository must update from a bounded patch object",
   );
@@ -70,6 +77,10 @@ async function main(): Promise<void> {
   assert(
     files.route.includes("backlinkOutreachScheduleApplyEnabled: input.backlinkOutreachScheduleApplyEnabled"),
     "Route must forward the capability flag",
+  );
+  assert(
+    files.route.includes("backlinkAutonomyEnabled: input.backlinkAutonomyEnabled"),
+    "Route must forward the autonomy capability flag",
   );
   assert(
     files.route.includes("dryRunOnly: input.dryRunOnly"),

@@ -35,6 +35,7 @@ export type BacklinkAutonomyDispatcherControl = {
   backlinksEnabled: boolean;
   disabledReason: string | null;
   backlinkAutonomyEnabled: boolean;
+  paidMailboxVerificationAuthorized?: boolean;
   liveExecutionAuthorized?: boolean;
   campaignApplyAuthorized?: boolean;
 };
@@ -92,6 +93,9 @@ export async function dispatchBacklinkAutonomyTask(
   if (value.contactId == null) return { kind: "rejected", reason: "TASK_INPUT_INVALID" };
   if (input.task.taskKind === "backlinks.contact_validation") return { kind: "executed", taskKind: input.task.taskKind, output: await executeBacklinkContactValidationTask(deps.validation, { ...value, contactId: value.contactId }) };
   if (input.task.taskKind === "backlinks.mailbox_verification") {
+    if (input.control.paidMailboxVerificationAuthorized !== true) {
+      return { kind: "rejected", reason: "MAILBOX_VERIFICATION_PAID_AUTHORIZATION_REQUIRED" };
+    }
     const currentNormalizedEmail = text(fields(input.task)?.currentNormalizedEmail);
     if (currentNormalizedEmail == null) return { kind: "rejected", reason: "TASK_INPUT_INVALID" };
     return { kind: "executed", taskKind: input.task.taskKind, output: await executeBacklinkMailboxVerificationTask(deps.mailbox, { ...value, contactId: value.contactId, currentNormalizedEmail }) };

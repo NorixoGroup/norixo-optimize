@@ -6,6 +6,8 @@ export type BacklinkAutonomyRuntimeControl = {
   disabledReason: string | null;
   backlinkAutonomyEnabled: boolean;
   campaignApplyAuthorized: boolean;
+  /** Separate operational approval for paid ZeroBounce requests. */
+  paidMailboxVerificationAuthorized: boolean;
   /** G1Y intentionally has no configuration path capable of setting this true. */
   liveExecutionAuthorized: false;
   dryRunOnly: boolean;
@@ -33,6 +35,8 @@ export function normalizeBacklinkAutonomyRuntimeControl(input: {
     disabledReason,
     backlinkAutonomyEnabled: autonomyEnabled,
     campaignApplyAuthorized: input.campaignApplyAuthorized === true,
+    paidMailboxVerificationAuthorized:
+      input.runtime.paidMailboxVerificationAuthorized === true,
     liveExecutionAuthorized: false,
     dryRunOnly: workspace?.dryRunOnly === true,
   };

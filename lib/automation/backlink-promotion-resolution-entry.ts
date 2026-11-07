@@ -43,13 +43,19 @@ export const BACKLINK_AUTONOMY_RUN_KIND = "backlinks.autonomy";
 export function buildBacklinkAutonomyRun(input: {
   promotion: AppliedBacklinkPromotion;
   scheduledAt: string;
+  /** A paid-verification authorization transition intentionally opens one new, resumable run. */
+  paidMailboxVerificationAuthorized?: boolean;
 }): CreateAutomationRunInput {
   const { promotion } = input;
   return {
     workspaceId: promotion.workspaceId,
     system: "backlinks",
     runKind: BACKLINK_AUTONOMY_RUN_KIND,
-    idempotencyKey: `backlinks-autonomy:promotion:${promotion.applicationId}`,
+    // A task stopped for absent paid authorization is completed with a durable
+    // explicit reason. Include this binary authorization generation so the
+    // next scheduler tick can create exactly one fresh run after an operator
+    // explicitly authorizes paid verification, without retrying while closed.
+    idempotencyKey: `backlinks-autonomy:promotion:${promotion.applicationId}:paid-mailbox:${input.paidMailboxVerificationAuthorized === true ? "authorized" : "blocked"}`,
     mode: "dry_run",
     triggerSource: "internal",
     requestedBy: promotion.actorUserId,

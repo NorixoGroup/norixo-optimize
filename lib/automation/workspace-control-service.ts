@@ -50,6 +50,7 @@ export async function updateAutomationWorkspaceControl(
   validateWorkspaceId(input.workspaceId);
   if (
     typeof input.backlinksEnabled !== "boolean" &&
+    typeof input.backlinkAutonomyEnabled !== "boolean" &&
     typeof input.backlinkOutreachScheduleApplyEnabled !== "boolean" &&
     typeof input.dryRunOnly !== "boolean"
   ) {

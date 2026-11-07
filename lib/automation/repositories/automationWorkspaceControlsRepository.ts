@@ -223,11 +223,15 @@ export async function updateAutomationWorkspaceControl(
   const operation = "updateAutomationWorkspaceControl";
   const patch: {
     backlinks_enabled?: boolean;
+    backlink_autonomy_enabled?: boolean;
     backlink_outreach_schedule_apply_enabled?: boolean;
     dry_run_only?: boolean;
   } = {};
   if (typeof input.backlinksEnabled === "boolean") {
     patch.backlinks_enabled = input.backlinksEnabled;
+  }
+  if (typeof input.backlinkAutonomyEnabled === "boolean") {
+    patch.backlink_autonomy_enabled = input.backlinkAutonomyEnabled;
   }
   if (typeof input.backlinkOutreachScheduleApplyEnabled === "boolean") {
     patch.backlink_outreach_schedule_apply_enabled =
