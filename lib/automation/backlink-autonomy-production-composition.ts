@@ -28,6 +28,7 @@ import { reserveBacklinkZeroBounceVerification } from "./repositories/zeroBounce
 import { runBacklinkAutonomyScheduler } from "./backlink-autonomy-scheduler";
 import { runOneBacklinkAutonomyWorkerTask } from "./backlink-autonomy-worker";
 import type { BacklinkAutonomyDispatcherDependencies } from "./backlink-autonomy-dispatcher";
+import type { BacklinkAutonomyIgmsPilotDependencies } from "./backlink-autonomy-igms-pilot";
 
 export const BACKLINK_AUTONOMY_CRON_WORKSPACE_LIMIT = 5;
 export const BACKLINK_AUTONOMY_CRON_PROMOTION_LIMIT = 10;
@@ -266,4 +267,40 @@ export function createBacklinkAutonomyProductionDependencies(): BacklinkAutonomy
     cancelTask: async () => null,
   };
   return { runtimeConfig: readBacklinkAutonomyRuntimeConfig, scheduler: runBacklinkAutonomyScheduler, runWorker: runOneBacklinkAutonomyWorkerTask, schedulerDependencies, workerDependencies, reclaimAutonomyTasks: (input) => reclaimExpiredBacklinkAutonomyTasks(client, input) } as BacklinkAutonomyProductionDependencies;
+}
+
+/**
+ * Deliberately separate adapter for the manually invoked, one-shot iGMS pilot.
+ * It does not expose scheduler or reclaim capabilities and it hard-disables paid verification.
+ */
+export function createBacklinkAutonomyIgmsPilotProductionDependencies(): BacklinkAutonomyIgmsPilotDependencies {
+  const client = createSupabaseAdminClient();
+  const general = createBacklinkAutonomyProductionDependencies();
+  return {
+    getWorkspaceControl: (workspaceId) => getAutomationWorkspaceControl(client, workspaceId),
+    getDomain: async (workspaceId, domainId) => { const row = await getBacklinkDomainById(client, workspaceId, domainId); return { id: row.id, workspaceId: row.workspace_id, hostname: row.hostname, archivedAt: row.archived_at }; },
+    getOpportunity: async (workspaceId, opportunityId) => { const row = await getBacklinkOpportunityById(client, workspaceId, opportunityId); return { id: row.id, workspaceId: row.workspace_id, domainId: row.domain_id, archivedAt: row.archived_at }; },
+    createOrGetTask: (input) => createOrGetAutomationTask(client, input),
+    createOrGetRun: (input) => createOrGetAutomationRun(client, input),
+    loadPromotion: async (promotionApplicationId) => {
+      const { data: application, error } = await client.from("backlink_promotion_applications")
+        .select("id, workspace_id, run_id, promotion_task_id, domain_id, opportunity_id, promoted_by")
+        .eq("id", promotionApplicationId).maybeSingle();
+      if (error != null || application == null) return null;
+      try {
+        const [task, domain, opportunity] = await Promise.all([
+          getAutomationTaskByIdInRun(client, { workspaceId: application.workspace_id, runId: application.run_id, taskId: application.promotion_task_id }),
+          getBacklinkDomainById(client, application.workspace_id, application.domain_id),
+          getBacklinkOpportunityById(client, application.workspace_id, application.opportunity_id),
+        ]);
+        if (task?.taskKind !== "backlinks.promotion.preview" || task.status !== "completed") return null;
+        return { applicationId: application.id, workspaceId: application.workspace_id, runId: application.run_id, promotionTaskId: application.promotion_task_id, promotionTaskKind: "backlinks.promotion.preview" as const, promotionTaskStatus: "completed" as const, domainId: application.domain_id, opportunityId: application.opportunity_id, actorUserId: application.promoted_by, applied: true as const, domain: { id: domain.id, workspaceId: domain.workspace_id, hostname: domain.hostname, archivedAt: domain.archived_at }, opportunity: { id: opportunity.id, workspaceId: opportunity.workspace_id, domainId: opportunity.domain_id, archivedAt: opportunity.archived_at } };
+      } catch { return null; }
+    },
+    runWorker: (input) => runOneBacklinkAutonomyWorkerTask({
+      ...general.workerDependencies,
+      // The pilot can never authorize paid mailbox verification, independently of env state.
+      runtimeConfig: () => ({ autonomyEnabled: true, paidMailboxVerificationAuthorized: false }),
+    }, input),
+  };
 }
