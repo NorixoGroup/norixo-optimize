@@ -39,6 +39,7 @@ export type GetOrCreateAutomationWorkspaceControlResult =
 export type UpdateAutomationWorkspaceControlInput = {
   workspaceId: string;
   backlinksEnabled?: boolean;
+  backlinkAutonomyEnabled?: boolean;
   backlinkOutreachScheduleApplyEnabled?: boolean;
   dryRunOnly?: boolean;
 };

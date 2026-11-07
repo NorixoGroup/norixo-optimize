@@ -8,6 +8,7 @@ import { claimMailboxVerificationRequest, completeMailboxVerificationRequest, ge
 import { recordMailboxVerificationAndMaybePromote } from "@/lib/backlinks/repositories/mailboxVerificationsRepository";
 import { ManualMailboxVerificationError, runManualMailboxVerification } from "@/lib/backlinks/services/manualMailboxVerificationService";
 import { readBacklinkZeroBounceBudgetRuntimeConfig } from "@/lib/automation/backlink-zerobounce-budget-runtime-config";
+import { readBacklinkAutonomyRuntimeConfig } from "@/lib/automation/backlink-autonomy-runtime-config";
 import { reserveBacklinkZeroBounceVerification } from "@/lib/automation/repositories/zeroBounceVerificationBudgetRepository";
 import { getRequestUserAndWorkspace } from "@/lib/server/routeAuth";
 import type { Database } from "@/types/database.types";
@@ -51,6 +52,12 @@ export async function POST(request: NextRequest, contextValue: { params: Promise
   if (requestContext === "forbidden") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   try {
     await getBacklinkContactById(requestContext.client, requestContext.workspace.id, id);
+    if (readBacklinkAutonomyRuntimeConfig().paidMailboxVerificationAuthorized !== true) {
+      return NextResponse.json(
+        { error: "MAILBOX_VERIFICATION_PAID_AUTHORIZATION_REQUIRED" },
+        { status: 409 },
+      );
+    }
     const adminClient = createSupabaseAdminClient();
     const zeroBounceBudget = readBacklinkZeroBounceBudgetRuntimeConfig();
     const result = await runManualMailboxVerification({

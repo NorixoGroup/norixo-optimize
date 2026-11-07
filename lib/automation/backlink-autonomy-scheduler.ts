@@ -62,7 +62,11 @@ export async function runBacklinkAutonomyScheduler(
       }
       const run = mode === "preview"
         ? null
-        : await deps.createOrGetRun!(buildBacklinkAutonomyRun({ promotion, scheduledAt: input.scheduledAt }));
+        : await deps.createOrGetRun!(buildBacklinkAutonomyRun({
+          promotion,
+          scheduledAt: input.scheduledAt,
+          paidMailboxVerificationAuthorized: control.paidMailboxVerificationAuthorized,
+        }));
       const autonomyRunId = run?.run.id ?? `preview:${promotion.applicationId}`;
       if (run != null) { autonomyRunIds.push(run.run.id); autonomyRuns.push({ workspaceId: promotion.workspaceId, runId: run.run.id }); }
       const result = await enterPromotedOpportunityContactResolution(deps, { promotion, autonomyRunId, control, mode, scheduledAt: input.scheduledAt });

@@ -88,6 +88,10 @@ async function main(): Promise<void> {
   );
   assert(patchSource.includes("backlinksEnabled: input.backlinksEnabled"), "PATCH flag missing");
   assert(
+    patchSource.includes("backlinkAutonomyEnabled: input.backlinkAutonomyEnabled"),
+    "PATCH autonomy flag missing",
+  );
+  assert(
     patchSource.includes("backlinkOutreachScheduleApplyEnabled: input.backlinkOutreachScheduleApplyEnabled"),
     "PATCH capability flag missing",
   );
@@ -95,9 +99,10 @@ async function main(): Promise<void> {
   assert(patchSource.includes("return NextResponse.json({ ok: true, control: result.control })"), "PATCH response missing");
 
   for (const required of [
-    'keys.length < 1 || keys.length > 3',
-    'allowedKeys = new Set(["backlinksEnabled", "backlinkOutreachScheduleApplyEnabled", "dryRunOnly"])',
+    'keys.length < 1 || keys.length > 4',
+    'allowedKeys = new Set(["backlinksEnabled", "backlinkAutonomyEnabled", "backlinkOutreachScheduleApplyEnabled", "dryRunOnly"])',
     "typeof backlinksEnabled === \"boolean\"",
+    "typeof backlinkAutonomyEnabled === \"boolean\"",
     "typeof backlinkOutreachScheduleApplyEnabled === \"boolean\"",
     "typeof dryRunOnly === \"boolean\"",
     "request.json().catch(() => null)",
