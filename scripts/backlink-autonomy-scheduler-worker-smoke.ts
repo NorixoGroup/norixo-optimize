@@ -17,7 +17,7 @@ async function main() {
   schedulerDeps.runtimeConfig = () => ({ autonomyEnabled: true });
   const preview = await runBacklinkAutonomyScheduler(schedulerDeps, { mode: "preview", scheduledAt: at }); assert.equal(preview.proposed.length, 1); assert.equal(writes, 0);
   const apply = await runBacklinkAutonomyScheduler(schedulerDeps, { mode: "apply", scheduledAt: at }); assert.equal(apply.created, 1); assert.equal(apply.autonomyRunIds[0], autonomyRun().id); assert.equal(writes, 1);
-  const replay = await runBacklinkAutonomyScheduler(schedulerDeps, { mode: "apply", scheduledAt: at }); assert.equal(replay.existing, 1); assert.equal(writes, 1);
+  const replay = await runBacklinkAutonomyScheduler(schedulerDeps, { mode: "apply", scheduledAt: at }); assert.equal(replay.existing, 1); assert.equal(replay.autonomyRuns[0]?.runId, autonomyRun().id, "existing idempotent runs must be returned for bounded lifecycle reconciliation"); assert.equal(writes, 1);
   schedulerDeps.listWorkspaceControls = async () => [{ ...control, backlinkAutonomyEnabled: false }]; assert.equal((await runBacklinkAutonomyScheduler(schedulerDeps, { mode: "apply", scheduledAt: at })).created, 0);
   schedulerDeps.listWorkspaceControls = async () => [{ ...control, disabledReason: "paused" }]; assert.equal((await runBacklinkAutonomyScheduler(schedulerDeps, { mode: "preview", scheduledAt: at })).proposed.length, 0);
   schedulerDeps.listWorkspaceControls = async () => [control]; schedulerDeps.listAppliedPromotions = async () => [{ ...promotion, applied: false }]; assert.equal((await runBacklinkAutonomyScheduler(schedulerDeps, { mode: "preview", scheduledAt: at })).proposed.length, 0);
