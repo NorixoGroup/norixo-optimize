@@ -18,8 +18,9 @@ import { hasBacklinkOutreachInboundReplyStopEffect } from "@/lib/backlinks/repos
 import { listBacklinkOutreachDeliveryEventsForOutreach } from "@/lib/backlinks/repositories/outreachDeliveryEventsRepository";
 import { getBacklinkOutreachDeliveryEffectByDeliveryEventId } from "@/lib/backlinks/repositories/outreachDeliveryEffectsRepository";
 import { assembleBacklinkAutonomyDecisionFacts } from "./backlink-autonomy-decision-facts";
-import { createOrGetAutomationRun, getAutomationWorkspaceControl } from "./repositories/automationRunsRepository";
+import { completeAutomationRun, createOrGetAutomationRun, failAutomationRun, getAutomationRunById, getAutomationWorkspaceControl, startAutomationRun } from "./repositories/automationRunsRepository";
 import { claimNextBacklinkAutonomyTask, completeAutomationTask, createOrGetAutomationTask, failAutomationTask, getAutomationTaskByIdInRun, heartbeatAutomationTask, reclaimExpiredBacklinkAutonomyTasks } from "./repositories/automationTasksRepository";
+import { listAutomationTasksForRun } from "./repositories/automationRunResumeRepository";
 import { listAutomationWorkspaceControlsForBacklinkAutonomy } from "./repositories/automationWorkspaceControlsRepository";
 import { listCanonicalAppliedPromotions } from "./backlink-autonomy-production-preview";
 import { readBacklinkAutonomyRuntimeConfig, type BacklinkAutonomyRuntimeConfig } from "./backlink-autonomy-runtime-config";
@@ -27,6 +28,7 @@ import { readBacklinkZeroBounceBudgetRuntimeConfig } from "./backlink-zerobounce
 import { reserveBacklinkZeroBounceVerification } from "./repositories/zeroBounceVerificationBudgetRepository";
 import { runBacklinkAutonomyScheduler } from "./backlink-autonomy-scheduler";
 import { runOneBacklinkAutonomyWorkerTask } from "./backlink-autonomy-worker";
+import { reconcileBacklinkAutonomyRunLifecycle } from "./backlink-autonomy-run-lifecycle";
 import type { BacklinkAutonomyDispatcherDependencies } from "./backlink-autonomy-dispatcher";
 import type { BacklinkAutonomyIgmsPilotDependencies } from "./backlink-autonomy-igms-pilot";
 
@@ -52,6 +54,8 @@ export type BacklinkAutonomyProductionDependencies = {
   schedulerDependencies: Parameters<typeof runBacklinkAutonomyScheduler>[0];
   workerDependencies: Parameters<typeof runOneBacklinkAutonomyWorkerTask>[0];
   reclaimAutonomyTasks: (input: { workspaceId: string; runId: string; reclaimedAt: string; limit: number }) => Promise<readonly import("./types").AutomationTask[]>;
+  lifecycle: Parameters<typeof reconcileBacklinkAutonomyRunLifecycle>[0];
+  now?: () => string;
 };
 
 /** A bounded, closed tick. It owns no outbound executor and never scans outreach rows. */
@@ -72,15 +76,20 @@ export async function runBacklinkAutonomyProductionTick(
   let workerSteps = 0;
   let workerTerminal = 0;
   for (const run of seeded.autonomyRuns) {
-    reclaimedTasks += (await deps.reclaimAutonomyTasks({ workspaceId: run.workspaceId, runId: run.runId, reclaimedAt: input.at, limit: BACKLINK_AUTONOMY_CRON_RECLAIM_LIMIT })).length;
+    const now = deps.now ?? (() => new Date().toISOString());
+    // This also repairs historical queued parents whose tasks are already
+    // terminal; it neither creates nor claims a task.
+    await reconcileBacklinkAutonomyRunLifecycle(deps.lifecycle, { workspaceId: run.workspaceId, runId: run.runId, at: now() });
+    reclaimedTasks += (await deps.reclaimAutonomyTasks({ workspaceId: run.workspaceId, runId: run.runId, reclaimedAt: now(), limit: BACKLINK_AUTONOMY_CRON_RECLAIM_LIMIT })).length;
     for (let step = 0; step < BACKLINK_AUTONOMY_CRON_WORKER_STEPS_PER_RUN; step += 1) {
       const result = await deps.runWorker(deps.workerDependencies, {
-        workspaceId: run.workspaceId, runId: run.runId, workerId: input.workerId, at: input.at,
+        workspaceId: run.workspaceId, runId: run.runId, workerId: input.workerId, at: now(),
       });
       workerSteps += 1;
       if (result.kind === "empty" || result.kind === "disabled") break;
       if (result.kind === "terminal" || result.kind === "dead_letter") workerTerminal += 1;
     }
+    await reconcileBacklinkAutonomyRunLifecycle(deps.lifecycle, { workspaceId: run.workspaceId, runId: run.runId, at: now() });
   }
   return { disposition: "completed", seededRuns: seeded.autonomyRunIds.length, tasksCreated: seeded.created, tasksExisting: seeded.existing, reclaimedTasks, workerSteps, workerTerminal };
 }
@@ -266,7 +275,21 @@ export function createBacklinkAutonomyProductionDependencies(): BacklinkAutonomy
     reclaimExpiredTasks: async () => { throw new Error("BACKLINK_AUTONOMY_GENERIC_RECLAIM_FORBIDDEN"); },
     cancelTask: async () => null,
   };
-  return { runtimeConfig: readBacklinkAutonomyRuntimeConfig, scheduler: runBacklinkAutonomyScheduler, runWorker: runOneBacklinkAutonomyWorkerTask, schedulerDependencies, workerDependencies, reclaimAutonomyTasks: (input) => reclaimExpiredBacklinkAutonomyTasks(client, input) } as BacklinkAutonomyProductionDependencies;
+  return {
+    runtimeConfig: readBacklinkAutonomyRuntimeConfig,
+    scheduler: runBacklinkAutonomyScheduler,
+    runWorker: runOneBacklinkAutonomyWorkerTask,
+    schedulerDependencies,
+    workerDependencies,
+    reclaimAutonomyTasks: (input) => reclaimExpiredBacklinkAutonomyTasks(client, input),
+    lifecycle: {
+      getRun: (input) => getAutomationRunById(client, input),
+      listTasks: (input) => listAutomationTasksForRun(client, input),
+      startRun: (input) => startAutomationRun(client, input),
+      completeRun: (input) => completeAutomationRun(client, input),
+      failRun: (input) => failAutomationRun(client, input),
+    },
+  } as BacklinkAutonomyProductionDependencies;
 }
 
 /**

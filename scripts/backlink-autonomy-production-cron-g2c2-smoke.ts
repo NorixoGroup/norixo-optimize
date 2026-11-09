@@ -25,6 +25,13 @@ const schedulerResult = (runs: readonly { workspaceId: string; runId: string }[]
   existing: 0,
   skipped: [],
 });
+const activeLifecycle = {
+  getRun: async () => ({ status: "running" }),
+  listTasks: async () => [{ status: "queued" }],
+  startRun: async () => null,
+  completeRun: async () => null,
+  failRun: async () => null,
+} as never;
 
 async function main() {
   let schedulerCalls = 0;
@@ -35,8 +42,10 @@ async function main() {
     scheduler: async () => { schedulerCalls += 1; return schedulerResult(); },
     runWorker: async () => { workerCalls += 1; throw new Error("must not run"); },
     reclaimAutonomyTasks: async () => { reclaimCalls += 1; throw new Error("must not reclaim"); },
+    lifecycle: activeLifecycle,
     schedulerDependencies: {} as never,
     workerDependencies: {} as never,
+    now: () => at,
   }, { at, workerId: "test" });
   assert.equal(disabled.disposition, "disabled");
   assert.equal(schedulerCalls, 0, "global OFF must avoid scheduler reads/writes");
@@ -54,8 +63,10 @@ async function main() {
       seen.push({ workspaceId: input.workspaceId, runId: input.runId });
       return { kind: "completed" as const, reasonCodes: [], taskId: "task", nextTaskId: null };
     },
+    lifecycle: activeLifecycle,
     schedulerDependencies: {} as never,
     workerDependencies: {} as never,
+    now: () => at,
   }, { at, workerId: "test" });
   assert.equal(bounded.workerSteps, BACKLINK_AUTONOMY_CRON_WORKER_STEPS_PER_RUN, "worker loop must be fixed and bounded");
   assert.deepEqual(seen, Array.from({ length: BACKLINK_AUTONOMY_CRON_WORKER_STEPS_PER_RUN }, () => ({ workspaceId: "workspace-a", runId: "autonomy-run-a" })));
@@ -85,8 +96,10 @@ async function main() {
       recoveredClaims.push(task.id);
       return { kind: "completed" as const, reasonCodes: [], taskId: task.id, nextTaskId: null };
     },
+    lifecycle: activeLifecycle,
     schedulerDependencies: {} as never,
     workerDependencies: {} as never,
+    now: () => at,
   }, { at, workerId: "recovery" });
   assert.equal(recovery.reclaimedTasks, 2, "only expired autonomy tasks in this run are reclaimed");
   assert.deepEqual(recoveredClaims, ["autonomy-retry"], "requeued task is reclaimed then claimed exactly once");
