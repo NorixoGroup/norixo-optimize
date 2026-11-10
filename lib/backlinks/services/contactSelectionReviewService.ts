@@ -11,13 +11,21 @@ export type ContactSelectionReasonCode = (typeof CONTACT_SELECTION_REASON_CODES)
 export type ContactSelectionMailboxState = "verified" | "risky" | "undeliverable" | "unknown" | "provider_error" | "running" | "indeterminate" | "exhausted" | "unverified";
 export type ContactSelectionFormState = "pending" | "running" | "verified" | "manual_review" | "failed" | "blocked" | "not_applicable";
 
+export const CONTACT_EVIDENCE_KINDS = ["mailto", "visible_email", "contact_form", "linkedin"] as const;
+export type ContactEvidenceKind = (typeof CONTACT_EVIDENCE_KINDS)[number];
+export const CONTACT_EVIDENCE_CONFIDENCES = ["strong", "medium"] as const;
+export type ContactEvidenceConfidence = (typeof CONTACT_EVIDENCE_CONFIDENCES)[number];
+export type ContactEvidenceSummaryItem = { kind: ContactEvidenceKind; confidence: ContactEvidenceConfidence; count: number };
+export type LinkedInProfileKind = "person" | "company" | "unknown" | "not_applicable";
+
 export type ContactSelectionCandidate = {
   id: string;
   fullName: string | null;
   roleTitle: string | null;
   channels: { email: boolean; contactForm: boolean; linkedIn: boolean };
   contactStatus: "unverified" | "verified" | "archived" | "do_not_contact";
-  provenancePresent: boolean;
+  evidenceSummary: ContactEvidenceSummaryItem[];
+  linkedinProfileKind: LinkedInProfileKind;
   mailboxState: ContactSelectionMailboxState;
   contactFormState: ContactSelectionFormState;
   selectable: boolean;
@@ -69,6 +77,68 @@ export function parseCandidateIds(output: unknown): string[] | null {
   if (ids.length < 2 || ids.length > 100 || !ids.every(isUuid)) return null;
   const unique = [...new Set(ids.map((id) => id.toLowerCase()))].sort();
   return unique.length === ids.length ? unique : null;
+}
+
+function isContactEvidenceKind(value: unknown): value is ContactEvidenceKind {
+  return typeof value === "string" && (CONTACT_EVIDENCE_KINDS as readonly string[]).includes(value);
+}
+
+function isContactEvidenceConfidence(value: unknown): value is ContactEvidenceConfidence {
+  return typeof value === "string" && (CONTACT_EVIDENCE_CONFIDENCES as readonly string[]).includes(value);
+}
+
+const MAX_EVIDENCE_SOURCE_LENGTH = 20_000;
+const MAX_EVIDENCE_ITEMS = 50;
+
+/**
+ * source_reference is free text (also writable via the manual contact-creation
+ * route), never a jsonb column, so this must never throw on malformed input
+ * and must never let an unrecognized shape through as evidence.
+ */
+export function parseContactEvidenceSummary(sourceReference: unknown): ContactEvidenceSummaryItem[] {
+  if (typeof sourceReference !== "string") return [];
+  const trimmed = sourceReference.trim();
+  if (!trimmed || trimmed.length > MAX_EVIDENCE_SOURCE_LENGTH) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) return [];
+  const counts = new Map<string, number>();
+  for (const item of parsed.slice(0, MAX_EVIDENCE_ITEMS)) {
+    if (typeof item !== "object" || item == null || Array.isArray(item)) continue;
+    const { kind, confidence } = item as Record<string, unknown>;
+    if (!isContactEvidenceKind(kind) || !isContactEvidenceConfidence(confidence)) continue;
+    const key = `${kind}|${confidence}`;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([key, count]) => {
+      const [kind, confidence] = key.split("|") as [ContactEvidenceKind, ContactEvidenceConfidence];
+      return { kind, confidence, count };
+    })
+    .sort((a, b) => (a.kind === b.kind ? a.confidence.localeCompare(b.confidence) : a.kind.localeCompare(b.kind)));
+}
+
+/**
+ * Classifies by URL shape only; the URL itself is never returned to callers.
+ * A company page must never be treated as a named person.
+ */
+export function classifyLinkedInProfile(linkedinUrl: string | null): LinkedInProfileKind {
+  if (linkedinUrl == null) return "not_applicable";
+  let url: URL;
+  try {
+    url = new URL(linkedinUrl);
+  } catch {
+    return "unknown";
+  }
+  const hostname = url.hostname.toLowerCase();
+  if (hostname !== "linkedin.com" && !hostname.endsWith(".linkedin.com")) return "unknown";
+  if (/^\/in\//i.test(url.pathname)) return "person";
+  if (/^\/company\//i.test(url.pathname)) return "company";
+  return "unknown";
 }
 
 export function parseContactSelectionDecision(value: unknown): ContactSelectionDecisionInput | null {
