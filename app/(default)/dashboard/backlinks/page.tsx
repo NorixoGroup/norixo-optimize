@@ -57,6 +57,8 @@ import OutreachFinalNoResponseDialog from "./_components/OutreachFinalNoResponse
 import OutreachSendDialog from "./_components/OutreachSendDialog";
 import OutreachAttemptHistoryDialog, { type OutreachAttemptHistoryItem, type OutreachDeliveryEventHistoryItem } from "./_components/OutreachAttemptHistoryDialog";
 import OutreachUnknownResolutionDialog from "./_components/OutreachUnknownResolutionDialog";
+import ContactSelectionReviewDialog from "./_components/ContactSelectionReviewDialog";
+import type { ContactSelectionCase, ContactSelectionReasonCode } from "@/lib/backlinks/services/contactSelectionReviewService";
 import { loadAllBacklinkDomainPages, loadAllBacklinkOpportunityPages } from "@/lib/backlinks/services/domainPageAggregation";
 import OutreachResponseDialog from "./_components/OutreachResponseDialog";
 import OutreachLifecycleActionDialog from "./_components/OutreachLifecycleActionDialog";
@@ -678,6 +680,12 @@ export default function BacklinksPage() {
   const [productionPilotSourceReference, setProductionPilotSourceReference] = useState("");
   const [productionPilotReason, setProductionPilotReason] = useState("");
   const [productionPilotConfirmed, setProductionPilotConfirmed] = useState(false);
+  const [contactSelectionOpen, setContactSelectionOpen] = useState(false);
+  const [contactSelectionCases, setContactSelectionCases] = useState<ContactSelectionCase[]>([]);
+  const [contactSelectionLoading, setContactSelectionLoading] = useState(false);
+  const [contactSelectionSubmitting, setContactSelectionSubmitting] = useState(false);
+  const [contactSelectionError, setContactSelectionError] = useState<string | null>(null);
+  const [contactSelectionSuccess, setContactSelectionSuccess] = useState<string | null>(null);
   const discoveryConfigurationError = getDiscoveryConfigurationError(
     discoveryProvider,
     discoveryQuery,
@@ -725,6 +733,29 @@ export default function BacklinksPage() {
 
     return payload as T;
   }, [activeWorkspaceId]);
+
+  const openContactSelectionReview = async () => {
+    setContactSelectionOpen(true); setContactSelectionLoading(true); setContactSelectionError(null); setContactSelectionSuccess(null);
+    try {
+      const response = await apiRequest<{ cases: ContactSelectionCase[] }>("/api/backlinks/contact-selections");
+      setContactSelectionCases(response.cases);
+    } catch (selectionError) {
+      setContactSelectionCases([]);
+      setContactSelectionError(selectionError instanceof Error ? selectionError.message : "Revue des contacts indisponible.");
+    } finally { setContactSelectionLoading(false); }
+  };
+
+  const submitContactSelection = async (input: { item: ContactSelectionCase; selectedContactId: string | null; reasonCode: ContactSelectionReasonCode }) => {
+    if (contactSelectionSubmitting) return;
+    setContactSelectionSubmitting(true); setContactSelectionError(null); setContactSelectionSuccess(null);
+    try {
+      const response = await apiRequest<{ ok: true; result: { disposition: "created" | "replayed" } }>("/api/backlinks/contact-selections", { method: "POST", body: JSON.stringify({ promotionApplicationId: input.item.promotionApplicationId, sourceResolutionTaskId: input.item.sourceResolutionTaskId, selectedContactId: input.selectedContactId, candidateFingerprint: input.item.candidateFingerprint, idempotencyKey: crypto.randomUUID(), reasonCode: input.reasonCode, confirm: true }) });
+      setContactSelectionSuccess(response.result.disposition === "replayed" ? "Décision déjà enregistrée." : "Décision enregistrée. Aucun traitement aval n’a été déclenché.");
+      const refreshed = await apiRequest<{ cases: ContactSelectionCase[] }>("/api/backlinks/contact-selections");
+      setContactSelectionCases(refreshed.cases);
+    } catch (selectionError) { setContactSelectionError(selectionError instanceof Error ? selectionError.message : "Décision indisponible."); }
+    finally { setContactSelectionSubmitting(false); }
+  };
 
   const resetProductionPilotState = () => {
     setProductionPilotAccess("unknown");
@@ -2743,7 +2774,7 @@ export default function BacklinksPage() {
         </div>
 
         <div id={`backlinks-panel-${activeSection}`} role="tabpanel" aria-labelledby={`backlinks-tab-${activeSection}`} className="pt-6">
-          <div className="mb-4 flex items-center justify-between gap-4"><div><h2 className="text-lg font-semibold text-slate-950">{activeContent.title}</h2><p className="mt-1 text-sm text-slate-600">Données lues depuis la couche API Backlinks.</p></div><button type="button" onClick={() => void loadDashboard()} disabled={loading} className="text-sm font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-50">Actualiser</button></div>
+          <div className="mb-4 flex items-center justify-between gap-4"><div><h2 className="text-lg font-semibold text-slate-950">{activeContent.title}</h2><p className="mt-1 text-sm text-slate-600">Données lues depuis la couche API Backlinks.</p></div><div className="flex items-center gap-3">{activeSection === "contacts" ? <button type="button" onClick={() => void openContactSelectionReview()} className="rounded-full border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700">Revue humaine</button> : null}<button type="button" onClick={() => void loadDashboard()} disabled={loading} className="text-sm font-semibold text-slate-700 underline decoration-slate-300 underline-offset-4 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-50">Actualiser</button></div></div>
           {activeSection === "outreach" ? <OutreachFilters searchQuery={outreachSearchQuery} campaignFilter={outreachCampaignFilter} statusFilter={outreachStatusFilter} channelFilter={outreachChannelFilter} campaigns={pages.campaigns.items.map((campaign) => ({ id: campaign.id, label: campaignLabel(pages.campaigns.items, campaign.id) }))} channels={outreachChannels} onSearchQueryChange={setOutreachSearchQuery} onCampaignFilterChange={setOutreachCampaignFilter} onStatusFilterChange={setOutreachStatusFilter} onChannelFilterChange={setOutreachChannelFilter} onReset={() => { setOutreachSearchQuery(""); setOutreachCampaignFilter(""); setOutreachStatusFilter(""); setOutreachChannelFilter(""); }} resetDisabled={!outreachFiltersActive} resultCount={filteredOutreachRows.length} totalCount={pages.outreach.items.length} filtersActive={outreachFiltersActive} statusLabel={outreachStatusLabel} channelLabel={outreachChannelLabel} /> : null}
           {activeSection === "links" ? <LinkFilters searchQuery={linkSearchQuery} statusFilter={linkStatusFilter} domainFilter={linkDomainFilter} assetFilter={linkAssetFilter} outreachFilter={linkOutreachFilter} domains={pages.domains.items.map((item) => ({ id: item.id, label: domainLabel(pages.domains.items, item.id) }))} assets={pages.assets.items.map((item) => ({ id: item.id, label: assetLabel(pages.assets.items, item.id) }))} outreach={pages.outreach.items.map((item) => ({ id: item.id, label: linkOutreachLabel(pages.outreach.items, pages.contacts.items, pages.opportunities.items, pages.domains.items, pages.campaigns.items, item.id) }))} resultCount={filteredLinkRows.length} totalCount={pages.links.items.length} filtersActive={linkFiltersActive} onSearchQueryChange={setLinkSearchQuery} onStatusFilterChange={setLinkStatusFilter} onDomainFilterChange={setLinkDomainFilter} onAssetFilterChange={setLinkAssetFilter} onOutreachFilterChange={setLinkOutreachFilter} onReset={() => { setLinkSearchQuery(""); setLinkStatusFilter(""); setLinkDomainFilter(""); setLinkAssetFilter(""); setLinkOutreachFilter(""); }} statusLabel={linkStatusLabel} /> : null}
           {activeSection === "links" && degradedLinkCount > 0 ? <div role="status" aria-live="polite" className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"><p className="font-semibold">{degradedLinkCount === 1 ? "1 backlink nécessite votre attention." : `${degradedLinkCount} backlinks nécessitent votre attention.`}</p><p className="mt-1">{lostLinkCount > 0 ? `${lostLinkCount} perdu${lostLinkCount > 1 ? "s" : ""}` : null}{lostLinkCount > 0 && changedLinkCount > 0 ? " · " : ""}{changedLinkCount > 0 ? `${changedLinkCount} modifié${changedLinkCount > 1 ? "s" : ""}` : null}</p></div> : null}
@@ -2766,6 +2797,7 @@ export default function BacklinksPage() {
       {activeSection === "outreach" ? <div className="mt-3 flex flex-wrap gap-2">{pages.outreach.items.map((outreach) => { const contact = pages.contacts.items.find((item) => item.id === outreach.contact_id) as OutreachContactRow | undefined ?? null; const action = outreachSendAction(outreach, contact); if (action === "send_in_progress") return <span key={`send-progress-${outreach.id}`} className="rounded-full border border-slate-200 px-3 py-1 text-sm font-semibold text-slate-600">Envoi en cours</span>; if (action === "resolution_required") return <span key={`send-resolution-${outreach.id}`} className="rounded-full border border-amber-200 px-3 py-1 text-sm font-semibold text-amber-800">Résolution requise</span>; if (action !== "initial_send") return null; return <button key={`send-${outreach.id}`} type="button" onClick={() => { setOutreachSendDialog(outreach); setOutreachSendMode(action); setOutreachSendIdempotencyKey(crypto.randomUUID()); setOutreachSendError(null); setOutreachSendResult(null); }} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Envoyer</button>; })}</div> : null}
       {activeSection === "outreach" ? <div className="mt-3 flex flex-wrap gap-2">{pages.outreach.items.map((outreach) => { const summary = inboundReplySummary(outreach); if (summary.correlatedCount === 0) return null; const pendingLabel = summary.unclassifiedCount > 0 ? outreach.status === "active" ? `${summary.unclassifiedCount} à classer` : `${summary.unclassifiedCount} non classifiée${summary.unclassifiedCount > 1 ? "s" : ""}` : `${summary.correlatedCount} réponse${summary.correlatedCount > 1 ? "s" : ""}`; return <div key={`inbound-${outreach.id}`} className="flex items-center gap-2"><button type="button" onClick={() => void handleOpenInboundReplies(outreach)} className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700">Réponses reçues</button><span className="text-sm text-slate-600">{pendingLabel}</span></div>; })}</div> : null}
       {outreachReadyDialog ? <OutreachReadyDialog outreach={{ contact: contactLabel(pages.contacts.items, outreachReadyDialog.contact_id), channel: String(outreachReadyDialog.channel), subject: typeof outreachReadyDialog.subject === "string" ? outreachReadyDialog.subject : null, body: typeof outreachReadyDialog.body === "string" ? outreachReadyDialog.body : null }} submitting={outreachReadySubmitting} error={outreachReadyError} success={outreachReadySuccess} onClose={() => { if (!outreachReadySubmitting) setOutreachReadyDialog(null); }} onConfirm={() => void handleMarkOutreachReady()} /> : null}
+      {contactSelectionOpen ? <ContactSelectionReviewDialog cases={contactSelectionCases} loading={contactSelectionLoading} submitting={contactSelectionSubmitting} error={contactSelectionError} success={contactSelectionSuccess} onClose={() => { if (!contactSelectionSubmitting) setContactSelectionOpen(false); }} onSubmit={(input) => void submitContactSelection(input)} /> : null}
       {outreachLinkedInInteractionDialog ? <OutreachLinkedInInteractionDialog outreachId={outreachLinkedInInteractionDialog.id} contactName={contactLabel(pages.contacts.items, outreachLinkedInInteractionDialog.contact_id)} linkedinUrl={typeof pages.contacts.items.find((item) => item.id === outreachLinkedInInteractionDialog.contact_id)?.linkedin_url === "string" ? pages.contacts.items.find((item) => item.id === outreachLinkedInInteractionDialog.contact_id)?.linkedin_url as string : null} message={typeof outreachLinkedInInteractionDialog.body === "string" ? outreachLinkedInInteractionDialog.body : null} onClose={() => setOutreachLinkedInInteractionDialog(null)} onChanged={() => void loadDashboard()} /> : null}
       {contactFormCampaignReportDialog ? (
         <ContactFormCampaignReportDialog

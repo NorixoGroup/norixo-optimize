@@ -1009,6 +1009,18 @@ export type Database = {
           },
         ]
       }
+      backlink_contact_selection_decisions: {
+        Row: { candidate_count: number; candidate_fingerprint: string; created_at: string; decided_at: string; decided_by: string; decision_status: string; id: string; idempotency_key: string; promotion_application_id: string; reason_code: string; selected_contact_id: string | null; source_autonomy_run_id: string; source_resolution_task_id: string; workspace_id: string }
+        Insert: { candidate_count: number; candidate_fingerprint: string; created_at?: string; decided_at?: string; decided_by: string; decision_status: string; id?: string; idempotency_key: string; promotion_application_id: string; reason_code: string; selected_contact_id?: string | null; source_autonomy_run_id: string; source_resolution_task_id: string; workspace_id: string }
+        Update: { candidate_count?: number; candidate_fingerprint?: string; created_at?: string; decided_at?: string; decided_by?: string; decision_status?: string; id?: string; idempotency_key?: string; promotion_application_id?: string; reason_code?: string; selected_contact_id?: string | null; source_autonomy_run_id?: string; source_resolution_task_id?: string; workspace_id?: string }
+        Relationships: []
+      }
+      backlink_contact_selection_events: {
+        Row: { actor_user_id: string; created_at: string; decision_id: string; event_type: string; id: string; reason_code: string; workspace_id: string }
+        Insert: { actor_user_id: string; created_at?: string; decision_id: string; event_type: string; id?: string; reason_code: string; workspace_id: string }
+        Update: { actor_user_id?: string; created_at?: string; decision_id?: string; event_type?: string; id?: string; reason_code?: string; workspace_id?: string }
+        Relationships: []
+      }
       backlink_contact_mailbox_verifications: {
         Row: { checked_at: string; contact_id: string; created_at: string; email_fingerprint: string; id: string; provider: string; provider_reference: string | null; result: string; safe_metadata: Json | null; verification_key: string; workspace_id: string }
         Insert: { checked_at: string; contact_id: string; created_at?: string; email_fingerprint: string; id?: string; provider: string; provider_reference?: string | null; result: string; safe_metadata?: Json | null; verification_key: string; workspace_id: string }
@@ -5548,11 +5560,16 @@ export type Database = {
         Args: { target_workspace_id: string }
         Returns: boolean
       }
+      is_norixo_private_admin: { Args: Record<PropertyKey, never>; Returns: boolean }
       is_workspace_member: {
         Args: { target_workspace_id: string }
         Returns: boolean
       }
       is_workspace_owner: { Args: { p_workspace: string }; Returns: boolean }
+      record_backlink_contact_selection_decision: {
+        Args: { p_workspace_id: string; p_promotion_application_id: string; p_source_resolution_task_id: string; p_selected_contact_id: string | null; p_expected_candidate_fingerprint: string; p_idempotency_key: string; p_reason_code: string; p_confirmed: boolean }
+        Returns: { decision_id: string; disposition: string }[]
+      }
       release_audit_entitlement: {
         Args: {
           p_failure_code?: string
