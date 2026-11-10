@@ -13,6 +13,8 @@ export type ContactSelectionFormState = "pending" | "running" | "verified" | "ma
 
 export type ContactSelectionCandidate = {
   id: string;
+  fullName: string | null;
+  roleTitle: string | null;
   channels: { email: boolean; contactForm: boolean; linkedIn: boolean };
   contactStatus: "unverified" | "verified" | "archived" | "do_not_contact";
   provenancePresent: boolean;

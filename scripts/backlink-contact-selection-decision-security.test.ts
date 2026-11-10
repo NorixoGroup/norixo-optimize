@@ -157,12 +157,14 @@ function buildCaseTableResponses(): TableResponses {
       data: [
         {
           id: CONTACT_1, workspace_id: WORKSPACE_ID, domain_id: DOMAIN_1,
+          full_name: "Jane Doe", role_title: "Marketing Manager",
           email_normalized: SECRET_EMAIL, linkedin_url: SECRET_LINKEDIN, contact_form_url: null,
           contact_status: "unverified", source_type: "scrape", source_reference: "ref-1",
           archived_at: null, do_not_contact_at: null,
         },
         {
           id: CONTACT_2, workspace_id: WORKSPACE_ID, domain_id: DOMAIN_1,
+          full_name: null, role_title: null,
           email_normalized: null, linkedin_url: null, contact_form_url: SECRET_FORM_URL,
           contact_status: "unverified", source_type: "manual", source_reference: "ref-2",
           archived_at: null, do_not_contact_at: null,
@@ -177,7 +179,7 @@ function buildCaseTableResponses(): TableResponses {
   };
 }
 
-test("listContactSelectionCases exposes only contract-defined booleans/states, never raw PII", async () => {
+test("listContactSelectionCases exposes only contract-defined identity/booleans/states, never raw contact channels", async () => {
   const cases = await listContactSelectionCases(
     clientFor({ tableResponses: buildCaseTableResponses(), rpc: authorityRpc(true, true) }),
     WORKSPACE_ID,
@@ -192,12 +194,16 @@ test("listContactSelectionCases exposes only contract-defined booleans/states, n
   const candidate1 = cases[0].candidates.find((candidate) => candidate.id === CONTACT_1);
   const candidate2 = cases[0].candidates.find((candidate) => candidate.id === CONTACT_2);
   assert.ok(candidate1 && candidate2);
-  const expectedKeys = ["id", "channels", "contactStatus", "provenancePresent", "mailboxState", "contactFormState", "selectable", "blockingCodes"].sort();
+  const expectedKeys = ["id", "fullName", "roleTitle", "channels", "contactStatus", "provenancePresent", "mailboxState", "contactFormState", "selectable", "blockingCodes"].sort();
   assert.deepEqual(Object.keys(candidate1!).sort(), expectedKeys);
   assert.deepEqual(candidate1!.channels, { email: true, contactForm: false, linkedIn: true });
   assert.deepEqual(candidate2!.channels, { email: false, contactForm: true, linkedIn: false });
   assert.equal(candidate1!.contactFormState, "not_applicable");
   assert.equal(candidate1!.selectable, true);
+  assert.equal(candidate1!.fullName, "Jane Doe", "a disambiguating display name must be surfaced to the authorized reviewer");
+  assert.equal(candidate1!.roleTitle, "Marketing Manager");
+  assert.equal(candidate2!.fullName, null, "a missing name must surface as null, never a fabricated label");
+  assert.equal(candidate2!.roleTitle, null);
 });
 
 test("listContactSelectionCases scopes every table read to the caller's own workspace_id", async () => {
@@ -474,4 +480,14 @@ test("the dialog never allows submitting a decision outside the server-provided 
   assert.ok(dialogSource.includes("Les résolutions singleton ne sont pas éligibles"));
   assert.ok(dialogSource.includes("ne déclenche aucune validation, tâche ou prise de contact"));
   assert.ok(dialogSource.includes("aucun outreach, e-mail ou contrôle payant ne sera déclenché"));
+});
+
+test("the dialog renders the candidate's name/role instead of a bare index, so an admin can tell candidates apart", () => {
+  const dialogSource = readFileSync("app/(default)/dashboard/backlinks/_components/ContactSelectionReviewDialog.tsx", "utf8");
+  assert.ok(dialogSource.includes("candidate.fullName"), "the label must be driven by the candidate's name, not just its position");
+  assert.ok(dialogSource.includes("candidate.roleTitle"), "the role title must be surfaced alongside the name");
+  assert.equal(dialogSource.includes("E-mail présent"), true);
+  for (const leak of ["candidate.email_normalized", "candidate.linkedin_url", "candidate.contact_form_url"]) {
+    assert.equal(dialogSource.includes(leak), false, "the dialog must never receive or render a raw contact channel value");
+  }
 });
