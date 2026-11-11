@@ -1,7 +1,7 @@
 import { load } from "cheerio";
 import { createHash } from "node:crypto";
 
-import { extractHtmlAnchors, parseHtmlDocument } from "../html";
+import { extractHtmlAnchors, extractStructuredPersons, parseHtmlDocument, type HtmlStructuredPersonObservation } from "../html";
 import { fetchHttp } from "../http";
 import { BacklinkRepositoryError } from "../repositories/errors";
 import type { ContactInput } from "./contactService";
@@ -20,6 +20,8 @@ export type ContactResolutionCandidate = {
   email: string | null;
   contactFormUrl: string | null;
   linkedinUrl: string | null;
+  fullName?: string | null;
+  roleTitle?: string | null;
   evidence: readonly ContactResolutionEvidence[];
 };
 
@@ -95,7 +97,7 @@ export type ContactResolutionResult = {
 
 export type ResolvedContactPersistenceInput = Pick<
   ContactInput,
-  "domain_id" | "contact_key" | "email_normalized" | "linkedin_url" | "contact_form_url" | "contact_status" | "source_type" | "source_reference"
+  "domain_id" | "contact_key" | "full_name" | "role_title" | "email_normalized" | "linkedin_url" | "contact_form_url" | "contact_status" | "source_type" | "source_reference"
 >;
 
 export type ResolvedContactIdentity = {
@@ -147,6 +149,8 @@ export function buildEvidenceBackedContactInput(input: {
   return {
     domain_id: input.domainId,
     contact_key: input.contactKey,
+    full_name: input.candidate.fullName,
+    role_title: input.candidate.roleTitle,
     email_normalized: input.candidate.email,
     linkedin_url: input.candidate.linkedinUrl,
     contact_form_url: input.candidate.contactFormUrl,
@@ -204,6 +208,8 @@ export function resolveCanonicalContactIdentity(input: {
     email: identity.channel === "email" ? identity.value : null,
     contactFormUrl: identity.channel === "contact_form" ? identity.value : null,
     linkedinUrl: identity.channel === "linkedin" ? identity.value : null,
+    fullName: input.candidate.fullName,
+    roleTitle: input.candidate.roleTitle,
     evidence: input.candidate.evidence,
   };
   return { ...identity, scopedIdentity, contactKey: `CT-${numericDigest}`, candidate };
@@ -322,6 +328,8 @@ function addEvidence(
     email: evidence.kind === "mailto" || evidence.kind === "visible_email" ? evidence.value : null,
     contactFormUrl: evidence.kind === "contact_form" ? evidence.value : null,
     linkedinUrl: evidence.kind === "linkedin" ? evidence.value : null,
+    fullName: null,
+    roleTitle: null,
     evidence: [],
   };
   if (!candidate.evidence.some((item) => item.kind === evidence.kind && item.sourceUrl === evidence.sourceUrl && item.value === evidence.value)) {
@@ -329,29 +337,105 @@ function addEvidence(
   }
 }
 
-function pageEvidence(page: ContactResolutionPage, origin: URL, officialOrigin: URL, expectedHostname: string, candidates: Map<string, ContactResolutionCandidate>): string[] {
+type NameTitlePair = { name: string | null; jobTitle: string | null };
+type NameEnrichmentState = NameTitlePair & { ambiguous: boolean };
+
+function pairsEqual(a: NameTitlePair, b: NameTitlePair): boolean {
+  return a.name === b.name && a.jobTitle === b.jobTitle;
+}
+
+/**
+ * Merges one page's JSON-LD Person pairs for a single email into the
+ * cross-page accumulator. Ambiguity is sticky: once an email is flagged
+ * ambiguous (conflicting pairs within a page, or across pages), it stays
+ * null/ambiguous for the rest of the crawl rather than being guessed at.
+ */
+function mergeNameEnrichment(
+  nameEnrichment: Map<string, NameEnrichmentState>,
+  email: string,
+  pairsOnThisPage: readonly NameTitlePair[],
+): void {
+  const existing = nameEnrichment.get(email);
+  if (existing?.ambiguous) return;
+  const distinctPairs = pairsOnThisPage.filter(
+    (pair, index) => !pairsOnThisPage.slice(0, index).some((seen) => pairsEqual(seen, pair)),
+  );
+  if (distinctPairs.length > 1) {
+    nameEnrichment.set(email, { name: null, jobTitle: null, ambiguous: true });
+    return;
+  }
+  const pair = distinctPairs[0]!;
+  if (existing == null) {
+    nameEnrichment.set(email, { ...pair, ambiguous: false });
+    return;
+  }
+  if (!pairsEqual(existing, pair)) {
+    nameEnrichment.set(email, { name: null, jobTitle: null, ambiguous: true });
+  }
+}
+
+/**
+ * Associates JSON-LD Person entries to candidates only when the Person's
+ * email exactly matches a candidate email already evidenced (mailto/visible)
+ * on this exact page. Co-presence elsewhere on the site is never sufficient.
+ */
+function applyStructuredPersonsForPage(
+  document: ReturnType<typeof parseHtmlDocument>,
+  pageEmails: ReadonlySet<string>,
+  nameEnrichment: Map<string, NameEnrichmentState>,
+): void {
+  if (pageEmails.size === 0) return;
+  const structured = extractStructuredPersons(document);
+  const pairsByEmail = new Map<string, NameTitlePair[]>();
+  for (const person of structured.persons as readonly HtmlStructuredPersonObservation[]) {
+    if (!pageEmails.has(person.email)) continue;
+    const pairs = pairsByEmail.get(person.email) ?? [];
+    pairs.push({ name: person.name, jobTitle: person.jobTitle });
+    pairsByEmail.set(person.email, pairs);
+  }
+  for (const [email, pairs] of pairsByEmail) mergeNameEnrichment(nameEnrichment, email, pairs);
+}
+
+function pageEvidence(
+  page: ContactResolutionPage,
+  origin: URL,
+  officialOrigin: URL,
+  expectedHostname: string,
+  candidates: Map<string, ContactResolutionCandidate>,
+  nameEnrichment: Map<string, NameEnrichmentState>,
+): string[] {
   const document = parseHtmlDocument({ url: page.url, status: page.status, contentType: page.contentType, body: page.body, fetchedAt: "" });
   if (!document.isHtml || document.isEmpty) return [];
   const anchors = extractHtmlAnchors(document).anchors;
   const $ = load(document.html);
+  const pageEmails = new Set<string>();
   // Cheerio's aggregate .text() can concatenate adjacent element text (for
   // example "Email" + "editor@example.com") into a false address. Preserve
   // a separator between individual text nodes before applying email matching.
-  const text = $("body, body *").contents().toArray()
+  // script/style content is never rendered to a visitor, so it must not be
+  // treated as visible-email evidence (it would otherwise leak JSON-LD
+  // addresses into the visible scan and defeat the same-page association rule).
+  const text = $("body, body *").not("script, style").contents().toArray()
     .filter((node) => node.type === "text")
     .map((node) => $(node).text())
     .join(" ")
     .replace(/\s+/g, " ");
   for (const match of text.matchAll(EMAIL)) {
     const email = normalizeEmail(match[0]);
-    if (email && isOfficialDomainEmail(email, expectedHostname)) addEvidence(candidates, { kind: "visible_email", value: email, sourceUrl: page.url, confidence: "strong" });
+    if (email && isOfficialDomainEmail(email, expectedHostname)) {
+      addEvidence(candidates, { kind: "visible_email", value: email, sourceUrl: page.url, confidence: "strong" });
+      pageEmails.add(email);
+    }
   }
   const discovered: string[] = [];
   for (const anchor of anchors) {
     const href = anchor.href?.trim() ?? "";
     if (href.toLowerCase().startsWith("mailto:")) {
       const email = normalizeEmail(href.slice("mailto:".length).split("?", 1)[0] ?? "");
-      if (email && isOfficialDomainEmail(email, expectedHostname)) addEvidence(candidates, { kind: "mailto", value: email, sourceUrl: page.url, confidence: "strong" });
+      if (email && isOfficialDomainEmail(email, expectedHostname)) {
+        addEvidence(candidates, { kind: "mailto", value: email, sourceUrl: page.url, confidence: "strong" });
+        pageEmails.add(email);
+      }
       continue;
     }
     let absolute: URL;
@@ -367,6 +451,7 @@ function pageEvidence(page: ContactResolutionPage, origin: URL, officialOrigin: 
   const forms = $("form").toArray();
   if (forms.length === 1) addEvidence(candidates, { kind: "contact_form", value: page.url, sourceUrl: page.url, confidence: "medium" });
   if (forms.length > 1) discovered.push("AMBIGUOUS_FORM");
+  applyStructuredPersonsForPage(document, pageEmails, nameEnrichment);
   return discovered;
 }
 
@@ -410,6 +495,7 @@ export async function resolveBacklinkContacts(input: ContactResolutionInput): Pr
   const queue = [homepage];
   const inspected = new Set<string>();
   const candidates = new Map<string, ContactResolutionCandidate>();
+  const nameEnrichment = new Map<string, NameEnrichmentState>();
   const reasons: string[] = [];
   let ambiguous = false;
   while (queue.length && inspected.size < maxPages) {
@@ -424,12 +510,19 @@ export async function resolveBacklinkContacts(input: ContactResolutionInput): Pr
     let finalUrl: URL;
     try { finalUrl = new URL(page.url); } catch { reasons.push("CROSS_ORIGIN_REDIRECT_SKIPPED"); continue; }
     if (finalUrl.protocol !== "https:" || finalUrl.origin !== homepageOrigin.origin) { reasons.push("CROSS_ORIGIN_REDIRECT_SKIPPED"); continue; }
-    const found = pageEvidence(page, finalUrl, homepageOrigin, expectedHostname, candidates);
+    const found = pageEvidence(page, finalUrl, homepageOrigin, expectedHostname, candidates, nameEnrichment);
     if (found.includes("AMBIGUOUS_FORM")) ambiguous = true;
     for (const next of found) if (next !== "AMBIGUOUS_FORM" && !inspected.has(next) && !queue.includes(next)) queue.push(next);
   }
   if (queue.length) reasons.push("PAGE_LIMIT_REACHED");
-  const values = [...candidates.values()].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+  const values = [...candidates.values()]
+    .map((candidate) => {
+      if (candidate.email == null) return candidate;
+      const enrichment = nameEnrichment.get(candidate.email);
+      if (enrichment == null || enrichment.ambiguous) return candidate;
+      return { ...candidate, fullName: enrichment.name, roleTitle: enrichment.jobTitle };
+    })
+    .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
   const status: ContactResolutionStatus = ambiguous && values.length === 0 ? "ambiguous" : values.length === 0 ? (reasons.includes("FETCH_FAILED") ? "failed" : "no_contact_found") : ambiguous || reasons.includes("PAGE_LIMIT_REACHED") ? "partial" : "resolved";
   return { status, inspectedUrls: [...inspected], candidates: values, reasons: [...new Set(reasons)] };
 }
