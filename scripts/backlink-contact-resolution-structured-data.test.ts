@@ -32,6 +32,14 @@ function jsonLd(persons: ReadonlyArray<{ email: string; name?: string; jobTitle?
   )}</script>`;
 }
 
+function jsonLdPersons(
+  persons: ReadonlyArray<{ email?: string; name?: string; jobTitle?: string; sameAs?: string | string[] }>,
+): string {
+  return `<script type="application/ld+json">${JSON.stringify(
+    persons.map((p) => ({ "@type": "Person", email: p.email, name: p.name, jobTitle: p.jobTitle, sameAs: p.sameAs })),
+  )}</script>`;
+}
+
 async function resolve(pages: Record<string, string>, maxPages = 3) {
   return resolveBacklinkContacts({
     homepageUrl: HOMEPAGE,
@@ -178,4 +186,106 @@ test("field transmission with a simulated client: full_name/role_title are passe
   assert.equal(reuseResult.disposition, "reused");
   assert.equal(reuseResult.id, "contact-1");
   assert.equal(createCalled, false);
+});
+
+test("linkedin sameAs: a Person's personal profile matching the page's evidenced LinkedIn URL is attached", async () => {
+  const result = await resolve({
+    [HOMEPAGE]: `<html><body>
+      <a href="https://www.linkedin.com/in/jane-doe">LinkedIn</a>
+      ${jsonLdPersons([{ name: "Jane Doe", jobTitle: "Editor", sameAs: "https://www.linkedin.com/in/jane-doe" }])}
+    </body></html>`,
+  });
+  const candidate = result.candidates.find((c) => c.linkedinUrl === "https://www.linkedin.com/in/jane-doe");
+  assert.equal(candidate?.fullName, "Jane Doe");
+  assert.equal(candidate?.roleTitle, "Editor");
+});
+
+test("linkedin sameAs: cross-page rejection — a Person entry on another page never attaches to a LinkedIn URL only evidenced elsewhere", async () => {
+  const result = await resolve({
+    [HOMEPAGE]: `<html><body>
+      <a href="https://www.linkedin.com/in/jane-doe">LinkedIn</a>
+      <a href="/about">About us</a>
+    </body></html>`,
+    [ABOUT]: `<html><body>
+      ${jsonLdPersons([{ name: "Jane Doe", jobTitle: "Editor", sameAs: "https://www.linkedin.com/in/jane-doe" }])}
+    </body></html>`,
+  });
+  const candidate = result.candidates.find((c) => c.linkedinUrl === "https://www.linkedin.com/in/jane-doe");
+  assert.equal(candidate?.fullName, null);
+  assert.equal(candidate?.roleTitle, null);
+});
+
+test("linkedin sameAs: a company profile URL is never accepted as a personal identity match", async () => {
+  const result = await resolve({
+    [HOMEPAGE]: `<html><body>
+      <a href="https://www.linkedin.com/company/example-inc">LinkedIn</a>
+      ${jsonLdPersons([{ name: "Example Inc", jobTitle: "Company", sameAs: "https://www.linkedin.com/company/example-inc" }])}
+    </body></html>`,
+  });
+  const candidate = result.candidates.find((c) => c.linkedinUrl === "https://www.linkedin.com/company/example-inc");
+  assert.equal(candidate?.fullName, null);
+  assert.equal(candidate?.roleTitle, null);
+});
+
+test("linkedin sameAs: malformed or deceptive LinkedIn-lookalike URLs are never accepted", async () => {
+  const result = await resolve({
+    [HOMEPAGE]: `<html><body>
+      <a href="https://www.linkedin.com/in/jane-doe">LinkedIn</a>
+      ${jsonLdPersons([{ name: "Jane Doe", jobTitle: "Editor", sameAs: "https://linkedin.com.evil.example/in/jane-doe" }])}
+    </body></html>`,
+  });
+  const candidate = result.candidates.find((c) => c.linkedinUrl === "https://www.linkedin.com/in/jane-doe");
+  assert.equal(candidate?.fullName, null);
+  assert.equal(candidate?.roleTitle, null);
+});
+
+test("linkedin sameAs: conflicting name/title pairs for one LinkedIn URL on the same page reject enrichment, and stay rejected across later pages", async () => {
+  const result = await resolve({
+    [HOMEPAGE]: `<html><body>
+      <a href="https://www.linkedin.com/in/jane-doe">LinkedIn</a>
+      <a href="/about">About us</a>
+      ${jsonLdPersons([
+        { name: "Jane A", jobTitle: "Editor", sameAs: "https://www.linkedin.com/in/jane-doe" },
+        { name: "Jane B", jobTitle: "Writer", sameAs: "https://www.linkedin.com/in/jane-doe" },
+      ])}
+    </body></html>`,
+    [ABOUT]: `<html><body>
+      <a href="https://www.linkedin.com/in/jane-doe">LinkedIn</a>
+      ${jsonLdPersons([{ name: "Jane A", jobTitle: "Editor", sameAs: "https://www.linkedin.com/in/jane-doe" }])}
+    </body></html>`,
+  });
+  const candidate = result.candidates.find((c) => c.linkedinUrl === "https://www.linkedin.com/in/jane-doe");
+  assert.equal(candidate?.fullName, null);
+  assert.equal(candidate?.roleTitle, null);
+});
+
+test("cross-channel contradiction: conflicting pairs for a linked email+LinkedIn identity reject enrichment on both channels", async () => {
+  const result = await resolve({
+    [HOMEPAGE]: `<html><body>
+      <a href="mailto:jane@example.com">Email Jane</a>
+      <a href="https://www.linkedin.com/in/jane-doe">LinkedIn</a>
+      <a href="/about">About us</a>
+      ${jsonLdPersons([{ email: "jane@example.com", name: "Jane Doe", jobTitle: "Editor", sameAs: "https://www.linkedin.com/in/jane-doe" }])}
+    </body></html>`,
+    [ABOUT]: `<html><body>
+      jane@example.com
+      ${jsonLdPersons([{ email: "jane@example.com", name: "Janet D.", jobTitle: "Senior Editor" }])}
+    </body></html>`,
+  });
+  const emailCandidate = findByEmail(result.candidates, "jane@example.com");
+  const linkedinCandidate = result.candidates.find((c) => c.linkedinUrl === "https://www.linkedin.com/in/jane-doe");
+  assert.equal(emailCandidate?.fullName, null);
+  assert.equal(emailCandidate?.roleTitle, null);
+  assert.equal(linkedinCandidate?.fullName, null);
+  assert.equal(linkedinCandidate?.roleTitle, null);
+});
+
+test("linkedin sameAs: a Person entry never creates a new LinkedIn candidate by itself", async () => {
+  const result = await resolve({
+    [HOMEPAGE]: `<html><body>
+      ${jsonLdPersons([{ name: "Jane Doe", jobTitle: "Editor", sameAs: "https://www.linkedin.com/in/jane-doe" }])}
+    </body></html>`,
+  });
+  assert.equal(result.candidates.find((c) => c.linkedinUrl === "https://www.linkedin.com/in/jane-doe"), undefined);
+  assert.equal(result.candidates.length, 0);
 });

@@ -65,9 +65,10 @@ export interface HtmlLinkObservationResult {
 }
 
 export interface HtmlStructuredPersonObservation {
-  email: string;
+  email: string | null;
   name: string | null;
   jobTitle: string | null;
+  linkedinSameAs: readonly string[];
 }
 
 export interface HtmlStructuredDataExtractionResult {
