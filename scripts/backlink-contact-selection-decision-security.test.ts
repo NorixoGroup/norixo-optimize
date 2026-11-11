@@ -11,6 +11,7 @@ import {
 import {
   candidateFingerprint,
   classifyLinkedInProfile,
+  classifyMailboxKind,
   parseCandidateIds,
   parseContactEvidenceSummary,
   parseContactSelectionDecision,
@@ -204,7 +205,7 @@ test("listContactSelectionCases exposes only contract-defined identity/booleans/
   const candidate1 = cases[0].candidates.find((candidate) => candidate.id === CONTACT_1);
   const candidate2 = cases[0].candidates.find((candidate) => candidate.id === CONTACT_2);
   assert.ok(candidate1 && candidate2);
-  const expectedKeys = ["id", "fullName", "roleTitle", "channels", "contactStatus", "evidenceSummary", "linkedinProfileKind", "mailboxState", "contactFormState", "selectable", "blockingCodes"].sort();
+  const expectedKeys = ["id", "fullName", "roleTitle", "channels", "contactStatus", "evidenceSummary", "linkedinProfileKind", "mailboxKind", "mailboxState", "contactFormState", "selectable", "blockingCodes"].sort();
   assert.deepEqual(Object.keys(candidate1!).sort(), expectedKeys);
   assert.deepEqual(candidate1!.channels, { email: true, contactForm: false, linkedIn: true });
   assert.deepEqual(candidate2!.channels, { email: false, contactForm: true, linkedIn: false });
@@ -225,6 +226,11 @@ test("listContactSelectionCases exposes only contract-defined identity/booleans/
   // hostname is classified "unknown" rather than crashing or defaulting to "person".
   assert.equal(candidate1!.linkedinProfileKind, "unknown");
   assert.equal(candidate2!.linkedinProfileKind, "not_applicable", "a candidate with no LinkedIn channel must not be classified as a profile kind");
+
+  // SECRET_EMAIL's local part ("secret-email-1") contains a digit, so it matches
+  // neither the generic nor the two-segment personal shape: it must stay unknown.
+  assert.equal(candidate1!.mailboxKind, "unknown");
+  assert.equal(candidate2!.mailboxKind, "unknown", "a candidate with no e-mail channel must classify as unknown, never generic or personal");
 });
 
 test("listContactSelectionCases scopes every table read to the caller's own workspace_id", async () => {
@@ -505,6 +511,52 @@ test("classifyLinkedInProfile distinguishes personal profiles, company pages, un
   assert.equal(classifyLinkedInProfile("not a url"), "unknown", "an unparseable URL must degrade safely, never throw");
 });
 
+// --- classifyMailboxKind: conservative, shape-only, never infers a real name ---
+
+test("classifyMailboxKind: known functional prefixes classify as generic_mailbox, including numeric-suffixed variants", () => {
+  for (const email of [
+    "info@example.test", "reservations@example.test", "booking@example.test", "partnerships@example.test",
+    "info2@example.test", "sales-3@example.test", "support.1@example.test", "no-reply@example.test",
+  ]) {
+    assert.equal(classifyMailboxKind(email), "generic_mailbox", `${email} must classify as generic_mailbox`);
+  }
+});
+
+test("classifyMailboxKind: a non-numeric suffix on a generic prefix must not match (no arbitrary partial matching)", () => {
+  assert.equal(classifyMailboxKind("sales-eu@example.test"), "unknown", "sales-eu must not be guessed as generic or personal");
+  assert.equal(classifyMailboxKind("contact-us@example.test"), "unknown", "an unlisted separator variant must not be guessed as generic");
+});
+
+test("classifyMailboxKind: exactly two alphabetic segments separated by one delimiter classify as possibly_personal_mailbox", () => {
+  for (const email of ["jane.doe@example.test", "jane-doe@example.test", "j.doe@example.test", "jane_doe@example.test"]) {
+    assert.equal(classifyMailboxKind(email), "possibly_personal_mailbox", `${email} must classify as possibly_personal_mailbox`);
+  }
+});
+
+test("classifyMailboxKind: ambiguous shapes must stay unknown, never guessed as personal", () => {
+  assert.equal(classifyMailboxKind("jdoe@example.test"), "unknown", "a bare concatenation with no separator must stay unknown");
+  assert.equal(classifyMailboxKind("events@example.test"), "unknown", "a single unrecognized word must stay unknown, never guessed as personal");
+  assert.equal(classifyMailboxKind("jane.q.doe@example.test"), "unknown", "more than two segments must stay unknown");
+  assert.equal(classifyMailboxKind("jane.doe2@example.test"), "unknown", "a digit inside a segment must stay unknown");
+});
+
+test("classifyMailboxKind: a two-segment shape where either segment is itself a known generic token stays unknown, not personal", () => {
+  assert.equal(classifyMailboxKind("sales-eu@example.test"), "unknown");
+  assert.equal(classifyMailboxKind("team-us@example.test"), "unknown", "a generic word in either segment must not be guessed as a personal name");
+});
+
+test("classifyMailboxKind: absence of an e-mail channel always classifies as unknown, never fabricated", () => {
+  assert.equal(classifyMailboxKind(null), "unknown");
+});
+
+test("classifyMailboxKind never returns or embeds the input e-mail in its output", () => {
+  for (const email of ["jane.doe@example.test", "info@example.test", "events@example.test", null]) {
+    const result = classifyMailboxKind(email);
+    assert.ok(["generic_mailbox", "possibly_personal_mailbox", "unknown"].includes(result));
+    if (email != null) assert.equal(result.includes(email), false);
+  }
+});
+
 // --- Cross-file and structural safeguards ---
 
 test("the Node fingerprint formula stays byte-for-byte consistent with the 5F Postgres RPC's formula", () => {
@@ -584,5 +636,14 @@ test("the dialog surfaces evidence kind/confidence and the LinkedIn person-vs-co
   assert.ok(dialogSource.includes("pas une personne"), "a company LinkedIn page must be explicitly disambiguated from a person");
   for (const forbidden of ["sourceUrl", "evidence.value", "item.sourceUrl", "linkedin_url"]) {
     assert.equal(dialogSource.includes(forbidden), false, `the dialog must never reference a raw provenance URL (${forbidden})`);
+  }
+});
+
+test("the dialog renders the mailbox-kind classification label, and never a raw e-mail value", () => {
+  const dialogSource = readFileSync("app/(default)/dashboard/backlinks/_components/ContactSelectionReviewDialog.tsx", "utf8");
+  assert.ok(dialogSource.includes("candidate.mailboxKind"), "the mailbox-kind classification must be rendered from the derived label, not inferred client-side");
+  assert.ok(dialogSource.includes("possiblement nominative"), "a possibly-personal mailbox must be labeled as unconfirmed, never as a verified identity");
+  for (const forbidden of ["candidate.email_normalized", "candidate.email", "emailNormalized"]) {
+    assert.equal(dialogSource.includes(forbidden), false, `the dialog must never reference a raw e-mail value (${forbidden})`);
   }
 });

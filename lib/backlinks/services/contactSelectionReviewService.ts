@@ -18,6 +18,9 @@ export type ContactEvidenceConfidence = (typeof CONTACT_EVIDENCE_CONFIDENCES)[nu
 export type ContactEvidenceSummaryItem = { kind: ContactEvidenceKind; confidence: ContactEvidenceConfidence; count: number };
 export type LinkedInProfileKind = "person" | "company" | "unknown" | "not_applicable";
 
+export const CONTACT_SELECTION_MAILBOX_KINDS = ["generic_mailbox", "possibly_personal_mailbox", "unknown"] as const;
+export type ContactSelectionMailboxKind = (typeof CONTACT_SELECTION_MAILBOX_KINDS)[number];
+
 export type ContactSelectionCandidate = {
   id: string;
   fullName: string | null;
@@ -26,6 +29,7 @@ export type ContactSelectionCandidate = {
   contactStatus: "unverified" | "verified" | "archived" | "do_not_contact";
   evidenceSummary: ContactEvidenceSummaryItem[];
   linkedinProfileKind: LinkedInProfileKind;
+  mailboxKind: ContactSelectionMailboxKind;
   mailboxState: ContactSelectionMailboxState;
   contactFormState: ContactSelectionFormState;
   selectable: boolean;
@@ -138,6 +142,58 @@ export function classifyLinkedInProfile(linkedinUrl: string | null): LinkedInPro
   if (hostname !== "linkedin.com" && !hostname.endsWith(".linkedin.com")) return "unknown";
   if (/^\/in\//i.test(url.pathname)) return "person";
   if (/^\/company\//i.test(url.pathname)) return "company";
+  return "unknown";
+}
+
+const GENERIC_MAILBOX_LOCAL_PARTS = [
+  "info", "contact", "contactus", "hello", "support", "help",
+  "admin", "office", "sales", "marketing", "press", "media",
+  "editorial", "editor", "team", "careers", "jobs", "hr", "recruiting",
+  "legal", "privacy", "security", "abuse", "webmaster", "postmaster",
+  "noreply", "no-reply", "donotreply",
+  "billing", "accounts", "accounting", "orders", "shop", "store",
+  "service", "services", "customerservice", "customercare",
+  "enquiries", "enquiry", "inquiries", "inquiry", "general",
+  "newsletter", "subscribe", "unsubscribe",
+  "partnerships", "partnership", "reservations", "reservation", "booking", "bookings",
+] as const;
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Exact token match plus an optional single separator and a numeric-only suffix
+// (e.g. "info2", "info-2"). Deliberately no free-form prefix/partial matching.
+const GENERIC_MAILBOX_LOCAL_PART = new RegExp(
+  `^(?:${GENERIC_MAILBOX_LOCAL_PARTS.map(escapeRegExp).join("|")})(?:[.\\-_]?[0-9]+)?$`,
+  "i",
+);
+
+// Exactly two alphabetic segments separated by a single delimiter (e.g. "jane.doe",
+// "j.doe"). A bare concatenation ("jdoe") or a single unrecognized word ("events")
+// never matches this, by design.
+const POSSIBLY_PERSONAL_MAILBOX_LOCAL_PART = /^([a-z]+)[.\-_]([a-z]{2,})$/i;
+
+function isKnownGenericToken(segment: string): boolean {
+  return GENERIC_MAILBOX_LOCAL_PARTS.some((token) => token.toLowerCase() === segment.toLowerCase());
+}
+
+/**
+ * Classifies by local-part shape only; never infers or returns a real name.
+ * possibly_personal_mailbox is intentionally narrow: any segment that is itself
+ * a known generic token (e.g. "sales-eu") stays unknown rather than being
+ * guessed as personal just because it has the two-segment shape.
+ */
+export function classifyMailboxKind(email: string | null): ContactSelectionMailboxKind {
+  if (email == null) return "unknown";
+  const atIndex = email.indexOf("@");
+  if (atIndex <= 0) return "unknown";
+  const localPart = email.slice(0, atIndex);
+  if (GENERIC_MAILBOX_LOCAL_PART.test(localPart)) return "generic_mailbox";
+  const personalMatch = localPart.match(POSSIBLY_PERSONAL_MAILBOX_LOCAL_PART);
+  if (personalMatch && !isKnownGenericToken(personalMatch[1]!) && !isKnownGenericToken(personalMatch[2]!)) {
+    return "possibly_personal_mailbox";
+  }
   return "unknown";
 }
 
