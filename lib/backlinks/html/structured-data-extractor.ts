@@ -6,6 +6,8 @@ const MAX_SCRIPT_TAGS = 10;
 const MAX_SCRIPT_LENGTH = 50_000;
 const MAX_GRAPH_ITEMS = 50;
 const MAX_FIELD_LENGTH = 200;
+const MAX_SAME_AS_ENTRIES = 5;
+const MAX_URL_LENGTH = 500;
 const EMAIL = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i;
 
 function normalizeBoundedText(value: unknown): string | null {
@@ -25,13 +27,32 @@ function isPersonType(value: unknown): boolean {
   return Array.isArray(value) && value.includes("Person");
 }
 
+/**
+ * Only a cheap, bounded shortlist is produced here: plain strings that look
+ * like a LinkedIn URL. Full validation (scheme, host, personal-profile path,
+ * canonicalization) is the service layer's responsibility, not this parser's.
+ */
+function normalizeSameAsCandidates(value: unknown): string[] {
+  const raw = Array.isArray(value) ? value : value == null ? [] : [value];
+  const out: string[] = [];
+  for (const entry of raw.slice(0, MAX_SAME_AS_ENTRIES)) {
+    if (typeof entry !== "string") continue;
+    const trimmed = entry.trim();
+    if (trimmed === "" || trimmed.length > MAX_URL_LENGTH) continue;
+    if (!/linkedin\.com/i.test(trimmed)) continue;
+    out.push(trimmed);
+  }
+  return out;
+}
+
 function toPersonObservation(entry: unknown): HtmlStructuredPersonObservation | null {
   if (typeof entry !== "object" || entry == null || Array.isArray(entry)) return null;
   const record = entry as Record<string, unknown>;
   if (!isPersonType(record["@type"])) return null;
   const email = normalizeEmailValue(record.email);
-  if (email == null) return null;
-  return { email, name: normalizeBoundedText(record.name), jobTitle: normalizeBoundedText(record.jobTitle) };
+  const linkedinSameAs = normalizeSameAsCandidates(record.sameAs);
+  if (email == null && linkedinSameAs.length === 0) return null;
+  return { email, name: normalizeBoundedText(record.name), jobTitle: normalizeBoundedText(record.jobTitle), linkedinSameAs };
 }
 
 /**

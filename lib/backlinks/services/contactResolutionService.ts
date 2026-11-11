@@ -344,56 +344,142 @@ function pairsEqual(a: NameTitlePair, b: NameTitlePair): boolean {
   return a.name === b.name && a.jobTitle === b.jobTitle;
 }
 
+function isLinkedinHostname(hostname: string): boolean {
+  const lower = hostname.toLowerCase();
+  return lower.replace(/^www\./, "") === "linkedin.com" || lower.endsWith(".linkedin.com");
+}
+
 /**
- * Merges one page's JSON-LD Person pairs for a single email into the
- * cross-page accumulator. Ambiguity is sticky: once an email is flagged
- * ambiguous (conflicting pairs within a page, or across pages), it stays
- * null/ambiguous for the rest of the crawl rather than being guessed at.
+ * Validates a `sameAs` candidate as a personal LinkedIn profile: https-only,
+ * no credentials, canonicalized deterministically (no network, no redirect
+ * follow), and restricted to the `/in/<slug>` path shape. Company, school,
+ * showcase, and any other LinkedIn path are rejected, as is any lookalike
+ * hostname (e.g. "linkedin.com.evil.example").
+ */
+function canonicalPersonalLinkedinUrl(value: string): string | null {
+  const canonical = canonicalHttpsUrl(value);
+  if (canonical == null) return null;
+  let url: URL;
+  try {
+    url = new URL(canonical);
+  } catch {
+    return null;
+  }
+  if (!isLinkedinHostname(url.hostname)) return null;
+  if (!/^\/in\/[^/]+$/i.test(url.pathname)) return null;
+  return canonical;
+}
+
+/**
+ * Resolves at most one validated, page-evidenced personal LinkedIn URL out of
+ * a Person's raw `sameAs` candidates. Any URL that fails validation, or that
+ * is not already proven as `linkedin` evidence on this exact page, is
+ * discarded; more than one distinct valid match is itself a source-level
+ * ambiguity and is treated as no match, never guessed at.
+ */
+function resolveSingleValidPersonalLinkedin(
+  candidates: readonly string[],
+  pageLinkedinCandidates: ReadonlySet<string>,
+): string | null {
+  const matches = new Set<string>();
+  for (const raw of candidates) {
+    const canonical = canonicalPersonalLinkedinUrl(raw);
+    if (canonical != null && pageLinkedinCandidates.has(canonical)) matches.add(canonical);
+  }
+  return matches.size === 1 ? [...matches][0]! : null;
+}
+
+/**
+ * Merges one page's JSON-LD Person pairs for a single key (an `email:` or
+ * `linkedin:`-prefixed identity) into the cross-page accumulator. Ambiguity
+ * is sticky: once a key is flagged ambiguous (conflicting pairs within a
+ * page, or across pages), it stays null/ambiguous for the rest of the crawl
+ * rather than being guessed at.
  */
 function mergeNameEnrichment(
   nameEnrichment: Map<string, NameEnrichmentState>,
-  email: string,
+  key: string,
   pairsOnThisPage: readonly NameTitlePair[],
 ): void {
-  const existing = nameEnrichment.get(email);
+  const existing = nameEnrichment.get(key);
   if (existing?.ambiguous) return;
   const distinctPairs = pairsOnThisPage.filter(
     (pair, index) => !pairsOnThisPage.slice(0, index).some((seen) => pairsEqual(seen, pair)),
   );
   if (distinctPairs.length > 1) {
-    nameEnrichment.set(email, { name: null, jobTitle: null, ambiguous: true });
+    nameEnrichment.set(key, { name: null, jobTitle: null, ambiguous: true });
     return;
   }
   const pair = distinctPairs[0]!;
   if (existing == null) {
-    nameEnrichment.set(email, { ...pair, ambiguous: false });
+    nameEnrichment.set(key, { ...pair, ambiguous: false });
     return;
   }
   if (!pairsEqual(existing, pair)) {
-    nameEnrichment.set(email, { name: null, jobTitle: null, ambiguous: true });
+    nameEnrichment.set(key, { name: null, jobTitle: null, ambiguous: true });
   }
 }
 
 /**
  * Associates JSON-LD Person entries to candidates only when the Person's
- * email exactly matches a candidate email already evidenced (mailto/visible)
- * on this exact page. Co-presence elsewhere on the site is never sufficient.
+ * email, or a personal LinkedIn `sameAs`, exactly matches evidence already
+ * proven on this exact page (mailto/visible email, or a `/in/...` LinkedIn
+ * link). Co-presence elsewhere on the site is never sufficient, and a Person
+ * entry never creates a candidate by itself — it can only enrich one that an
+ * independent evidence channel already produced.
+ *
+ * A single Person entry that links a page's email evidence AND its LinkedIn
+ * evidence (both fields present and both proven) ties those two keys
+ * together for the rest of the crawl: if either key later turns out
+ * ambiguous — even from a conflict discovered on a different page, after the
+ * link was recorded — both are rejected, since the cross-channel link
+ * asserting they are the same person is no more trustworthy than its
+ * weakest side.
  */
 function applyStructuredPersonsForPage(
   document: ReturnType<typeof parseHtmlDocument>,
   pageEmails: ReadonlySet<string>,
+  pageLinkedinCandidates: ReadonlySet<string>,
   nameEnrichment: Map<string, NameEnrichmentState>,
+  linkedKeyPairs: Set<string>,
 ): void {
-  if (pageEmails.size === 0) return;
+  if (pageEmails.size === 0 && pageLinkedinCandidates.size === 0) return;
   const structured = extractStructuredPersons(document);
   const pairsByEmail = new Map<string, NameTitlePair[]>();
+  const pairsByLinkedin = new Map<string, NameTitlePair[]>();
   for (const person of structured.persons as readonly HtmlStructuredPersonObservation[]) {
-    if (!pageEmails.has(person.email)) continue;
-    const pairs = pairsByEmail.get(person.email) ?? [];
-    pairs.push({ name: person.name, jobTitle: person.jobTitle });
-    pairsByEmail.set(person.email, pairs);
+    const pair: NameTitlePair = { name: person.name, jobTitle: person.jobTitle };
+    const emailMatch = person.email != null && pageEmails.has(person.email) ? person.email : null;
+    const linkedinMatch = resolveSingleValidPersonalLinkedin(person.linkedinSameAs, pageLinkedinCandidates);
+    if (emailMatch == null && linkedinMatch == null) continue;
+    if (emailMatch != null) {
+      const pairs = pairsByEmail.get(emailMatch) ?? [];
+      pairs.push(pair);
+      pairsByEmail.set(emailMatch, pairs);
+    }
+    if (linkedinMatch != null) {
+      const pairs = pairsByLinkedin.get(linkedinMatch) ?? [];
+      pairs.push(pair);
+      pairsByLinkedin.set(linkedinMatch, pairs);
+    }
+    if (emailMatch != null && linkedinMatch != null) {
+      linkedKeyPairs.add(`email:${emailMatch}|linkedin:${linkedinMatch}`);
+    }
   }
-  for (const [email, pairs] of pairsByEmail) mergeNameEnrichment(nameEnrichment, email, pairs);
+  for (const [email, pairs] of pairsByEmail) mergeNameEnrichment(nameEnrichment, `email:${email}`, pairs);
+  for (const [linkedin, pairs] of pairsByLinkedin) mergeNameEnrichment(nameEnrichment, `linkedin:${linkedin}`, pairs);
+  // Re-checked against the full crawl history, not just this page: a
+  // conflict discovered later, on a page with no LinkedIn evidence at all,
+  // must still reach back and reject a link recorded earlier.
+  for (const pairKey of linkedKeyPairs) {
+    const [emailKey, linkedinKey] = pairKey.split("|") as [string, string];
+    const emailState = nameEnrichment.get(emailKey);
+    const linkedinState = nameEnrichment.get(linkedinKey);
+    if (emailState?.ambiguous || linkedinState?.ambiguous) {
+      nameEnrichment.set(emailKey, { name: null, jobTitle: null, ambiguous: true });
+      nameEnrichment.set(linkedinKey, { name: null, jobTitle: null, ambiguous: true });
+    }
+  }
 }
 
 function pageEvidence(
@@ -403,12 +489,14 @@ function pageEvidence(
   expectedHostname: string,
   candidates: Map<string, ContactResolutionCandidate>,
   nameEnrichment: Map<string, NameEnrichmentState>,
+  linkedKeyPairs: Set<string>,
 ): string[] {
   const document = parseHtmlDocument({ url: page.url, status: page.status, contentType: page.contentType, body: page.body, fetchedAt: "" });
   if (!document.isHtml || document.isEmpty) return [];
   const anchors = extractHtmlAnchors(document).anchors;
   const $ = load(document.html);
   const pageEmails = new Set<string>();
+  const pageLinkedinCandidates = new Set<string>();
   // Cheerio's aggregate .text() can concatenate adjacent element text (for
   // example "Email" + "editor@example.com") into a false address. Preserve
   // a separator between individual text nodes before applying email matching.
@@ -440,8 +528,14 @@ function pageEvidence(
     }
     let absolute: URL;
     try { absolute = new URL(href, origin); } catch { continue; }
-    if (absolute.hostname.toLowerCase().replace(/^www\./, "") === "linkedin.com" || absolute.hostname.toLowerCase().endsWith(".linkedin.com")) {
+    if (isLinkedinHostname(absolute.hostname)) {
       if (/^\/(?:in|company)\//i.test(absolute.pathname)) addEvidence(candidates, { kind: "linkedin", value: absolute.toString(), sourceUrl: page.url, confidence: "medium" });
+      // Only a personal profile is eligible as a sameAs-matching target;
+      // company/school/showcase pages are left out of this set entirely.
+      if (/^\/in\//i.test(absolute.pathname)) {
+        const canonicalPersonal = canonicalHttpsUrl(absolute.toString());
+        if (canonicalPersonal != null) pageLinkedinCandidates.add(canonicalPersonal);
+      }
       continue;
     }
     const safe = sameOfficialHttpsUrl(href, origin, officialOrigin);
@@ -451,7 +545,7 @@ function pageEvidence(
   const forms = $("form").toArray();
   if (forms.length === 1) addEvidence(candidates, { kind: "contact_form", value: page.url, sourceUrl: page.url, confidence: "medium" });
   if (forms.length > 1) discovered.push("AMBIGUOUS_FORM");
-  applyStructuredPersonsForPage(document, pageEmails, nameEnrichment);
+  applyStructuredPersonsForPage(document, pageEmails, pageLinkedinCandidates, nameEnrichment, linkedKeyPairs);
   return discovered;
 }
 
@@ -496,6 +590,7 @@ export async function resolveBacklinkContacts(input: ContactResolutionInput): Pr
   const inspected = new Set<string>();
   const candidates = new Map<string, ContactResolutionCandidate>();
   const nameEnrichment = new Map<string, NameEnrichmentState>();
+  const linkedKeyPairs = new Set<string>();
   const reasons: string[] = [];
   let ambiguous = false;
   while (queue.length && inspected.size < maxPages) {
@@ -510,17 +605,25 @@ export async function resolveBacklinkContacts(input: ContactResolutionInput): Pr
     let finalUrl: URL;
     try { finalUrl = new URL(page.url); } catch { reasons.push("CROSS_ORIGIN_REDIRECT_SKIPPED"); continue; }
     if (finalUrl.protocol !== "https:" || finalUrl.origin !== homepageOrigin.origin) { reasons.push("CROSS_ORIGIN_REDIRECT_SKIPPED"); continue; }
-    const found = pageEvidence(page, finalUrl, homepageOrigin, expectedHostname, candidates, nameEnrichment);
+    const found = pageEvidence(page, finalUrl, homepageOrigin, expectedHostname, candidates, nameEnrichment, linkedKeyPairs);
     if (found.includes("AMBIGUOUS_FORM")) ambiguous = true;
     for (const next of found) if (next !== "AMBIGUOUS_FORM" && !inspected.has(next) && !queue.includes(next)) queue.push(next);
   }
   if (queue.length) reasons.push("PAGE_LIMIT_REACHED");
   const values = [...candidates.values()]
     .map((candidate) => {
-      if (candidate.email == null) return candidate;
-      const enrichment = nameEnrichment.get(candidate.email);
-      if (enrichment == null || enrichment.ambiguous) return candidate;
-      return { ...candidate, fullName: enrichment.name, roleTitle: enrichment.jobTitle };
+      if (candidate.email != null) {
+        const enrichment = nameEnrichment.get(`email:${candidate.email}`);
+        if (enrichment == null || enrichment.ambiguous) return candidate;
+        return { ...candidate, fullName: enrichment.name, roleTitle: enrichment.jobTitle };
+      }
+      if (candidate.linkedinUrl != null) {
+        const canonical = canonicalHttpsUrl(candidate.linkedinUrl);
+        const enrichment = canonical == null ? null : nameEnrichment.get(`linkedin:${canonical}`);
+        if (enrichment == null || enrichment.ambiguous) return candidate;
+        return { ...candidate, fullName: enrichment.name, roleTitle: enrichment.jobTitle };
+      }
+      return candidate;
     })
     .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
   const status: ContactResolutionStatus = ambiguous && values.length === 0 ? "ambiguous" : values.length === 0 ? (reasons.includes("FETCH_FAILED") ? "failed" : "no_contact_found") : ambiguous || reasons.includes("PAGE_LIMIT_REACHED") ? "partial" : "resolved";
