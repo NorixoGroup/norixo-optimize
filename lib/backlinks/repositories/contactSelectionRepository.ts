@@ -3,7 +3,7 @@ import { listContactFormVerificationPreflightStatesForContacts } from "./contact
 import { listMailboxVerificationStatesForContacts } from "./mailboxVerificationRequestsRepository";
 import { BacklinkRepositoryError, normalizeBacklinkRepositoryError } from "./errors";
 import type { BacklinkRepositoryClient } from "./repositoryClient";
-import { candidateFingerprint, classifyLinkedInProfile, parseCandidateIds, parseContactEvidenceSummary, type ContactSelectionCase, type ContactSelectionDecisionInput, type ContactSelectionFormState, type ContactSelectionReasonCode } from "../services/contactSelectionReviewService";
+import { candidateFingerprint, classifyLinkedInProfile, classifyMailboxKind, parseCandidateIds, parseContactEvidenceSummary, type ContactSelectionCase, type ContactSelectionDecisionInput, type ContactSelectionFormState, type ContactSelectionReasonCode } from "../services/contactSelectionReviewService";
 
 export async function assertContactSelectionAuthority(client: BacklinkRepositoryClient, workspaceId: string): Promise<void> {
   const [privateAdmin, workspaceAdmin] = await Promise.all([
@@ -65,7 +65,7 @@ export async function listContactSelectionCases(client: BacklinkRepositoryClient
       const row = contact!; const blockingCodes: string[] = [];
       if (row.archived_at != null || row.contact_status === "archived") blockingCodes.push("CONTACT_ARCHIVED");
       if (row.do_not_contact_at != null || row.contact_status === "do_not_contact") blockingCodes.push("CONTACT_DO_NOT_CONTACT");
-      return { id: row.id, fullName: row.full_name?.trim() || null, roleTitle: row.role_title?.trim() || null, channels: { email: row.email_normalized != null, contactForm: row.contact_form_url != null, linkedIn: row.linkedin_url != null }, contactStatus: row.contact_status as "unverified" | "verified" | "archived" | "do_not_contact", evidenceSummary: parseContactEvidenceSummary(row.source_reference), linkedinProfileKind: classifyLinkedInProfile(row.linkedin_url), mailboxState: mailbox[row.id] ?? "unverified", contactFormState: ((row.contact_form_url ? forms[row.id] : null) ?? "not_applicable") as ContactSelectionFormState, selectable: blockingCodes.length === 0, blockingCodes };
+      return { id: row.id, fullName: row.full_name?.trim() || null, roleTitle: row.role_title?.trim() || null, channels: { email: row.email_normalized != null, contactForm: row.contact_form_url != null, linkedIn: row.linkedin_url != null }, contactStatus: row.contact_status as "unverified" | "verified" | "archived" | "do_not_contact", evidenceSummary: parseContactEvidenceSummary(row.source_reference), linkedinProfileKind: classifyLinkedInProfile(row.linkedin_url), mailboxKind: classifyMailboxKind(row.email_normalized), mailboxState: mailbox[row.id] ?? "unverified", contactFormState: ((row.contact_form_url ? forms[row.id] : null) ?? "not_applicable") as ContactSelectionFormState, selectable: blockingCodes.length === 0, blockingCodes };
     });
     const decision = decisions.get(task.id);
     if (decision != null && (decision.decision_status !== "contact_selected" && decision.decision_status !== "promotion_rejected")) return [];
