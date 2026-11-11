@@ -63,3 +63,14 @@ export interface HtmlLinkObservationResult {
   linkCount: number;
   links: HtmlLinkObservation[];
 }
+
+export interface HtmlStructuredPersonObservation {
+  email: string;
+  name: string | null;
+  jobTitle: string | null;
+}
+
+export interface HtmlStructuredDataExtractionResult {
+  documentUrl: string;
+  persons: HtmlStructuredPersonObservation[];
+}
