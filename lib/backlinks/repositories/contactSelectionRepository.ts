@@ -3,7 +3,7 @@ import { listContactFormVerificationPreflightStatesForContacts } from "./contact
 import { listMailboxVerificationStatesForContacts } from "./mailboxVerificationRequestsRepository";
 import { BacklinkRepositoryError, normalizeBacklinkRepositoryError } from "./errors";
 import type { BacklinkRepositoryClient } from "./repositoryClient";
-import { candidateFingerprint, parseCandidateIds, type ContactSelectionCase, type ContactSelectionDecisionInput, type ContactSelectionFormState, type ContactSelectionReasonCode } from "../services/contactSelectionReviewService";
+import { candidateFingerprint, classifyLinkedInProfile, parseCandidateIds, parseContactEvidenceSummary, type ContactSelectionCase, type ContactSelectionDecisionInput, type ContactSelectionFormState, type ContactSelectionReasonCode } from "../services/contactSelectionReviewService";
 
 export async function assertContactSelectionAuthority(client: BacklinkRepositoryClient, workspaceId: string): Promise<void> {
   const [privateAdmin, workspaceAdmin] = await Promise.all([
@@ -43,7 +43,7 @@ export async function listContactSelectionCases(client: BacklinkRepositoryClient
   const [runsResult, appsResult, contactsResult, decisionsResult] = await Promise.all([
     client.from("automation_runs").select("id,workspace_id,system,run_kind,status").eq("workspace_id", workspaceId).in("id", runIds),
     client.from("backlink_promotion_applications").select("id,workspace_id,domain_id,opportunity_id").eq("workspace_id", workspaceId).in("id", appIds),
-    client.from("backlink_contacts").select("id,workspace_id,domain_id,full_name,role_title,email_normalized,linkedin_url,contact_form_url,contact_status,source_type,source_reference,archived_at,do_not_contact_at").eq("workspace_id", workspaceId).in("id", contactIds),
+    client.from("backlink_contacts").select("id,workspace_id,domain_id,full_name,role_title,email_normalized,linkedin_url,contact_form_url,contact_status,source_reference,archived_at,do_not_contact_at").eq("workspace_id", workspaceId).in("id", contactIds),
     client.from("backlink_contact_selection_decisions").select("source_resolution_task_id,decision_status,reason_code,decided_at").eq("workspace_id", workspaceId).in("source_resolution_task_id", taskIds),
   ]);
   for (const [operation, result] of [["runs", runsResult], ["applications", appsResult], ["contacts", contactsResult], ["decisions", decisionsResult]] as const) if (result.error != null) throw normalizeBacklinkRepositoryError(`listContactSelectionCases.${operation}`, result.error);
@@ -65,7 +65,7 @@ export async function listContactSelectionCases(client: BacklinkRepositoryClient
       const row = contact!; const blockingCodes: string[] = [];
       if (row.archived_at != null || row.contact_status === "archived") blockingCodes.push("CONTACT_ARCHIVED");
       if (row.do_not_contact_at != null || row.contact_status === "do_not_contact") blockingCodes.push("CONTACT_DO_NOT_CONTACT");
-      return { id: row.id, fullName: row.full_name?.trim() || null, roleTitle: row.role_title?.trim() || null, channels: { email: row.email_normalized != null, contactForm: row.contact_form_url != null, linkedIn: row.linkedin_url != null }, contactStatus: row.contact_status as "unverified" | "verified" | "archived" | "do_not_contact", provenancePresent: Boolean(row.source_type?.trim() && row.source_reference?.trim()), mailboxState: mailbox[row.id] ?? "unverified", contactFormState: ((row.contact_form_url ? forms[row.id] : null) ?? "not_applicable") as ContactSelectionFormState, selectable: blockingCodes.length === 0, blockingCodes };
+      return { id: row.id, fullName: row.full_name?.trim() || null, roleTitle: row.role_title?.trim() || null, channels: { email: row.email_normalized != null, contactForm: row.contact_form_url != null, linkedIn: row.linkedin_url != null }, contactStatus: row.contact_status as "unverified" | "verified" | "archived" | "do_not_contact", evidenceSummary: parseContactEvidenceSummary(row.source_reference), linkedinProfileKind: classifyLinkedInProfile(row.linkedin_url), mailboxState: mailbox[row.id] ?? "unverified", contactFormState: ((row.contact_form_url ? forms[row.id] : null) ?? "not_applicable") as ContactSelectionFormState, selectable: blockingCodes.length === 0, blockingCodes };
     });
     const decision = decisions.get(task.id);
     if (decision != null && (decision.decision_status !== "contact_selected" && decision.decision_status !== "promotion_rejected")) return [];

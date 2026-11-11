@@ -10,7 +10,9 @@ import {
 } from "../lib/backlinks/repositories/contactSelectionRepository";
 import {
   candidateFingerprint,
+  classifyLinkedInProfile,
   parseCandidateIds,
+  parseContactEvidenceSummary,
   parseContactSelectionDecision,
   type ContactSelectionDecisionInput,
 } from "../lib/backlinks/services/contactSelectionReviewService";
@@ -27,6 +29,7 @@ const DECISION_1 = "99999999-9999-4999-8999-999999999999";
 const SECRET_EMAIL = "secret-email-1@example.test";
 const SECRET_LINKEDIN = "https://linkedin.example/secret-handle-1";
 const SECRET_FORM_URL = "https://secret-form.example/apply";
+const SECRET_SOURCE_URL = "https://secret-provenance.example/team?token=abc123";
 
 type TableResponses = Record<string, { data: unknown; error: unknown }>;
 type RpcHandler = (name: string, args: unknown) => Promise<{ data: unknown; error: unknown }>;
@@ -159,14 +162,19 @@ function buildCaseTableResponses(): TableResponses {
           id: CONTACT_1, workspace_id: WORKSPACE_ID, domain_id: DOMAIN_1,
           full_name: "Jane Doe", role_title: "Marketing Manager",
           email_normalized: SECRET_EMAIL, linkedin_url: SECRET_LINKEDIN, contact_form_url: null,
-          contact_status: "unverified", source_type: "scrape", source_reference: "ref-1",
+          contact_status: "unverified", source_type: "scrape",
+          source_reference: JSON.stringify([
+            { kind: "mailto", value: SECRET_EMAIL, sourceUrl: SECRET_SOURCE_URL, confidence: "strong" },
+            { kind: "mailto", value: SECRET_EMAIL, sourceUrl: SECRET_SOURCE_URL, confidence: "strong" },
+            { kind: "linkedin", value: SECRET_LINKEDIN, sourceUrl: SECRET_SOURCE_URL, confidence: "medium" },
+          ]),
           archived_at: null, do_not_contact_at: null,
         },
         {
           id: CONTACT_2, workspace_id: WORKSPACE_ID, domain_id: DOMAIN_1,
           full_name: null, role_title: null,
           email_normalized: null, linkedin_url: null, contact_form_url: SECRET_FORM_URL,
-          contact_status: "unverified", source_type: "manual", source_reference: "ref-2",
+          contact_status: "unverified", source_type: "manual", source_reference: "not-json-at-all",
           archived_at: null, do_not_contact_at: null,
         },
       ],
@@ -179,7 +187,7 @@ function buildCaseTableResponses(): TableResponses {
   };
 }
 
-test("listContactSelectionCases exposes only contract-defined identity/booleans/states, never raw contact channels", async () => {
+test("listContactSelectionCases exposes only contract-defined identity/booleans/states, never raw contact channels or provenance URLs", async () => {
   const cases = await listContactSelectionCases(
     clientFor({ tableResponses: buildCaseTableResponses(), rpc: authorityRpc(true, true) }),
     WORKSPACE_ID,
@@ -189,12 +197,14 @@ test("listContactSelectionCases exposes only contract-defined identity/booleans/
   assert.equal(serialized.includes(SECRET_EMAIL), false, "raw email must never be serialized");
   assert.equal(serialized.includes(SECRET_LINKEDIN), false, "raw LinkedIn URL must never be serialized");
   assert.equal(serialized.includes(SECRET_FORM_URL), false, "raw contact form URL must never be serialized");
-  assert.equal(serialized.includes("ref-1"), false, "raw source_reference must never be serialized");
+  assert.equal(serialized.includes(SECRET_SOURCE_URL), false, "a provenance source URL must never be serialized, even though it is present in source_reference");
+  assert.equal(serialized.includes("not-json-at-all"), false, "the raw source_reference text must never be serialized verbatim");
+  assert.equal(serialized.includes("token=abc123"), false, "no URL query parameter from a provenance source must ever leak");
 
   const candidate1 = cases[0].candidates.find((candidate) => candidate.id === CONTACT_1);
   const candidate2 = cases[0].candidates.find((candidate) => candidate.id === CONTACT_2);
   assert.ok(candidate1 && candidate2);
-  const expectedKeys = ["id", "fullName", "roleTitle", "channels", "contactStatus", "provenancePresent", "mailboxState", "contactFormState", "selectable", "blockingCodes"].sort();
+  const expectedKeys = ["id", "fullName", "roleTitle", "channels", "contactStatus", "evidenceSummary", "linkedinProfileKind", "mailboxState", "contactFormState", "selectable", "blockingCodes"].sort();
   assert.deepEqual(Object.keys(candidate1!).sort(), expectedKeys);
   assert.deepEqual(candidate1!.channels, { email: true, contactForm: false, linkedIn: true });
   assert.deepEqual(candidate2!.channels, { email: false, contactForm: true, linkedIn: false });
@@ -204,6 +214,17 @@ test("listContactSelectionCases exposes only contract-defined identity/booleans/
   assert.equal(candidate1!.roleTitle, "Marketing Manager");
   assert.equal(candidate2!.fullName, null, "a missing name must surface as null, never a fabricated label");
   assert.equal(candidate2!.roleTitle, null);
+
+  assert.deepEqual(candidate1!.evidenceSummary, [
+    { kind: "linkedin", confidence: "medium", count: 1 },
+    { kind: "mailto", confidence: "strong", count: 2 },
+  ], "distinct (kind, confidence) pairs from source_reference must be counted, never the raw entries");
+  assert.deepEqual(candidate2!.evidenceSummary, [], "unparseable source_reference must degrade to an empty, safe summary");
+
+  // SECRET_LINKEDIN does not resolve to linkedin.com, so this also proves a non-matching
+  // hostname is classified "unknown" rather than crashing or defaulting to "person".
+  assert.equal(candidate1!.linkedinProfileKind, "unknown");
+  assert.equal(candidate2!.linkedinProfileKind, "not_applicable", "a candidate with no LinkedIn channel must not be classified as a profile kind");
 });
 
 test("listContactSelectionCases scopes every table read to the caller's own workspace_id", async () => {
@@ -421,6 +442,69 @@ test("candidateFingerprint is deterministic regardless of candidate input order"
   assert.match(a, /^[a-f0-9]{64}$/);
 });
 
+// --- parseContactEvidenceSummary: defensive parsing of a free-text column ---
+
+test("parseContactEvidenceSummary accepts a well-formed evidence array and counts (kind, confidence) pairs", () => {
+  const summary = parseContactEvidenceSummary(JSON.stringify([
+    { kind: "mailto", value: "a@example.test", sourceUrl: "https://example.test/contact", confidence: "strong" },
+    { kind: "mailto", value: "a@example.test", sourceUrl: "https://example.test/contact", confidence: "strong" },
+    { kind: "contact_form", value: "https://example.test/contact-form", sourceUrl: "https://example.test/contact", confidence: "medium" },
+  ]));
+  assert.deepEqual(summary, [
+    { kind: "contact_form", confidence: "medium", count: 1 },
+    { kind: "mailto", confidence: "strong", count: 2 },
+  ]);
+});
+
+test("parseContactEvidenceSummary treats absent/empty/non-string input as no evidence, never throws", () => {
+  for (const value of [null, undefined, "", "   ", 42, {}, []]) {
+    assert.deepEqual(parseContactEvidenceSummary(value), []);
+  }
+});
+
+test("parseContactEvidenceSummary degrades malformed JSON to an empty summary instead of throwing", () => {
+  for (const malformed of ["not-json-at-all", "{bad json", "[{\"kind\":\"mailto\"", "undefined"]) {
+    assert.deepEqual(parseContactEvidenceSummary(malformed), []);
+  }
+});
+
+test("parseContactEvidenceSummary rejects unexpected structures: non-array JSON, wrong element types, unknown kind/confidence values", () => {
+  assert.deepEqual(parseContactEvidenceSummary(JSON.stringify({ kind: "mailto", confidence: "strong" })), [], "a bare object instead of an array must yield no evidence");
+  assert.deepEqual(parseContactEvidenceSummary(JSON.stringify(["just a string", 42, null, ["nested", "array"]])), [], "non-object array elements must be ignored, not crash");
+  assert.deepEqual(
+    parseContactEvidenceSummary(JSON.stringify([{ kind: "zerobounce_call", confidence: "strong" }, { kind: "mailto", confidence: "verified" }])),
+    [],
+    "an unrecognized kind or confidence value outside the closed enums must never be trusted through",
+  );
+  assert.deepEqual(
+    parseContactEvidenceSummary(JSON.stringify([{ kind: "mailto" }, { confidence: "strong" }])),
+    [],
+    "a partial object missing either field must be ignored",
+  );
+});
+
+test("parseContactEvidenceSummary caps pathologically large input instead of doing unbounded work on a free-text column", () => {
+  const hugeString = `"${"a".repeat(25_000)}"`;
+  assert.deepEqual(parseContactEvidenceSummary(`[{"kind":"mailto","confidence":"strong","note":${hugeString}}]`), []);
+  const manyItems = JSON.stringify(Array.from({ length: 200 }, () => ({ kind: "mailto", confidence: "strong" })));
+  const cappedSummary = parseContactEvidenceSummary(manyItems);
+  assert.equal(cappedSummary.length, 1);
+  assert.ok(cappedSummary[0].count <= 50, "counting must stop at the item cap, not scan an unbounded array");
+});
+
+// --- classifyLinkedInProfile: a company page must never be treated as a named person ---
+
+test("classifyLinkedInProfile distinguishes personal profiles, company pages, unknown shapes, and absence — without ever needing the URL back", () => {
+  assert.equal(classifyLinkedInProfile(null), "not_applicable");
+  assert.equal(classifyLinkedInProfile("https://www.linkedin.com/in/jane-doe-12345"), "person");
+  assert.equal(classifyLinkedInProfile("https://linkedin.com/in/jane-doe"), "person");
+  assert.equal(classifyLinkedInProfile("https://www.linkedin.com/company/acme-corp"), "company");
+  assert.equal(classifyLinkedInProfile("https://fr.linkedin.com/company/acme-corp"), "company");
+  assert.equal(classifyLinkedInProfile("https://www.linkedin.com/pulse/some-article"), "unknown", "a LinkedIn URL that is neither /in/ nor /company/ must not be guessed as a person");
+  assert.equal(classifyLinkedInProfile("https://not-linkedin.example/in/jane-doe"), "unknown", "a look-alike host must never be classified as a real LinkedIn profile");
+  assert.equal(classifyLinkedInProfile("not a url"), "unknown", "an unparseable URL must degrade safely, never throw");
+});
+
 // --- Cross-file and structural safeguards ---
 
 test("the Node fingerprint formula stays byte-for-byte consistent with the 5F Postgres RPC's formula", () => {
@@ -489,5 +573,16 @@ test("the dialog renders the candidate's name/role instead of a bare index, so a
   assert.equal(dialogSource.includes("E-mail présent"), true);
   for (const leak of ["candidate.email_normalized", "candidate.linkedin_url", "candidate.contact_form_url"]) {
     assert.equal(dialogSource.includes(leak), false, "the dialog must never receive or render a raw contact channel value");
+  }
+});
+
+test("the dialog surfaces evidence kind/confidence and the LinkedIn person-vs-company classification, never a raw URL or 'verified' wording", () => {
+  const dialogSource = readFileSync("app/(default)/dashboard/backlinks/_components/ContactSelectionReviewDialog.tsx", "utf8");
+  assert.ok(dialogSource.includes("candidate.evidenceSummary"), "evidence kinds/confidence must be rendered from the safe structured summary");
+  assert.ok(dialogSource.includes("candidate.linkedinProfileKind"), "the LinkedIn classification must be rendered");
+  assert.ok(dialogSource.includes("Preuves de provenance (non vérifiées)"), "evidence must be labeled as unverified, never implying a mailbox/identity check");
+  assert.ok(dialogSource.includes("pas une personne"), "a company LinkedIn page must be explicitly disambiguated from a person");
+  for (const forbidden of ["sourceUrl", "evidence.value", "item.sourceUrl", "linkedin_url"]) {
+    assert.equal(dialogSource.includes(forbidden), false, `the dialog must never reference a raw provenance URL (${forbidden})`);
   }
 });
