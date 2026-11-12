@@ -55,11 +55,17 @@ export async function enqueueContactResolutionTask(
   return createTask(buildContactResolutionTask(input));
 }
 
-/** Pure descriptor builder; validation tasks are not enqueued by this module. */
+/**
+ * Pure descriptor builder; validation tasks are not enqueued by this module.
+ * `dependsOnTaskId` is nullable because a sibling resume run (see
+ * backlink-contact-selection-resume-service.ts) has no same-run task to
+ * depend on — the dependency-integrity trigger requires any non-null
+ * dependency to belong to the same run.
+ */
 export function buildContactValidationTask(input: {
   workspaceId: string;
   runId: string;
-  dependsOnTaskId: string;
+  dependsOnTaskId: string | null;
   domainId: string;
   opportunityId: string;
   contactId: string;
