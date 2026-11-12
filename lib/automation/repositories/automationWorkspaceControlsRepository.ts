@@ -122,7 +122,7 @@ export async function listAutomationWorkspaceControlsForBacklinkLiveAutoSend(
   const { data, error } = await client
     .from("automation_workspace_controls")
     .select(
-      "workspace_id, backlinks_enabled, backlink_autonomy_enabled, backlink_outreach_schedule_apply_enabled, dry_run_only, disabled_reason, last_schedule_apply_attempt_at, created_at, updated_at, updated_by",
+      "workspace_id, backlinks_enabled, backlink_autonomy_enabled, backlink_outreach_schedule_apply_enabled, dry_run_only, disabled_reason, last_schedule_apply_attempt_at, created_at, updated_at, updated_by, promotion_auto_apply_enabled, promotion_auto_apply_authorized_by, promotion_auto_apply_authorized_at, promotion_auto_apply_last_applied_date",
     )
     .eq("backlinks_enabled", true)
     .eq("dry_run_only", false)
@@ -150,6 +150,42 @@ export async function listAutomationWorkspaceControlsForBacklinkAutonomy(
     .order("workspace_id", { ascending: true }).limit(limit);
   if (error != null) throw normalizeBacklinkRepositoryError(operation, error);
   return (data ?? []).map((row) => ({ workspaceId: row.workspace_id, backlinksEnabled: row.backlinks_enabled, backlinkAutonomyEnabled: row.backlink_autonomy_enabled, backlinkOutreachScheduleApplyEnabled: row.backlink_outreach_schedule_apply_enabled, dryRunOnly: row.dry_run_only, disabledReason: row.disabled_reason, lastScheduleApplyAttemptAt: row.last_schedule_apply_attempt_at, createdAt: row.created_at, updatedAt: row.updated_at }));
+}
+
+/** Independent of backlink_autonomy_enabled — matches exactly the gate the auto-apply RPC itself checks. */
+export async function listAutomationWorkspaceControlsForBacklinkPromotionAutoApply(
+  client: BacklinkRepositoryClient,
+  limit: number,
+): Promise<AutomationWorkspaceControl[]> {
+  const operation = "listAutomationWorkspaceControlsForBacklinkPromotionAutoApply";
+  const { data, error } = await client
+    .from("automation_workspace_controls")
+    .select(
+      "workspace_id, backlinks_enabled, backlink_autonomy_enabled, backlink_outreach_schedule_apply_enabled, dry_run_only, disabled_reason, last_schedule_apply_attempt_at, created_at, updated_at",
+    )
+    .eq("backlinks_enabled", true)
+    .eq("promotion_auto_apply_enabled", true)
+    .is("disabled_reason", null)
+    .order("workspace_id", { ascending: true })
+    .limit(limit);
+
+  if (error != null) {
+    throw normalizeBacklinkRepositoryError(operation, error);
+  }
+
+  return (
+    data?.map((row) => ({
+      workspaceId: row.workspace_id,
+      backlinksEnabled: row.backlinks_enabled,
+      backlinkAutonomyEnabled: row.backlink_autonomy_enabled,
+      backlinkOutreachScheduleApplyEnabled: row.backlink_outreach_schedule_apply_enabled,
+      dryRunOnly: row.dry_run_only,
+      disabledReason: row.disabled_reason,
+      lastScheduleApplyAttemptAt: row.last_schedule_apply_attempt_at,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    })) ?? []
+  );
 }
 
 export async function listAutomationWorkspaceControlsForBacklinkReverification(
