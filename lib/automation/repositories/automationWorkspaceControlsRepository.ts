@@ -122,7 +122,7 @@ export async function listAutomationWorkspaceControlsForBacklinkLiveAutoSend(
   const { data, error } = await client
     .from("automation_workspace_controls")
     .select(
-      "workspace_id, backlinks_enabled, backlink_autonomy_enabled, backlink_outreach_schedule_apply_enabled, dry_run_only, disabled_reason, last_schedule_apply_attempt_at, created_at, updated_at, updated_by, promotion_auto_apply_enabled, promotion_auto_apply_authorized_by, promotion_auto_apply_authorized_at, promotion_auto_apply_last_applied_date",
+      "workspace_id, backlinks_enabled, backlink_autonomy_enabled, backlink_outreach_schedule_apply_enabled, dry_run_only, disabled_reason, last_schedule_apply_attempt_at, created_at, updated_at, updated_by, promotion_auto_apply_enabled, promotion_auto_apply_authorized_by, promotion_auto_apply_authorized_at, promotion_auto_apply_last_applied_date, campaign_apply_authorized_enabled, campaign_apply_authorized_by, campaign_apply_authorized_at",
     )
     .eq("backlinks_enabled", true)
     .eq("dry_run_only", false)

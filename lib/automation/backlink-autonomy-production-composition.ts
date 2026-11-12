@@ -30,6 +30,8 @@ import { listCompletedBacklinkPromotionPreviewTasks } from "./repositories/backl
 import { applyBacklinkPromotionProposalAuto } from "./repositories/backlinkPromotionAutoApplyRepository";
 import { runBacklinkPromotionAutoApplyTick, type BacklinkPromotionAutoApplyOutcome } from "./backlink-promotion-auto-apply-service";
 import { isBacklinkPromotionAutoApplyEnabled } from "./backlink-promotion-auto-apply-config";
+import { isBacklinkCampaignApplyAuthorized } from "./repositories/backlinkCampaignApplyAuthorizationCheckRepository";
+import { isBacklinkCampaignApplyAuthorizationEnabled } from "./backlink-campaign-apply-authorization-config";
 import { readBacklinkAutonomyRuntimeConfig, type BacklinkAutonomyRuntimeConfig } from "./backlink-autonomy-runtime-config";
 import { readBacklinkZeroBounceBudgetRuntimeConfig } from "./backlink-zerobounce-budget-runtime-config";
 import { reserveBacklinkZeroBounceVerification } from "./repositories/zeroBounceVerificationBudgetRepository";
@@ -309,6 +311,14 @@ export function createBacklinkAutonomyProductionDependencies(): BacklinkAutonomy
     heartbeatTask: (input: any) => heartbeatAutomationTask(client, input),
     reclaimExpiredTasks: async () => { throw new Error("BACKLINK_AUTONOMY_GENERIC_RECLAIM_FORBIDDEN"); },
     cancelTask: async () => null,
+    // Explicit, revocable, per-workspace human authorization (Lot E). Off by
+    // default via its own flag, independent of every other autonomy flag.
+    // Never trusted or cached: re-checked live on every task via the
+    // read-only is_backlink_campaign_apply_authorized RPC.
+    campaignApplyAuthorized: async ({ workspaceId }: { workspaceId: string }) => {
+      if (!isBacklinkCampaignApplyAuthorizationEnabled()) return false;
+      return isBacklinkCampaignApplyAuthorized(client, workspaceId);
+    },
   };
   return {
     runtimeConfig: readBacklinkAutonomyRuntimeConfig,
