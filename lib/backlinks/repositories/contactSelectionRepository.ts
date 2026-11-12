@@ -73,6 +73,42 @@ export async function listContactSelectionCases(client: BacklinkRepositoryClient
   });
 }
 
+/**
+ * Cron/admin-client read only: this intentionally bypasses `assertContactSelectionAuthority`,
+ * which enforces the double-authorization RLS policy for an authenticated human
+ * session. Never call this from a user-facing request path.
+ */
+export async function listContactSelectedDecisionsForResume(
+  client: BacklinkRepositoryClient,
+  workspaceId: string,
+  limit: number,
+): Promise<Array<{
+  id: string;
+  workspaceId: string;
+  promotionApplicationId: string;
+  sourceAutonomyRunId: string;
+  sourceResolutionTaskId: string;
+  selectedContactId: string | null;
+  decisionStatus: "contact_selected" | "promotion_rejected";
+  decidedBy: string;
+}>> {
+  const { data, error } = await client.from("backlink_contact_selection_decisions")
+    .select("id,promotion_application_id,source_autonomy_run_id,source_resolution_task_id,selected_contact_id,decision_status,decided_by")
+    .eq("workspace_id", workspaceId).eq("decision_status", "contact_selected")
+    .order("decided_at", { ascending: true }).limit(limit);
+  if (error != null) throw normalizeBacklinkRepositoryError("listContactSelectedDecisionsForResume", error);
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    workspaceId,
+    promotionApplicationId: row.promotion_application_id,
+    sourceAutonomyRunId: row.source_autonomy_run_id,
+    sourceResolutionTaskId: row.source_resolution_task_id,
+    selectedContactId: row.selected_contact_id,
+    decisionStatus: row.decision_status as "contact_selected" | "promotion_rejected",
+    decidedBy: row.decided_by,
+  }));
+}
+
 export async function recordContactSelectionDecision(client: BacklinkRepositoryClient, workspaceId: string, input: ContactSelectionDecisionInput) {
   await assertContactSelectionAuthority(client, workspaceId);
   const { data, error } = await client.rpc("record_backlink_contact_selection_decision", {

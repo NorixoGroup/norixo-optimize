@@ -23,6 +23,9 @@ import { claimNextBacklinkAutonomyTask, completeAutomationTask, createOrGetAutom
 import { listAutomationTasksForRun } from "./repositories/automationRunResumeRepository";
 import { listAutomationWorkspaceControlsForBacklinkAutonomy } from "./repositories/automationWorkspaceControlsRepository";
 import { listCanonicalAppliedPromotions } from "./backlink-autonomy-production-preview";
+import { listContactSelectedDecisionsForResume } from "@/lib/backlinks/repositories/contactSelectionRepository";
+import { runBacklinkContactSelectionResumeTick, type BacklinkContactSelectionResumeTickResult } from "./backlink-contact-selection-resume-service";
+import { isBacklinkContactSelectionResumeEnabled } from "./backlink-contact-selection-resume-config";
 import { readBacklinkAutonomyRuntimeConfig, type BacklinkAutonomyRuntimeConfig } from "./backlink-autonomy-runtime-config";
 import { readBacklinkZeroBounceBudgetRuntimeConfig } from "./backlink-zerobounce-budget-runtime-config";
 import { reserveBacklinkZeroBounceVerification } from "./repositories/zeroBounceVerificationBudgetRepository";
@@ -36,6 +39,8 @@ export const BACKLINK_AUTONOMY_CRON_WORKSPACE_LIMIT = 5;
 export const BACKLINK_AUTONOMY_CRON_PROMOTION_LIMIT = 10;
 export const BACKLINK_AUTONOMY_CRON_WORKER_STEPS_PER_RUN = 3;
 export const BACKLINK_AUTONOMY_CRON_RECLAIM_LIMIT = 3;
+export const BACKLINK_CONTACT_SELECTION_RESUME_WORKSPACE_LIMIT = 5;
+export const BACKLINK_CONTACT_SELECTION_RESUME_DECISION_LIMIT = 5;
 
 export type BacklinkAutonomyProductionTickResult = {
   disposition: "disabled" | "completed";
@@ -45,6 +50,7 @@ export type BacklinkAutonomyProductionTickResult = {
   reclaimedTasks: number;
   workerSteps: number;
   workerTerminal: number;
+  contactSelectionResumedRuns: number;
 };
 
 export type BacklinkAutonomyProductionDependencies = {
@@ -55,6 +61,12 @@ export type BacklinkAutonomyProductionDependencies = {
   workerDependencies: Parameters<typeof runOneBacklinkAutonomyWorkerTask>[0];
   reclaimAutonomyTasks: (input: { workspaceId: string; runId: string; reclaimedAt: string; limit: number }) => Promise<readonly import("./types").AutomationTask[]>;
   lifecycle: Parameters<typeof reconcileBacklinkAutonomyRunLifecycle>[0];
+  /**
+   * Off by default (BACKLINK_CONTACT_SELECTION_RESUME_ENABLED). Resumes only
+   * already-recorded, unambiguous `contact_selected` decisions into sibling
+   * runs; it never widens eligibility beyond the autonomy workspace gate.
+   */
+  resumeContactSelections?: (input: { scheduledAt: string }) => Promise<BacklinkContactSelectionResumeTickResult>;
   now?: () => string;
 };
 
@@ -64,7 +76,7 @@ export async function runBacklinkAutonomyProductionTick(
   input: { at: string; workerId: string },
 ): Promise<BacklinkAutonomyProductionTickResult> {
   if (deps.runtimeConfig().autonomyEnabled !== true) {
-    return { disposition: "disabled", seededRuns: 0, tasksCreated: 0, tasksExisting: 0, reclaimedTasks: 0, workerSteps: 0, workerTerminal: 0 };
+    return { disposition: "disabled", seededRuns: 0, tasksCreated: 0, tasksExisting: 0, reclaimedTasks: 0, workerSteps: 0, workerTerminal: 0, contactSelectionResumedRuns: 0 };
   }
   const seeded = await deps.scheduler(deps.schedulerDependencies, {
     mode: "apply",
@@ -72,10 +84,14 @@ export async function runBacklinkAutonomyProductionTick(
     workspaceLimit: BACKLINK_AUTONOMY_CRON_WORKSPACE_LIMIT,
     promotionLimitPerWorkspace: BACKLINK_AUTONOMY_CRON_PROMOTION_LIMIT,
   });
+  const resumeContactSelections = deps.resumeContactSelections;
+  const resumed = resumeContactSelections == null
+    ? { decisionsScanned: 0, resumedRuns: [], results: [] }
+    : await resumeContactSelections({ scheduledAt: input.at });
   let reclaimedTasks = 0;
   let workerSteps = 0;
   let workerTerminal = 0;
-  for (const run of seeded.autonomyRuns) {
+  for (const run of [...seeded.autonomyRuns, ...resumed.resumedRuns]) {
     const now = deps.now ?? (() => new Date().toISOString());
     // This also repairs historical queued parents whose tasks are already
     // terminal; it neither creates nor claims a task.
@@ -91,7 +107,7 @@ export async function runBacklinkAutonomyProductionTick(
     }
     await reconcileBacklinkAutonomyRunLifecycle(deps.lifecycle, { workspaceId: run.workspaceId, runId: run.runId, at: now() });
   }
-  return { disposition: "completed", seededRuns: seeded.autonomyRunIds.length, tasksCreated: seeded.created, tasksExisting: seeded.existing, reclaimedTasks, workerSteps, workerTerminal };
+  return { disposition: "completed", seededRuns: seeded.autonomyRunIds.length, tasksCreated: seeded.created, tasksExisting: seeded.existing, reclaimedTasks, workerSteps, workerTerminal, contactSelectionResumedRuns: resumed.resumedRuns.length };
 }
 
 function blockedHandlers(client: ReturnType<typeof createSupabaseAdminClient>): BacklinkAutonomyDispatcherDependencies {
@@ -288,6 +304,23 @@ export function createBacklinkAutonomyProductionDependencies(): BacklinkAutonomy
       startRun: (input) => startAutomationRun(client, input),
       completeRun: (input) => completeAutomationRun(client, input),
       failRun: (input) => failAutomationRun(client, input),
+    },
+    resumeContactSelections: async (input) => {
+      if (!isBacklinkContactSelectionResumeEnabled()) return { decisionsScanned: 0, resumedRuns: [], results: [] };
+      return runBacklinkContactSelectionResumeTick(
+        {
+          listWorkspaceControls: (limit) => listAutomationWorkspaceControlsForBacklinkAutonomy(client, limit),
+          listDecisions: (workspaceId, limit) => listContactSelectedDecisionsForResume(client, workspaceId, limit),
+          getResolutionTask: (workspaceId, runId, taskId) => getAutomationTaskByIdInRun(client, { workspaceId, runId, taskId }),
+          createOrGetRun: (runInput) => createOrGetAutomationRun(client, runInput),
+          createOrGetTask: (taskInput) => createOrGetAutomationTask(client, taskInput),
+        },
+        {
+          workspaceLimit: BACKLINK_CONTACT_SELECTION_RESUME_WORKSPACE_LIMIT,
+          decisionLimitPerWorkspace: BACKLINK_CONTACT_SELECTION_RESUME_DECISION_LIMIT,
+          scheduledAt: input.scheduledAt,
+        },
+      );
     },
   } as BacklinkAutonomyProductionDependencies;
 }
