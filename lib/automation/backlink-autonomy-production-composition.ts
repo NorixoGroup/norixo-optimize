@@ -21,11 +21,15 @@ import { assembleBacklinkAutonomyDecisionFacts } from "./backlink-autonomy-decis
 import { completeAutomationRun, createOrGetAutomationRun, failAutomationRun, getAutomationRunById, getAutomationWorkspaceControl, startAutomationRun } from "./repositories/automationRunsRepository";
 import { claimNextBacklinkAutonomyTask, completeAutomationTask, createOrGetAutomationTask, failAutomationTask, getAutomationTaskByIdInRun, heartbeatAutomationTask, reclaimExpiredBacklinkAutonomyTasks } from "./repositories/automationTasksRepository";
 import { listAutomationTasksForRun } from "./repositories/automationRunResumeRepository";
-import { listAutomationWorkspaceControlsForBacklinkAutonomy } from "./repositories/automationWorkspaceControlsRepository";
+import { listAutomationWorkspaceControlsForBacklinkAutonomy, listAutomationWorkspaceControlsForBacklinkPromotionAutoApply } from "./repositories/automationWorkspaceControlsRepository";
 import { listCanonicalAppliedPromotions } from "./backlink-autonomy-production-preview";
 import { listContactSelectedDecisionsForResume } from "@/lib/backlinks/repositories/contactSelectionRepository";
 import { runBacklinkContactSelectionResumeTick, type BacklinkContactSelectionResumeTickResult } from "./backlink-contact-selection-resume-service";
 import { isBacklinkContactSelectionResumeEnabled } from "./backlink-contact-selection-resume-config";
+import { listCompletedBacklinkPromotionPreviewTasks } from "./repositories/backlinkPromotionAutoApplyCandidatesRepository";
+import { applyBacklinkPromotionProposalAuto } from "./repositories/backlinkPromotionAutoApplyRepository";
+import { runBacklinkPromotionAutoApplyTick, type BacklinkPromotionAutoApplyOutcome } from "./backlink-promotion-auto-apply-service";
+import { isBacklinkPromotionAutoApplyEnabled } from "./backlink-promotion-auto-apply-config";
 import { readBacklinkAutonomyRuntimeConfig, type BacklinkAutonomyRuntimeConfig } from "./backlink-autonomy-runtime-config";
 import { readBacklinkZeroBounceBudgetRuntimeConfig } from "./backlink-zerobounce-budget-runtime-config";
 import { reserveBacklinkZeroBounceVerification } from "./repositories/zeroBounceVerificationBudgetRepository";
@@ -41,6 +45,8 @@ export const BACKLINK_AUTONOMY_CRON_WORKER_STEPS_PER_RUN = 3;
 export const BACKLINK_AUTONOMY_CRON_RECLAIM_LIMIT = 3;
 export const BACKLINK_CONTACT_SELECTION_RESUME_WORKSPACE_LIMIT = 5;
 export const BACKLINK_CONTACT_SELECTION_RESUME_DECISION_LIMIT = 5;
+export const BACKLINK_PROMOTION_AUTO_APPLY_WORKSPACE_LIMIT = 5;
+export const BACKLINK_PROMOTION_AUTO_APPLY_TASK_LIMIT_PER_WORKSPACE = 10;
 
 export type BacklinkAutonomyProductionTickResult = {
   disposition: "disabled" | "completed";
@@ -51,6 +57,7 @@ export type BacklinkAutonomyProductionTickResult = {
   workerSteps: number;
   workerTerminal: number;
   contactSelectionResumedRuns: number;
+  promotionAutoApplied: number;
 };
 
 export type BacklinkAutonomyProductionDependencies = {
@@ -67,6 +74,13 @@ export type BacklinkAutonomyProductionDependencies = {
    * runs; it never widens eligibility beyond the autonomy workspace gate.
    */
   resumeContactSelections?: (input: { scheduledAt: string }) => Promise<BacklinkContactSelectionResumeTickResult>;
+  /**
+   * Off by default (BACKLINK_PROMOTION_AUTO_APPLY_ENABLED). Applies at most
+   * one strictly Tier A promotion per authorized workspace per tick; every
+   * eligibility fact is re-derived and re-authorized by the RPC itself, not
+   * trusted from this composition layer.
+   */
+  applyPromotionsAuto?: () => Promise<readonly BacklinkPromotionAutoApplyOutcome[]>;
   now?: () => string;
 };
 
@@ -76,8 +90,13 @@ export async function runBacklinkAutonomyProductionTick(
   input: { at: string; workerId: string },
 ): Promise<BacklinkAutonomyProductionTickResult> {
   if (deps.runtimeConfig().autonomyEnabled !== true) {
-    return { disposition: "disabled", seededRuns: 0, tasksCreated: 0, tasksExisting: 0, reclaimedTasks: 0, workerSteps: 0, workerTerminal: 0, contactSelectionResumedRuns: 0 };
+    return { disposition: "disabled", seededRuns: 0, tasksCreated: 0, tasksExisting: 0, reclaimedTasks: 0, workerSteps: 0, workerTerminal: 0, contactSelectionResumedRuns: 0, promotionAutoApplied: 0 };
   }
+  // Runs before the scheduler so a freshly auto-applied promotion is already
+  // a canonical applied promotion by the time listCanonicalAppliedPromotions
+  // is read below, within this same tick.
+  const applyPromotionsAuto = deps.applyPromotionsAuto;
+  const promotionAutoApplyOutcomes = applyPromotionsAuto == null ? [] : await applyPromotionsAuto();
   const seeded = await deps.scheduler(deps.schedulerDependencies, {
     mode: "apply",
     scheduledAt: input.at,
@@ -107,7 +126,7 @@ export async function runBacklinkAutonomyProductionTick(
     }
     await reconcileBacklinkAutonomyRunLifecycle(deps.lifecycle, { workspaceId: run.workspaceId, runId: run.runId, at: now() });
   }
-  return { disposition: "completed", seededRuns: seeded.autonomyRunIds.length, tasksCreated: seeded.created, tasksExisting: seeded.existing, reclaimedTasks, workerSteps, workerTerminal, contactSelectionResumedRuns: resumed.resumedRuns.length };
+  return { disposition: "completed", seededRuns: seeded.autonomyRunIds.length, tasksCreated: seeded.created, tasksExisting: seeded.existing, reclaimedTasks, workerSteps, workerTerminal, contactSelectionResumedRuns: resumed.resumedRuns.length, promotionAutoApplied: promotionAutoApplyOutcomes.filter((outcome) => outcome.outcome === "applied").length };
 }
 
 function blockedHandlers(client: ReturnType<typeof createSupabaseAdminClient>): BacklinkAutonomyDispatcherDependencies {
@@ -319,6 +338,20 @@ export function createBacklinkAutonomyProductionDependencies(): BacklinkAutonomy
           workspaceLimit: BACKLINK_CONTACT_SELECTION_RESUME_WORKSPACE_LIMIT,
           decisionLimitPerWorkspace: BACKLINK_CONTACT_SELECTION_RESUME_DECISION_LIMIT,
           scheduledAt: input.scheduledAt,
+        },
+      );
+    },
+    applyPromotionsAuto: async () => {
+      if (!isBacklinkPromotionAutoApplyEnabled()) return [];
+      return runBacklinkPromotionAutoApplyTick(
+        {
+          listWorkspaces: (limit) => listAutomationWorkspaceControlsForBacklinkPromotionAutoApply(client, limit),
+          listCompletedPromotionPreviewTasks: (workspaceId, limit) => listCompletedBacklinkPromotionPreviewTasks(client, workspaceId, limit),
+          applyProposal: (proposalInput) => applyBacklinkPromotionProposalAuto(client, proposalInput),
+        },
+        {
+          workspaceLimit: BACKLINK_PROMOTION_AUTO_APPLY_WORKSPACE_LIMIT,
+          taskLimitPerWorkspace: BACKLINK_PROMOTION_AUTO_APPLY_TASK_LIMIT_PER_WORKSPACE,
         },
       );
     },

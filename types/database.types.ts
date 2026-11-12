@@ -1597,9 +1597,9 @@ export type Database = {
         ]
       }
       automation_workspace_controls: {
-        Row: { backlink_autonomy_enabled: boolean; backlink_outreach_schedule_apply_enabled: boolean; backlinks_enabled: boolean; created_at: string; disabled_reason: string | null; dry_run_only: boolean; last_schedule_apply_attempt_at: string | null; updated_at: string; updated_by: string | null; workspace_id: string }
-        Insert: { backlink_autonomy_enabled?: boolean; backlink_outreach_schedule_apply_enabled?: boolean; backlinks_enabled?: boolean; created_at?: string; disabled_reason?: string | null; dry_run_only?: boolean; last_schedule_apply_attempt_at?: string | null; updated_at?: string; updated_by?: string | null; workspace_id: string }
-        Update: { backlink_autonomy_enabled?: boolean; backlink_outreach_schedule_apply_enabled?: boolean; backlinks_enabled?: boolean; created_at?: string; disabled_reason?: string | null; dry_run_only?: boolean; last_schedule_apply_attempt_at?: string | null; updated_at?: string; updated_by?: string | null; workspace_id?: string }
+        Row: { backlink_autonomy_enabled: boolean; backlink_outreach_schedule_apply_enabled: boolean; backlinks_enabled: boolean; created_at: string; disabled_reason: string | null; dry_run_only: boolean; last_schedule_apply_attempt_at: string | null; promotion_auto_apply_authorized_at: string | null; promotion_auto_apply_authorized_by: string | null; promotion_auto_apply_enabled: boolean; promotion_auto_apply_last_applied_date: string | null; updated_at: string; updated_by: string | null; workspace_id: string }
+        Insert: { backlink_autonomy_enabled?: boolean; backlink_outreach_schedule_apply_enabled?: boolean; backlinks_enabled?: boolean; created_at?: string; disabled_reason?: string | null; dry_run_only?: boolean; last_schedule_apply_attempt_at?: string | null; promotion_auto_apply_authorized_at?: string | null; promotion_auto_apply_authorized_by?: string | null; promotion_auto_apply_enabled?: boolean; promotion_auto_apply_last_applied_date?: string | null; updated_at?: string; updated_by?: string | null; workspace_id: string }
+        Update: { backlink_autonomy_enabled?: boolean; backlink_outreach_schedule_apply_enabled?: boolean; backlinks_enabled?: boolean; created_at?: string; disabled_reason?: string | null; dry_run_only?: boolean; last_schedule_apply_attempt_at?: string | null; promotion_auto_apply_authorized_at?: string | null; promotion_auto_apply_authorized_by?: string | null; promotion_auto_apply_enabled?: boolean; promotion_auto_apply_last_applied_date?: string | null; updated_at?: string; updated_by?: string | null; workspace_id?: string }
         Relationships: []
       }
       backlink_outreach_schedule_apply_locks: {
@@ -5021,6 +5021,34 @@ export type Database = {
           domain_id: string
           opportunity_disposition: string
           opportunity_id: string
+        }[]
+      }
+      apply_backlink_promotion_proposal_auto: {
+        Args: {
+          p_promotion_task_id: string
+          p_proposal_key: string
+          p_run_id: string
+          p_workspace_id: string
+        }
+        Returns: {
+          application_id: string
+          audit_written: boolean
+          domain_disposition: string
+          domain_id: string
+          opportunity_disposition: string
+          opportunity_id: string
+        }[]
+      }
+      set_backlink_promotion_auto_apply_authorization: {
+        Args: {
+          p_enabled: boolean
+          p_workspace_id: string
+        }
+        Returns: {
+          promotion_auto_apply_authorized_at: string | null
+          promotion_auto_apply_authorized_by: string | null
+          promotion_auto_apply_enabled: boolean
+          workspace_id: string
         }[]
       }
       reserve_backlink_key: {
