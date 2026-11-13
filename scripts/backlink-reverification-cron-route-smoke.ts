@@ -28,8 +28,10 @@ async function main(): Promise<void> {
 
   for (const required of [
     "export async function GET(request: NextRequest)",
-    "const CRON_SECRET = process.env.CRON_SECRET ?? \"\"",
-    "CRON_SECRET.length === 0 || authorization !== `Bearer ${CRON_SECRET}`",
+    "const cronSecret = process.env.CRON_SECRET ?? \"\"",
+    "cronSecret.length > 0 && authorization === `Bearer ${cronSecret}`",
+    "hasValidBacklinkN8nCronAuthorization",
+    "NORIXO_N8N_CRON_SECRET: process.env.NORIXO_N8N_CRON_SECRET",
     "return unauthorizedResponse()",
     "runBacklinkReverificationAutomation",
     "readBacklinkReverificationRuntimeConfig",

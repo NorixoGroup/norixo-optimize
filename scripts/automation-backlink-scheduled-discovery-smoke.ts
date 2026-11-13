@@ -231,6 +231,44 @@ async function main(): Promise<void> {
     const failing = createScheduledDiscoveryCronHandler({ dedicatedCronSecret: () => "ded-s3cret", legacyCronSecret: () => "", isEnabled: () => true, createProductionDependencies: () => { throw new Error("db password leak"); }, run: runScheduledBacklinkDiscovery, now: () => MONDAY });
     const failed = await failing(request("Bearer ded-s3cret"));
     assert(failed.status === 500 && !JSON.stringify(await failed.json()).includes("leak"), "Failures are generic");
+
+    // N8N-AUTH-02: the alternative n8n secret is additive, constant-time, and never a bypass.
+    const withN8n = (enabled: boolean) =>
+      createScheduledDiscoveryCronHandler({
+        dedicatedCronSecret: () => "ded-s3cret",
+        legacyCronSecret: () => "old-s3cret",
+        n8nCronSecret: () => "n8n-s3cret",
+        isEnabled: () => enabled,
+        createProductionDependencies: () => { constructed += 1; return makeDeps().deps; },
+        run: runScheduledBacklinkDiscovery,
+        now: () => MONDAY,
+      });
+    assert((await withN8n(false)(request("Bearer ded-s3cret"))).status === 200, "legacy dedicated secret still accepted");
+    assert((await withN8n(false)(request("Bearer old-s3cret"))).status === 200, "legacy fallback secret still accepted");
+    const n8nAuthorized = await withN8n(false)(request("Bearer n8n-s3cret"));
+    assert(n8nAuthorized.status === 200 && (await n8nAuthorized.json()).disposition === "disabled", "new n8n secret accepted, flag OFF still short-circuits (no bypass)");
+    assert((await withN8n(false)(request("Bearer wrong"))).status === 401, "incorrect secret refused");
+    assert((await withN8n(false)(request())).status === 401, "absent secret refused");
+    assert((await withN8n(false)(request("Bearer "))).status === 401, "empty bearer refused");
+    const n8nMasked = createScheduledDiscoveryCronHandler({
+      dedicatedCronSecret: () => "",
+      legacyCronSecret: () => "",
+      n8nCronSecret: () => "[SENSITIVE]",
+      isEnabled: () => true,
+      createProductionDependencies: () => { throw new Error("must not build"); },
+      run: runScheduledBacklinkDiscovery,
+      now: () => MONDAY,
+    });
+    assert((await n8nMasked(request("Bearer [SENSITIVE]"))).status === 401, "a masked n8n secret value is never treated as live");
+    const allUnconfigured = createScheduledDiscoveryCronHandler({
+      dedicatedCronSecret: () => "",
+      legacyCronSecret: () => "",
+      isEnabled: () => true,
+      createProductionDependencies: () => { throw new Error("must not build"); },
+      run: runScheduledBacklinkDiscovery,
+      now: () => MONDAY,
+    });
+    assert((await allUnconfigured(request("Bearer anything"))).status === 401, "all secrets unconfigured (n8n omitted entirely) never authorizes");
   }
 
   // 10. Scope: preview-only, no promotion/outreach/contact/ZeroBounce, not scheduled from vercel.json.
@@ -251,8 +289,9 @@ async function main(): Promise<void> {
         { path: "/api/internal/cron/backlinks/outreach/schedule", schedule: "0 6 * * *" },
         { path: "/api/internal/cron/backlinks/reverification", schedule: "0 5 * * *" },
         { path: "/api/internal/cron/backlinks/autonomy", schedule: "15 6 * * *" },
+        { path: "/api/internal/cron/backlinks/discovery-qualification-resume", schedule: "30 6 * * *" },
       ]),
-      "vercel.json keeps exactly the three other crons and no Discovery cron (scheduled by Supabase pg_cron)",
+      "vercel.json keeps exactly the four other crons and no Discovery cron (scheduled by Supabase pg_cron)",
     );
   }
 

@@ -9,6 +9,8 @@ import {
 import { isBacklinkDiscoveryQualificationResumeCandidateTask } from "@/lib/automation/repositories/backlinkDiscoveryQualificationResumeCandidatesRepository";
 import { runBacklinkDiscoveryQualificationResumeCron } from "@/lib/automation/backlink-discovery-qualification-resume-cron-service";
 import { createDryRunAutomationTaskHandlers } from "@/lib/automation/dry-run-handlers";
+import { GET } from "@/app/api/internal/cron/backlinks/discovery-qualification-resume/route";
+import { NextRequest } from "next/server";
 
 const NOW = new Date("2026-10-30T12:00:00.000Z");
 const NOW_MS = NOW.getTime();
@@ -63,6 +65,88 @@ test("config: authentication rejects a missing header, empty CRON_SECRET, or a m
 
 test("config: authentication accepts the exact Bearer secret", () => {
   assert.equal(hasValidBacklinkDiscoveryQualificationResumeCronAuthorization("Bearer s", { CRON_SECRET: "s" }), true);
+});
+
+// -- N8N-AUTH-02: alternative n8n secret on the real GET handler, additive and non-bypassing -----
+// The flag is kept OFF throughout so an authorized call short-circuits at disabledResponse()
+// before any Supabase client is constructed — safe to invoke in a local test process.
+// restoreEnv avoids process.env's string-coercion of `undefined` into the literal "undefined".
+
+const ENV_KEYS = ["CRON_SECRET", "NORIXO_N8N_CRON_SECRET", "BACKLINK_DISCOVERY_QUALIFICATION_RESUME_CRON_ENABLED"] as const;
+
+function snapshotEnv(): Record<(typeof ENV_KEYS)[number], string | undefined> {
+  return Object.fromEntries(ENV_KEYS.map((key) => [key, process.env[key]])) as never;
+}
+
+function restoreEnv(saved: Record<(typeof ENV_KEYS)[number], string | undefined>): void {
+  for (const key of ENV_KEYS) {
+    if (saved[key] === undefined) delete process.env[key];
+    else process.env[key] = saved[key];
+  }
+}
+
+test("route: legacy CRON_SECRET still authorizes; flag OFF still short-circuits (no bypass)", async () => {
+  const saved = snapshotEnv();
+  try {
+    process.env.CRON_SECRET = "legacy-s3cret";
+    process.env.NORIXO_N8N_CRON_SECRET = "n8n-s3cret";
+    delete process.env.BACKLINK_DISCOVERY_QUALIFICATION_RESUME_CRON_ENABLED;
+    const response = await GET(new NextRequest("https://example.test/api/internal/cron/backlinks/discovery-qualification-resume", { headers: { authorization: "Bearer legacy-s3cret" } }));
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { disposition: "disabled", reason: "BACKLINK_DISCOVERY_QUALIFICATION_RESUME_CRON_DISABLED" });
+  } finally {
+    restoreEnv(saved);
+  }
+});
+
+test("route: new NORIXO_N8N_CRON_SECRET authorizes; flag OFF still short-circuits (no bypass)", async () => {
+  const saved = snapshotEnv();
+  try {
+    process.env.CRON_SECRET = "legacy-s3cret";
+    process.env.NORIXO_N8N_CRON_SECRET = "n8n-s3cret";
+    delete process.env.BACKLINK_DISCOVERY_QUALIFICATION_RESUME_CRON_ENABLED;
+    const response = await GET(new NextRequest("https://example.test/api/internal/cron/backlinks/discovery-qualification-resume", { headers: { authorization: "Bearer n8n-s3cret" } }));
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { disposition: "disabled", reason: "BACKLINK_DISCOVERY_QUALIFICATION_RESUME_CRON_DISABLED" });
+  } finally {
+    restoreEnv(saved);
+  }
+});
+
+test("route: an incorrect secret is refused with 401", async () => {
+  const saved = snapshotEnv();
+  try {
+    process.env.CRON_SECRET = "legacy-s3cret";
+    process.env.NORIXO_N8N_CRON_SECRET = "n8n-s3cret";
+    const response = await GET(new NextRequest("https://example.test/api/internal/cron/backlinks/discovery-qualification-resume", { headers: { authorization: "Bearer wrong" } }));
+    assert.equal(response.status, 401);
+  } finally {
+    restoreEnv(saved);
+  }
+});
+
+test("route: an absent secret is refused with 401", async () => {
+  const saved = snapshotEnv();
+  try {
+    process.env.CRON_SECRET = "legacy-s3cret";
+    process.env.NORIXO_N8N_CRON_SECRET = "n8n-s3cret";
+    const response = await GET(new NextRequest("https://example.test/api/internal/cron/backlinks/discovery-qualification-resume"));
+    assert.equal(response.status, 401);
+  } finally {
+    restoreEnv(saved);
+  }
+});
+
+test("route: both secrets unconfigured never authorizes, with 401", async () => {
+  const saved = snapshotEnv();
+  try {
+    delete process.env.CRON_SECRET;
+    delete process.env.NORIXO_N8N_CRON_SECRET;
+    const response = await GET(new NextRequest("https://example.test/api/internal/cron/backlinks/discovery-qualification-resume", { headers: { authorization: "Bearer anything" } }));
+    assert.equal(response.status, 401);
+  } finally {
+    restoreEnv(saved);
+  }
 });
 
 // -- 3/4. Not-yet-due task vs. due (backoff elapsed) task -----------------------------------------

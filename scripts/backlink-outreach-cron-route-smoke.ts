@@ -15,7 +15,9 @@ async function main(): Promise<void> {
   for (const required of [
     "export async function GET(request: NextRequest)",
     "CRON_SECRET",
-    'authorization !== `Bearer ${CRON_SECRET}`',
+    "cronSecret.length > 0 && authorization === `Bearer ${cronSecret}`",
+    "hasValidBacklinkN8nCronAuthorization",
+    "NORIXO_N8N_CRON_SECRET: process.env.NORIXO_N8N_CRON_SECRET",
     "createSupabaseAdminClient()",
     'triggerKind: "cron"',
     "workspaceLimit: 25",

@@ -8,6 +8,7 @@ import {
   type ScheduledDiscoveryDependencies,
 } from "@/lib/automation/backlink-scheduled-discovery";
 import { createScheduledDiscoveryProductionDependencies } from "@/lib/automation/backlink-scheduled-discovery-production";
+import { MASKED_BACKLINK_N8N_CRON_SECRET_VALUE } from "@/lib/automation/backlink-n8n-cron-authorization";
 
 /**
  * Scheduled AI-assisted Brave discovery (Monday, Wednesday, Friday, UTC).
@@ -22,6 +23,7 @@ import { createScheduledDiscoveryProductionDependencies } from "@/lib/automation
 type CronDependencies = {
   dedicatedCronSecret: () => string;
   legacyCronSecret: () => string;
+  n8nCronSecret?: () => string;
   isEnabled: () => boolean;
   createProductionDependencies: () => ScheduledDiscoveryDependencies;
   run: typeof runScheduledBacklinkDiscovery;
@@ -41,10 +43,15 @@ async function matchesSecret(authorization: string | null, secret: string): Prom
 export function createScheduledDiscoveryCronHandler(deps: CronDependencies) {
   return async function GET(request: NextRequest) {
     const authorization = request.headers.get("authorization");
-    // Both secrets are always compared (no short-circuit between them).
+    // All configured secrets are always compared (no short-circuit between them).
     const dedicatedMatch = await matchesSecret(authorization, deps.dedicatedCronSecret());
     const legacyMatch = await matchesSecret(authorization, deps.legacyCronSecret());
-    if (!dedicatedMatch && !legacyMatch) {
+    const n8nSecret = deps.n8nCronSecret?.() ?? "";
+    const n8nMatch =
+      n8nSecret.length > 0 &&
+      n8nSecret !== MASKED_BACKLINK_N8N_CRON_SECRET_VALUE &&
+      (await matchesSecret(authorization, n8nSecret));
+    if (!dedicatedMatch && !legacyMatch && !n8nMatch) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -66,6 +73,7 @@ export function createScheduledDiscoveryCronHandler(deps: CronDependencies) {
 export const GET = createScheduledDiscoveryCronHandler({
   dedicatedCronSecret: () => process.env.BACKLINK_DISCOVERY_CRON_SECRET ?? "",
   legacyCronSecret: () => process.env.CRON_SECRET ?? "",
+  n8nCronSecret: () => process.env.NORIXO_N8N_CRON_SECRET ?? "",
   isEnabled: () => isScheduledDiscoveryEnabled(),
   createProductionDependencies: createScheduledDiscoveryProductionDependencies,
   run: runScheduledBacklinkDiscovery,

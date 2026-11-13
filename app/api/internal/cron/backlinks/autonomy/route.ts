@@ -6,9 +6,11 @@ import {
   type BacklinkAutonomyProductionDependencies,
 } from "@/lib/automation/backlink-autonomy-production-composition";
 import { readBacklinkAutonomyRuntimeConfig } from "@/lib/automation/backlink-autonomy-runtime-config";
+import { hasValidBacklinkN8nCronAuthorization } from "@/lib/automation/backlink-n8n-cron-authorization";
 
 type CronDependencies = {
   cronSecret: () => string;
+  n8nCronSecret?: () => string;
   runtimeConfig: typeof readBacklinkAutonomyRuntimeConfig;
   createProductionDependencies: () => BacklinkAutonomyProductionDependencies;
   runTick: typeof runBacklinkAutonomyProductionTick;
@@ -22,8 +24,13 @@ function unauthorizedResponse() {
 /** The only production entrypoint: fixed bounds are owned by the composition, never request input. */
 export function createBacklinkAutonomyCronHandler(deps: CronDependencies) {
   return async function GET(request: NextRequest) {
+    const authorization = request.headers.get("authorization");
     const secret = deps.cronSecret();
-    if (secret.length === 0 || request.headers.get("authorization") !== `Bearer ${secret}`) {
+    const isLegacyAuthorized = secret.length > 0 && authorization === `Bearer ${secret}`;
+    const isN8nAuthorized = await hasValidBacklinkN8nCronAuthorization(authorization, {
+      NORIXO_N8N_CRON_SECRET: deps.n8nCronSecret?.() ?? "",
+    });
+    if (!isLegacyAuthorized && !isN8nAuthorized) {
       return unauthorizedResponse();
     }
 
@@ -47,6 +54,7 @@ export function createBacklinkAutonomyCronHandler(deps: CronDependencies) {
 
 export const GET = createBacklinkAutonomyCronHandler({
   cronSecret: () => process.env.CRON_SECRET ?? "",
+  n8nCronSecret: () => process.env.NORIXO_N8N_CRON_SECRET ?? "",
   runtimeConfig: readBacklinkAutonomyRuntimeConfig,
   createProductionDependencies: createBacklinkAutonomyProductionDependencies,
   runTick: runBacklinkAutonomyProductionTick,

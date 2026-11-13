@@ -123,6 +123,38 @@ async function main() {
   assert.equal(dependenciesCreated, 0, "global OFF must not build production adapters");
   assert.equal(tickCalls, 0, "global OFF must not invoke a tick");
 
+  // N8N-AUTH-02: the alternative n8n secret is additive, never a bypass of the global flag gate.
+  const n8nHandler = createBacklinkAutonomyCronHandler({
+    cronSecret: () => "test-secret",
+    n8nCronSecret: () => "n8n-s3cret",
+    runtimeConfig: off,
+    createProductionDependencies: () => { dependenciesCreated += 1; return {} as never; },
+    runTick: async () => { tickCalls += 1; throw new Error("must not tick"); },
+    now: () => at,
+  });
+  const requestWith = (authorization?: string) =>
+    new NextRequest("https://example.test/api/internal/cron/backlinks/autonomy", {
+      headers: authorization === undefined ? {} : { authorization },
+    });
+  assert.equal((await n8nHandler(requestWith("Bearer test-secret"))).status, 200, "legacy secret still accepted");
+  const n8nAuthorized = await n8nHandler(requestWith("Bearer n8n-s3cret"));
+  assert.equal(n8nAuthorized.status, 200, "new n8n secret accepted");
+  assert.deepEqual(await n8nAuthorized.json(), { disposition: "disabled", reason: "BACKLINK_AUTONOMY_DISABLED" }, "n8n secret does not bypass the global flag gate");
+  assert.equal((await n8nHandler(requestWith("Bearer wrong"))).status, 401, "incorrect secret refused");
+  assert.equal((await n8nHandler(requestWith())).status, 401, "absent secret refused");
+  assert.equal(
+    (await createBacklinkAutonomyCronHandler({
+      cronSecret: () => "",
+      runtimeConfig: off,
+      createProductionDependencies: () => { throw new Error("must not build"); },
+      runTick: async () => { throw new Error("must not tick"); },
+      now: () => at,
+    })(requestWith("Bearer anything")))!.status,
+    401,
+    "unconfigured secrets (legacy and n8n both absent) never authorize",
+  );
+  assert.equal(dependenciesCreated, 0, "no authorized-and-enabled call occurred in this block");
+
   const composition = await readFile(new URL("../lib/automation/backlink-autonomy-production-composition.ts", import.meta.url), "utf8");
   const route = await readFile(new URL("../app/api/internal/cron/backlinks/autonomy/route.ts", import.meta.url), "utf8");
   assert.match(composition, /claimNextBacklinkAutonomyTask/, "production worker must use the filtered claim adapter");
