@@ -12,8 +12,8 @@ import {
 import { listBacklinkReverificationCandidates } from "@/lib/backlinks/repositories/linksRepository";
 import { listAutomationWorkspaceControlsForBacklinkReverification } from "@/lib/automation/repositories/automationWorkspaceControlsRepository";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { hasValidBacklinkN8nCronAuthorization } from "@/lib/automation/backlink-n8n-cron-authorization";
 
-const CRON_SECRET = process.env.CRON_SECRET ?? "";
 const CRON_WORKSPACE_LIMIT = 1;
 const CRON_CANDIDATE_LIMIT_PER_WORKSPACE = 5;
 const CRON_SCHEDULER_MAX_ITERATIONS = 1;
@@ -24,8 +24,13 @@ function unauthorizedResponse() {
 }
 
 export async function GET(request: NextRequest) {
-  const authorization = request.headers.get("authorization") ?? "";
-  if (CRON_SECRET.length === 0 || authorization !== `Bearer ${CRON_SECRET}`) {
+  const authorization = request.headers.get("authorization");
+  const cronSecret = process.env.CRON_SECRET ?? "";
+  const isLegacyAuthorized = cronSecret.length > 0 && authorization === `Bearer ${cronSecret}`;
+  const isN8nAuthorized = await hasValidBacklinkN8nCronAuthorization(authorization, {
+    NORIXO_N8N_CRON_SECRET: process.env.NORIXO_N8N_CRON_SECRET,
+  });
+  if (!isLegacyAuthorized && !isN8nAuthorized) {
     return unauthorizedResponse();
   }
 

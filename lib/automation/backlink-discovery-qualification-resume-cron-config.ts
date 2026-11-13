@@ -1,5 +1,6 @@
 export type BacklinkDiscoveryQualificationResumeCronEnvironment = {
   CRON_SECRET?: string;
+  NORIXO_N8N_CRON_SECRET?: string;
   BACKLINK_DISCOVERY_QUALIFICATION_RESUME_CRON_ENABLED?: string;
 };
 

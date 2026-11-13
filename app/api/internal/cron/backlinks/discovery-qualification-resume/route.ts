@@ -5,6 +5,7 @@ import {
   hasValidBacklinkDiscoveryQualificationResumeCronAuthorization,
   isBacklinkDiscoveryQualificationResumeCronEnabled,
 } from "@/lib/automation/backlink-discovery-qualification-resume-cron-config";
+import { hasValidBacklinkN8nCronAuthorization } from "@/lib/automation/backlink-n8n-cron-authorization";
 import { runBacklinkDiscoveryQualificationResumeCron } from "@/lib/automation/backlink-discovery-qualification-resume-cron-service";
 import { listBacklinkDiscoveryQualificationResumeCandidates } from "@/lib/automation/repositories/backlinkDiscoveryQualificationResumeCandidatesRepository";
 import {
@@ -84,15 +85,17 @@ function notSupported(operation: string): never {
 export async function GET(request: NextRequest) {
   const environment = {
     CRON_SECRET: process.env.CRON_SECRET,
+    NORIXO_N8N_CRON_SECRET: process.env.NORIXO_N8N_CRON_SECRET,
     BACKLINK_DISCOVERY_QUALIFICATION_RESUME_CRON_ENABLED:
       process.env.BACKLINK_DISCOVERY_QUALIFICATION_RESUME_CRON_ENABLED,
   };
-  if (
-    !hasValidBacklinkDiscoveryQualificationResumeCronAuthorization(
-      request.headers.get("authorization"),
-      environment,
-    )
-  ) {
+  const authorization = request.headers.get("authorization");
+  const isLegacyAuthorized = hasValidBacklinkDiscoveryQualificationResumeCronAuthorization(
+    authorization,
+    environment,
+  );
+  const isN8nAuthorized = await hasValidBacklinkN8nCronAuthorization(authorization, environment);
+  if (!isLegacyAuthorized && !isN8nAuthorized) {
     return unauthorizedResponse();
   }
   // Must precede any client/DB construction: global OFF performs no reads, claims, or writes.
