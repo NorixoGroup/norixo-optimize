@@ -191,7 +191,7 @@ export const authorityTrustI18n = {
         "Un audit Norixo est un outil d’aide à la décision. Il ne promet pas une hausse garantie du revenu, du taux d’occupation ou du classement, et ne modifie pas automatiquement votre annonce.",
     },
     freeAudit: {
-      eyebrow: "METHODE DE L’APERÇU",
+      eyebrow: "MÉTHODE DE L’APERÇU",
       title: "Sur quoi repose l’aperçu marché gratuit",
       intro:
         "L’aperçu gratuit est volontairement plus étroit que l’audit complet. Il montre un point de référence agrégé pour un segment de marché avant toute analyse spécifique de votre annonce.",
@@ -295,7 +295,7 @@ export const authorityTrustI18n = {
         "Una auditoría Norixo es una ayuda a la decisión. No promete ingresos, ocupación ni ranking garantizados, y no edita ni publica tu anuncio automáticamente.",
     },
     freeAudit: {
-      eyebrow: "METODO DE LA PREVIA",
+      eyebrow: "MÉTODO DE LA VISTA PREVIA",
       title: "En qué se basa la vista previa gratuita del mercado",
       intro:
         "La vista previa gratuita es intencionadamente más limitada que la auditoría completa. Muestra una referencia agregada de mercado para un segmento antes de cualquier análisis específico de tu anuncio.",
@@ -503,7 +503,7 @@ export const authorityTrustI18n = {
         "Um audit Norixo é uma ferramenta de apoio à decisão. Não promete receitas, ocupação ou ranking garantidos e não edita nem publica automaticamente o seu anúncio.",
     },
     freeAudit: {
-      eyebrow: "METODO DA PREVISUALIZACAO",
+      eyebrow: "MÉTODO DA PRÉ-VISUALIZAÇÃO",
       title: "Em que se baseia a prévia gratuita do mercado",
       intro:
         "A prévia gratuita é intencionalmente mais limitada do que o audit completo. Ela mostra um ponto de referência agregado para um segmento de mercado antes de qualquer análise específica do seu anúncio.",
