@@ -431,32 +431,32 @@ export const freeAuditTranslations = {
   },
   fr: {
     hero: {
-      eyebrow: "Apercu gratuit du marche",
-      title: "Decouvrez un apercu tarifaire du marche",
+      eyebrow: "Aperçu gratuit du marché",
+      title: "Découvrez un aperçu tarifaire du marché",
       subtitle:
-        "L'apercu gratuit du marche de Norixo prend en charge les sources de marche Airbnb, Booking, Expedia, Agoda et Vrbo et montre la fourchette observee et la mediane de votre categorie avant un audit complet de l'annonce.",
+        "L'aperçu gratuit du marché de Norixo prend en charge les sources de marché Airbnb, Booking, Expedia, Agoda et Vrbo et montre la fourchette observée et la médiane de votre catégorie avant un audit complet de l'annonce.",
       reassurance:
-        "Aucune carte bancaire. Aucune extraction de donnees. Aucun contenu ni prix personnel de votre annonce n'est consulte.",
+        "Aucune carte bancaire. Aucune extraction de données. Aucun contenu ni prix personnel de votre annonce n'est consulté.",
     },
     form: {
-      title: "Apercu du marche",
+      title: "Aperçu du marché",
       text:
-        "Renseignez les informations structurees ci-dessous pour recevoir un apercu fonde uniquement sur les benchmarks agreges du marche.",
-      listingUrlLabel: "URL de l'annonce (facultative — non analysee ni envoyee)",
+        "Renseignez les informations structurées ci-dessous pour recevoir un aperçu fondé uniquement sur les benchmarks agrégés du marché.",
+      listingUrlLabel: "URL de l'annonce (facultative — non analysée ni envoyée)",
       listingUrlPlaceholder: "https://www.airbnb.com/rooms/123456789",
       countryLabel: "Pays",
       countryPlaceholder: "France",
       cityLabel: "Ville",
       cityPlaceholder: "Paris",
       platformLabel: "Plateforme",
-      platformPlaceholder: "Selectionnez une plateforme",
+      platformPlaceholder: "Sélectionnez une plateforme",
       propertyTypeLabel: "Type de logement",
-      propertyTypePlaceholder: "Selectionnez un type de logement",
-      submitIdle: "Voir mon apercu du marche",
-      submitLoading: "Analyse du marche...",
+      propertyTypePlaceholder: "Sélectionnez un type de logement",
+      submitIdle: "Voir mon aperçu du marché",
+      submitLoading: "Analyse du marché...",
       helper:
-        "L'URL reste locale a votre navigateur et n'est jamais envoyee a l'API d'apercu.",
-      statusLoading: "Analyse du marche en cours.",
+        "L'URL reste locale à votre navigateur et n'est jamais envoyée à l'API d'aperçu.",
+      statusLoading: "Analyse du marché en cours.",
     },
     options: {
       platform: {
@@ -472,184 +472,184 @@ export const freeAuditTranslations = {
         villa: "Villa",
         riad: "Riad",
         room: "Chambre",
-        hotel: "Hotel",
+        hotel: "Hôtel",
       },
     },
     errors: {
       listing_url_invalid: "Indiquez une URL valide sur une plateforme prise en charge.",
       country_required: "Indiquez votre pays.",
       city_required: "Indiquez votre ville.",
-      platform_required: "Selectionnez une plateforme.",
-      property_type_required: "Selectionnez un type de logement.",
-      invalid_request: "Certaines informations doivent etre corrigees.",
+      platform_required: "Sélectionnez une plateforme.",
+      property_type_required: "Sélectionnez un type de logement.",
+      invalid_request: "Certaines informations doivent être corrigées.",
       rate_limited:
-        "Vous avez effectue plusieurs demandes. Reessayez dans quelques minutes.",
-      unavailable: "L'apercu gratuit est temporairement indisponible.",
-      network_error: "Impossible de charger l'apercu pour le moment.",
-      unknown_error: "Impossible de charger l'apercu pour le moment.",
+        "Vous avez effectué plusieurs demandes. Réessayez dans quelques minutes.",
+      unavailable: "L'aperçu gratuit est temporairement indisponible.",
+      network_error: "Impossible de charger l'aperçu pour le moment.",
+      unknown_error: "Impossible de charger l'aperçu pour le moment.",
     },
     result: {
-      title: "Apercu tarifaire du marche",
+      title: "Aperçu tarifaire du marché",
       text:
-        "Resultat fonde uniquement sur les donnees de marche agregees disponibles pour cette categorie.",
-      initialTitle: "Votre apercu apparaitra ici.",
+        "Résultat fondé uniquement sur les données de marché agrégées disponibles pour cette catégorie.",
+      initialTitle: "Votre aperçu apparaîtra ici.",
       initialText:
-        "Norixo affichera la fourchette observee et la mediane disponibles pour votre marche.",
-      initialGuideTitle: "Ce que vous decouvrirez",
+        "Norixo affichera la fourchette observée et la médiane disponibles pour votre marché.",
+      initialGuideTitle: "Ce que vous découvrirez",
       initialGuideItems: [
         {
-          title: "Fourchette observee",
-          text: "Decouvrez les prix bas et hauts disponibles pour ce marche.",
+          title: "Fourchette observée",
+          text: "Découvrez les prix bas et hauts disponibles pour ce marché.",
         },
         {
-          title: "Mediane du marche",
-          text: "Visualisez le niveau central observe sur cette categorie.",
+          title: "Médiane du marché",
+          text: "Visualisez le niveau central observé sur cette catégorie.",
         },
         {
           title: "Niveau de confiance",
-          text: "Comprenez la solidite des donnees actuellement disponibles.",
+          text: "Comprenez la solidité des données actuellement disponibles.",
         },
       ],
       initialPrompt:
-        "Completez le formulaire pour afficher l'apercu disponible pour ce marche.",
-      submittingTitle: "Preparation de votre apercu marche",
+        "Complétez le formulaire pour afficher l'aperçu disponible pour ce marché.",
+      submittingTitle: "Préparation de votre aperçu marché",
       submittingText:
-        "Norixo assemble les signaux de marche agreges disponibles pour cette categorie.",
-      benchmarkRange: "Fourchette observee",
-      medianPrice: "Mediane",
-      marketTitle: "Instantane du marche",
+        "Norixo assemble les signaux de marché agrégés disponibles pour cette catégorie.",
+      benchmarkRange: "Fourchette observée",
+      medianPrice: "Médiane",
+      marketTitle: "Instantané du marché",
       marketScopeAllPlatforms: "Toutes plateformes",
       confidenceTitle: "Confiance",
       recommendationsTitle: "Recommandations",
-      limitationsTitle: "A savoir",
+      limitationsTitle: "À savoir",
       insufficientTitle: "Couverture encore insuffisante",
       insufficientText:
-        "Nous ne disposons pas encore d'un volume suffisant de donnees agregees pour cette demande.",
-      unavailableTitle: "Apercu indisponible",
+        "Nous ne disposons pas encore d'un volume suffisant de données agrégées pour cette demande.",
+      unavailableTitle: "Aperçu indisponible",
       confidenceLevel: {
         standard: "Confiance standard",
-        high: "Confiance elevee",
+        high: "Confiance élevée",
       },
       sampleBand: {
-        sufficient: "Echantillon suffisant",
-        strong: "Echantillon solide",
+        sufficient: "Échantillon suffisant",
+        strong: "Échantillon solide",
       },
       limitationCodes: {
-        market_only: "Aucun prix ni contenu de votre annonce n'a ete analyse.",
+        market_only: "Aucun prix ni contenu de votre annonce n'a été analysé.",
         aggregated_market_data:
-          "Les resultats reposent sur des donnees de marche agregees.",
+          "Les résultats reposent sur des données de marché agrégées.",
         listing_specific_factors:
-          "Les caracteristiques du logement, la saison et l'emplacement precis peuvent fortement modifier le tarif adapte.",
+          "Les caractéristiques du logement, la saison et l'emplacement précis peuvent fortement modifier le tarif adapté.",
         broad_market_segment:
-          "Le benchmark disponible couvre un segment de marche plus large que la demande initiale.",
+          "Le benchmark disponible couvre un segment de marché plus large que la demande initiale.",
         all_capacities_scope:
-          "L'apercu agrege toutes les capacites d'accueil dans ce segment de marche.",
+          "L'aperçu agrège toutes les capacités d'accueil dans ce segment de marché.",
         multi_platform_scope:
-          "Cet apercu regroupe des donnees agregees issues de plusieurs plateformes de reservation.",
+          "Cet aperçu regroupe des données agrégées issues de plusieurs plateformes de réservation.",
         limited_sample_size:
-          "L'echantillon reste encore limite pour ce segment de marche.",
+          "L'échantillon reste encore limité pour ce segment de marché.",
         limited_source_diversity:
-          "La diversite des sources reste encore limitee pour ce segment de marche.",
+          "La diversité des sources reste encore limitée pour ce segment de marché.",
         aging_data:
-          "Une partie des donnees agregees commence a vieillir.",
+          "Une partie des données agrégées commence à vieillir.",
         multi_currency_market:
-          "Plusieurs devises concurrentes existent sur ce marche et ne permettent pas un apercu fiable sans contexte supplementaire.",
+          "Plusieurs devises concurrentes existent sur ce marché et ne permettent pas un aperçu fiable sans contexte supplémentaire.",
       },
       recommendationCodes: {
         median_positions_market:
-          "La mediane observee permet de situer le niveau central de ce marche.",
+          "La médiane observée permet de situer le niveau central de ce marché.",
         broader_segment_used:
-          "Le segment utilise couvre un marche plus large que le type demande.",
+          "Le segment utilisé couvre un marché plus large que le type demandé.",
         listing_specific_factors_matter:
-          "Les photos, les equipements, la saisonnalite et l'emplacement peuvent fortement faire varier le bon prix.",
+          "Les photos, les équipements, la saisonnalité et l'emplacement peuvent fortement faire varier le bon prix.",
         full_audit_for_positioning:
-          "L'audit complet analysera votre annonce et vos concurrents reels pour determiner votre positionnement exact.",
+          "L'audit complet analysera votre annonce et vos concurrents réels pour déterminer votre positionnement exact.",
       },
     },
     premium: {
-      rangeLabel: "Fourchette observee",
-      marketMedianLabel: "Mediane marche",
-      marketNowTitle: "Marche actuel",
+      rangeLabel: "Fourchette observée",
+      marketMedianLabel: "Médiane marché",
+      marketNowTitle: "Marché actuel",
       lowPriceLabel: "Prix bas",
-      medianPriceLabel: "Prix median",
+      medianPriceLabel: "Prix médian",
       highPriceLabel: "Prix haut",
-      compareToMarketCta: "Comparer mon annonce a ce marche",
-      revealTitle: "Ce que votre audit complet va reveler",
+      compareToMarketCta: "Comparer mon annonce à ce marché",
+      revealTitle: "Ce que votre audit complet va révéler",
       revealSubtitle:
-        "L'apercu gratuit vous montre le marche. L'audit complet analyse reellement votre annonce.",
+        "L'aperçu gratuit vous montre le marché. L'audit complet analyse réellement votre annonce.",
       revealCards: [
         {
-          title: "Votre position reelle",
+          title: "Votre position réelle",
           text:
-            "Comparez votre annonce aux concurrents de votre marche et identifiez votre positionnement exact.",
+            "Comparez votre annonce aux concurrents de votre marché et identifiez votre positionnement exact.",
         },
         {
           title: "Votre potentiel tarifaire",
           text:
-            "Decouvrez les niveaux de prix adaptes a votre logement, a votre saison et a votre environnement concurrentiel.",
+            "Découvrez les niveaux de prix adaptés à votre logement, à votre saison et à votre environnement concurrentiel.",
         },
         {
           title: "Vos leviers de conversion",
           text:
-            "Analysez votre titre, votre description, vos photos, vos equipements et les elements qui freinent les reservations.",
+            "Analysez votre titre, votre description, vos photos, vos équipements et les éléments qui freinent les réservations.",
         },
         {
           title: "Vos actions prioritaires",
           text:
-            "Recevez un plan d'action clair, classe selon l'impact potentiel sur vos performances.",
+            "Recevez un plan d'action clair, classé selon l'impact potentiel sur vos performances.",
         },
       ],
       journeyTitle: "Votre parcours avec Norixo",
       journeySteps: [
         {
-          title: "Apercu marche gratuit",
-          text: "Decouvrez la fourchette et la mediane du marche.",
+          title: "Aperçu marché gratuit",
+          text: "Découvrez la fourchette et la médiane du marché.",
         },
         {
-          title: "Analyse complete de l'annonce",
+          title: "Analyse complète de l'annonce",
           text:
             "Norixo analyse votre contenu, vos concurrents et votre positionnement.",
         },
         {
-          title: "Plan d'action personnalise",
-          text: "Recevez des recommandations concretes et prioritaires.",
+          title: "Plan d'action personnalisé",
+          text: "Recevez des recommandations concrètes et prioritaires.",
         },
       ],
-      unlockCta: "Debloquer mon audit complet",
+      unlockCta: "Débloquer mon audit complet",
     },
     clarity: {
-      title: "Comprendre l'apercu gratuit",
+      title: "Comprendre l'aperçu gratuit",
       cards: [
         {
           title: "Ce que vous obtenez gratuitement",
-          text: "Cette etape est un apercu de marche public, pas encore un audit personnalise de l'annonce.",
+          text: "Cette étape est un aperçu de marché public, pas encore un audit personnalisé de l'annonce.",
           items: [
-            "Fourchette observee pour votre categorie",
-            "Mediane du marche et niveau de confiance",
-            "Signaux de couverture et de limites pour ce marche",
+            "Fourchette observée pour votre catégorie",
+            "Médiane du marché et niveau de confiance",
+            "Signaux de couverture et de limites pour ce marché",
           ],
         },
         {
-          title: "Ce qui n'est pas encore analyse",
-          text: "Norixo n'inspecte pas le contenu prive de votre annonce avant le lancement de l'audit complet.",
+          title: "Ce qui n'est pas encore analysé",
+          text: "Norixo n'inspecte pas le contenu privé de votre annonce avant le lancement de l'audit complet.",
           items: [
-            "Aucune revue du titre, de la description, des photos ou des equipements",
-            "Aucune analyse de votre prix prive",
-            "Aucun diagnostic complet des concurrents ni plan d'action a ce stade",
+            "Aucune revue du titre, de la description, des photos ou des équipements",
+            "Aucune analyse de votre prix privé",
+            "Aucun diagnostic complet des concurrents ni plan d'action à ce stade",
           ],
         },
         {
-          title: "Pourquoi ces resultats sont credibles",
-          text: "L'apercu s'appuie sur des benchmarks publics agreges, selectionnes pour votre marche par les regles d'intelligence de Norixo.",
+          title: "Pourquoi ces résultats sont crédibles",
+          text: "L'aperçu s'appuie sur des benchmarks publics agrégés, sélectionnés pour votre marché par les règles d'intelligence de Norixo.",
           items: [
-            "Donnees de marche agregees et anonymisees uniquement",
-            "Aucune donnee privee utilisateur publiee ni reutilisee publiquement",
+            "Données de marché agrégées et anonymisées uniquement",
+            "Aucune donnée privée utilisateur publiée ni réutilisée publiquement",
             "La couverture peut varier selon la ville, la plateforme et le type de logement",
           ],
         },
         {
-          title: "Pourquoi creer un compte ensuite",
-          text: "Le compte permet a Norixo de poursuivre de maniere securisee depuis cet apercu vers le parcours d'audit complet.",
+          title: "Pourquoi créer un compte ensuite",
+          text: "Le compte permet à Norixo de poursuivre de manière sécurisée depuis cet aperçu vers le parcours d'audit complet.",
           items: [
             "Sauvegarder le contexte de reprise",
             "Lancer l'audit complet depuis le dashboard",
@@ -659,92 +659,92 @@ export const freeAuditTranslations = {
       ],
     },
     compare: {
-      title: "Apercu gratuit vs audit complet",
-      freeTitle: "Apercu de marche gratuit",
+      title: "Aperçu gratuit vs audit complet",
+      freeTitle: "Aperçu de marché gratuit",
       fullTitle: "Audit complet",
       freeItems: [
-        "Fourchette de prix agregee",
-        "Mediane du marche",
+        "Fourchette de prix agrégée",
+        "Médiane du marché",
         "Niveau de confiance",
-        "Recommandations generales",
-        "Aucun contenu de l'annonce consulte",
+        "Recommandations générales",
+        "Aucun contenu de l'annonce consulté",
       ],
       fullItems: [
-        "Analyse reelle de l'annonce",
+        "Analyse réelle de l'annonce",
         "Titre et description",
-        "Photos et equipements",
-        "Concurrents reels",
-        "Opportunites de conversion",
-        "Recommandations personnalisees",
-        "Analyse pricing complete",
+        "Photos et équipements",
+        "Concurrents réels",
+        "Opportunités de conversion",
+        "Recommandations personnalisées",
+        "Analyse pricing complète",
         "Analyse d'occupation si disponible",
       ],
     },
     faq: {
-      title: "Questions frequentes",
+      title: "Questions fréquentes",
       items: [
         {
-          question: "L'apercu gratuit est-il vraiment gratuit ?",
+          question: "L'aperçu gratuit est-il vraiment gratuit ?",
           answer:
-            "Oui. L'apercu marche ne demande aucune carte bancaire et ne consomme aucun credit d'audit payant.",
+            "Oui. L'aperçu marché ne demande aucune carte bancaire et ne consomme aucun crédit d'audit payant.",
         },
         {
-          question: "Norixo se connecte-t-il a mon compte de plateforme ?",
+          question: "Norixo se connecte-t-il à mon compte de plateforme ?",
           answer:
-            "Non. L'apercu gratuit utilise uniquement des informations structurees de marche et ne necessite aucune connexion a votre compte.",
+            "Non. L'aperçu gratuit utilise uniquement des informations structurées de marché et ne nécessite aucune connexion à votre compte.",
         },
         {
-          question: "Mon annonce est-elle extraite pendant l'apercu gratuit ?",
+          question: "Mon annonce est-elle extraite pendant l'aperçu gratuit ?",
           answer:
-            "Non. A ce stade Norixo ne lance pas d'extraction complete de l'annonce et n'analyse pas encore le contenu de votre annonce.",
+            "Non. À ce stade Norixo ne lance pas d'extraction complète de l'annonce et n'analyse pas encore le contenu de votre annonce.",
         },
         {
-          question: "D'ou viennent les donnees affichees ?",
+          question: "D'où viennent les données affichées ?",
           answer:
-            "L'apercu est construit a partir de benchmarks publics agreges selectionnes pour le segment de marche demande.",
+            "L'aperçu est construit à partir de benchmarks publics agrégés sélectionnés pour le segment de marché demandé.",
         },
         {
           question: "Pourquoi l'audit complet est-il payant ?",
           answer:
-            "L'audit payant va au-dela du benchmark public et analyse votre annonce reelle, son contenu, son positionnement et ses actions prioritaires.",
+            "L'audit payant va au-delà du benchmark public et analyse votre annonce réelle, son contenu, son positionnement et ses actions prioritaires.",
         },
         {
-          question: "Que se passe-t-il si la couverture du marche est encore insuffisante ?",
+          question: "Que se passe-t-il si la couverture du marché est encore insuffisante ?",
           answer:
-            "Norixo indique que la couverture est insuffisante au lieu de simuler une precision que les benchmarks publics ne permettent pas encore.",
+            "Norixo indique que la couverture est insuffisante au lieu de simuler une précision que les benchmarks publics ne permettent pas encore.",
         },
       ],
     },
     cta: {
-      title: "Pret a debloquer l'audit complet ?",
-      text: "Passez d'un apercu du marche a l'audit complet de votre annonce avec Norixo.",
-      primary: "Debloquer l'audit complet",
-      secondary: "Partir de votre annonce reelle",
-      reassurance: "Obtenez votre positionnement exact et des recommandations personnalisees.",
+      title: "Prêt à débloquer l'audit complet ?",
+      text: "Passez d'un aperçu du marché à l'audit complet de votre annonce avec Norixo.",
+      primary: "Débloquer l'audit complet",
+      secondary: "Partir de votre annonce réelle",
+      reassurance: "Obtenez votre positionnement exact et des recommandations personnalisées.",
     },
     seo: {
-      title: "Audit Airbnb gratuit : consultez les prix de votre marche | Norixo",
+      title: "Audit Airbnb gratuit : consultez les prix de votre marché | Norixo",
       description:
-        "Consultez gratuitement la fourchette de prix et la mediane de votre marche avec des donnees agregees, sans extraction de donnees ni carte bancaire.",
+        "Consultez gratuitement la fourchette de prix et la médiane de votre marché avec des données agrégées, sans extraction de données ni carte bancaire.",
     },
   },
   es: {
     hero: {
       eyebrow: "Vista previa gratuita del mercado",
-      title: "Descubre una vision general de los precios del mercado",
+      title: "Descubre una visión general de los precios del mercado",
       subtitle:
-        "La vista previa gratuita del mercado de Norixo admite fuentes de mercado de Airbnb, Booking, Expedia, Agoda y Vrbo y muestra el rango observado y la mediana de tu categoria antes de una auditoria completa del anuncio.",
+        "La vista previa gratuita del mercado de Norixo admite fuentes de mercado de Airbnb, Booking, Expedia, Agoda y Vrbo y muestra el rango observado y la mediana de tu categoría antes de una auditoría completa del anuncio.",
       reassurance:
-        "Sin tarjeta bancaria. Sin extraccion de datos. No se analiza el contenido del anuncio ni tu precio personal en esta etapa.",
+        "Sin tarjeta bancaria. Sin extracción de datos. No se analiza el contenido del anuncio ni tu precio personal en esta etapa.",
     },
     form: {
       title: "Vista estructurada del mercado",
       text:
-        "Completa los datos estructurados a continuacion para recibir una vista previa basada unicamente en benchmarks agregados del mercado.",
-      listingUrlLabel: "URL del anuncio (opcional — no se analiza ni se envia)",
+        "Completa los datos estructurados a continuación para recibir una vista previa basada únicamente en benchmarks agregados del mercado.",
+      listingUrlLabel: "URL del anuncio (opcional — no se analiza ni se envía)",
       listingUrlPlaceholder: "https://www.airbnb.com/rooms/123456789",
-      countryLabel: "Pais",
-      countryPlaceholder: "Espana",
+      countryLabel: "País",
+      countryPlaceholder: "España",
       cityLabel: "Ciudad",
       cityPlaceholder: "Barcelona",
       platformLabel: "Plataforma",
@@ -752,9 +752,9 @@ export const freeAuditTranslations = {
       propertyTypeLabel: "Tipo de alojamiento",
       propertyTypePlaceholder: "Selecciona un tipo de alojamiento",
       submitIdle: "Ver mi vista del mercado",
-      submitLoading: "Analisis del mercado...",
+      submitLoading: "Análisis del mercado...",
       helper:
-        "La URL permanece en tu navegador y nunca se envia a la API de vista previa.",
+        "La URL permanece en tu navegador y nunca se envía a la API de vista previa.",
       statusLoading: "Vista previa del mercado en curso.",
     },
     options: {
@@ -770,30 +770,30 @@ export const freeAuditTranslations = {
         apartment: "Apartamento",
         villa: "Villa",
         riad: "Riad",
-        room: "Habitacion",
+        room: "Habitación",
         hotel: "Hotel",
       },
     },
     errors: {
-      listing_url_invalid: "Introduce una URL valida de una plataforma compatible.",
-      country_required: "Introduce tu pais.",
+      listing_url_invalid: "Introduce una URL válida de una plataforma compatible.",
+      country_required: "Introduce tu país.",
       city_required: "Introduce tu ciudad.",
       platform_required: "Selecciona una plataforma.",
       property_type_required: "Selecciona un tipo de alojamiento.",
-      invalid_request: "Hay informacion que debe corregirse.",
+      invalid_request: "Hay información que debe corregirse.",
       rate_limited: "Has realizado varias solicitudes. Vuelve a intentarlo en unos minutos.",
-      unavailable: "La vista previa gratuita no esta disponible temporalmente.",
+      unavailable: "La vista previa gratuita no está disponible temporalmente.",
       network_error: "No es posible cargar la vista previa ahora mismo.",
       unknown_error: "No es posible cargar la vista previa ahora mismo.",
     },
     result: {
       title: "Resumen de precios del mercado",
       text:
-        "Resultado basado unicamente en los datos agregados del mercado disponibles para esta categoria.",
-      initialTitle: "Tu vista previa aparecera aqui.",
+        "Resultado basado únicamente en los datos agregados del mercado disponibles para esta categoría.",
+      initialTitle: "Tu vista previa aparecerá aquí.",
       initialText:
-        "Norixo mostrara el rango de precios observado y la mediana disponible para tu mercado.",
-      initialGuideTitle: "Lo que descubriras",
+        "Norixo mostrará el rango de precios observado y la mediana disponible para tu mercado.",
+      initialGuideTitle: "Lo que descubrirás",
       initialGuideItems: [
         {
           title: "Rango observado",
@@ -801,7 +801,7 @@ export const freeAuditTranslations = {
         },
         {
           title: "Mediana del mercado",
-          text: "Visualiza el nivel central observado para esta categoria.",
+          text: "Visualiza el nivel central observado para esta categoría.",
         },
         {
           title: "Nivel de confianza",
@@ -812,36 +812,36 @@ export const freeAuditTranslations = {
         "Completa el formulario para mostrar la vista previa disponible para este mercado.",
       submittingTitle: "Preparando tu vista previa del mercado",
       submittingText:
-        "Norixo esta reuniendo las senales agregadas del mercado disponibles para esta categoria.",
+        "Norixo está reuniendo las señales agregadas del mercado disponibles para esta categoría.",
       benchmarkRange: "Rango observado",
       medianPrice: "Mediana",
-      marketTitle: "Instantanea del mercado",
+      marketTitle: "Instantánea del mercado",
       marketScopeAllPlatforms: "Todas las plataformas",
       confidenceTitle: "Confianza",
       recommendationsTitle: "Recomendaciones",
-      limitationsTitle: "Que debes saber",
+      limitationsTitle: "Qué debes saber",
       insufficientTitle: "La cobertura sigue siendo limitada",
       insufficientText:
-        "Todavia no disponemos de suficiente volumen de datos agregados para esta solicitud.",
+        "Todavía no disponemos de suficiente volumen de datos agregados para esta solicitud.",
       unavailableTitle: "Vista previa no disponible",
       confidenceLevel: {
-        standard: "Confianza estandar",
+        standard: "Confianza estándar",
         high: "Confianza alta",
       },
       sampleBand: {
         sufficient: "Muestra suficiente",
-        strong: "Muestra solida",
+        strong: "Muestra sólida",
       },
       limitationCodes: {
-        market_only: "No se analizo el precio ni el contenido de tu anuncio.",
+        market_only: "No se analizó el precio ni el contenido de tu anuncio.",
         aggregated_market_data:
           "Los resultados se basan en datos agregados del mercado.",
         listing_specific_factors:
-          "Las caracteristicas del alojamiento, la estacionalidad y la ubicacion exacta pueden cambiar mucho el precio adecuado.",
+          "Las características del alojamiento, la estacionalidad y la ubicación exacta pueden cambiar mucho el precio adecuado.",
         broad_market_segment:
-          "El benchmark disponible cubre un segmento de mercado mas amplio que tu solicitud inicial.",
+          "El benchmark disponible cubre un segmento de mercado más amplio que tu solicitud inicial.",
         all_capacities_scope:
-          "La vista previa agrega todas las capacidades de huespedes de este segmento de mercado.",
+          "La vista previa agrega todas las capacidades de huéspedes de este segmento de mercado.",
         multi_platform_scope:
           "Esta vista previa combina datos agregados de varias plataformas de reserva.",
         limited_sample_size:
@@ -857,11 +857,11 @@ export const freeAuditTranslations = {
         median_positions_market:
           "La mediana observada ayuda a situar el nivel central de este mercado.",
         broader_segment_used:
-          "La vista previa se apoya en un segmento de mercado mas amplio que el tipo exacto solicitado.",
+          "La vista previa se apoya en un segmento de mercado más amplio que el tipo exacto solicitado.",
         listing_specific_factors_matter:
-          "Las fotos, los servicios, la estacionalidad y la ubicacion pueden modificar de forma importante el precio adecuado.",
+          "Las fotos, los servicios, la estacionalidad y la ubicación pueden modificar de forma importante el precio adecuado.",
         full_audit_for_positioning:
-          "La auditoria completa analizara tu anuncio y a tus competidores reales para definir tu posicionamiento exacto.",
+          "La auditoría completa analizará tu anuncio y a tus competidores reales para definir tu posicionamiento exacto.",
       },
     },
     premium: {
@@ -872,12 +872,12 @@ export const freeAuditTranslations = {
       medianPriceLabel: "Precio mediano",
       highPriceLabel: "Precio alto",
       compareToMarketCta: "Comparar mi anuncio con este mercado",
-      revealTitle: "Lo que revelara tu auditoria completa",
+      revealTitle: "Lo que revelará tu auditoría completa",
       revealSubtitle:
-        "La vista previa gratuita te muestra el mercado. La auditoria completa analiza tu anuncio real.",
+        "La vista previa gratuita te muestra el mercado. La auditoría completa analiza tu anuncio real.",
       revealCards: [
         {
-          title: "La posicion real de tu anuncio",
+          title: "La posición real de tu anuncio",
           text:
             "Compara tu anuncio con los competidores de tu mercado e identifica su posicionamiento exacto.",
         },
@@ -887,14 +887,14 @@ export const freeAuditTranslations = {
             "Descubre los niveles de precio adecuados para tu alojamiento, tu temporada y tu entorno competitivo.",
         },
         {
-          title: "Tus palancas de conversion",
+          title: "Tus palancas de conversión",
           text:
-            "Analiza tu titulo, descripcion, fotos, servicios y los elementos que frenan las reservas.",
+            "Analiza tu título, descripción, fotos, servicios y los elementos que frenan las reservas.",
         },
         {
           title: "Tus acciones prioritarias",
           text:
-            "Recibe un plan de accion claro, ordenado segun el impacto potencial en tu rendimiento.",
+            "Recibe un plan de acción claro, ordenado según el impacto potencial en tu rendimiento.",
         },
       ],
       journeyTitle: "Tu recorrido con Norixo",
@@ -904,62 +904,62 @@ export const freeAuditTranslations = {
           text: "Descubre el rango observado y la mediana del mercado.",
         },
         {
-          title: "Analisis completo del anuncio",
+          title: "Análisis completo del anuncio",
           text:
             "Norixo analiza tu contenido, tus competidores y tu posicionamiento.",
         },
         {
-          title: "Plan de accion personalizado",
+          title: "Plan de acción personalizado",
           text: "Recibe recomendaciones concretas y priorizadas.",
         },
       ],
-      unlockCta: "Desbloquear mi auditoria completa",
+      unlockCta: "Desbloquear mi auditoría completa",
     },
     clarity: {
       title: "Entender la vista previa gratuita",
       cards: [
         {
           title: "Lo que recibes gratis",
-          text: "Esta etapa es una vista previa del mercado publico, no una auditoria personalizada del anuncio.",
+          text: "Esta etapa es una vista previa del mercado público, no una auditoría personalizada del anuncio.",
           items: [
-            "Rango observado para tu categoria",
+            "Rango observado para tu categoría",
             "Mediana del mercado y nivel de confianza",
-            "Senales de cobertura y limitaciones de este mercado",
+            "Señales de cobertura y limitaciones de este mercado",
           ],
         },
         {
-          title: "Lo que aun no se analiza",
-          text: "Norixo no inspecciona el contenido privado de tu anuncio antes de iniciar la auditoria completa.",
+          title: "Lo que aún no se analiza",
+          text: "Norixo no inspecciona el contenido privado de tu anuncio antes de iniciar la auditoría completa.",
           items: [
-            "Sin revision de titulo, descripcion, fotos o servicios",
-            "Sin analisis de tu precio privado",
-            "Sin diagnostico completo de competidores ni plan de accion todavia",
+            "Sin revisión de título, descripción, fotos o servicios",
+            "Sin análisis de tu precio privado",
+            "Sin diagnóstico completo de competidores ni plan de acción todavía",
           ],
         },
         {
-          title: "Por que estos resultados son creibles",
-          text: "La vista previa se basa en evidencia publica de benchmark seleccionada para tu mercado segun las reglas de inteligencia de Norixo.",
+          title: "Por qué estos resultados son creíbles",
+          text: "La vista previa se basa en evidencia pública de benchmark seleccionada para tu mercado según las reglas de inteligencia de Norixo.",
           items: [
             "Solo datos de mercado agregados y anonimizados",
-            "Ningun dato privado de usuarios se publica ni se reutiliza publicamente",
-            "La cobertura puede variar segun ciudad, plataforma y tipo de propiedad",
+            "Ningún dato privado de usuarios se publica ni se reutiliza públicamente",
+            "La cobertura puede variar según ciudad, plataforma y tipo de propiedad",
           ],
         },
         {
-          title: "Por que crear una cuenta despues",
-          text: "La cuenta permite a Norixo continuar de forma segura desde esta vista previa hacia la auditoria completa.",
+          title: "Por qué crear una cuenta después",
+          text: "La cuenta permite a Norixo continuar de forma segura desde esta vista previa hacia la auditoría completa.",
           items: [
             "Guardar el contexto de traspaso",
-            "Lanzar la auditoria completa desde el panel",
-            "Recuperar mas tarde tus auditorias y compras",
+            "Lanzar la auditoría completa desde el panel",
+            "Recuperar más tarde tus auditorías y compras",
           ],
         },
       ],
     },
     compare: {
-      title: "Vista gratuita vs auditoria completa",
+      title: "Vista gratuita vs auditoría completa",
       freeTitle: "Vista gratuita del mercado",
-      fullTitle: "Auditoria completa",
+      fullTitle: "Auditoría completa",
       freeItems: [
         "Rango de precios agregado del mercado",
         "Mediana del mercado",
@@ -968,62 +968,62 @@ export const freeAuditTranslations = {
         "No se revisa el contenido del anuncio",
       ],
       fullItems: [
-        "Analisis real del anuncio",
-        "Titulo y descripcion",
+        "Análisis real del anuncio",
+        "Título y descripción",
         "Fotos y servicios",
         "Competidores reales",
-        "Oportunidades de conversion",
+        "Oportunidades de conversión",
         "Recomendaciones personalizadas",
-        "Analisis completo de precios",
-        "Analisis de ocupacion cuando este disponible",
+        "Análisis completo de precios",
+        "Análisis de ocupación cuando esté disponible",
       ],
     },
     faq: {
       title: "Preguntas frecuentes",
       items: [
         {
-          question: "La vista previa gratuita es realmente gratuita?",
+          question: "¿La vista previa gratuita es realmente gratuita?",
           answer:
-            "Si. La vista previa del mercado no requiere tarjeta y no consume ningun credito de auditoria de pago.",
+            "Sí. La vista previa del mercado no requiere tarjeta y no consume ningún crédito de auditoría de pago.",
         },
         {
-          question: "Norixo se conecta a mi cuenta de la plataforma?",
+          question: "¿Norixo se conecta a mi cuenta de la plataforma?",
           answer:
-            "No. La vista previa gratuita usa solo entradas estructuradas del mercado y no requiere ninguna conexion de cuenta.",
+            "No. La vista previa gratuita usa solo entradas estructuradas del mercado y no requiere ninguna conexión de cuenta.",
         },
         {
-          question: "Mi anuncio se extrae durante la vista previa gratuita?",
+          question: "¿Mi anuncio se extrae durante la vista previa gratuita?",
           answer:
-            "No. En esta etapa Norixo no lanza una extraccion completa del anuncio ni revisa el contenido de tu anuncio.",
+            "No. En esta etapa Norixo no lanza una extracción completa del anuncio ni revisa el contenido de tu anuncio.",
         },
         {
-          question: "De donde vienen los datos de la vista previa?",
+          question: "¿De dónde vienen los datos de la vista previa?",
           answer:
-            "La vista previa se construye a partir de evidencia publica agregada de benchmark seleccionada para el segmento de mercado solicitado.",
+            "La vista previa se construye a partir de evidencia pública agregada de benchmark seleccionada para el segmento de mercado solicitado.",
         },
         {
-          question: "Por que la auditoria completa es de pago?",
+          question: "¿Por qué la auditoría completa es de pago?",
           answer:
-            "La auditoria de pago va mas alla del benchmark publico y analiza tu anuncio real, su contenido, su posicionamiento y sus acciones prioritarias.",
+            "La auditoría de pago va más allá del benchmark público y analiza tu anuncio real, su contenido, su posicionamiento y sus acciones prioritarias.",
         },
         {
-          question: "Que pasa si la cobertura del mercado sigue siendo limitada?",
+          question: "¿Qué pasa si la cobertura del mercado sigue siendo limitada?",
           answer:
-            "Norixo muestra que la cobertura es insuficiente en lugar de fingir una respuesta precisa cuando la evidencia publica disponible sigue siendo demasiado limitada.",
+            "Norixo muestra que la cobertura es insuficiente en lugar de fingir una respuesta precisa cuando la evidencia pública disponible sigue siendo demasiado limitada.",
         },
       ],
     },
     cta: {
-      title: "Listo para desbloquear la auditoria completa?",
-      text: "Pasa de una instantanea del mercado a la auditoria completa de tu anuncio con Norixo.",
-      primary: "Desbloquear la auditoria completa",
+      title: "¿Listo para desbloquear la auditoría completa?",
+      text: "Pasa de una instantánea del mercado a la auditoría completa de tu anuncio con Norixo.",
+      primary: "Desbloquear la auditoría completa",
       secondary: "Empezar con tu anuncio real",
       reassurance: "Obtén tu posicionamiento exacto y recomendaciones personalizadas.",
     },
     seo: {
-      title: "Auditoria Airbnb gratis: consulta los precios de tu mercado | Norixo",
+      title: "Auditoría Airbnb gratis: consulta los precios de tu mercado | Norixo",
       description:
-        "Consulta gratis el rango de precios y la mediana de tu mercado con datos agregados, sin extraccion de datos ni tarjeta bancaria.",
+        "Consulta gratis el rango de precios y la mediana de tu mercado con datos agregados, sin extracción de datos ni tarjeta bancaria.",
     },
   },
   it: {
@@ -1033,17 +1033,17 @@ export const freeAuditTranslations = {
       subtitle:
         "L'anteprima gratuita del mercato di Norixo supporta fonti di mercato Airbnb, Booking, Expedia, Agoda e Vrbo e mostra l'intervallo osservato e la mediana della tua categoria prima di un audit completo dell'annuncio.",
       reassurance:
-        "Nessuna carta di credito. Nessuna estrazione di dati. In questa fase non vengono analizzati ne il contenuto dell'annuncio ne il tuo prezzo personale.",
+        "Nessuna carta di credito. Nessuna estrazione di dati. In questa fase non vengono analizzati né il contenuto dell'annuncio né il tuo prezzo personale.",
     },
     form: {
       title: "Panoramica strutturata del mercato",
       text:
         "Compila i dettagli strutturati qui sotto per ricevere un'anteprima basata esclusivamente su benchmark di mercato aggregati.",
-      listingUrlLabel: "URL dell'annuncio (facoltativo — non analizzato ne inviato)",
+      listingUrlLabel: "URL dell'annuncio (facoltativo — non analizzato né inviato)",
       listingUrlPlaceholder: "https://www.airbnb.com/rooms/123456789",
       countryLabel: "Paese",
       countryPlaceholder: "Italia",
-      cityLabel: "Citta",
+      cityLabel: "Città",
       cityPlaceholder: "Roma",
       platformLabel: "Piattaforma",
       platformPlaceholder: "Seleziona una piattaforma",
@@ -1075,12 +1075,12 @@ export const freeAuditTranslations = {
     errors: {
       listing_url_invalid: "Inserisci un URL valido da una piattaforma supportata.",
       country_required: "Inserisci il tuo paese.",
-      city_required: "Inserisci la tua citta.",
+      city_required: "Inserisci la tua città.",
       platform_required: "Seleziona una piattaforma.",
       property_type_required: "Seleziona una tipologia di alloggio.",
       invalid_request: "Alcune informazioni devono essere corrette.",
       rate_limited: "Hai inviato diverse richieste. Riprova tra qualche minuto.",
-      unavailable: "L'anteprima gratuita e temporaneamente non disponibile.",
+      unavailable: "L'anteprima gratuita è temporaneamente non disponibile.",
       network_error: "Impossibile caricare l'anteprima in questo momento.",
       unknown_error: "Impossibile caricare l'anteprima in questo momento.",
     },
@@ -1088,21 +1088,21 @@ export const freeAuditTranslations = {
       title: "Panoramica prezzi del mercato",
       text:
         "Risultato basato solo sui dati di mercato aggregati attualmente disponibili per questa categoria.",
-      initialTitle: "La tua anteprima apparira qui.",
+      initialTitle: "La tua anteprima apparirà qui.",
       initialText:
-        "Norixo mostrera l'intervallo di prezzo osservato e la mediana disponibili per il tuo mercato.",
+        "Norixo mostrerà l'intervallo di prezzo osservato e la mediana disponibili per il tuo mercato.",
       initialGuideTitle: "Cosa scoprirai",
       initialGuideItems: [
         {
           title: "Intervallo osservato",
-          text: "Scopri i prezzi piu bassi e piu alti disponibili per questo mercato.",
+          text: "Scopri i prezzi più bassi e più alti disponibili per questo mercato.",
         },
         {
           title: "Mediana del mercato",
           text: "Visualizza il livello centrale osservato per questa categoria.",
         },
         {
-          title: "Livello di affidabilita",
+          title: "Livello di affidabilità",
           text: "Comprendi quanto sono solidi i dati di mercato disponibili.",
         },
       ],
@@ -1115,7 +1115,7 @@ export const freeAuditTranslations = {
       medianPrice: "Mediana",
       marketTitle: "Panoramica del mercato",
       marketScopeAllPlatforms: "Tutte le piattaforme",
-      confidenceTitle: "Affidabilita",
+      confidenceTitle: "Affidabilità",
       recommendationsTitle: "Raccomandazioni",
       limitationsTitle: "Da sapere",
       insufficientTitle: "Copertura ancora limitata",
@@ -1123,43 +1123,43 @@ export const freeAuditTranslations = {
         "Non disponiamo ancora di un volume sufficiente di dati aggregati per questa richiesta.",
       unavailableTitle: "Anteprima non disponibile",
       confidenceLevel: {
-        standard: "Affidabilita standard",
-        high: "Affidabilita alta",
+        standard: "Affidabilità standard",
+        high: "Affidabilità alta",
       },
       sampleBand: {
         sufficient: "Campione sufficiente",
         strong: "Campione solido",
       },
       limitationCodes: {
-        market_only: "Non e stato analizzato ne il prezzo ne il contenuto del tuo annuncio.",
+        market_only: "Non è stato analizzato né il prezzo né il contenuto del tuo annuncio.",
         aggregated_market_data:
           "I risultati si basano su dati di mercato aggregati.",
         listing_specific_factors:
-          "Caratteristiche dell'alloggio, stagionalita e posizione precisa possono influenzare molto il prezzo corretto.",
+          "Caratteristiche dell'alloggio, stagionalità e posizione precisa possono influenzare molto il prezzo corretto.",
         broad_market_segment:
-          "Il benchmark disponibile copre un segmento di mercato piu ampio rispetto alla richiesta iniziale.",
+          "Il benchmark disponibile copre un segmento di mercato più ampio rispetto alla richiesta iniziale.",
         all_capacities_scope:
-          "L'anteprima aggrega tutte le capacita degli ospiti di questo segmento di mercato.",
+          "L'anteprima aggrega tutte le capacità degli ospiti di questo segmento di mercato.",
         multi_platform_scope:
-          "Questa anteprima combina dati aggregati provenienti da piu piattaforme di prenotazione.",
+          "Questa anteprima combina dati aggregati provenienti da più piattaforme di prenotazione.",
         limited_sample_size:
-          "Il campione attuale e ancora limitato per questo segmento di mercato.",
+          "Il campione attuale è ancora limitato per questo segmento di mercato.",
         limited_source_diversity:
           "Il campione attuale proviene da un insieme limitato di fonti di mercato.",
         aging_data:
           "Una parte dei dati aggregati di mercato sta iniziando a invecchiare.",
         multi_currency_market:
-          "In questo mercato coesistono piu valute e non consentono un'anteprima affidabile senza ulteriore contesto.",
+          "In questo mercato coesistono più valute e non consentono un'anteprima affidabile senza ulteriore contesto.",
       },
       recommendationCodes: {
         median_positions_market:
           "La mediana osservata aiuta a collocare il livello centrale di questo mercato.",
         broader_segment_used:
-          "L'anteprima si basa su un segmento di mercato piu ampio rispetto al tipo richiesto.",
+          "L'anteprima si basa su un segmento di mercato più ampio rispetto al tipo richiesto.",
         listing_specific_factors_matter:
-          "Foto, servizi, stagionalita e posizione possono modificare in modo significativo il prezzo corretto.",
+          "Foto, servizi, stagionalità e posizione possono modificare in modo significativo il prezzo corretto.",
         full_audit_for_positioning:
-          "L'audit completo analizzera il tuo annuncio e i concorrenti reali per determinare il tuo posizionamento esatto.",
+          "L'audit completo analizzerà il tuo annuncio e i concorrenti reali per determinare il tuo posizionamento esatto.",
       },
     },
     premium: {
@@ -1170,7 +1170,7 @@ export const freeAuditTranslations = {
       medianPriceLabel: "Prezzo mediano",
       highPriceLabel: "Prezzo alto",
       compareToMarketCta: "Confronta il mio annuncio con questo mercato",
-      revealTitle: "Cosa rivelera il tuo audit completo",
+      revealTitle: "Cosa rivelerà il tuo audit completo",
       revealSubtitle:
         "L'anteprima gratuita ti mostra il mercato. L'audit completo analizza davvero il tuo annuncio.",
       revealCards: [
@@ -1218,10 +1218,10 @@ export const freeAuditTranslations = {
       cards: [
         {
           title: "Cosa ottieni gratuitamente",
-          text: "Questa fase e un'anteprima pubblica del mercato, non ancora un audit personalizzato dell'annuncio.",
+          text: "Questa fase è un'anteprima pubblica del mercato, non ancora un audit personalizzato dell'annuncio.",
           items: [
             "Fascia osservata per la tua categoria",
-            "Mediana di mercato e livello di affidabilita",
+            "Mediana di mercato e livello di affidabilità",
             "Segnali di copertura e limiti per questo mercato",
           ],
         },
@@ -1235,16 +1235,16 @@ export const freeAuditTranslations = {
           ],
         },
         {
-          title: "Perche questi risultati sono credibili",
+          title: "Perché questi risultati sono credibili",
           text: "L'anteprima si basa su benchmark pubblici aggregati, selezionati per il tuo mercato dalle regole di intelligence di Norixo.",
           items: [
             "Solo dati di mercato aggregati e anonimizzati",
             "Nessun dato privato utente pubblicato o riutilizzato pubblicamente",
-            "La copertura puo variare in base a citta, piattaforma e tipo di alloggio",
+            "La copertura può variare in base a città, piattaforma e tipo di alloggio",
           ],
         },
         {
-          title: "Perche creare un account dopo",
+          title: "Perché creare un account dopo",
           text: "L'account permette a Norixo di proseguire in modo sicuro da questa anteprima verso il percorso di audit completo.",
           items: [
             "Salvare il contesto di ripresa",
@@ -1261,7 +1261,7 @@ export const freeAuditTranslations = {
       freeItems: [
         "Intervallo di prezzo aggregato del mercato",
         "Mediana del mercato",
-        "Livello di affidabilita",
+        "Livello di affidabilità",
         "Raccomandazioni generali",
         "Nessun contenuto dell'annuncio analizzato",
       ],
@@ -1270,7 +1270,7 @@ export const freeAuditTranslations = {
         "Titolo e descrizione",
         "Foto e servizi",
         "Concorrenti reali",
-        "Opportunita di conversione",
+        "Opportunità di conversione",
         "Raccomandazioni personalizzate",
         "Analisi completa del pricing",
         "Analisi dell'occupazione quando disponibile",
@@ -1280,9 +1280,9 @@ export const freeAuditTranslations = {
       title: "Domande frequenti",
       items: [
         {
-          question: "L'anteprima gratuita e davvero gratuita?",
+          question: "L'anteprima gratuita è davvero gratuita?",
           answer:
-            "Si. L'anteprima di mercato non richiede alcuna carta bancaria e non consuma alcun credito di audit a pagamento.",
+            "Sì. L'anteprima di mercato non richiede alcuna carta bancaria e non consuma alcun credito di audit a pagamento.",
         },
         {
           question: "Norixo si collega al mio account della piattaforma?",
@@ -1297,17 +1297,17 @@ export const freeAuditTranslations = {
         {
           question: "Da dove provengono i dati mostrati?",
           answer:
-            "L'anteprima e costruita a partire da benchmark pubblici aggregati selezionati per il segmento di mercato richiesto.",
+            "L'anteprima è costruita a partire da benchmark pubblici aggregati selezionati per il segmento di mercato richiesto.",
         },
         {
-          question: "Perche l'audit completo e a pagamento?",
+          question: "Perché l'audit completo è a pagamento?",
           answer:
             "L'audit a pagamento va oltre il benchmark pubblico e analizza il tuo annuncio reale, il suo contenuto, il suo posizionamento e le azioni prioritarie.",
         },
         {
-          question: "Cosa succede se la copertura del mercato e ancora insufficiente?",
+          question: "Cosa succede se la copertura del mercato è ancora insufficiente?",
           answer:
-            "Norixo indica che la copertura e insufficiente invece di simulare una precisione che i benchmark pubblici non permettono ancora.",
+            "Norixo indica che la copertura è insufficiente invece di simulare una precisione che i benchmark pubblici non permettono ancora.",
         },
       ],
     },
@@ -1326,20 +1326,20 @@ export const freeAuditTranslations = {
   },
   pt: {
     hero: {
-      eyebrow: "Pre-visualizacao gratuita do mercado",
-      title: "Descubra uma visao de precos baseada apenas no mercado",
+      eyebrow: "Pré-visualização gratuita do mercado",
+      title: "Descubra uma visão de preços baseada apenas no mercado",
       subtitle:
-        "A pre-visualizacao gratuita do mercado da Norixo suporta fontes de mercado Airbnb, Booking, Expedia, Agoda e Vrbo e mostra a faixa observada e a mediana da sua categoria antes de uma auditoria completa do anuncio.",
+        "A pré-visualização gratuita do mercado da Norixo suporta fontes de mercado Airbnb, Booking, Expedia, Agoda e Vrbo e mostra a faixa observada e a mediana da sua categoria antes de uma auditoria completa do anúncio.",
       reassurance:
-        "Sem cartao de credito. Sem extracao de dados. Nesta fase nao analisamos o conteudo do anuncio nem o seu preco individual.",
+        "Sem cartão de crédito. Sem extração de dados. Nesta fase não analisamos o conteúdo do anúncio nem o seu preço individual.",
     },
     form: {
-      title: "Visao estruturada do mercado",
+      title: "Visão estruturada do mercado",
       text:
-        "Preencha os dados estruturados abaixo para receber uma pre-visualizacao baseada apenas em benchmarks agregados do mercado.",
-      listingUrlLabel: "URL do anuncio (opcional — nao e analisado nem enviado)",
+        "Preencha os dados estruturados abaixo para receber uma pré-visualização baseada apenas em benchmarks agregados do mercado.",
+      listingUrlLabel: "URL do anúncio (opcional — não é analisado nem enviado)",
       listingUrlPlaceholder: "https://www.airbnb.com/rooms/123456789",
-      countryLabel: "Pais",
+      countryLabel: "País",
       countryPlaceholder: "Portugal",
       cityLabel: "Cidade",
       cityPlaceholder: "Lisboa",
@@ -1347,11 +1347,11 @@ export const freeAuditTranslations = {
       platformPlaceholder: "Selecione uma plataforma",
       propertyTypeLabel: "Tipo de alojamento",
       propertyTypePlaceholder: "Selecione um tipo de alojamento",
-      submitIdle: "Ver a minha visao do mercado",
-      submitLoading: "Analise do mercado...",
+      submitIdle: "Ver a minha visão do mercado",
+      submitLoading: "Análise do mercado...",
       helper:
-        "O URL permanece no seu navegador e nunca e enviado para a API de pre-visualizacao.",
-      statusLoading: "Pre-visualizacao do mercado em curso.",
+        "O URL permanece no seu navegador e nunca é enviado para a API de pré-visualização.",
+      statusLoading: "Pré-visualização do mercado em curso.",
     },
     options: {
       platform: {
@@ -1362,7 +1362,7 @@ export const freeAuditTranslations = {
         vrbo: "Vrbo",
       },
       propertyType: {
-        studio: "Estudio",
+        studio: "Estúdio",
         apartment: "Apartamento",
         villa: "Moradia",
         riad: "Riad",
@@ -1371,170 +1371,170 @@ export const freeAuditTranslations = {
       },
     },
     errors: {
-      listing_url_invalid: "Introduza um URL valido de uma plataforma suportada.",
-      country_required: "Introduza o seu pais.",
+      listing_url_invalid: "Introduza um URL válido de uma plataforma suportada.",
+      country_required: "Introduza o seu país.",
       city_required: "Introduza a sua cidade.",
       platform_required: "Selecione uma plataforma.",
       property_type_required: "Selecione um tipo de alojamento.",
-      invalid_request: "Algumas informacoes precisam de ser corrigidas.",
-      rate_limited: "Fez varios pedidos. Tente novamente dentro de alguns minutos.",
-      unavailable: "A pre-visualizacao gratuita esta temporariamente indisponivel.",
-      network_error: "Nao foi possivel carregar a pre-visualizacao neste momento.",
-      unknown_error: "Nao foi possivel carregar a pre-visualizacao neste momento.",
+      invalid_request: "Algumas informações precisam de ser corrigidas.",
+      rate_limited: "Fez vários pedidos. Tente novamente dentro de alguns minutos.",
+      unavailable: "A pré-visualização gratuita está temporariamente indisponível.",
+      network_error: "Não foi possível carregar a pré-visualização neste momento.",
+      unknown_error: "Não foi possível carregar a pré-visualização neste momento.",
     },
     result: {
-      title: "Visao geral de precos do mercado",
+      title: "Visão geral de preços do mercado",
       text:
-        "Resultado baseado apenas nos dados agregados do mercado atualmente disponiveis para esta categoria.",
-      initialTitle: "A sua pre-visualizacao aparecera aqui.",
+        "Resultado baseado apenas nos dados agregados do mercado atualmente disponíveis para esta categoria.",
+      initialTitle: "A sua pré-visualização aparecerá aqui.",
       initialText:
-        "A Norixo mostrara a faixa de precos observada e a mediana disponivel para o seu mercado.",
+        "A Norixo mostrará a faixa de preços observada e a mediana disponível para o seu mercado.",
       initialGuideTitle: "O que vai descobrir",
       initialGuideItems: [
         {
           title: "Faixa observada",
-          text: "Descubra os precos mais baixos e mais altos disponiveis para este mercado.",
+          text: "Descubra os preços mais baixos e mais altos disponíveis para este mercado.",
         },
         {
           title: "Mediana do mercado",
-          text: "Visualize o nivel central observado para esta categoria.",
+          text: "Visualize o nível central observado para esta categoria.",
         },
         {
-          title: "Nivel de confianca",
-          text: "Compreenda a solidez dos dados de mercado disponiveis.",
+          title: "Nível de confiança",
+          text: "Compreenda a solidez dos dados de mercado disponíveis.",
         },
       ],
       initialPrompt:
-        "Preencha o formulario para mostrar a pre-visualizacao disponivel para este mercado.",
-      submittingTitle: "A preparar a sua pre-visualizacao do mercado",
+        "Preencha o formulário para mostrar a pré-visualização disponível para este mercado.",
+      submittingTitle: "A preparar a sua pré-visualização do mercado",
       submittingText:
-        "A Norixo esta a reunir os sinais agregados do mercado disponiveis para esta categoria.",
+        "A Norixo está a reunir os sinais agregados do mercado disponíveis para esta categoria.",
       benchmarkRange: "Faixa observada",
       medianPrice: "Mediana",
       marketTitle: "Panorama do mercado",
       marketScopeAllPlatforms: "Todas as plataformas",
-      confidenceTitle: "Confianca",
-      recommendationsTitle: "Recomendacoes",
+      confidenceTitle: "Confiança",
+      recommendationsTitle: "Recomendações",
       limitationsTitle: "O que saber",
-      insufficientTitle: "A cobertura ainda e limitada",
+      insufficientTitle: "A cobertura ainda é limitada",
       insufficientText:
-        "Ainda nao dispomos de volume suficiente de dados agregados para este pedido.",
-      unavailableTitle: "Pre-visualizacao indisponivel",
+        "Ainda não dispomos de volume suficiente de dados agregados para este pedido.",
+      unavailableTitle: "Pré-visualização indisponível",
       confidenceLevel: {
-        standard: "Confianca padrao",
-        high: "Confianca alta",
+        standard: "Confiança padrão",
+        high: "Confiança alta",
       },
       sampleBand: {
         sufficient: "Amostra suficiente",
         strong: "Amostra forte",
       },
       limitationCodes: {
-        market_only: "Nem o preco nem o conteudo do seu anuncio foram analisados.",
+        market_only: "Nem o preço nem o conteúdo do seu anúncio foram analisados.",
         aggregated_market_data:
           "Os resultados baseiam-se em dados agregados do mercado.",
         listing_specific_factors:
-          "Caracteristicas do alojamento, sazonalidade e localizacao exata podem alterar bastante o preco certo.",
+          "Características do alojamento, sazonalidade e localização exata podem alterar bastante o preço certo.",
         broad_market_segment:
-          "O benchmark disponivel cobre um segmento de mercado mais amplo do que o pedido inicial.",
+          "O benchmark disponível cobre um segmento de mercado mais amplo do que o pedido inicial.",
         all_capacities_scope:
-          "A pre-visualizacao agrega todas as capacidades de hospedes deste segmento de mercado.",
+          "A pré-visualização agrega todas as capacidades de hóspedes deste segmento de mercado.",
         multi_platform_scope:
-          "Esta pre-visualizacao combina dados agregados de varias plataformas de reserva.",
+          "Esta pré-visualização combina dados agregados de várias plataformas de reserva.",
         limited_sample_size:
-          "A amostra atual ainda e limitada para este segmento de mercado.",
+          "A amostra atual ainda é limitada para este segmento de mercado.",
         limited_source_diversity:
           "A amostra atual vem de um conjunto limitado de fontes de mercado.",
         aging_data:
-          "Parte dos dados agregados de mercado esta a comecar a envelhecer.",
+          "Parte dos dados agregados de mercado está a começar a envelhecer.",
         multi_currency_market:
-          "Existem varias moedas concorrentes neste mercado e isso impede uma pre-visualizacao fiavel sem contexto adicional.",
+          "Existem várias moedas concorrentes neste mercado e isso impede uma pré-visualização fiável sem contexto adicional.",
       },
       recommendationCodes: {
         median_positions_market:
-          "A mediana observada ajuda a posicionar o nivel central deste mercado.",
+          "A mediana observada ajuda a posicionar o nível central deste mercado.",
         broader_segment_used:
-          "A pre-visualizacao baseia-se num segmento de mercado mais amplo do que o tipo pedido.",
+          "A pré-visualização baseia-se num segmento de mercado mais amplo do que o tipo pedido.",
         listing_specific_factors_matter:
-          "Fotos, comodidades, sazonalidade e localizacao podem alterar materialmente o preco adequado.",
+          "Fotos, comodidades, sazonalidade e localização podem alterar materialmente o preço adequado.",
         full_audit_for_positioning:
-          "A auditoria completa analisara o seu anuncio e os concorrentes reais para determinar o seu posicionamento exato.",
+          "A auditoria completa analisará o seu anúncio e os concorrentes reais para determinar o seu posicionamento exato.",
       },
     },
     premium: {
       rangeLabel: "Faixa observada",
       marketMedianLabel: "Mediana do mercado",
       marketNowTitle: "Mercado atual",
-      lowPriceLabel: "Preco baixo",
-      medianPriceLabel: "Preco mediano",
-      highPriceLabel: "Preco alto",
-      compareToMarketCta: "Comparar meu anuncio com este mercado",
+      lowPriceLabel: "Preço baixo",
+      medianPriceLabel: "Preço mediano",
+      highPriceLabel: "Preço alto",
+      compareToMarketCta: "Comparar meu anúncio com este mercado",
       revealTitle: "O que a sua auditoria completa vai revelar",
       revealSubtitle:
-        "A pre-visualizacao gratuita mostra o mercado. A auditoria completa analisa de fato o seu anuncio.",
+        "A pré-visualização gratuita mostra o mercado. A auditoria completa analisa de fato o seu anúncio.",
       revealCards: [
         {
-          title: "A posicao real do seu anuncio",
+          title: "A posição real do seu anúncio",
           text:
-            "Compare o seu anuncio com os concorrentes do seu mercado e identifique o seu posicionamento exato.",
+            "Compare o seu anúncio com os concorrentes do seu mercado e identifique o seu posicionamento exato.",
         },
         {
-          title: "O seu potencial tarifario",
+          title: "O seu potencial tarifário",
           text:
-            "Descubra os niveis de preco adequados ao seu alojamento, a sua sazonalidade e ao seu ambiente competitivo.",
+            "Descubra os níveis de preço adequados ao seu alojamento, à sua sazonalidade e ao seu ambiente competitivo.",
         },
         {
-          title: "As suas alavancas de conversao",
+          title: "As suas alavancas de conversão",
           text:
-            "Analise o seu titulo, descricao, fotos, comodidades e os elementos que travam as reservas.",
+            "Analise o seu título, descrição, fotos, comodidades e os elementos que travam as reservas.",
         },
         {
-          title: "As suas acoes prioritarias",
+          title: "As suas ações prioritárias",
           text:
-            "Receba um plano de acao claro, ordenado pelo impacto potencial no seu desempenho.",
+            "Receba um plano de ação claro, ordenado pelo impacto potencial no seu desempenho.",
         },
       ],
       journeyTitle: "O seu percurso com a Norixo",
       journeySteps: [
         {
-          title: "Pre-visualizacao gratuita do mercado",
+          title: "Pré-visualização gratuita do mercado",
           text: "Descubra a faixa observada e a mediana do mercado.",
         },
         {
-          title: "Analise completa do anuncio",
+          title: "Análise completa do anúncio",
           text:
-            "A Norixo analisa o seu conteudo, os seus concorrentes e o seu posicionamento.",
+            "A Norixo analisa o seu conteúdo, os seus concorrentes e o seu posicionamento.",
         },
         {
-          title: "Plano de acao personalizado",
-          text: "Receba recomendacoes concretas e priorizadas.",
+          title: "Plano de ação personalizado",
+          text: "Receba recomendações concretas e priorizadas.",
         },
       ],
       unlockCta: "Desbloquear a minha auditoria completa",
     },
     clarity: {
-      title: "Compreender a pre-visualizacao gratuita",
+      title: "Compreender a pré-visualização gratuita",
       cards: [
         {
           title: "O que recebe gratuitamente",
-          text: "Esta etapa e uma pre-visualizacao publica do mercado, ainda nao uma auditoria personalizada do anuncio.",
+          text: "Esta etapa é uma pré-visualização pública do mercado, ainda não uma auditoria personalizada do anúncio.",
           items: [
             "Faixa observada para a sua categoria",
-            "Mediana do mercado e nivel de confianca",
+            "Mediana do mercado e nível de confiança",
             "Sinais de cobertura e limites para este mercado",
           ],
         },
         {
-          title: "O que ainda nao e analisado",
-          text: "A Norixo nao inspeciona o conteudo privado do seu anuncio antes do inicio da auditoria completa.",
+          title: "O que ainda não é analisado",
+          text: "A Norixo não inspeciona o conteúdo privado do seu anúncio antes do início da auditoria completa.",
           items: [
-            "Nenhuma revisao do titulo, descricao, fotos ou comodidades",
-            "Nenhuma analise do seu preco privado",
-            "Nenhum diagnostico completo dos concorrentes nem plano de acao nesta fase",
+            "Nenhuma revisão do título, descrição, fotos ou comodidades",
+            "Nenhuma análise do seu preço privado",
+            "Nenhum diagnóstico completo dos concorrentes nem plano de ação nesta fase",
           ],
         },
         {
-          title: "Porque estes resultados sao crediveis",
-          text: "A pre-visualizacao baseia-se em benchmarks publicos agregados, selecionados para o seu mercado pelas regras de intelligence da Norixo.",
+          title: "Porque estes resultados são críveis",
+          text: "A pré-visualização baseia-se em benchmarks públicos agregados, selecionados para o seu mercado pelas regras de intelligence da Norixo.",
           items: [
             "Apenas dados de mercado agregados e anonimizados",
             "Nenhum dado privado de utilizador publicado ou reutilizado publicamente",
@@ -1543,7 +1543,7 @@ export const freeAuditTranslations = {
         },
         {
           title: "Porque criar uma conta a seguir",
-          text: "A conta permite que a Norixo continue de forma segura desta pre-visualizacao para o percurso de auditoria completa.",
+          text: "A conta permite que a Norixo continue de forma segura desta pré-visualização para o percurso de auditoria completa.",
           items: [
             "Guardar o contexto de retoma",
             "Iniciar a auditoria completa a partir do dashboard",
@@ -1553,73 +1553,73 @@ export const freeAuditTranslations = {
       ],
     },
     compare: {
-      title: "Pre-visualizacao gratuita vs auditoria completa",
-      freeTitle: "Pre-visualizacao gratuita do mercado",
+      title: "Pré-visualização gratuita vs auditoria completa",
+      freeTitle: "Pré-visualização gratuita do mercado",
       fullTitle: "Auditoria completa",
       freeItems: [
-        "Faixa de precos agregada do mercado",
+        "Faixa de preços agregada do mercado",
         "Mediana do mercado",
-        "Nivel de confianca",
-        "Recomendacoes gerais",
-        "Nenhum conteudo do anuncio analisado",
+        "Nível de confiança",
+        "Recomendações gerais",
+        "Nenhum conteúdo do anúncio analisado",
       ],
       fullItems: [
-        "Analise real do anuncio",
-        "Titulo e descricao",
+        "Análise real do anúncio",
+        "Título e descrição",
         "Fotos e comodidades",
         "Concorrentes reais",
-        "Oportunidades de conversao",
-        "Recomendacoes personalizadas",
-        "Analise completa de precos",
-        "Analise de ocupacao quando disponivel",
+        "Oportunidades de conversão",
+        "Recomendações personalizadas",
+        "Análise completa de preços",
+        "Análise de ocupação quando disponível",
       ],
     },
     faq: {
       title: "Perguntas frequentes",
       items: [
         {
-          question: "A pre-visualizacao gratuita e mesmo gratuita?",
+          question: "A pré-visualização gratuita é mesmo gratuita?",
           answer:
-            "Sim. A pre-visualizacao do mercado nao exige cartao bancario e nao consome qualquer credito de auditoria paga.",
+            "Sim. A pré-visualização do mercado não exige cartão bancário e não consome qualquer crédito de auditoria paga.",
         },
         {
-          question: "A Norixo liga-se a minha conta da plataforma?",
+          question: "A Norixo liga-se à minha conta da plataforma?",
           answer:
-            "Nao. A pre-visualizacao gratuita usa apenas informacao estruturada de mercado e nao requer qualquer ligacao a sua conta.",
+            "Não. A pré-visualização gratuita usa apenas informação estruturada de mercado e não requer qualquer ligação à sua conta.",
         },
         {
-          question: "O meu anuncio e extraido durante a pre-visualizacao gratuita?",
+          question: "O meu anúncio é extraído durante a pré-visualização gratuita?",
           answer:
-            "Nao. Nesta fase a Norixo nao inicia qualquer extracao completa do anuncio e ainda nao analisa o conteudo do seu anuncio.",
+            "Não. Nesta fase a Norixo não inicia qualquer extração completa do anúncio e ainda não analisa o conteúdo do seu anúncio.",
         },
         {
-          question: "De onde vem os dados apresentados?",
+          question: "De onde vêm os dados apresentados?",
           answer:
-            "A pre-visualizacao e construida a partir de benchmarks publicos agregados selecionados para o segmento de mercado pedido.",
+            "A pré-visualização é construída a partir de benchmarks públicos agregados selecionados para o segmento de mercado pedido.",
         },
         {
-          question: "Porque a auditoria completa e paga?",
+          question: "Porque a auditoria completa é paga?",
           answer:
-            "A auditoria paga vai alem do benchmark publico e analisa o seu anuncio real, o seu conteudo, o seu posicionamento e as acoes prioritarias.",
+            "A auditoria paga vai além do benchmark público e analisa o seu anúncio real, o seu conteúdo, o seu posicionamento e as ações prioritárias.",
         },
         {
           question: "O que acontece se a cobertura do mercado ainda for insuficiente?",
           answer:
-            "A Norixo indica que a cobertura e insuficiente em vez de simular uma precisao que os benchmarks publicos ainda nao permitem.",
+            "A Norixo indica que a cobertura é insuficiente em vez de simular uma precisão que os benchmarks públicos ainda não permitem.",
         },
       ],
     },
     cta: {
       title: "Pronto para desbloquear a auditoria completa?",
-      text: "Passe de um panorama do mercado para a auditoria completa do seu anuncio com a Norixo.",
+      text: "Passe de um panorama do mercado para a auditoria completa do seu anúncio com a Norixo.",
       primary: "Desbloquear a auditoria completa",
-      secondary: "Comecar com o seu anuncio real",
-      reassurance: "Obtenha o seu posicionamento exato e recomendacoes personalizadas.",
+      secondary: "Começar com o seu anúncio real",
+      reassurance: "Obtenha o seu posicionamento exato e recomendações personalizadas.",
     },
     seo: {
-      title: "Auditoria Airbnb gratis: consulte os precos do seu mercado | Norixo",
+      title: "Auditoria Airbnb grátis: consulte os preços do seu mercado | Norixo",
       description:
-        "Consulte gratuitamente a faixa de precos e a mediana do seu mercado com dados agregados, sem extracao de dados e sem cartao de credito.",
+        "Consulte gratuitamente a faixa de preços e a mediana do seu mercado com dados agregados, sem extração de dados e sem cartão de crédito.",
     },
   },
   nl: {
@@ -1923,7 +1923,7 @@ export const freeAuditTranslations = {
   de: {
     hero: {
       eyebrow: "Kostenlose Marktübersicht",
-      title: "Entdecken Sie einen Marktuberblick auf Basis aggregierter Preise",
+      title: "Entdecken Sie einen Marktüberblick auf Basis aggregierter Preise",
       subtitle:
         "Die kostenlose Marktübersicht von Norixo unterstützt Marktquellen von Airbnb, Booking, Expedia, Agoda und Vrbo und zeigt die beobachtete Preisspanne und den Median Ihrer Kategorie vor einem vollständigen Inserats-Audit.",
       reassurance:
@@ -1932,7 +1932,7 @@ export const freeAuditTranslations = {
     form: {
       title: "Strukturierte Marktvorschau",
       text:
-        "Geben Sie unten die strukturierten Angaben ein, um eine Vorschau zu erhalten, die ausschliesslich auf aggregierten Marktbenchmarks basiert.",
+        "Geben Sie unten die strukturierten Angaben ein, um eine Vorschau zu erhalten, die ausschließlich auf aggregierten Marktbenchmarks basiert.",
       listingUrlLabel: "Inserats-URL (optional — wird nicht analysiert oder gesendet)",
       listingUrlPlaceholder: "https://www.airbnb.com/rooms/123456789",
       countryLabel: "Land",
@@ -1940,9 +1940,9 @@ export const freeAuditTranslations = {
       cityLabel: "Stadt",
       cityPlaceholder: "Berlin",
       platformLabel: "Plattform",
-      platformPlaceholder: "Plattform auswahlen",
+      platformPlaceholder: "Plattform auswählen",
       propertyTypeLabel: "Unterkunftsart",
-      propertyTypePlaceholder: "Unterkunftsart auswahlen",
+      propertyTypePlaceholder: "Unterkunftsart auswählen",
       submitIdle: "Meine Marktübersicht ansehen",
       submitLoading: "Marktanalyse...",
       helper:
@@ -1967,44 +1967,44 @@ export const freeAuditTranslations = {
       },
     },
     errors: {
-      listing_url_invalid: "Geben Sie eine gultige URL einer unterstutzten Plattform ein.",
+      listing_url_invalid: "Geben Sie eine gültige URL einer unterstützten Plattform ein.",
       country_required: "Geben Sie Ihr Land ein.",
       city_required: "Geben Sie Ihre Stadt ein.",
-      platform_required: "Wahlen Sie eine Plattform aus.",
-      property_type_required: "Wahlen Sie eine Unterkunftsart aus.",
-      invalid_request: "Einige Angaben mussen korrigiert werden.",
+      platform_required: "Wählen Sie eine Plattform aus.",
+      property_type_required: "Wählen Sie eine Unterkunftsart aus.",
+      invalid_request: "Einige Angaben müssen korrigiert werden.",
       rate_limited: "Sie haben mehrere Anfragen gestellt. Bitte versuchen Sie es in einigen Minuten erneut.",
-      unavailable: "Die kostenlose Vorschau ist vorubergehend nicht verfugbar.",
+      unavailable: "Die kostenlose Vorschau ist vorübergehend nicht verfügbar.",
       network_error: "Die Vorschau kann derzeit nicht geladen werden.",
       unknown_error: "Die Vorschau kann derzeit nicht geladen werden.",
     },
     result: {
-      title: "Marktuberblick zu Preisen",
+      title: "Marktüberblick zu Preisen",
       text:
-        "Ergebnis ausschliesslich auf Basis der aktuell fur diese Kategorie verfugbaren aggregierten Marktdaten.",
+        "Ergebnis ausschließlich auf Basis der aktuell für diese Kategorie verfügbaren aggregierten Marktdaten.",
       initialTitle: "Ihre Vorschau erscheint hier.",
       initialText:
-        "Norixo zeigt die beobachtete Preisspanne und den verfugbaren Median fur Ihren Markt.",
+        "Norixo zeigt die beobachtete Preisspanne und den verfügbaren Median für Ihren Markt.",
       initialGuideTitle: "Was Sie entdecken werden",
       initialGuideItems: [
         {
           title: "Beobachtete Spanne",
-          text: "Entdecken Sie die aktuell fur diesen Markt verfugbaren niedrigen und hohen Preise.",
+          text: "Entdecken Sie die aktuell für diesen Markt verfügbaren niedrigen und hohen Preise.",
         },
         {
           title: "Marktmedian",
-          text: "Sehen Sie das zentrale Preisniveau, das fur diese Kategorie beobachtet wurde.",
+          text: "Sehen Sie das zentrale Preisniveau, das für diese Kategorie beobachtet wurde.",
         },
         {
           title: "Vertrauensniveau",
-          text: "Verstehen Sie, wie belastbar die verfugbaren Marktdaten sind.",
+          text: "Verstehen Sie, wie belastbar die verfügbaren Marktdaten sind.",
         },
       ],
       initialPrompt:
-        "Fullen Sie das Formular aus, um die aktuell fur diesen Markt verfugbare Vorschau anzuzeigen.",
+        "Füllen Sie das Formular aus, um die aktuell für diesen Markt verfügbare Vorschau anzuzeigen.",
       submittingTitle: "Ihre Marktvorschau wird vorbereitet",
       submittingText:
-        "Norixo stellt die aggregierten Marktsignale zusammen, die fur diese Kategorie verfugbar sind.",
+        "Norixo stellt die aggregierten Marktsignale zusammen, die für diese Kategorie verfügbar sind.",
       benchmarkRange: "Beobachtete Spanne",
       medianPrice: "Median",
       marketTitle: "Marktsnapshot",
@@ -2014,8 +2014,8 @@ export const freeAuditTranslations = {
       limitationsTitle: "Wissenswertes",
       insufficientTitle: "Die Abdeckung ist noch begrenzt",
       insufficientText:
-        "Fur diese Anfrage liegen noch nicht genug aggregierte Marktdaten vor.",
-      unavailableTitle: "Vorschau nicht verfugbar",
+        "Für diese Anfrage liegen noch nicht genug aggregierte Marktdaten vor.",
+      unavailableTitle: "Vorschau nicht verfügbar",
       confidenceLevel: {
         standard: "Standardvertrauen",
         high: "Hohes Vertrauen",
@@ -2029,21 +2029,21 @@ export const freeAuditTranslations = {
         aggregated_market_data:
           "Die Ergebnisse basieren auf aggregierten Marktdaten.",
         listing_specific_factors:
-          "Unterkunftsmerkmale, Saisonverlauf und der genaue Standort konnen den passenden Preis stark verandern.",
+          "Unterkunftsmerkmale, Saisonverlauf und der genaue Standort können den passenden Preis stark verändern.",
         broad_market_segment:
-          "Der verfugbare Benchmark deckt ein breiteres Marktsegment ab als Ihre ursprungliche Anfrage.",
+          "Der verfügbare Benchmark deckt ein breiteres Marktsegment ab als Ihre ursprüngliche Anfrage.",
         all_capacities_scope:
-          "Die Vorschau fasst alle Gastekapazitaten in diesem Marktsegment zusammen.",
+          "Die Vorschau fasst alle Gästekapazitäten in diesem Marktsegment zusammen.",
         multi_platform_scope:
           "Diese Vorschau kombiniert aggregierte Daten aus mehreren Buchungsplattformen.",
         limited_sample_size:
-          "Die aktuelle Stichprobe ist fur dieses Marktsegment noch begrenzt.",
+          "Die aktuelle Stichprobe ist für dieses Marktsegment noch begrenzt.",
         limited_source_diversity:
           "Die aktuelle Stichprobe stammt aus einer begrenzten Anzahl von Marktquellen.",
         aging_data:
           "Ein Teil der aggregierten Marktdaten beginnt zu veralten.",
         multi_currency_market:
-          "In diesem Markt existieren mehrere konkurrierende Wahrungen, sodass ohne zusatzlichen Kontext keine verlassliche Vorschau moglich ist.",
+          "In diesem Markt existieren mehrere konkurrierende Währungen, sodass ohne zusätzlichen Kontext keine verlässliche Vorschau möglich ist.",
       },
       recommendationCodes: {
         median_positions_market:
@@ -2051,9 +2051,9 @@ export const freeAuditTranslations = {
         broader_segment_used:
           "Die Vorschau basiert auf einem breiteren Marktsegment als dem exakt angefragten Typ.",
         listing_specific_factors_matter:
-          "Fotos, Ausstattung, Saisonverlauf und Lage konnen den passenden Preis deutlich beeinflussen.",
+          "Fotos, Ausstattung, Saisonverlauf und Lage können den passenden Preis deutlich beeinflussen.",
         full_audit_for_positioning:
-          "Das vollstandige Audit analysiert Ihr Inserat und reale Wettbewerber, um Ihre genaue Positionierung zu bestimmen.",
+          "Das vollständige Audit analysiert Ihr Inserat und reale Wettbewerber, um Ihre genaue Positionierung zu bestimmen.",
       },
     },
     premium: {
@@ -2064,12 +2064,12 @@ export const freeAuditTranslations = {
       medianPriceLabel: "Medianpreis",
       highPriceLabel: "Hoher Preis",
       compareToMarketCta: "Mein Inserat mit diesem Markt vergleichen",
-      revealTitle: "Was Ihr vollstandiges Audit aufdecken wird",
+      revealTitle: "Was Ihr vollständiges Audit aufdecken wird",
       revealSubtitle:
-        "Die kostenlose Vorschau zeigt Ihnen den Markt. Das vollstandige Audit analysiert Ihr tatsachliches Inserat.",
+        "Die kostenlose Vorschau zeigt Ihnen den Markt. Das vollständige Audit analysiert Ihr tatsächliches Inserat.",
       revealCards: [
         {
-          title: "Die tatsachliche Position Ihres Inserats",
+          title: "Die tatsächliche Position Ihres Inserats",
           text:
             "Vergleichen Sie Ihr Inserat mit den Wettbewerbern in Ihrem Markt und bestimmen Sie seine genaue Positionierung.",
         },
@@ -2084,7 +2084,7 @@ export const freeAuditTranslations = {
             "Analysieren Sie Titel, Beschreibung, Fotos, Ausstattung und alle Elemente, die Buchungen bremsen.",
         },
         {
-          title: "Ihre wichtigsten Massnahmen",
+          title: "Ihre wichtigsten Maßnahmen",
           text:
             "Erhalten Sie einen klaren Aktionsplan, priorisiert nach dem voraussichtlichen Einfluss auf Ihre Performance.",
         },
@@ -2096,7 +2096,7 @@ export const freeAuditTranslations = {
           text: "Entdecken Sie die beobachtete Spanne und den Marktmedian.",
         },
         {
-          title: "Vollstandige Inseratsanalyse",
+          title: "Vollständige Inseratsanalyse",
           text:
             "Norixo analysiert Ihr Inserat, Ihre Wettbewerber und Ihre Positionierung.",
         },
@@ -2105,59 +2105,59 @@ export const freeAuditTranslations = {
           text: "Sie erhalten konkrete, priorisierte Empfehlungen.",
         },
       ],
-      unlockCta: "Mein vollstandiges Audit freischalten",
+      unlockCta: "Mein vollständiges Audit freischalten",
     },
     clarity: {
       title: "Die kostenlose Vorschau verstehen",
       cards: [
         {
           title: "Was Sie kostenlos erhalten",
-          text: "Dieser Schritt ist eine offentliche Marktvorschau, noch kein personalisiertes Audit Ihres Inserats.",
+          text: "Dieser Schritt ist eine öffentliche Marktvorschau, noch kein personalisiertes Audit Ihres Inserats.",
           items: [
-            "Beobachtete Spanne fur Ihre Kategorie",
+            "Beobachtete Spanne für Ihre Kategorie",
             "Marktmedian und Vertrauensniveau",
             "Hinweise zu Abdeckung und Grenzen dieses Marktes",
           ],
         },
         {
           title: "Was noch nicht analysiert wird",
-          text: "Norixo pruft die privaten Inhalte Ihres Inserats noch nicht, bevor das vollstandige Audit gestartet wird.",
+          text: "Norixo prüft die privaten Inhalte Ihres Inserats noch nicht, bevor das vollständige Audit gestartet wird.",
           items: [
-            "Keine Prufung von Titel, Beschreibung, Fotos oder Ausstattung",
+            "Keine Prüfung von Titel, Beschreibung, Fotos oder Ausstattung",
             "Keine Analyse Ihres privaten Preises",
-            "Noch keine vollstandige Wettbewerbsdiagnose oder kein Aktionsplan in dieser Phase",
+            "Noch keine vollständige Wettbewerbsdiagnose oder kein Aktionsplan in dieser Phase",
           ],
         },
         {
-          title: "Warum diese Ergebnisse glaubwurdig sind",
-          text: "Die Vorschau basiert auf aggregierten offentlichen Benchmarks, die von den Intelligence-Regeln von Norixo fur Ihren Markt ausgewahlt werden.",
+          title: "Warum diese Ergebnisse glaubwürdig sind",
+          text: "Die Vorschau basiert auf aggregierten öffentlichen Benchmarks, die von den Intelligence-Regeln von Norixo für Ihren Markt ausgewählt werden.",
           items: [
             "Nur aggregierte und anonymisierte Marktdaten",
-            "Keine privaten Nutzerdaten werden offentlich veroffentlicht oder offentlich wiederverwendet",
+            "Keine privaten Nutzerdaten werden öffentlich veröffentlicht oder öffentlich wiederverwendet",
             "Die Abdeckung kann je nach Stadt, Plattform und Unterkunftstyp variieren",
           ],
         },
         {
           title: "Warum Sie danach ein Konto erstellen",
-          text: "Mit dem Konto kann Norixo sicher von dieser Vorschau zum vollstandigen Auditpfad ubergehen.",
+          text: "Mit dem Konto kann Norixo sicher von dieser Vorschau zum vollständigen Auditpfad übergehen.",
           items: [
             "Den Wiederaufnahmekontext speichern",
-            "Das vollstandige Audit aus dem Dashboard starten",
-            "Spater Audits und Kaufe wiederfinden",
+            "Das vollständige Audit aus dem Dashboard starten",
+            "Später Audits und Käufe wiederfinden",
           ],
         },
       ],
     },
     compare: {
-      title: "Kostenlose Vorschau vs vollstandiges Audit",
+      title: "Kostenlose Vorschau vs vollständiges Audit",
       freeTitle: "Kostenlose Marktvorschau",
-      fullTitle: "Vollstandiges Audit",
+      fullTitle: "Vollständiges Audit",
       freeItems: [
         "Aggregierte Marktpreisspanne",
         "Marktmedian",
         "Vertrauensniveau",
         "Allgemeine Empfehlungen",
-        "Keine Inseratsinhalte gepruft",
+        "Keine Inseratsinhalte geprüft",
       ],
       fullItems: [
         "Reale Inseratsanalyse",
@@ -2166,12 +2166,12 @@ export const freeAuditTranslations = {
         "Reale Wettbewerber",
         "Konversionschancen",
         "Personalisierte Empfehlungen",
-        "Vollstandige Preisanalyse",
-        "Auslastungsanalyse, wenn verfugbar",
+        "Vollständige Preisanalyse",
+        "Auslastungsanalyse, wenn verfügbar",
       ],
     },
     faq: {
-      title: "Haufige Fragen",
+      title: "Häufige Fragen",
       items: [
         {
           question: "Ist die kostenlose Vorschau wirklich kostenlos?",
@@ -2181,36 +2181,36 @@ export const freeAuditTranslations = {
         {
           question: "Verbindet sich Norixo mit meinem Plattformkonto?",
           answer:
-            "Nein. Die kostenlose Vorschau nutzt nur strukturierte Marktinformationen und benotigt keine Verbindung zu Ihrem Konto.",
+            "Nein. Die kostenlose Vorschau nutzt nur strukturierte Marktinformationen und benötigt keine Verbindung zu Ihrem Konto.",
         },
         {
-          question: "Wird mein Inserat wahrend der kostenlosen Vorschau ausgelesen?",
+          question: "Wird mein Inserat während der kostenlosen Vorschau ausgelesen?",
           answer:
-            "Nein. In dieser Phase startet Norixo keine vollstandige Extraktion des Inserats und analysiert den Inhalt Ihres Inserats noch nicht.",
+            "Nein. In dieser Phase startet Norixo keine vollständige Extraktion des Inserats und analysiert den Inhalt Ihres Inserats noch nicht.",
         },
         {
           question: "Woher stammen die angezeigten Daten?",
           answer:
-            "Die Vorschau wird aus aggregierten offentlichen Benchmarks aufgebaut, die fur das angeforderte Marktsegment ausgewahlt wurden.",
+            "Die Vorschau wird aus aggregierten öffentlichen Benchmarks aufgebaut, die für das angeforderte Marktsegment ausgewählt wurden.",
         },
         {
-          question: "Warum ist das vollstandige Audit kostenpflichtig?",
+          question: "Warum ist das vollständige Audit kostenpflichtig?",
           answer:
-            "Das kostenpflichtige Audit geht uber den offentlichen Benchmark hinaus und analysiert Ihr echtes Inserat, dessen Inhalt, Positionierung und priorisierte Aktionen.",
+            "Das kostenpflichtige Audit geht über den öffentlichen Benchmark hinaus und analysiert Ihr echtes Inserat, dessen Inhalt, Positionierung und priorisierte Aktionen.",
         },
         {
           question: "Was passiert, wenn die Marktabdeckung noch nicht ausreicht?",
           answer:
-            "Norixo weist auf eine unzureichende Abdeckung hin, statt eine Genauigkeit vorzutauschen, die die offentlichen Benchmarks noch nicht erlauben.",
+            "Norixo weist auf eine unzureichende Abdeckung hin, statt eine Genauigkeit vorzutauschen, die die öffentlichen Benchmarks noch nicht erlauben.",
         },
       ],
     },
     cta: {
-      title: "Bereit fur das vollstandige Audit?",
-      text: "Wechseln Sie von einem Marktsnapshot zum vollstandigen Norixo-Audit Ihres Inserats.",
-      primary: "Vollstandiges Audit freischalten",
+      title: "Bereit für das vollständige Audit?",
+      text: "Wechseln Sie von einem Marktsnapshot zum vollständigen Norixo-Audit Ihres Inserats.",
+      primary: "Vollständiges Audit freischalten",
       secondary: "Mit Ihrem echten Inserat starten",
-      reassurance: "Erhalten Sie Ihre exakte Positionierung und personliche Empfehlungen.",
+      reassurance: "Erhalten Sie Ihre exakte Positionierung und persönliche Empfehlungen.",
     },
     seo: {
       title: "Kostenloser Airbnb-Marktcheck: Preise vergleichen | Norixo",
