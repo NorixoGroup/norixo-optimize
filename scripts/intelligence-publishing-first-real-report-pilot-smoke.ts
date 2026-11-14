@@ -131,7 +131,7 @@ async function main() {
     bundleBuild.bundle.document.identity.canonicalPath,
     "/reports/airbnb-market-report-barcelona-apartment",
   );
-  assert.equal(bundleBuild.bundle.change.changeType, "partial_report");
+  assert.equal(bundleBuild.bundle.change.changeType, "new_report");
   assert.equal(
     bundleBuild.bundle.document.sections.some(
       (section) => section.sectionType === "occupancy_benchmark",
@@ -160,6 +160,35 @@ async function main() {
     true,
   );
   assertNoPrivateFragments(bundleBuild.bundle);
+
+  const explicitOccupancyRequiredSource = clone(reportSourceInput) as Record<
+    string,
+    unknown
+  >;
+  const explicitOccupancyPublication = (
+    explicitOccupancyRequiredSource.publication as Record<string, unknown>
+  );
+  explicitOccupancyPublication.requiredMetrics = [
+    "pricing_benchmark",
+    "market_overview",
+    "occupancy_benchmark",
+  ];
+  const explicitOccupancyBundleBuild = buildMarketReportBundleFromPublicMarketSource(
+    explicitOccupancyRequiredSource,
+  );
+  assert.equal(
+    explicitOccupancyBundleBuild.bundle.change.changeType,
+    "partial_report",
+    "An occupancy metric explicitly listed in requiredMetrics must still block completeness even though the public pipeline has no occupancy data.",
+  );
+  assert.equal(
+    explicitOccupancyBundleBuild.bundle.change.diagnostics.some(
+      (diagnostic) => diagnostic.code === "occupancy_asset_missing",
+    ),
+    true,
+    "Expected an occupancy_asset_missing diagnostic when occupancy_benchmark is explicitly required.",
+  );
+  assertNoPrivateFragments(explicitOccupancyBundleBuild.bundle);
 
   const temporaryRoot = await mkdtemp(
     path.join(tmpdir(), "ipp-real-report-foundation-"),
@@ -215,14 +244,14 @@ async function main() {
       canonicalManifest.route.canonical.pathname,
       "/fr/reports/airbnb-market-report-barcelona-apartment",
     );
-    assert.equal(canonicalManifest.decision.decisionType, "publish_with_warning");
-    assert.equal(canonicalManifest.publication.publicationMode, "publish_with_warning");
-    assert.equal(canonicalManifest.publication.completeness, "partial_report");
+    assert.equal(canonicalManifest.decision.decisionType, "publish");
+    assert.equal(canonicalManifest.publication.publicationMode, "publish");
+    assert.equal(canonicalManifest.publication.completeness, "complete_report");
     assert.equal(canonicalManifest.publication.renderable, true);
-    assert.equal(canonicalManifest.publication.indexable, false);
-    assert.equal(canonicalManifest.publication.sitemapEligible, false);
-    assert.equal(canonicalManifest.seo.robots.index, false);
-    assert.equal(canonicalManifest.sitemapEntry, null);
+    assert.equal(canonicalManifest.publication.indexable, true);
+    assert.equal(canonicalManifest.publication.sitemapEligible, true);
+    assert.equal(canonicalManifest.seo.robots.index, true);
+    assert.ok(canonicalManifest.sitemapEntry != null);
     assert.equal(
       canonicalManifest.route.aliases.some(
         (alias) => alias.fromPath === "/reports/airbnb-market-report-barcelona",
@@ -270,8 +299,8 @@ async function main() {
     assert.equal(resolution.found, true);
     assert.equal(resolution.canonicalPath, "/fr/reports/airbnb-market-report-barcelona-apartment");
     assert.equal(resolution.entry?.source, "ipp_canonical");
-    assert.equal(resolution.entry?.indexable, false);
-    assert.equal(resolution.entry?.sitemapEligible, false);
+    assert.equal(resolution.entry?.indexable, true);
+    assert.equal(resolution.entry?.sitemapEligible, true);
     assert.equal(resolution.entry?.pathname, "/fr/reports/airbnb-market-report-barcelona-apartment");
 
     const localizedResolution = resolveNextPublicationForLocalizedRoute(
