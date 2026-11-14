@@ -64,6 +64,44 @@ export default function sitemap(): MetadataRoute.Sitemap {
     }
   }
 
+  for (const guide of guides) {
+    entries.push({
+      url: `${publicSiteUrl}/guides/${guide.slug}`,
+    });
+  }
+
+  for (const solution of solutions) {
+    entries.push({
+      url: `${publicSiteUrl}/solutions/${solution.slug}`,
+    });
+  }
+
+  for (const tool of tools) {
+    entries.push({
+      url: `${publicSiteUrl}/tools/${tool.slug}`,
+    });
+  }
+
+  for (const ranking of rankings) {
+    entries.push({
+      url: `${publicSiteUrl}/rankings/${ranking.slug}`,
+    });
+  }
+
+  for (const country of countries) {
+    entries.push({
+      url: `${publicSiteUrl}/countries/${country.slug}`,
+    });
+  }
+
+  for (const article of articles) {
+    entries.push({
+      url: `${publicSiteUrl}/articles/${article.slug}`,
+    });
+  }
+
+  entries.push(...buildNextSitemapEntries(reportsCatalog));
+
   for (const city of cities) {
     entries.push({
       url: `${publicSiteUrl}/airbnb-optimizer/${city.slug}`,
@@ -85,42 +123,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     }
   }
 
-  for (const country of countries) {
-    entries.push({
-      url: `${publicSiteUrl}/countries/${country.slug}`,
-    });
-  }
-
-  for (const ranking of rankings) {
-    entries.push({
-      url: `${publicSiteUrl}/rankings/${ranking.slug}`,
-    });
-  }
-
-  for (const article of articles) {
-    entries.push({
-      url: `${publicSiteUrl}/articles/${article.slug}`,
-    });
-  }
-
-  for (const guide of guides) {
-    entries.push({
-      url: `${publicSiteUrl}/guides/${guide.slug}`,
-    });
-  }
-
-  for (const solution of solutions) {
-    entries.push({
-      url: `${publicSiteUrl}/solutions/${solution.slug}`,
-    });
-  }
-
-  for (const tool of tools) {
-    entries.push({
-      url: `${publicSiteUrl}/tools/${tool.slug}`,
-    });
-  }
-
-  entries.push(...buildNextSitemapEntries(reportsCatalog));
   return entries;
 }
