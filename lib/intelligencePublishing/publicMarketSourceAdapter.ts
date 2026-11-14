@@ -916,11 +916,9 @@ export function buildMarketReportBundleFromPublicMarketSource(
         requirePricing: base.source.publication.requiredMetrics.includes(
           "pricing_benchmark",
         ),
-        requireOccupancy:
-          base.source.publication.indexOnlyWhenComplete ||
-          base.source.publication.requiredMetrics.includes(
-            "occupancy_benchmark",
-          ),
+        requireOccupancy: base.source.publication.requiredMetrics.includes(
+          "occupancy_benchmark",
+        ),
         allowPartialReport: true,
         minimumSectionCount: 5,
       },
