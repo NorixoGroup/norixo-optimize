@@ -4005,6 +4005,8 @@ export function buildWebSeoModel(input: Readonly<{
       : bundle.structuredData.mainEntity;
   const structuredData: CoordinationJsonObject = deepFreeze({
     ...(bundle.structuredData as CoordinationJsonObject),
+    "@id": input.route.canonical.canonicalUrl,
+    url: input.route.canonical.canonicalUrl,
     canonicalUrl: input.route.canonical.canonicalUrl,
     ...(structuredDataMainEntity == null
       ? {}
