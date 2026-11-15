@@ -306,6 +306,11 @@ export type MarketReportLineageArtifact = Readonly<{
 }>;
 
 export type MarketReportStructuredData = Readonly<{
+  "@context": string;
+  "@type": string;
+  "@id": string | null;
+  url: string | null;
+  isPartOf: CoordinationJsonObject;
   schemaType: string;
   headline: string;
   description: string;
@@ -2936,7 +2941,15 @@ function buildStructuredData(
     methodology: MarketReportMethodology | null;
   }>,
 ): MarketReportStructuredData {
+  const canonicalUrl = input.document.identity.canonicalUrl;
   return deepFreeze({
+    "@context": "https://schema.org",
+    "@type": "Report",
+    "@id": canonicalUrl,
+    url: canonicalUrl,
+    isPartOf: freezeMetadata({
+      "@id": "https://norixo.io/#website",
+    }),
     schemaType: "Report",
     headline: input.document.title,
     description: input.document.description,
@@ -2958,7 +2971,7 @@ function buildStructuredData(
       windowEndedAt: input.document.period.windowEndedAt,
     }),
     publisher: freezeMetadata({
-      name: "Norixo",
+      "@id": "https://norixo.io/#organization",
     }),
     mainEntity: freezeMetadata({
       title: input.document.title,
