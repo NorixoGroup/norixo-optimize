@@ -44,6 +44,11 @@ function getCopy(locale: string) {
       available: "Disponible",
       methodologyAndLimits: "Méthodologie et limites",
       sources: "Sources",
+      citationTitle: "Citer ce rapport",
+      citationIntro:
+        "Citez la page canonique de ce rapport et conservez la date de mise à jour si elle est affichée ci-dessus.",
+      citationScope: "Périmètre",
+      methodologyLink: "Méthodologie de recherche Norixo",
       moreMarketReports: "Autres rapports de marché",
     } as const;
   }
@@ -58,6 +63,11 @@ function getCopy(locale: string) {
     available: "Available",
     methodologyAndLimits: "Methodology and limits",
     sources: "Sources",
+    citationTitle: "Cite this report",
+    citationIntro:
+      "Cite this report's canonical page and preserve the update date shown above, if any.",
+    citationScope: "Scope",
+    methodologyLink: "Norixo research methodology",
     moreMarketReports: "More market reports",
   } as const;
 }
@@ -75,6 +85,17 @@ export default function IppMarketReportView({
   const page = manifest.page;
   const structuredData = manifest.seo.structuredData;
   const copy = getCopy(locale);
+  const canonicalUrl = manifest.route.canonical.absoluteUrl;
+  const citationPeriod = page.facts.find(
+    (fact) => fact.key === "capture_period",
+  );
+  const citationSample = page.facts.find(
+    (fact) => fact.key === "pricing_sample",
+  );
+  const { city, platform, propertyType } = manifest.route.canonical;
+  const citationScopeLabel = [city, platform, propertyType]
+    .filter((part) => typeof part === "string" && part.trim().length > 0)
+    .join(" · ");
 
   return (
     <main className="min-h-screen bg-[#FAF7F2] text-[#10231F]">
@@ -219,6 +240,79 @@ export default function IppMarketReportView({
           </div>
         </section>
       ) : null}
+
+      <section className="mx-auto max-w-6xl px-6 pb-12">
+        <div className="rounded-3xl border border-[#10231F]/10 bg-white p-8 shadow-sm">
+          <h2 className="text-3xl font-semibold">{copy.citationTitle}</h2>
+          <p className="mt-4 max-w-3xl leading-8 text-[#4C5C55]">
+            {copy.citationIntro}
+          </p>
+          <div className="mt-6 rounded-2xl bg-[#FAF7F2] p-5 text-sm leading-7 text-[#4C5C55]">
+            <p className="font-semibold text-[#10231F]">
+              Norixo, &ldquo;{page.heading}&rdquo;
+            </p>
+            <p className="mt-2 break-all">{canonicalUrl}</p>
+            {citationScopeLabel.length > 0 ||
+            citationPeriod != null ||
+            citationSample != null ? (
+              <dl className="mt-4 grid gap-3 sm:grid-cols-3">
+                {citationScopeLabel.length > 0 ? (
+                  <div>
+                    <dt className="font-semibold text-[#10231F]">
+                      {copy.citationScope}
+                    </dt>
+                    <dd>{citationScopeLabel}</dd>
+                  </div>
+                ) : null}
+                {citationPeriod != null ? (
+                  <div>
+                    <dt className="font-semibold text-[#10231F]">
+                      {String(citationPeriod.label ?? citationPeriod.key)}
+                    </dt>
+                    <dd>
+                      {formatValue(
+                        (citationPeriod.value as
+                          | string
+                          | number
+                          | boolean
+                          | null
+                          | undefined) ?? null,
+                        locale,
+                      )}
+                    </dd>
+                  </div>
+                ) : null}
+                {citationSample != null ? (
+                  <div>
+                    <dt className="font-semibold text-[#10231F]">
+                      {String(citationSample.label ?? citationSample.key)}
+                    </dt>
+                    <dd>
+                      {formatValue(
+                        (citationSample.value as
+                          | string
+                          | number
+                          | boolean
+                          | null
+                          | undefined) ?? null,
+                        locale,
+                      )}
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
+            ) : null}
+          </div>
+          <p className="mt-6">
+            <Link
+              href="/research/methodology"
+              className="text-sm font-semibold text-[#10231F] underline underline-offset-4"
+            >
+              {copy.methodologyLink}
+            </Link>
+          </p>
+        </div>
+      </section>
 
       {relatedCards.length > 0 ? (
         <section className="mx-auto max-w-6xl px-6 pb-20">

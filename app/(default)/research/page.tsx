@@ -47,6 +47,13 @@ const documents = [
     description:
       "Understand how to read aggregated public market data, confidence signals, freshness, limitations, and publication status.",
   },
+  {
+    href: "/reports",
+    eyebrow: "Available now",
+    title: "Research reports",
+    description:
+      "Open the public report catalog. Each report documents its own scope, evidence, and limitations.",
+  },
 ] as const;
 
 export default function ResearchHubPage() {
@@ -57,6 +64,7 @@ export default function ResearchHubPage() {
       name: "Norixo Research & Methodology",
       description: metadata.description,
       url: "https://norixo.io/research",
+      isPartOf: { "@id": "https://norixo.io/#website" },
       publisher: { "@id": "https://norixo.io/#organization" },
     },
     {
@@ -162,6 +170,24 @@ export default function ResearchHubPage() {
             scope, freshness, and limitations. This documentation explains the
             public safeguards behind eligible reports without exposing private
             listings, customer data, or proprietary audit logic.
+          </p>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-6 pb-10">
+        <div className="rounded-3xl border border-[#10231F]/10 bg-white p-8 shadow-sm">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#D96C3B]">
+            Citation
+          </p>
+          <h2 className="mt-3 text-3xl font-semibold">
+            How to cite Norixo research
+          </h2>
+          <p className="mt-4 max-w-3xl leading-8 text-[#4C5C55]">
+            For a market claim, cite the specific public report that contains
+            the evidence rather than this hub. For definitions or publication
+            safeguards, cite the methodology page. Preserve the exact title,
+            canonical URL, and publication or update date shown on the
+            source.
           </p>
         </div>
       </section>
