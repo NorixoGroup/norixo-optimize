@@ -182,13 +182,6 @@ export default async function MarketReportPage({ params }: Props) {
         },
       ],
     },
-    {
-      "@context": "https://schema.org",
-      "@type": "Organization",
-      "@id": "https://norixo.io/#organization",
-      name: "Norixo",
-      url: "https://norixo.io",
-    },
   ];
 
   return (
