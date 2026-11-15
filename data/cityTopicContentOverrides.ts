@@ -610,6 +610,141 @@ const cityTopicContentOverrides: Record<
         "Once a comparison identifies a credible and testable gap, a Norixo audit can help distinguish a fixable listing signal from a structural difference before several changes are made at once.",
     },
   },
+
+  pisa: {
+    "pricing-guide": {
+      heading: "Price a Pisa listing around a short-stay, gateway market",
+      introduction:
+        "Pisa can attract travelers making short stays or stopovers toward wider Tuscany, alongside visits anchored by the Leaning Tower and the airport, rather than being a destination where every guest plans a long leisure stay. A pricing approach built for a multi-night city-break market can misread demand here.",
+      sections: [
+        {
+          heading: "Expect shorter bookings than a typical city break",
+          body:
+            "Many guests treat Pisa as a one- or two-night stop, either visiting the Tower directly or using the airport as a gateway to wider Tuscany, including Florence. Check whether your minimum-stay settings and nightly rate make sense for a short, high-turnover booking pattern instead of assuming guests plan a longer leisure stay.",
+        },
+        {
+          heading: "Separate historic-center demand from airport-transit demand",
+          body:
+            "A listing within walking distance of the Tower and historic center competes on a different basis than one positioned mainly for airport convenience. Make sure your description and photos state clearly which guest need you serve, since a price that fits one positioning can look mismatched for the other.",
+        },
+        {
+          heading: "Watch for seasonal and event-driven spikes without inventing a benchmark",
+          body:
+            "Tourist flow through Pisa concentrates around spring and summer travel and specific events in the wider region. Track your own calendar's booking pace and lead time across the year rather than relying on an assumed city-wide seasonal multiplier.",
+        },
+      ],
+      auditBridge:
+        "A Norixo audit can help check whether a Pisa listing's stay-length assumptions, positioning, and calendar settings match the short-stay, gateway pattern guests actually book, before any pricing change is made.",
+    },
+  },
+
+  taghazout: {
+    "pricing-guide": {
+      heading: "Price a Taghazout listing around surf-season demand",
+      introduction:
+        "Taghazout is known primarily as a surf destination, and its booking pattern follows surf conditions and surf-travel habits more than a conventional city or beach-resort calendar. Treating it like a generic coastal market risks mispricing both peak and off-season periods.",
+      sections: [
+        {
+          heading: "Recognize who is actually booking",
+          body:
+            "Guests are frequently surf travelers, some booking short trips around swell and surf courses, others staying for extended periods in a more nomadic pattern. Check whether your listing's description, amenities, and minimum-stay rules fit the guest type you actually attract before adjusting price.",
+        },
+        {
+          heading: "Account for surf-season timing before assuming a flat seasonal curve",
+          body:
+            "Demand tends to track the surf season rather than a conventional summer-holiday pattern. Review your own historical booking pace by month instead of applying a generic coastal-destination seasonality assumption.",
+        },
+        {
+          heading: "Position surf-relevant amenities clearly",
+          body:
+            "Board storage, communal or shared spaces, and proximity to known surf spots can matter more to this guest base than amenities that a typical beach-resort listing would prioritize. Make sure the listing states these clearly so price and perceived value stay aligned.",
+        },
+      ],
+      auditBridge:
+        "A Norixo audit can help verify that a Taghazout listing's positioning and calendar reflect surf-travel demand patterns rather than a generic coastal-destination assumption before any pricing adjustment.",
+    },
+  },
+
+  fukuoka: {
+    "pricing-guide": {
+      heading: "Price a Fukuoka listing around business and convention demand",
+      introduction:
+        "Fukuoka combines leisure tourism with a meaningful amount of business and convention travel, and it also serves as a regional gateway within Kyushu. A pricing approach built only around leisure seasonality can miss how corporate and event-driven demand shapes the calendar here.",
+      sections: [
+        {
+          heading: "Separate business-stay demand from leisure demand",
+          body:
+            "A compact, well-connected unit aimed at a business traveler or conference attendee is a different proposition from a larger unit aimed at a family or leisure group. Check which guest type your listing's size, location, and amenities actually serve before assuming a single demand pattern drives your calendar.",
+        },
+        {
+          heading: "Watch for convention and event-driven spikes",
+          body:
+            "Periods around major conventions or regional events can shift demand independently of typical leisure seasonality. Track your own booking pace and lead time around known local event dates rather than assuming a flat or purely weather-driven seasonal curve.",
+        },
+        {
+          heading: "Consider proximity to business districts and transit",
+          body:
+            "Distance to the convention center, central business district, or key transit connections can matter as much as distance to leisure attractions. Make sure the listing communicates the right proximity for the guest type you are pricing for.",
+        },
+      ],
+      auditBridge:
+        "A Norixo audit can help determine whether a Fukuoka listing's positioning and calendar are better aligned with business and convention travel or leisure demand before adjusting price.",
+    },
+  },
+
+  "rio-de-janeiro": {
+    "pricing-guide": {
+      heading: "Price a Rio de Janeiro listing around its sharp seasonal swings",
+      introduction:
+        "Rio de Janeiro experiences marked seasonal demand swings tied to Carnival, New Year's Eve (Réveillon), and the summer season, alongside strong guest preference for specific neighborhoods. A flat, non-seasonal pricing approach is unlikely to fit this market.",
+      sections: [
+        {
+          heading: "Treat peak periods as structurally different from the rest of the year",
+          body:
+            "Carnival, Réveillon (New Year's Eve), and the summer months typically draw sharply higher demand than the rest of the calendar. Review your own booking pace and lead time separately for these periods rather than applying a single year-round pricing logic.",
+        },
+        {
+          heading: "Weigh neighborhood identity carefully",
+          body:
+            "Guests often choose between beachfront neighborhoods and other parts of the city for very different reasons, including perceived safety, walkability, and proximity to the coast. Make sure your description is explicit about location and access so price and perceived value stay consistent for the guest you are targeting.",
+        },
+        {
+          heading: "Separate location premium from seasonal premium",
+          body:
+            "A beachfront listing's price reflects both its location and the time of year; conflating the two can lead to over- or under-pricing outside peak season. Compare your rate against genuinely similar listings in the same neighborhood and the same period before concluding the gap is about seasonality or location alone.",
+        },
+      ],
+      auditBridge:
+        "A Norixo audit can help separate the effect of Rio de Janeiro's peak-season calendar from neighborhood positioning so a pricing change targets the actual constraint.",
+    },
+  },
+
+  turin: {
+    "pricing-guide": {
+      heading: "Price a Turin listing around business travel and fair-driven demand",
+      introduction:
+        "Turin's Airbnb demand is shaped significantly by business travel, trade fairs and exhibitions, and its role as a gateway to the Alps, rather than by leisure tourism to a historic center alone. A pricing approach copied from a leisure-dominated Italian city can misread this market.",
+      sections: [
+        {
+          heading: "Identify whether your listing serves business or leisure stays",
+          body:
+            "A central apartment aimed at a business traveler or fair attendee competes differently than one positioned as a base for a mountain trip. Check that your description, amenities, and location framing match the guest type you are actually pricing for.",
+        },
+        {
+          heading: "Watch for fair and exhibition calendars",
+          body:
+            "Demand can spike around specific trade fairs, exhibitions, or business events independently of typical tourist seasonality. Track your own booking pace around known local event dates rather than assuming a generic leisure-season curve.",
+        },
+        {
+          heading: "Account for the winter mountain-tourism overlap",
+          body:
+            "Turin's proximity to the Alps can create a secondary seasonal pattern tied to winter sports travel, distinct from both business-travel periods and conventional summer tourism. Review whether your calendar shows a winter effect before treating your pricing as flat across seasons.",
+        },
+      ],
+      auditBridge:
+        "A Norixo audit can help determine whether a Turin listing's calendar is better explained by business and fair-driven demand or by leisure and mountain-tourism seasonality before any pricing change.",
+    },
+  },
 };
 
 export function getCityTopicContentOverride(citySlug: string, topicSlug: string) {
