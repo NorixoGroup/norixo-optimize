@@ -15,7 +15,7 @@ type AuditEntitlementRpcRow = {
   reason_code: string | null;
 };
 
-export type AuditEntitlementSource = "admin" | "credit";
+export type AuditEntitlementSource = "admin" | "credit" | "free_plan";
 
 export type ReserveAuditEntitlementStatus =
   | "reserved"
@@ -127,7 +127,7 @@ function getAuditEntitlementAdminClient(
 function toAuditEntitlementSource(
   value: string | null | undefined,
 ): AuditEntitlementSource | null {
-  return value === "admin" || value === "credit" ? value : null;
+  return value === "admin" || value === "credit" || value === "free_plan" ? value : null;
 }
 
 function normalizeRpcRow(data: unknown): AuditEntitlementRpcRow | null {
