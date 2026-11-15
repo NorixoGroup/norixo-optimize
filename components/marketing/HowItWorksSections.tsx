@@ -216,6 +216,10 @@ export function HowItWorksSections({
             </div>
           </div>
 
+          <p className="mt-1.5 text-[11px] italic text-slate-500">
+            {copy.reportPreview.illustrativeDisclaimer}
+          </p>
+
           <div className="mt-2.5 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-2.5 shadow-[0_10px_24px_rgba(16,185,129,0.14)] ring-1 ring-emerald-300">
             <div className="relative pl-4">
               <div className="absolute bottom-0 left-0 top-0 w-[3px] rounded-full bg-emerald-400/70" />

@@ -36,6 +36,8 @@ export const howItWorksI18n = {
       similarComparison: "Compared with similar listings nearby.",
       qualityIndex: "Listing quality index",
       qualityStatus: "Solid with room for improvement.",
+      illustrativeDisclaimer:
+        "Illustrative example — not a real listing or a guaranteed outcome.",
       estimatedImpact: "ESTIMATED IMPACT",
       potentialBookings: "Booking potential estimated from your audit",
       similarListings: "based on similar optimized listings",
@@ -114,6 +116,8 @@ export const howItWorksI18n = {
       similarComparison: "Comparé aux annonces similaires à proximité.",
       qualityIndex: "Indice qualité annonce",
       qualityStatus: "Solide avec marge d’amélioration.",
+      illustrativeDisclaimer:
+        "Exemple illustratif — pas une annonce réelle ni un résultat garanti.",
       estimatedImpact: "IMPACT ESTIMÉ",
       potentialBookings: "Potentiel estimé par votre audit",
       similarListings: "basé sur des annonces similaires optimisées",
@@ -192,6 +196,8 @@ export const howItWorksI18n = {
       similarComparison: "Comparado con anuncios similares cercanos.",
       qualityIndex: "Índice de calidad del anuncio",
       qualityStatus: "Sólido con margen de mejora.",
+      illustrativeDisclaimer:
+        "Ejemplo ilustrativo — no es un anuncio real ni un resultado garantizado.",
       estimatedImpact: "IMPACTO ESTIMADO",
       potentialBookings: "Potencial estimado pela auditoria",
       similarListings: "basado en anuncios similares optimizados",
@@ -269,6 +275,8 @@ export const howItWorksI18n = {
       similarComparison: "Verglichen mit ähnlichen Inseraten in der Nähe.",
       qualityIndex: "Qualitätsindex des Inserats",
       qualityStatus: "Solide mit Verbesserungspotenzial.",
+      illustrativeDisclaimer:
+        "Illustratives Beispiel – keine echte Anzeige und kein garantiertes Ergebnis.",
       estimatedImpact: "GESCHÄTZTER EFFEKT",
       potentialBookings: "Aus dem Audit geschätztes Potenzial",
       similarListings: "basierend auf ähnlichen optimierten Inseraten",
@@ -346,6 +354,8 @@ export const howItWorksI18n = {
       similarComparison: "Confrontato con annunci simili nelle vicinanze.",
       qualityIndex: "Indice di qualità dell’annuncio",
       qualityStatus: "Solido con margine di miglioramento.",
+      illustrativeDisclaimer:
+        "Esempio illustrativo — non è un annuncio reale né un risultato garantito.",
       estimatedImpact: "IMPATTO STIMATO",
       potentialBookings: "Estimación basada en la auditoría di potenziale prenotazioni",
       similarListings: "basato su annunci simili ottimizzati",
@@ -423,6 +433,8 @@ export const howItWorksI18n = {
       similarComparison: "Comparado com anúncios semelhantes nas proximidades.",
       qualityIndex: "Índice de qualidade do anúncio",
       qualityStatus: "Sólido, com margem para melhorar.",
+      illustrativeDisclaimer:
+        "Exemplo ilustrativo — não é um anúncio real nem um resultado garantido.",
       estimatedImpact: "IMPACTO ESTIMADO",
       potentialBookings: "Potencial estimado pela auditoria",
       similarListings: "baseado em anúncios semelhantes otimizados",
@@ -500,6 +512,8 @@ export const howItWorksI18n = {
       similarComparison: "Vergeleken met soortgelijke advertenties in de buurt.",
       qualityIndex: "Kwaliteitsindex van de advertentie",
       qualityStatus: "Sterk, met ruimte voor verbetering.",
+      illustrativeDisclaimer:
+        "Illustratief voorbeeld — geen echte advertentie en geen gegarandeerd resultaat.",
       estimatedImpact: "GESCHATTE IMPACT",
       potentialBookings: "Potentieel geschat op basis van de audit",
       similarListings: "gebaseerd op vergelijkbare geoptimaliseerde advertenties",
@@ -577,6 +591,8 @@ export const howItWorksI18n = {
       similarComparison: "近隣の類似掲載と比較。",
       qualityIndex: "掲載品質インデックス",
       qualityStatus: "改善余地を残しつつも堅実。",
+      illustrativeDisclaimer:
+        "イラストレーション例です。実際の掲載物件でも保証された結果でもありません。",
       estimatedImpact: "推定インパクト",
       potentialBookings: "監査に基づく推定 の潜在予約増",
       similarListings: "最適化された類似掲載に基づく",
@@ -654,6 +670,7 @@ export const howItWorksI18n = {
       similarComparison: "与附近类似房源进行比较。",
       qualityIndex: "房源质量指数",
       qualityStatus: "整体扎实，但仍有提升空间。",
+      illustrativeDisclaimer: "示例说明——并非真实房源，也不保证结果。",
       estimatedImpact: "预估影响",
       potentialBookings: "基于审计估算的预订潜力",
       similarListings: "基于类似的已优化房源",
@@ -731,6 +748,8 @@ export const howItWorksI18n = {
       similarComparison: "주변의 유사 숙소와 비교.",
       qualityIndex: "숙소 품질 지수",
       qualityStatus: "탄탄하지만 개선 여지가 있습니다.",
+      illustrativeDisclaimer:
+        "예시 설명입니다 — 실제 숙소가 아니며 결과를 보장하지 않습니다.",
       estimatedImpact: "예상 영향",
       potentialBookings: "감사 결과에 기반한 예약 잠재력 추정",
       similarListings: "유사한 최적화 숙소를 기반으로 함",
@@ -808,6 +827,7 @@ export const howItWorksI18n = {
       similarComparison: "مقارنة بإعلانات مشابهة قريبة.",
       qualityIndex: "مؤشر جودة الإعلان",
       qualityStatus: "مستوى جيد مع مجال للتحسين.",
+      illustrativeDisclaimer: "مثال توضيحي — ليس إعلانًا حقيقيًا ولا نتيجة مضمونة.",
       estimatedImpact: "الأثر التقديري",
       potentialBookings: "تقدير قائم على التدقيق من الحجوزات المحتملة",
       similarListings: "استنادًا إلى إعلانات مشابهة تم تحسينها",
