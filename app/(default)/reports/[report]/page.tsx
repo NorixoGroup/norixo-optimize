@@ -133,9 +133,14 @@ export default async function MarketReportPage({ params }: Props) {
     ].includes(tool.slug)
   );
 
-  const relatedReports = marketReports.filter(
-    (item) => item.slug !== report.slug
-  ).slice(0, 4);
+  const currentReportIndex = marketReports.findIndex(
+    (item) => item.slug === report.slug
+  );
+  const relatedReportCount = Math.min(4, marketReports.length - 1);
+  const relatedReports = Array.from({ length: relatedReportCount }, (_, offset) => {
+    const index = (currentReportIndex + offset + 1) % marketReports.length;
+    return marketReports[index];
+  });
 
   const jsonLd = [
     {
