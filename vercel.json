@@ -1,10 +1,6 @@
 {
   "crons": [
     {
-      "path": "/api/internal/cron/backlinks/outreach/schedule",
-      "schedule": "0 6 * * *"
-    },
-    {
       "path": "/api/internal/cron/backlinks/autonomy",
       "schedule": "15 6 * * *"
     },
