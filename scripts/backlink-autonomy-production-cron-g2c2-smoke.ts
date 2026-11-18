@@ -10,6 +10,7 @@ import {
   runBacklinkAutonomyProductionTick,
 } from "../lib/automation/backlink-autonomy-production-composition";
 import { createBacklinkAutonomyCronHandler } from "../app/api/internal/cron/backlinks/autonomy/route";
+import { BacklinkRepositoryError } from "../lib/backlinks/repositories/errors";
 
 const at = "2026-09-22T00:00:00.000Z";
 const off = () => ({ autonomyEnabled: false, source: "environment" as const });
@@ -169,6 +170,199 @@ async function main() {
   assert.equal(BACKLINK_AUTONOMY_CRON_PROMOTION_LIMIT, 10);
   assert.equal(BACKLINK_AUTONOMY_CRON_WORKER_STEPS_PER_RUN, 3);
   assert.equal(BACKLINK_AUTONOMY_CRON_RECLAIM_LIMIT, 3);
+
+  // BL-AUTONOMY-500 fix: a reclaim exception on one run must not drop every other run from this tick.
+  {
+    const runA = { workspaceId: "workspace-isolation-a", runId: "autonomy-run-isolation-a" };
+    const runB = { workspaceId: "workspace-isolation-b", runId: "autonomy-run-isolation-b" };
+    const workerCallsByRun: string[] = [];
+    const result = await runBacklinkAutonomyProductionTick({
+      runtimeConfig: on,
+      scheduler: async () => schedulerResult([runA, runB]),
+      reclaimAutonomyTasks: async (input) => {
+        if (input.runId === runB.runId) throw new Error("simulated reclaim failure");
+        return [];
+      },
+      runWorker: async (_deps, input) => {
+        workerCallsByRun.push(input.runId);
+        return { kind: "completed" as const, reasonCodes: [], taskId: "task", nextTaskId: null };
+      },
+      lifecycle: activeLifecycle,
+      schedulerDependencies: {} as never,
+      workerDependencies: {} as never,
+      now: () => at,
+    }, { at, workerId: "test" });
+    assert.equal(result.disposition, "completed", "a per-run exception must not fail the whole tick");
+    assert.equal(result.runsFailed, 1, "exactly the one throwing run must be counted as failed");
+    assert.equal(result.workerSteps, BACKLINK_AUTONOMY_CRON_WORKER_STEPS_PER_RUN, "the healthy run's worker steps must still run and count");
+    assert.deepEqual(workerCallsByRun, Array.from({ length: BACKLINK_AUTONOMY_CRON_WORKER_STEPS_PER_RUN }, () => runA.runId), "the throwing run's worker loop must never start; the other run proceeds");
+    assert.equal(result.runFailures.length, 1, "exactly one bounded failure record must identify the failed run");
+    assert.deepEqual(result.runFailures[0], { workspaceId: runB.workspaceId, runId: runB.runId, errorType: "Error", errorCode: "UNKNOWN" }, "the failure record must name the run concerned and a bounded error type/code only");
+  }
+
+  // BL-AUTONOMY-500 fix: a runWorker exception on one run must not prevent a later run from being processed.
+  {
+    const runA = { workspaceId: "workspace-isolation-c", runId: "autonomy-run-isolation-c" };
+    const runB = { workspaceId: "workspace-isolation-d", runId: "autonomy-run-isolation-d" };
+    const reclaimCallsByRun: string[] = [];
+    const workerCallsByRun: string[] = [];
+    const result = await runBacklinkAutonomyProductionTick({
+      runtimeConfig: on,
+      scheduler: async () => schedulerResult([runA, runB]),
+      reclaimAutonomyTasks: async (input) => { reclaimCallsByRun.push(input.runId); return []; },
+      runWorker: async (_deps, input) => {
+        if (input.runId === runA.runId) throw new Error("simulated worker failure");
+        workerCallsByRun.push(input.runId);
+        return { kind: "completed" as const, reasonCodes: [], taskId: "task", nextTaskId: null };
+      },
+      lifecycle: activeLifecycle,
+      schedulerDependencies: {} as never,
+      workerDependencies: {} as never,
+      now: () => at,
+    }, { at, workerId: "test" });
+    assert.equal(result.disposition, "completed");
+    assert.equal(result.runsFailed, 1, "exactly the one throwing run must be counted as failed");
+    assert.deepEqual(reclaimCallsByRun, [runA.runId, runB.runId], "reclaim for the later run must still execute after the earlier run's worker failure");
+    assert.equal(result.workerSteps, BACKLINK_AUTONOMY_CRON_WORKER_STEPS_PER_RUN, "only the healthy run's completed steps are counted");
+    assert.deepEqual(workerCallsByRun, Array.from({ length: BACKLINK_AUTONOMY_CRON_WORKER_STEPS_PER_RUN }, () => runB.runId), "the later run must still be fully processed");
+    assert.equal(result.runFailures.length, 1, "exactly one bounded failure record must identify the failed run");
+    assert.deepEqual(result.runFailures[0], { workspaceId: runA.workspaceId, runId: runA.runId, errorType: "Error", errorCode: "UNKNOWN" }, "the failure record must name the run concerned and a bounded error type/code only");
+  }
+
+  // PR #88 last check: a run throwing an Error with an attacker/data-controllable dynamic .name must never
+  // surface that raw name in runFailures — it must be normalized to a bounded, non-disclosing placeholder.
+  {
+    const runA = { workspaceId: "workspace-isolation-e", runId: "autonomy-run-isolation-e" };
+    const result = await runBacklinkAutonomyProductionTick({
+      runtimeConfig: on,
+      scheduler: async () => schedulerResult([runA]),
+      reclaimAutonomyTasks: async () => {
+        const sensitiveNamedError = new Error("generic message");
+        sensitiveNamedError.name = "Bearer sk_live_do-not-leak-this-name user@example.com";
+        throw sensitiveNamedError;
+      },
+      runWorker: async () => { throw new Error("must not run"); },
+      lifecycle: activeLifecycle,
+      schedulerDependencies: {} as never,
+      workerDependencies: {} as never,
+      now: () => at,
+    }, { at, workerId: "test" });
+    assert.equal(result.runsFailed, 1);
+    assert.equal(result.runFailures.length, 1);
+    assert.deepEqual(result.runFailures[0], { workspaceId: runA.workspaceId, runId: runA.runId, errorType: "UnrecognizedErrorType", errorCode: "UNKNOWN" }, "a dynamic/unrecognized Error.name must be normalized, never surfaced as-is");
+  }
+
+  // BL-AUTONOMY-500 fix: when the whole tick still throws (e.g. during scheduling, outside the per-run loop),
+  // the route must keep returning a generic 500 and must log only a safe type/code, never a raw message.
+  {
+    const capturedLogs: unknown[][] = [];
+    const originalConsoleError = console.error;
+    console.error = (...args: unknown[]) => { capturedLogs.push(args); };
+    try {
+      const secretLookingMessage = "Bearer sk_live_do-not-leak-this https://internal.example.com/secret?token=abc123 user@example.com";
+      const handler = createBacklinkAutonomyCronHandler({
+        cronSecret: () => "test-secret",
+        runtimeConfig: on,
+        createProductionDependencies: () => ({} as never),
+        runTick: async () => { throw new Error(secretLookingMessage); },
+        now: () => at,
+      });
+      const response = await handler(new NextRequest("https://example.test/api/internal/cron/backlinks/autonomy", { headers: { authorization: "Bearer test-secret" } }));
+      assert.equal(response.status, 500, "an unrecoverable tick failure must still return a generic 500");
+      assert.deepEqual(await response.json(), { error: "Unable to run backlink autonomy cron" }, "the 500 body contract must be unchanged");
+      assert.equal(capturedLogs.length, 1, "exactly one error log must be emitted");
+      const loggedPayload = JSON.stringify(capturedLogs[0]);
+      assert.doesNotMatch(loggedPayload, /sk_live_do-not-leak-this/, "a raw secret-looking token must never be logged");
+      assert.doesNotMatch(loggedPayload, /internal\.example\.com/, "a raw internal URL must never be logged");
+      assert.doesNotMatch(loggedPayload, /user@example\.com/, "a raw email address must never be logged");
+      assert.match(loggedPayload, /"errorType":"Error"/, "the error's type must be logged");
+      assert.match(loggedPayload, /"errorCode":"UNKNOWN"/, "a bounded fallback code must be logged for a plain Error");
+
+      capturedLogs.length = 0;
+      const repositoryErrorHandler = createBacklinkAutonomyCronHandler({
+        cronSecret: () => "test-secret",
+        runtimeConfig: on,
+        createProductionDependencies: () => ({} as never),
+        runTick: async () => { throw new BacklinkRepositoryError({ code: "DATABASE", operation: "getAutomationWorkspaceControl", message: "The database operation could not be completed." }); },
+        now: () => at,
+      });
+      const repositoryErrorResponse = await repositoryErrorHandler(new NextRequest("https://example.test/api/internal/cron/backlinks/autonomy", { headers: { authorization: "Bearer test-secret" } }));
+      assert.equal(repositoryErrorResponse.status, 500);
+      const repositoryLoggedPayload = JSON.stringify(capturedLogs[0]);
+      assert.match(repositoryLoggedPayload, /"errorType":"BacklinkRepositoryError"/, "a known repository error's type must be logged");
+      assert.match(repositoryLoggedPayload, /"errorCode":"DATABASE"/, "a known repository error's bounded code must be logged");
+
+      // PR #88 last check: Error.name is not a closed enum in the language — any thrown object can set it
+      // to anything, including attacker- or data-influenced text. It must be normalized before logging.
+      capturedLogs.length = 0;
+      const sensitiveNameHandler = createBacklinkAutonomyCronHandler({
+        cronSecret: () => "test-secret",
+        runtimeConfig: on,
+        createProductionDependencies: () => ({} as never),
+        runTick: async () => {
+          const sensitiveNamedError = new Error("generic message");
+          sensitiveNamedError.name = "Bearer sk_live_do-not-leak-this-name user@example.com";
+          throw sensitiveNamedError;
+        },
+        now: () => at,
+      });
+      const sensitiveNameResponse = await sensitiveNameHandler(new NextRequest("https://example.test/api/internal/cron/backlinks/autonomy", { headers: { authorization: "Bearer test-secret" } }));
+      assert.equal(sensitiveNameResponse.status, 500);
+      const sensitiveNameLoggedPayload = JSON.stringify(capturedLogs[0]);
+      assert.doesNotMatch(sensitiveNameLoggedPayload, /sk_live_do-not-leak-this-name/, "a dynamic, attacker-settable Error.name must never be logged verbatim");
+      assert.doesNotMatch(sensitiveNameLoggedPayload, /user@example\.com/, "a dynamic Error.name must never leak an email address into the log");
+      assert.match(sensitiveNameLoggedPayload, /"errorType":"UnrecognizedErrorType"/, "an unrecognized Error.name must be normalized to a bounded placeholder, not logged as-is");
+    } finally {
+      console.error = originalConsoleError;
+    }
+  }
+
+  // BL-AUTONOMY-500 prepublication: a degraded-but-completed tick (HTTP 200) must still be
+  // operationally detectable via a log line, naming the failed runs, not only via the JSON body.
+  {
+    const capturedWarnings: unknown[][] = [];
+    const originalConsoleWarn = console.warn;
+    console.warn = (...args: unknown[]) => { capturedWarnings.push(args); };
+    try {
+      const degradedResult = {
+        disposition: "completed" as const,
+        seededRuns: 2, tasksCreated: 0, tasksExisting: 0, reclaimedTasks: 0,
+        workerSteps: 3, workerTerminal: 0, contactSelectionResumedRuns: 0, promotionAutoApplied: 0,
+        runsFailed: 1,
+        runFailures: [{ workspaceId: "workspace-degraded", runId: "autonomy-run-degraded", errorType: "Error", errorCode: "UNKNOWN" }],
+      };
+      const handler = createBacklinkAutonomyCronHandler({
+        cronSecret: () => "test-secret",
+        runtimeConfig: on,
+        createProductionDependencies: () => ({} as never),
+        runTick: async () => degradedResult,
+        now: () => at,
+      });
+      const response = await handler(new NextRequest("https://example.test/api/internal/cron/backlinks/autonomy", { headers: { authorization: "Bearer test-secret" } }));
+      assert.equal(response.status, 200, "a degraded-but-completed tick must still return 200");
+      assert.deepEqual(await response.json(), degradedResult, "the response body must carry runFailures unchanged");
+      assert.equal(capturedWarnings.length, 1, "a degraded tick must emit exactly one log line even though the status is 200");
+      const loggedPayload = JSON.stringify(capturedWarnings[0]);
+      assert.match(loggedPayload, /"runsFailed":1/, "the log line must carry the failure count");
+      assert.match(loggedPayload, /"workspaceId":"workspace-degraded"/, "the log line must identify the failed run");
+      assert.match(loggedPayload, /"errorCode":"UNKNOWN"/, "the log line must carry the bounded error code");
+
+      capturedWarnings.length = 0;
+      const healthyResult = { ...degradedResult, runsFailed: 0, runFailures: [] };
+      const healthyHandler = createBacklinkAutonomyCronHandler({
+        cronSecret: () => "test-secret",
+        runtimeConfig: on,
+        createProductionDependencies: () => ({} as never),
+        runTick: async () => healthyResult,
+        now: () => at,
+      });
+      await healthyHandler(new NextRequest("https://example.test/api/internal/cron/backlinks/autonomy", { headers: { authorization: "Bearer test-secret" } }));
+      assert.equal(capturedWarnings.length, 0, "a fully healthy tick must never emit the degraded-tick log line");
+    } finally {
+      console.warn = originalConsoleWarn;
+    }
+  }
+
   console.log("PASS — Backlink autonomy production cron G2C.2 smoke");
 }
 

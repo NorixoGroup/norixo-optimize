@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { BacklinkRepositoryError } from "@/lib/backlinks/repositories/errors";
 import { getBacklinkDomainById } from "@/lib/backlinks/repositories/domainsRepository";
 import { getBacklinkOpportunityById } from "@/lib/backlinks/repositories/opportunitiesRepository";
 import { getBacklinkContactById, listBacklinkContactsByDomain } from "@/lib/backlinks/repositories/contactsRepository";
@@ -50,6 +51,14 @@ export const BACKLINK_CONTACT_SELECTION_RESUME_DECISION_LIMIT = 5;
 export const BACKLINK_PROMOTION_AUTO_APPLY_WORKSPACE_LIMIT = 5;
 export const BACKLINK_PROMOTION_AUTO_APPLY_TASK_LIMIT_PER_WORKSPACE = 10;
 
+/** Never carries `error.message`: a raw message may carry a query value, a URL, or other unbounded detail. */
+export type BacklinkAutonomyRunFailure = {
+  workspaceId: string;
+  runId: string;
+  errorType: string;
+  errorCode: string;
+};
+
 export type BacklinkAutonomyProductionTickResult = {
   disposition: "disabled" | "completed";
   seededRuns: number;
@@ -60,7 +69,38 @@ export type BacklinkAutonomyProductionTickResult = {
   workerTerminal: number;
   contactSelectionResumedRuns: number;
   promotionAutoApplied: number;
+  /** Runs whose lifecycle/reclaim/worker processing threw; the tick still completed for every other run. */
+  runsFailed: number;
+  /** One bounded, secret-free entry per run counted in `runsFailed`, identifying which run and why. */
+  runFailures: readonly BacklinkAutonomyRunFailure[];
 };
+
+/** A generic `Error.name` is attacker- or data-influenced in principle (any thrown object can set it); never surface it unchecked. */
+const KNOWN_GENERIC_ERROR_TYPES = new Set<string>([
+  "Error",
+  "TypeError",
+  "RangeError",
+  "SyntaxError",
+  "ReferenceError",
+  "EvalError",
+  "URIError",
+  "AggregateError",
+]);
+
+function normalizeGenericErrorType(name: string): string {
+  return KNOWN_GENERIC_ERROR_TYPES.has(name) ? name : "UnrecognizedErrorType";
+}
+
+/** Never reads `error.message`: see `BacklinkAutonomyRunFailure`. */
+function describeAutonomyRunError(error: unknown): { errorType: string; errorCode: string } {
+  if (error instanceof BacklinkRepositoryError) {
+    return { errorType: error.name, errorCode: error.code };
+  }
+  if (error instanceof Error) {
+    return { errorType: normalizeGenericErrorType(error.name), errorCode: "UNKNOWN" };
+  }
+  return { errorType: "non_error", errorCode: "UNKNOWN" };
+}
 
 export type BacklinkAutonomyProductionDependencies = {
   runtimeConfig: () => BacklinkAutonomyRuntimeConfig;
@@ -92,7 +132,7 @@ export async function runBacklinkAutonomyProductionTick(
   input: { at: string; workerId: string },
 ): Promise<BacklinkAutonomyProductionTickResult> {
   if (deps.runtimeConfig().autonomyEnabled !== true) {
-    return { disposition: "disabled", seededRuns: 0, tasksCreated: 0, tasksExisting: 0, reclaimedTasks: 0, workerSteps: 0, workerTerminal: 0, contactSelectionResumedRuns: 0, promotionAutoApplied: 0 };
+    return { disposition: "disabled", seededRuns: 0, tasksCreated: 0, tasksExisting: 0, reclaimedTasks: 0, workerSteps: 0, workerTerminal: 0, contactSelectionResumedRuns: 0, promotionAutoApplied: 0, runsFailed: 0, runFailures: [] };
   }
   // Runs before the scheduler so a freshly auto-applied promotion is already
   // a canonical applied promotion by the time listCanonicalAppliedPromotions
@@ -112,23 +152,33 @@ export async function runBacklinkAutonomyProductionTick(
   let reclaimedTasks = 0;
   let workerSteps = 0;
   let workerTerminal = 0;
+  let runsFailed = 0;
+  const runFailures: BacklinkAutonomyRunFailure[] = [];
   for (const run of [...seeded.autonomyRuns, ...resumed.resumedRuns]) {
     const now = deps.now ?? (() => new Date().toISOString());
-    // This also repairs historical queued parents whose tasks are already
-    // terminal; it neither creates nor claims a task.
-    await reconcileBacklinkAutonomyRunLifecycle(deps.lifecycle, { workspaceId: run.workspaceId, runId: run.runId, at: now() });
-    reclaimedTasks += (await deps.reclaimAutonomyTasks({ workspaceId: run.workspaceId, runId: run.runId, reclaimedAt: now(), limit: BACKLINK_AUTONOMY_CRON_RECLAIM_LIMIT })).length;
-    for (let step = 0; step < BACKLINK_AUTONOMY_CRON_WORKER_STEPS_PER_RUN; step += 1) {
-      const result = await deps.runWorker(deps.workerDependencies, {
-        workspaceId: run.workspaceId, runId: run.runId, workerId: input.workerId, at: now(),
-      });
-      workerSteps += 1;
-      if (result.kind === "empty" || result.kind === "disabled") break;
-      if (result.kind === "terminal" || result.kind === "dead_letter") workerTerminal += 1;
+    try {
+      // This also repairs historical queued parents whose tasks are already
+      // terminal; it neither creates nor claims a task.
+      await reconcileBacklinkAutonomyRunLifecycle(deps.lifecycle, { workspaceId: run.workspaceId, runId: run.runId, at: now() });
+      reclaimedTasks += (await deps.reclaimAutonomyTasks({ workspaceId: run.workspaceId, runId: run.runId, reclaimedAt: now(), limit: BACKLINK_AUTONOMY_CRON_RECLAIM_LIMIT })).length;
+      for (let step = 0; step < BACKLINK_AUTONOMY_CRON_WORKER_STEPS_PER_RUN; step += 1) {
+        const result = await deps.runWorker(deps.workerDependencies, {
+          workspaceId: run.workspaceId, runId: run.runId, workerId: input.workerId, at: now(),
+        });
+        workerSteps += 1;
+        if (result.kind === "empty" || result.kind === "disabled") break;
+        if (result.kind === "terminal" || result.kind === "dead_letter") workerTerminal += 1;
+      }
+      await reconcileBacklinkAutonomyRunLifecycle(deps.lifecycle, { workspaceId: run.workspaceId, runId: run.runId, at: now() });
+    } catch (error) {
+      // One run's lifecycle/reclaim/worker exception must not drop every other
+      // eligible run from this tick's result; the run's own lease/reclaim and
+      // idempotent-create mechanisms are untouched and will recover it next tick.
+      runsFailed += 1;
+      runFailures.push({ workspaceId: run.workspaceId, runId: run.runId, ...describeAutonomyRunError(error) });
     }
-    await reconcileBacklinkAutonomyRunLifecycle(deps.lifecycle, { workspaceId: run.workspaceId, runId: run.runId, at: now() });
   }
-  return { disposition: "completed", seededRuns: seeded.autonomyRunIds.length, tasksCreated: seeded.created, tasksExisting: seeded.existing, reclaimedTasks, workerSteps, workerTerminal, contactSelectionResumedRuns: resumed.resumedRuns.length, promotionAutoApplied: promotionAutoApplyOutcomes.filter((outcome) => outcome.outcome === "applied").length };
+  return { disposition: "completed", seededRuns: seeded.autonomyRunIds.length, tasksCreated: seeded.created, tasksExisting: seeded.existing, reclaimedTasks, workerSteps, workerTerminal, contactSelectionResumedRuns: resumed.resumedRuns.length, promotionAutoApplied: promotionAutoApplyOutcomes.filter((outcome) => outcome.outcome === "applied").length, runsFailed, runFailures };
 }
 
 function blockedHandlers(client: ReturnType<typeof createSupabaseAdminClient>): BacklinkAutonomyDispatcherDependencies {
