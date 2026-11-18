@@ -22,13 +22,29 @@ function unauthorizedResponse() {
   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 }
 
+/** A generic `Error.name` is attacker- or data-influenced in principle (any thrown object can set it); never log it unchecked. */
+const KNOWN_GENERIC_ERROR_TYPES = new Set<string>([
+  "Error",
+  "TypeError",
+  "RangeError",
+  "SyntaxError",
+  "ReferenceError",
+  "EvalError",
+  "URIError",
+  "AggregateError",
+]);
+
+function normalizeGenericErrorType(name: string): string {
+  return KNOWN_GENERIC_ERROR_TYPES.has(name) ? name : "UnrecognizedErrorType";
+}
+
 /** Never logs `error.message`: a raw message may carry a query value, a URL, or other unbounded detail. */
 function describeCronError(error: unknown): { errorType: string; errorCode: string } {
   if (error instanceof BacklinkRepositoryError) {
     return { errorType: error.name, errorCode: error.code };
   }
   if (error instanceof Error) {
-    return { errorType: error.name, errorCode: "UNKNOWN" };
+    return { errorType: normalizeGenericErrorType(error.name), errorCode: "UNKNOWN" };
   }
   return { errorType: "non_error", errorCode: "UNKNOWN" };
 }

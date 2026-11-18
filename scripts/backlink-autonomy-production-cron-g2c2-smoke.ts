@@ -229,6 +229,29 @@ async function main() {
     assert.deepEqual(result.runFailures[0], { workspaceId: runA.workspaceId, runId: runA.runId, errorType: "Error", errorCode: "UNKNOWN" }, "the failure record must name the run concerned and a bounded error type/code only");
   }
 
+  // PR #88 last check: a run throwing an Error with an attacker/data-controllable dynamic .name must never
+  // surface that raw name in runFailures — it must be normalized to a bounded, non-disclosing placeholder.
+  {
+    const runA = { workspaceId: "workspace-isolation-e", runId: "autonomy-run-isolation-e" };
+    const result = await runBacklinkAutonomyProductionTick({
+      runtimeConfig: on,
+      scheduler: async () => schedulerResult([runA]),
+      reclaimAutonomyTasks: async () => {
+        const sensitiveNamedError = new Error("generic message");
+        sensitiveNamedError.name = "Bearer sk_live_do-not-leak-this-name user@example.com";
+        throw sensitiveNamedError;
+      },
+      runWorker: async () => { throw new Error("must not run"); },
+      lifecycle: activeLifecycle,
+      schedulerDependencies: {} as never,
+      workerDependencies: {} as never,
+      now: () => at,
+    }, { at, workerId: "test" });
+    assert.equal(result.runsFailed, 1);
+    assert.equal(result.runFailures.length, 1);
+    assert.deepEqual(result.runFailures[0], { workspaceId: runA.workspaceId, runId: runA.runId, errorType: "UnrecognizedErrorType", errorCode: "UNKNOWN" }, "a dynamic/unrecognized Error.name must be normalized, never surfaced as-is");
+  }
+
   // BL-AUTONOMY-500 fix: when the whole tick still throws (e.g. during scheduling, outside the per-run loop),
   // the route must keep returning a generic 500 and must log only a safe type/code, never a raw message.
   {
@@ -268,6 +291,27 @@ async function main() {
       const repositoryLoggedPayload = JSON.stringify(capturedLogs[0]);
       assert.match(repositoryLoggedPayload, /"errorType":"BacklinkRepositoryError"/, "a known repository error's type must be logged");
       assert.match(repositoryLoggedPayload, /"errorCode":"DATABASE"/, "a known repository error's bounded code must be logged");
+
+      // PR #88 last check: Error.name is not a closed enum in the language — any thrown object can set it
+      // to anything, including attacker- or data-influenced text. It must be normalized before logging.
+      capturedLogs.length = 0;
+      const sensitiveNameHandler = createBacklinkAutonomyCronHandler({
+        cronSecret: () => "test-secret",
+        runtimeConfig: on,
+        createProductionDependencies: () => ({} as never),
+        runTick: async () => {
+          const sensitiveNamedError = new Error("generic message");
+          sensitiveNamedError.name = "Bearer sk_live_do-not-leak-this-name user@example.com";
+          throw sensitiveNamedError;
+        },
+        now: () => at,
+      });
+      const sensitiveNameResponse = await sensitiveNameHandler(new NextRequest("https://example.test/api/internal/cron/backlinks/autonomy", { headers: { authorization: "Bearer test-secret" } }));
+      assert.equal(sensitiveNameResponse.status, 500);
+      const sensitiveNameLoggedPayload = JSON.stringify(capturedLogs[0]);
+      assert.doesNotMatch(sensitiveNameLoggedPayload, /sk_live_do-not-leak-this-name/, "a dynamic, attacker-settable Error.name must never be logged verbatim");
+      assert.doesNotMatch(sensitiveNameLoggedPayload, /user@example\.com/, "a dynamic Error.name must never leak an email address into the log");
+      assert.match(sensitiveNameLoggedPayload, /"errorType":"UnrecognizedErrorType"/, "an unrecognized Error.name must be normalized to a bounded placeholder, not logged as-is");
     } finally {
       console.error = originalConsoleError;
     }
