@@ -7,6 +7,7 @@ import {
 } from "@/lib/automation/backlink-autonomy-production-composition";
 import { readBacklinkAutonomyRuntimeConfig } from "@/lib/automation/backlink-autonomy-runtime-config";
 import { hasValidBacklinkN8nCronAuthorization } from "@/lib/automation/backlink-n8n-cron-authorization";
+import { BacklinkRepositoryError } from "@/lib/backlinks/repositories/errors";
 
 type CronDependencies = {
   cronSecret: () => string;
@@ -19,6 +20,17 @@ type CronDependencies = {
 
 function unauthorizedResponse() {
   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+}
+
+/** Never logs `error.message`: a raw message may carry a query value, a URL, or other unbounded detail. */
+function describeCronError(error: unknown): { errorType: string; errorCode: string } {
+  if (error instanceof BacklinkRepositoryError) {
+    return { errorType: error.name, errorCode: error.code };
+  }
+  if (error instanceof Error) {
+    return { errorType: error.name, errorCode: "UNKNOWN" };
+  }
+  return { errorType: "non_error", errorCode: "UNKNOWN" };
 }
 
 /** The only production entrypoint: fixed bounds are owned by the composition, never request input. */
@@ -44,9 +56,18 @@ export function createBacklinkAutonomyCronHandler(deps: CronDependencies) {
         at: deps.now(),
         workerId: "norixo-backlink-autonomy-cron",
       });
+      if (result.disposition === "completed" && result.runsFailed > 0) {
+        // Status stays 200: most runs still completed. This line is what makes a
+        // degraded tick operationally visible to log-based monitoring, not just
+        // to a caller that happens to inspect the JSON body.
+        console.warn("[automation/backlinks/autonomy/cron] degraded tick", {
+          runsFailed: result.runsFailed,
+          runFailures: result.runFailures,
+        });
+      }
       return NextResponse.json(result);
-    } catch {
-      console.error("[automation/backlinks/autonomy/cron] request failed");
+    } catch (error) {
+      console.error("[automation/backlinks/autonomy/cron] request failed", describeCronError(error));
       return NextResponse.json({ error: "Unable to run backlink autonomy cron" }, { status: 500 });
     }
   };
