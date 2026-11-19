@@ -67,6 +67,14 @@ export async function runBacklinkAutonomyScheduler(
           scheduledAt: input.scheduledAt,
           paidMailboxVerificationAuthorized: control.paidMailboxVerificationAuthorized,
         }));
+      // An existing run already past queued/running can never accept a new task: the
+      // trg_automation_tasks_integrity trigger (20260803020000_create_automation_tasks.sql)
+      // rejects it unconditionally. A durably applied promotion is rescanned every tick, so
+      // without this guard a run that already completed once would crash every future tick.
+      if (run != null && !["queued", "running"].includes(run.run.status)) {
+        skipped.push(`AUTONOMY_RUN_ALREADY_TERMINAL:${promotion.applicationId}`);
+        continue;
+      }
       const autonomyRunId = run?.run.id ?? `preview:${promotion.applicationId}`;
       if (run != null) { autonomyRunIds.push(run.run.id); autonomyRuns.push({ workspaceId: promotion.workspaceId, runId: run.run.id }); }
       const result = await enterPromotedOpportunityContactResolution(deps, { promotion, autonomyRunId, control, mode, scheduledAt: input.scheduledAt });

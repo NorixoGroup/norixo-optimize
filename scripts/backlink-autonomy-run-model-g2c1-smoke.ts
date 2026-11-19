@@ -137,6 +137,7 @@ async function main() {
   const createdRun = [...runs.values()][0]!;
   const createdTask = [...tasks.values()][0]!;
   assert.equal(first.created, 1);
+  assert(!first.skipped.some((reason) => reason.startsWith("AUTONOMY_RUN_ALREADY_TERMINAL:")), "a freshly created queued run must never be skipped by the terminal-run guard");
   assert.equal(createdRun.status, "queued");
   assert.equal(createdTask.status, "queued");
   assert.notEqual(createdRun.id, promotion.runId);
@@ -178,6 +179,99 @@ async function main() {
   );
   assert.equal(disabled.created, 0);
   assert.equal(disabled.autonomyRunIds.length, 0);
+
+  // BL-AUTONOMY-500 scheduler fix: an existing run already past queued/running can never
+  // accept a new task — trg_automation_tasks_integrity (20260803020000_create_automation_tasks.sql)
+  // rejects it unconditionally. A durably applied promotion is rescanned every tick, so without
+  // this guard a run that completed once would crash every future tick, forever.
+  for (const terminalStatus of ["completed", "failed", "cancelled"] as const) {
+    let createOrGetTaskCalls = 0;
+    const terminalRun: AutomationRun = {
+      ...run({ workspaceId: ids.workspace, system: "backlinks", runKind: "backlinks.autonomy", idempotencyKey: `terminal-${terminalStatus}`, mode: "dry_run", triggerSource: "internal", requestedBy: ids.actor, scheduledAt: at, input: {} }),
+      status: terminalStatus,
+    };
+    const result = await runBacklinkAutonomyScheduler(
+      {
+        ...dependencies,
+        createOrGetRun: async () => ({ kind: "existing" as const, run: terminalRun }),
+        createOrGetTask: async (input: CreateAutomationTaskInput) => { createOrGetTaskCalls += 1; return { kind: "created" as const, task: task(input) }; },
+      },
+      { mode: "apply", scheduledAt: at },
+    );
+    assert.equal(result.created, 0, `a ${terminalStatus} run must never receive a new task`);
+    assert.equal(createOrGetTaskCalls, 0, `createOrGetTask must never be attempted for a ${terminalStatus} run`);
+    assert.equal(result.autonomyRunIds.length, 0, `a ${terminalStatus} run must not be surfaced for per-run processing`);
+    assert(result.skipped.some((reason) => reason === `AUTONOMY_RUN_ALREADY_TERMINAL:${promotion.applicationId}`), `skipped must record the terminal-run reason for ${terminalStatus}`);
+  }
+
+  // The guard is purely state-based, not kind-based: even a run reported as freshly "created"
+  // must be skipped if its status is already terminal.
+  {
+    let createOrGetTaskCalls = 0;
+    const createdButTerminalRun: AutomationRun = {
+      ...run({ workspaceId: ids.workspace, system: "backlinks", runKind: "backlinks.autonomy", idempotencyKey: "created-but-terminal", mode: "dry_run", triggerSource: "internal", requestedBy: ids.actor, scheduledAt: at, input: {} }),
+      status: "completed",
+    };
+    const result = await runBacklinkAutonomyScheduler(
+      {
+        ...dependencies,
+        createOrGetRun: async () => ({ kind: "created" as const, run: createdButTerminalRun }),
+        createOrGetTask: async (input: CreateAutomationTaskInput) => { createOrGetTaskCalls += 1; return { kind: "created" as const, task: task(input) }; },
+      },
+      { mode: "apply", scheduledAt: at },
+    );
+    assert.equal(result.created, 0, "a created-but-terminal run must never receive a new task");
+    assert.equal(createOrGetTaskCalls, 0, "createOrGetTask must never be attempted for a created-but-terminal run");
+    assert(result.skipped.some((reason) => reason === `AUTONOMY_RUN_ALREADY_TERMINAL:${promotion.applicationId}`), "skipped must record the terminal-run reason even for kind: \"created\"");
+  }
+
+  // A running existing run is untouched by the guard: it must keep receiving tasks normally.
+  {
+    const runningRun: AutomationRun = {
+      ...run({ workspaceId: ids.workspace, system: "backlinks", runKind: "backlinks.autonomy", idempotencyKey: "existing-running", mode: "dry_run", triggerSource: "internal", requestedBy: ids.actor, scheduledAt: at, input: {} }),
+      status: "running",
+    };
+    let createOrGetTaskCalls = 0;
+    const result = await runBacklinkAutonomyScheduler(
+      {
+        ...dependencies,
+        createOrGetRun: async () => ({ kind: "existing" as const, run: runningRun }),
+        createOrGetTask: async (input: CreateAutomationTaskInput) => { createOrGetTaskCalls += 1; return { kind: "created" as const, task: task(input) }; },
+      },
+      { mode: "apply", scheduledAt: at },
+    );
+    assert.equal(result.created, 1, "a running run must still receive its task, unaffected by the terminal-run guard");
+    assert.equal(createOrGetTaskCalls, 1);
+    assert.deepEqual(result.autonomyRunIds, [runningRun.id]);
+    assert(!result.skipped.some((reason) => reason.startsWith("AUTONOMY_RUN_ALREADY_TERMINAL:")));
+  }
+
+  // A promotion skipped by the terminal-run guard must not block the next promotion in the same tick.
+  {
+    const promotionTerminal: AppliedBacklinkPromotion = { ...promotion, applicationId: "promotion-application-mixed-terminal" };
+    const promotionQueued: AppliedBacklinkPromotion = { ...promotion, applicationId: "promotion-application-mixed-queued" };
+    const terminalRun: AutomationRun = {
+      ...run({ workspaceId: ids.workspace, system: "backlinks", runKind: "backlinks.autonomy", idempotencyKey: "mixed-terminal", mode: "dry_run", triggerSource: "internal", requestedBy: ids.actor, scheduledAt: at, input: {} }),
+      status: "completed",
+    };
+    let createOrGetTaskCalls = 0;
+    const result = await runBacklinkAutonomyScheduler(
+      {
+        ...dependencies,
+        listAppliedPromotions: async () => [promotionTerminal, promotionQueued],
+        createOrGetRun: async (input: CreateAutomationRunInput) =>
+          input.idempotencyKey.includes(promotionTerminal.applicationId)
+            ? { kind: "existing" as const, run: terminalRun }
+            : { kind: "created" as const, run: run(input) },
+        createOrGetTask: async (input: CreateAutomationTaskInput) => { createOrGetTaskCalls += 1; return { kind: "created" as const, task: task(input) }; },
+      },
+      { mode: "apply", scheduledAt: at },
+    );
+    assert.equal(result.promotionsScanned, 2, "both promotions must be scanned despite the first being skipped");
+    assert.equal(createOrGetTaskCalls, 1, "only the non-terminal promotion must reach task creation");
+    assert.equal(result.created, 1);
+    assert(result.skipped.some((reason) => reason === `AUTONOMY_RUN_ALREADY_TERMINAL:${promotionTerminal.applicationId}`));
+  }
 
   console.log("PASS — Backlink autonomy dedicated run model G2C.1 smoke");
 }
