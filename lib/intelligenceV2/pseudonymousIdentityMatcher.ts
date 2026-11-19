@@ -45,6 +45,7 @@ export type PseudonymousObservationStatus =
   | "comparable"
   | "no_tokens"
   | "self_conflicting"
+  | "malformed_tokens"
   | "ambiguous_duplicate_id"
   | "contradictory_evidence";
 
@@ -75,6 +76,16 @@ export type PseudonymousIdentityAnalysisInput = Readonly<{
 }>;
 
 export type PseudonymousIdentityAnalysisResult = Readonly<{
+  /**
+   * Count of logical observations considered, after collapsing only
+   * byte-identical duplicate submissions sharing the same observationId.
+   * Entries with a missing/invalid observationId are never counted here
+   * (see `invalidInputCount` instead). This is a count of observations
+   * considered, NOT a count of observations that were successfully
+   * compared or grouped -- it includes every status in
+   * `PseudonymousObservationStatus` other than entries filtered out before
+   * this count is taken (invalid observationId only).
+   */
   rawObservationCount: number;
   /**
    * Number of connected components formed by positive MATCH edges among
@@ -104,30 +115,46 @@ function isUsableTokenEntry(entry: PseudonymousTokenEntry | null | undefined): b
   );
 }
 
+export type PseudonymousTokenMapBuildResult =
+  | Readonly<{ ok: true; map: ReadonlyMap<string, string> }>
+  | Readonly<{ ok: false; reason: "self_conflicting" | "malformed_entry" }>;
+
 /**
  * Builds keyVersion -> value for one observation's own token list.
- * Returns null if the observation disagrees with itself (the same
- * keyVersion appears more than once with a different value) -- a
- * self-conflicting observation is never partially trusted, not even for
- * the keys it agrees with itself on.
+ *
+ * Conservative by construction: a single malformed entry (missing/empty
+ * keyVersion or value, or a non-object entry) never results in a partial
+ * map built from only the remaining valid entries. Silently dropping a bad
+ * entry and comparing on whatever is left would let a corrupted token
+ * coexist with, and be compared alongside, data the caller never actually
+ * attested to -- exactly the "partial comparison treated as reliable"
+ * failure mode this must avoid. The whole observation is instead reported
+ * as unusable ("malformed_entry"), never partially trusted, the same way a
+ * self-conflicting observation (reason "self_conflicting") is never
+ * partially trusted either, not even for the keys it agrees with itself
+ * on.
  */
 function buildTokenMap(
   tokens: readonly PseudonymousTokenEntry[] | null | undefined,
-): ReadonlyMap<string, string> | null {
-  if (!Array.isArray(tokens)) return new Map();
+): PseudonymousTokenMapBuildResult {
+  if (!Array.isArray(tokens) || tokens.length === 0) {
+    return { ok: true, map: new Map() };
+  }
 
   const map = new Map<string, string>();
   for (const entry of tokens) {
-    if (!isUsableTokenEntry(entry)) continue;
+    if (!isUsableTokenEntry(entry)) {
+      return { ok: false, reason: "malformed_entry" };
+    }
     const keyVersion = normalizeToken(entry.keyVersion) as string;
     const value = normalizeToken(entry.value) as string;
     const existing = map.get(keyVersion);
     if (existing != null && existing !== value) {
-      return null;
+      return { ok: false, reason: "self_conflicting" };
     }
     map.set(keyVersion, value);
   }
-  return map;
+  return { ok: true, map };
 }
 
 /**
@@ -180,15 +207,15 @@ export function comparePseudonymousObservations(
   a: PseudonymousObservationInput,
   b: PseudonymousObservationInput,
 ): PseudonymousComparisonResult {
-  const mapA = buildTokenMap(a?.tokens);
-  const mapB = buildTokenMap(b?.tokens);
-  if (mapA == null || mapB == null) {
+  const resultA = buildTokenMap(a?.tokens);
+  const resultB = buildTokenMap(b?.tokens);
+  if (!resultA.ok || !resultB.ok) {
     return Object.freeze({
       outcome: "INCOMPARABLE",
       comparedKeyVersions: Object.freeze([]),
     });
   }
-  return comparePseudonymousTokenMaps(mapA, mapB);
+  return comparePseudonymousTokenMaps(resultA.map, resultB.map);
 }
 
 class UnionFind {
@@ -272,35 +299,48 @@ export function analyzePseudonymousObservations(
 
   for (const observationId of firstSeenOrder) {
     const entries = byId.get(observationId) as PseudonymousObservationInput[];
-    const maps = entries.map((entry) => buildTokenMap(entry.tokens));
+    const built = entries.map((entry) => buildTokenMap(entry.tokens));
 
+    // Canonicalized via JSON.stringify of the sorted [key, value] pairs
+    // rather than a hand-joined "key=value" string: a hand-joined
+    // separator-based representation is NOT injective when a keyVersion or
+    // value itself contains the separator characters (e.g. "=" or a
+    // newline), which could make two genuinely different token maps
+    // serialize to the same string (a false "true duplicate") or vice
+    // versa. JSON.stringify escapes embedded characters unambiguously, so
+    // distinct maps always produce distinct strings regardless of what
+    // the caller's fictional token values happen to contain. Entries that
+    // failed to build at all (self-conflicting or malformed) each get
+    // their own unique marker -- two bad submissions are never assumed
+    // identical just because both are bad.
     const distinctSignatures = new Set<string>();
-    for (const map of maps) {
-      if (map == null) {
-        distinctSignatures.add(`__self_conflicting__:${distinctSignatures.size}`);
-        continue;
+    built.forEach((result, index) => {
+      if (!result.ok) {
+        distinctSignatures.add(`__unusable__:${result.reason}:${index}`);
+        return;
       }
-      const canonical = [...map.entries()]
-        .sort(([ka], [kb]) => (ka < kb ? -1 : ka > kb ? 1 : 0))
-        .map(([k, v]) => `${k}=${v}`)
-        .join("\n");
-      distinctSignatures.add(canonical);
-    }
+      distinctSignatures.add(
+        JSON.stringify(
+          [...result.map.entries()].sort(([ka], [kb]) => (ka < kb ? -1 : ka > kb ? 1 : 0)),
+        ),
+      );
+    });
 
     if (entries.length === 1 || distinctSignatures.size === 1) {
       // Either a single submission, or every duplicate agrees byte-for-byte
       // -- collapse to one logical observation.
       const tokens = entries[0].tokens;
-      const map = maps[0];
+      const result = built[0];
       resolved.push({
         observationId,
         tokens,
-        status:
-          map == null
+        status: !result.ok
+          ? result.reason === "self_conflicting"
             ? "self_conflicting"
-            : map.size === 0
-              ? "no_tokens"
-              : "comparable",
+            : "malformed_tokens"
+          : result.map.size === 0
+            ? "no_tokens"
+            : "comparable",
       });
     } else {
       for (const entry of entries) {
@@ -313,14 +353,21 @@ export function analyzePseudonymousObservations(
     }
   }
 
+  // See the doc comment on `rawObservationCount` in the result type: this
+  // is "logical observations considered" (post exact-duplicate collapse,
+  // excluding only missing/invalid observationId), not "observations
+  // successfully compared or grouped".
   const rawObservationCount = resolved.length;
 
   const comparableMaps = new Map<string, ReadonlyMap<string, string>>();
   for (const entry of resolved) {
     if (entry.status !== "comparable") continue;
+    const rebuilt = buildTokenMap(entry.tokens);
     // Safe: "comparable" status was only assigned when buildTokenMap
-    // succeeded and was non-empty.
-    comparableMaps.set(entry.observationId, buildTokenMap(entry.tokens) as ReadonlyMap<string, string>);
+    // succeeded (ok) with a non-empty map.
+    if (rebuilt.ok) {
+      comparableMaps.set(entry.observationId, rebuilt.map);
+    }
   }
 
   const comparableIds = [...comparableMaps.keys()].sort();

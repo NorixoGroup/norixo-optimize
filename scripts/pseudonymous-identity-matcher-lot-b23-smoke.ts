@@ -239,6 +239,72 @@ function main() {
     );
   }
 
+  // 8e. Regression (PR #91 review, point 1): a malformed token entry
+  // (empty keyVersion) mixed alongside an otherwise-valid, otherwise-
+  // matching token must never let the valid subset be used for a
+  // "reliable" partial comparison. Before the fix, the malformed entry was
+  // silently dropped and the remaining valid entry alone produced a MATCH.
+  {
+    const malformedButWouldHaveMatched = obs("obs-malformed", [
+      { keyVersion: "", value: "garbage" },
+      { keyVersion: "v1", value: "tok_fake_same" },
+    ]);
+    const clean = obs("obs-clean", [{ keyVersion: "v1", value: "tok_fake_same" }]);
+
+    const result = comparePseudonymousObservations(malformedButWouldHaveMatched, clean);
+    assert.equal(result.outcome, "INCOMPARABLE");
+
+    const analysis = analyzePseudonymousObservations({
+      observations: [malformedButWouldHaveMatched, clean],
+    });
+    assert.equal(analysis.pseudonymousComponentCount, 1);
+    assert.equal(analysis.unknownIndependenceObservationCount, 1);
+    assert.deepEqual(
+      analysis.excludedObservations.map((entry) => entry.status),
+      ["malformed_tokens"],
+    );
+
+    // Entirely malformed (every entry bad, array non-empty) is also
+    // "malformed_tokens", distinct from the legitimate "no_tokens" case.
+    const allMalformed = obs("obs-all-malformed", [
+      { keyVersion: "", value: "x" },
+      { keyVersion: "v9", value: "" },
+    ]);
+    const onlyAllMalformed = analyzePseudonymousObservations({
+      observations: [allMalformed],
+    });
+    assert.deepEqual(
+      onlyAllMalformed.excludedObservations.map((entry) => entry.status),
+      ["malformed_tokens"],
+    );
+  }
+
+  // 8f. Regression (PR #91 review, point 2): duplicate-id detection must
+  // not collapse two genuinely different token maps just because a
+  // hand-joined "key=value" string representation would collide when a
+  // value itself contains the separator characters.
+  {
+    const a = obs("obs-dup-sep", [{ keyVersion: "k", value: "v1\nk2=v2" }]);
+    const b = obs("obs-dup-sep", [
+      { keyVersion: "k", value: "v1" },
+      { keyVersion: "k2", value: "v2" },
+    ]);
+
+    const analysis = analyzePseudonymousObservations({ observations: [a, b] });
+
+    // These are genuinely different token maps sharing an id -- must be
+    // treated as an ambiguous duplicate id, never silently collapsed into
+    // one logical observation.
+    assert.equal(analysis.rawObservationCount, 2);
+    assert.equal(analysis.pseudonymousComponentCount, 0);
+    assert.equal(analysis.unknownIndependenceObservationCount, 2);
+    assert.ok(
+      analysis.excludedObservations.every(
+        (entry) => entry.status === "ambiguous_duplicate_id",
+      ),
+    );
+  }
+
   // 9. Determinism: identical input analyzed twice yields byte-identical
   // (deep-equal) results; repeated pairwise comparisons are stable.
   {
