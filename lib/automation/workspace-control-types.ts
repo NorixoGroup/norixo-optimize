@@ -5,6 +5,8 @@ export type AutomationWorkspaceControl = {
   backlinkOutreachScheduleApplyEnabled: boolean;
   dryRunOnly: boolean;
   disabledReason: string | null;
+  backlinkLiveAutoSendPausedAt?: string | null;
+  backlinkLiveAutoSendPauseReason?: "failed" | "unknown" | null;
   lastScheduleApplyAttemptAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -17,6 +19,8 @@ export type AutomationWorkspaceControlRecord = {
   backlinkOutreachScheduleApplyEnabled: boolean;
   dryRunOnly: boolean;
   disabledReason: string | null;
+  backlinkLiveAutoSendPausedAt?: string | null;
+  backlinkLiveAutoSendPauseReason?: "failed" | "unknown" | null;
   lastScheduleApplyAttemptAt: string | null;
   createdAt: string;
   updatedAt: string;

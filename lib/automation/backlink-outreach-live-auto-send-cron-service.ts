@@ -19,9 +19,15 @@ export type BacklinkOutreachLiveAutoSendCronWorkspaceControl =
   };
 
 export type BacklinkOutreachLiveAutoSendCronResult = {
-  disposition: "sent" | "failed" | "unknown" | "no_candidate";
+  disposition: "completed";
   workspacesScanned: number;
+  workspacesEligible: number;
   candidatesConsidered: number;
+  sent: number;
+  failed: number;
+  unknown: number;
+  noCandidate: number;
+  paused: number;
 };
 
 export type BacklinkOutreachLiveAutoSendCronDependencies = {
@@ -42,6 +48,23 @@ export type BacklinkOutreachLiveAutoSendCronDependencies = {
     outreachId: string;
     idempotencyKey: string;
   }) => Promise<BacklinkOutreachEmailSendResult>;
+  pauseWorkspaceLiveAutoSend: (input: {
+    workspaceId: string;
+    pausedAt: string;
+    reason: "failed" | "unknown";
+  }) => Promise<void>;
+  reserveWorkspaceCycle: (input: {
+    workspaceId: string;
+    cycleId: string;
+    outreachId: string;
+    reservedAt: string;
+  }) => Promise<{ kind: "acquired" } | { kind: "already_reserved" }>;
+  releaseWorkspaceCycleReservation: (input: {
+    workspaceId: string;
+    cycleId: string;
+    outreachId: string;
+  }) => Promise<void>;
+  cycleId: string;
   now?: () => string;
   createIdempotencyKey?: (input: {
     workspaceId: string;
@@ -92,12 +115,20 @@ export async function runBacklinkOutreachLiveAutoSendCron(
   const controls = await dependencies.listWorkspaceControls(MAX_WORKSPACES_PER_RUN);
   let candidatesConsidered = 0;
   let workspacesScanned = 0;
+  let workspacesEligible = 0;
+  let sent = 0;
+  let failed = 0;
+  let unknown = 0;
+  let noCandidate = 0;
+  let paused = 0;
 
   for (const control of controls) {
     workspacesScanned += 1;
     if (!canRunBacklinkOutreachLiveAutoSend(control)) {
       continue;
     }
+    workspacesEligible += 1;
+    let workspaceReachedTerminalDisposition = false;
 
     const candidates = await dependencies.listCandidates(
       control.workspaceId,
@@ -107,6 +138,17 @@ export async function runBacklinkOutreachLiveAutoSendCron(
       candidatesConsidered += 1;
       if (!isExplicitHumanApproval(candidate)) {
         continue;
+      }
+
+      const reservation = await dependencies.reserveWorkspaceCycle({
+        workspaceId: control.workspaceId,
+        cycleId: dependencies.cycleId,
+        outreachId: candidate.id,
+        reservedAt: dependencies.now?.() ?? new Date().toISOString(),
+      });
+      if (reservation.kind === "already_reserved") {
+        workspaceReachedTerminalDisposition = true;
+        break;
       }
 
       try {
@@ -124,16 +166,37 @@ export async function runBacklinkOutreachLiveAutoSendCron(
             outreachId: candidate.id,
           },
         );
-        if (result.disposition === "sent" || result.disposition === "failed" || result.disposition === "unknown") {
-          return { disposition: result.disposition, workspacesScanned, candidatesConsidered };
+        if (result.disposition === "sent") {
+          sent += 1;
+          workspaceReachedTerminalDisposition = true;
+          break;
         }
+        if (result.disposition === "failed" || result.disposition === "unknown") {
+          if (result.disposition === "failed") failed += 1;
+          else unknown += 1;
+          await dependencies.pauseWorkspaceLiveAutoSend({
+            workspaceId: control.workspaceId,
+            pausedAt: dependencies.now?.() ?? new Date().toISOString(),
+            reason: result.disposition,
+          });
+          paused += 1;
+          workspaceReachedTerminalDisposition = true;
+          break;
+        }
+        // No provider call can have occurred when the targeted service returns no_candidate.
+        await dependencies.releaseWorkspaceCycleReservation({
+          workspaceId: control.workspaceId,
+          cycleId: dependencies.cycleId,
+          outreachId: candidate.id,
+        });
       } catch (error) {
         if (!isSkippableSendError(error)) {
           throw error;
         }
       }
     }
+    if (!workspaceReachedTerminalDisposition) noCandidate += 1;
   }
 
-  return { disposition: "no_candidate", workspacesScanned, candidatesConsidered };
+  return { disposition: "completed", workspacesScanned, workspacesEligible, candidatesConsidered, sent, failed, unknown, noCandidate, paused };
 }

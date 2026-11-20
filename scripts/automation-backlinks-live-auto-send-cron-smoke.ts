@@ -68,14 +68,29 @@ function dependencies(input: {
     outreachId: string;
     idempotencyKey: string;
   }) => Promise<BacklinkOutreachEmailSendResult>;
+  pause?: (input: { workspaceId: string; pausedAt: string; reason: "failed" | "unknown" }) => Promise<void>;
+  reservations?: Set<string>;
+  cycleId?: string;
 }) {
   const candidates = input.candidates ?? [];
+  const reservations = input.reservations ?? new Set<string>();
   return {
     listWorkspaceControls: async () => input.controls ?? [control],
-    getCandidateById: async (_workspaceId: string, outreachId: string) =>
-      candidates.find((item) => item.id === outreachId) ?? null,
-    listCandidates: async () => candidates,
+    getCandidateById: async (workspaceId: string, outreachId: string) =>
+      candidates.find((item) => item.workspace_id === workspaceId && item.id === outreachId) ?? null,
+    listCandidates: async (workspaceId: string) => candidates.filter((item) => item.workspace_id === workspaceId),
     sendBacklinkOutreachEmail: input.send,
+    pauseWorkspaceLiveAutoSend: input.pause ?? (async () => undefined),
+    reserveWorkspaceCycle: async ({ workspaceId, cycleId }: { workspaceId: string; cycleId: string }) => {
+      const key = `${workspaceId}:${cycleId}`;
+      if (reservations.has(key)) return { kind: "already_reserved" as const };
+      reservations.add(key);
+      return { kind: "acquired" as const };
+    },
+    releaseWorkspaceCycleReservation: async ({ workspaceId, cycleId }: { workspaceId: string; cycleId: string }) => {
+      reservations.delete(`${workspaceId}:${cycleId}`);
+    },
+    cycleId: input.cycleId ?? "2026-10-28",
     now: () => "2026-10-28T08:00:00.000Z",
     createIdempotencyKey: ({ workspaceId, outreachId, selectedAt }: { workspaceId: string; outreachId: string; selectedAt: string }) =>
       `test:${workspaceId}:${outreachId}:${selectedAt}`,
@@ -115,7 +130,7 @@ async function main(): Promise<void> {
         return sent("550e8400-e29b-41d4-a716-446655440001");
       },
     }));
-    assert(result.disposition === "no_candidate" && calls === 0, "Disabled controls must not reach the send service.");
+    assert(result.disposition === "completed" && result.noCandidate === 0 && calls === 0, "Disabled controls must not reach the send service.");
   }
 
   {
@@ -126,7 +141,7 @@ async function main(): Promise<void> {
         return sent("unused");
       },
     }));
-    assert(result.disposition === "no_candidate" && calls === 0, "No candidates must not reach the send service.");
+    assert(result.disposition === "completed" && result.noCandidate === 1 && calls === 0, "No candidates must not reach the send service.");
   }
 
   {
@@ -138,7 +153,7 @@ async function main(): Promise<void> {
         return sent("550e8400-e29b-41d4-a716-446655440002");
       },
     }));
-    assert(result.disposition === "no_candidate" && calls === 0, "Candidates without explicit human approval must not reach the send service.");
+    assert(result.disposition === "completed" && result.noCandidate === 1 && calls === 0, "Candidates without explicit human approval must not reach the send service.");
   }
 
   {
@@ -150,7 +165,7 @@ async function main(): Promise<void> {
         throw new BacklinkOutreachEmailSendError("OUTREACH_INELIGIBLE");
       },
     }));
-    assert(result.disposition === "no_candidate" && providerCalls === 0, "A V3 refusal must not invoke a provider.");
+    assert(result.disposition === "completed" && result.noCandidate === 1 && providerCalls === 0, "A V3 refusal must not invoke a provider.");
   }
 
   {
@@ -227,12 +242,13 @@ async function main(): Promise<void> {
         return sent(input.outreachId);
       },
     }));
-    assert(result.disposition === "sent" && providerCalls === 1, "A cron run must send at most one email.");
+    assert(result.disposition === "completed" && result.sent === 1 && providerCalls === 1, "A workspace must send at most one email per cron cycle.");
   }
 
   {
     let providerCalls = 0;
     let reserved = false;
+    const reservations = new Set<string>();
     const candidates = [candidate("550e8400-e29b-41d4-a716-446655440006")];
     const send = async (input: { outreachId: string }) => {
       if (reserved) throw new BacklinkOutreachEmailSendError("OUTREACH_INELIGIBLE");
@@ -241,15 +257,88 @@ async function main(): Promise<void> {
       return sent(input.outreachId);
     };
     const [first, second] = await Promise.all([
-      runBacklinkOutreachLiveAutoSendCron(dependencies({ candidates, send })),
-      runBacklinkOutreachLiveAutoSendCron(dependencies({ candidates, send })),
+      runBacklinkOutreachLiveAutoSendCron(dependencies({ candidates, send, reservations })),
+      runBacklinkOutreachLiveAutoSendCron(dependencies({ candidates, send, reservations })),
     ]);
     assert(
-      providerCalls === 1 && [first.disposition, second.disposition].includes("sent"),
+      providerCalls === 1 && first.sent + second.sent === 1,
       "Concurrent executions must have only one provider-reaching reservation.",
     );
-    const retry = await runBacklinkOutreachLiveAutoSendCron(dependencies({ candidates, send }));
-    assert(retry.disposition === "no_candidate" && providerCalls === 1, "A retry after reservation must remain idempotent.");
+    const retry = await runBacklinkOutreachLiveAutoSendCron(dependencies({ candidates, send, reservations }));
+    assert(retry.disposition === "completed" && retry.sent === 0 && providerCalls === 1, "A retry after reservation must remain idempotent.");
+  }
+
+  {
+    const pauses: string[] = [];
+    const result = await runBacklinkOutreachLiveAutoSendCron(dependencies({
+      candidates: [candidate("550e8400-e29b-41d4-a716-446655440008")],
+      send: async (input) => ({ ...sent(input.outreachId), disposition: "failed", attemptStatus: "failed" }),
+      pause: async (input) => { pauses.push(input.reason); },
+    }));
+    assert(result.failed === 1 && result.paused === 1 && pauses.join(",") === "failed", "A failed LIVE send must pause only its LIVE batch capability.");
+  }
+
+  {
+    const reservations = new Set<string>();
+    const candidates = [candidate("550e8400-e29b-41d4-a716-446655440012")];
+    let providerCalls = 0;
+    let rejected = false;
+    try {
+      await runBacklinkOutreachLiveAutoSendCron(dependencies({
+        candidates,
+        reservations,
+        send: async (input) => { providerCalls += 1; return { ...sent(input.outreachId), disposition: "unknown", attemptStatus: "unknown" }; },
+        pause: async () => { throw new Error("pause persistence unavailable"); },
+      }));
+    } catch {
+      rejected = true;
+    }
+    const retry = await runBacklinkOutreachLiveAutoSendCron(dependencies({
+      candidates,
+      reservations,
+      send: async (input) => { providerCalls += 1; return sent(input.outreachId); },
+    }));
+    assert(rejected && providerCalls === 1 && retry.sent === 0, "A failed pause write must leave the cycle reservation fail-closed.");
+  }
+
+  {
+    const reservations = new Set<string>();
+    const candidates = [candidate("550e8400-e29b-41d4-a716-446655440013")];
+    let providerCalls = 0;
+    await runBacklinkOutreachLiveAutoSendCron(dependencies({
+      candidates, reservations, cycleId: "2026-10-28",
+      send: async (input) => { providerCalls += 1; return sent(input.outreachId); },
+    }));
+    const nextCycle = await runBacklinkOutreachLiveAutoSendCron(dependencies({
+      candidates, reservations, cycleId: "2026-10-29",
+      send: async (input) => { providerCalls += 1; return sent(input.outreachId); },
+    }));
+    assert(providerCalls === 2 && nextCycle.sent === 1, "A distinct cycle must not be blocked by a prior cycle reservation.");
+  }
+
+  {
+    const pauses: string[] = [];
+    const result = await runBacklinkOutreachLiveAutoSendCron(dependencies({
+      candidates: [candidate("550e8400-e29b-41d4-a716-446655440011")],
+      send: async (input) => ({ ...sent(input.outreachId), disposition: "unknown", attemptStatus: "unknown" }),
+      pause: async (input) => { pauses.push(input.reason); },
+    }));
+    assert(result.unknown === 1 && result.paused === 1 && pauses.join(",") === "unknown", "An unknown LIVE send must pause only its LIVE batch capability.");
+  }
+
+  {
+    const otherControl = { ...control, workspaceId: "workspace-2" };
+    const candidates = [
+      candidate("550e8400-e29b-41d4-a716-446655440009"),
+      candidate("550e8400-e29b-41d4-a716-446655440010", { workspace_id: "workspace-2" }),
+    ];
+    let providerCalls = 0;
+    const result = await runBacklinkOutreachLiveAutoSendCron(dependencies({
+      controls: [control, otherControl],
+      candidates,
+      send: async (input) => { providerCalls += 1; return sent(input.outreachId); },
+    }));
+    assert(result.sent === 2 && providerCalls === 2, "The batch must cap sends at one per eligible workspace, not one globally.");
   }
 
   const route = await readFile("app/api/internal/cron/backlinks/outreach/send-one/route.ts", "utf8");

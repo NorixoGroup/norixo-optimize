@@ -24,6 +24,11 @@ function mapAutomationWorkspaceControl(
     backlinkOutreachScheduleApplyEnabled: row.backlink_outreach_schedule_apply_enabled,
     dryRunOnly: row.dry_run_only,
     disabledReason: row.disabled_reason,
+    backlinkLiveAutoSendPausedAt: row.backlink_live_auto_send_paused_at,
+    backlinkLiveAutoSendPauseReason:
+      row.backlink_live_auto_send_pause_reason === "failed" || row.backlink_live_auto_send_pause_reason === "unknown"
+        ? row.backlink_live_auto_send_pause_reason
+        : null,
     lastScheduleApplyAttemptAt: row.last_schedule_apply_attempt_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -122,12 +127,13 @@ export async function listAutomationWorkspaceControlsForBacklinkLiveAutoSend(
   const { data, error } = await client
     .from("automation_workspace_controls")
     .select(
-      "workspace_id, backlinks_enabled, backlink_autonomy_enabled, backlink_outreach_schedule_apply_enabled, dry_run_only, disabled_reason, last_schedule_apply_attempt_at, created_at, updated_at, updated_by, promotion_auto_apply_enabled, promotion_auto_apply_authorized_by, promotion_auto_apply_authorized_at, promotion_auto_apply_last_applied_date, campaign_apply_authorized_enabled, campaign_apply_authorized_by, campaign_apply_authorized_at",
+      "workspace_id, backlinks_enabled, backlink_autonomy_enabled, backlink_outreach_schedule_apply_enabled, dry_run_only, disabled_reason, backlink_live_auto_send_paused_at, backlink_live_auto_send_pause_reason, last_schedule_apply_attempt_at, created_at, updated_at, updated_by, promotion_auto_apply_enabled, promotion_auto_apply_authorized_by, promotion_auto_apply_authorized_at, promotion_auto_apply_last_applied_date, campaign_apply_authorized_enabled, campaign_apply_authorized_by, campaign_apply_authorized_at",
     )
     .eq("backlinks_enabled", true)
     .eq("dry_run_only", false)
     .eq("backlink_outreach_schedule_apply_enabled", true)
     .is("disabled_reason", null)
+    .is("backlink_live_auto_send_paused_at", null)
     .order("workspace_id", { ascending: true })
     .limit(limit);
 
@@ -136,6 +142,23 @@ export async function listAutomationWorkspaceControlsForBacklinkLiveAutoSend(
   }
 
   return (data ?? []).map(mapAutomationWorkspaceControl);
+}
+
+/** Pauses only LIVE auto-send after an ambiguous or failed provider outcome. */
+export async function pauseAutomationWorkspaceControlBacklinkLiveAutoSend(
+  client: BacklinkRepositoryClient,
+  input: { workspaceId: string; pausedAt: string; reason: "failed" | "unknown" },
+): Promise<void> {
+  const operation = "pauseAutomationWorkspaceControlBacklinkLiveAutoSend";
+  const { error } = await client
+    .from("automation_workspace_controls")
+    .update({
+      backlink_live_auto_send_paused_at: input.pausedAt,
+      backlink_live_auto_send_pause_reason: input.reason,
+    })
+    .eq("workspace_id", input.workspaceId)
+    .is("backlink_live_auto_send_paused_at", null);
+  if (error != null) throw normalizeBacklinkRepositoryError(operation, error);
 }
 
 /** Dedicated autonomy selector; deliberately independent from legacy dry-run scheduling. */
