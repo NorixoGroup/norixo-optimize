@@ -11,6 +11,7 @@ export type BacklinkOutreachLiveAutoSendWorkspaceControl = {
   backlinkOutreachScheduleApplyEnabled: boolean;
   dryRunOnly: boolean;
   disabledReason: string | null;
+  backlinkLiveAutoSendPausedAt?: string | null;
 };
 
 export type BacklinkOutreachLiveAutoSendResult = {
@@ -73,7 +74,8 @@ export function canRunBacklinkOutreachLiveAutoSend(
     control.backlinksEnabled === true &&
     control.backlinkOutreachScheduleApplyEnabled === true &&
     control.dryRunOnly === false &&
-    control.disabledReason == null;
+    control.disabledReason == null &&
+    control.backlinkLiveAutoSendPausedAt == null;
 }
 
 function isCandidateEligible(candidate: BacklinkOutreachLiveAutoSendCandidateRow): boolean {

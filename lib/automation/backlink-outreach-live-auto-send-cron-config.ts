@@ -1,12 +1,19 @@
 export type BacklinkOutreachLiveAutoSendCronEnvironment = {
   CRON_SECRET?: string;
   BACKLINK_LIVE_AUTO_SEND_CRON_ENABLED?: string;
+  BACKLINK_LIVE_AUTO_SEND_BATCH_CRON_ENABLED?: string;
 };
 
 export function isBacklinkOutreachLiveAutoSendCronEnabled(
   environment: BacklinkOutreachLiveAutoSendCronEnvironment,
 ): boolean {
   return environment.BACKLINK_LIVE_AUTO_SEND_CRON_ENABLED === "true";
+}
+
+export function isBacklinkOutreachLiveAutoSendBatchCronEnabled(
+  environment: BacklinkOutreachLiveAutoSendCronEnvironment,
+): boolean {
+  return environment.BACKLINK_LIVE_AUTO_SEND_BATCH_CRON_ENABLED === "true";
 }
 
 export function hasValidBacklinkOutreachLiveAutoSendCronAuthorization(

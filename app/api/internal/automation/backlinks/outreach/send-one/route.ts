@@ -43,6 +43,7 @@ type WorkspaceControlRow = {
   backlink_outreach_schedule_apply_enabled: boolean;
   dry_run_only: boolean;
   disabled_reason: string | null;
+  backlink_live_auto_send_paused_at: string | null;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -121,7 +122,8 @@ function isEnabled(control: WorkspaceControlRow | null): control is WorkspaceCon
     control.backlinks_enabled === true &&
     control.backlink_outreach_schedule_apply_enabled === true &&
     control.dry_run_only === false &&
-    control.disabled_reason == null;
+    control.disabled_reason == null &&
+    control.backlink_live_auto_send_paused_at == null;
 }
 
 export async function POST(request: NextRequest) {
@@ -147,7 +149,7 @@ export async function POST(request: NextRequest) {
     const { data: control, error: controlError } = await adminClient
       .from("automation_workspace_controls")
       .select(
-        "workspace_id, backlinks_enabled, backlink_outreach_schedule_apply_enabled, dry_run_only, disabled_reason",
+        "workspace_id, backlinks_enabled, backlink_outreach_schedule_apply_enabled, dry_run_only, disabled_reason, backlink_live_auto_send_paused_at",
       )
       .eq("workspace_id", auth.workspace.id)
       .maybeSingle();
@@ -217,6 +219,7 @@ export async function POST(request: NextRequest) {
           backlinkOutreachScheduleApplyEnabled: control.backlink_outreach_schedule_apply_enabled,
           dryRunOnly: control.dry_run_only,
           disabledReason: control.disabled_reason,
+          backlinkLiveAutoSendPausedAt: control.backlink_live_auto_send_paused_at,
         },
         outreachId: body.outreachId,
       },
