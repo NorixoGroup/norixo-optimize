@@ -330,6 +330,9 @@ async function main() {
         workerSteps: 3, workerTerminal: 0, contactSelectionResumedRuns: 0, promotionAutoApplied: 0,
         runsFailed: 1,
         runFailures: [{ workspaceId: "workspace-degraded", runId: "autonomy-run-degraded", errorType: "Error", errorCode: "UNKNOWN" }],
+        workspacesScanned: 1,
+        promotionsScanned: 2,
+        skipped: {},
       };
       const handler = createBacklinkAutonomyCronHandler({
         cronSecret: () => "test-secret",
