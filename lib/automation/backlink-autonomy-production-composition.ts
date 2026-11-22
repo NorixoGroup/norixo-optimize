@@ -36,7 +36,7 @@ import { isBacklinkCampaignApplyAuthorizationEnabled } from "./backlink-campaign
 import { readBacklinkAutonomyRuntimeConfig, type BacklinkAutonomyRuntimeConfig } from "./backlink-autonomy-runtime-config";
 import { readBacklinkZeroBounceBudgetRuntimeConfig } from "./backlink-zerobounce-budget-runtime-config";
 import { reserveBacklinkZeroBounceVerification } from "./repositories/zeroBounceVerificationBudgetRepository";
-import { runBacklinkAutonomyScheduler } from "./backlink-autonomy-scheduler";
+import { runBacklinkAutonomyScheduler, type BacklinkAutonomySchedulerResult } from "./backlink-autonomy-scheduler";
 import { runOneBacklinkAutonomyWorkerTask } from "./backlink-autonomy-worker";
 import { reconcileBacklinkAutonomyRunLifecycle } from "./backlink-autonomy-run-lifecycle";
 import type { BacklinkAutonomyDispatcherDependencies } from "./backlink-autonomy-dispatcher";
@@ -73,7 +73,36 @@ export type BacklinkAutonomyProductionTickResult = {
   runsFailed: number;
   /** One bounded, secret-free entry per run counted in `runsFailed`, identifying which run and why. */
   runFailures: readonly BacklinkAutonomyRunFailure[];
+  /** Bounded scheduler counters; skipped keys are reason codes only, never record identifiers. */
+  workspacesScanned: number;
+  promotionsScanned: number;
+  skipped: Readonly<Record<string, number>>;
 };
+
+const SCHEDULER_SKIP_REASON_CODE = /^[A-Z][A-Z0-9_]*$/;
+
+/**
+ * The scheduler keeps its internal skip entries diagnostic by appending an
+ * identifier after `:`. The cron response must stay aggregate-only: retain
+ * only validated reason codes and count them deterministically.
+ */
+export function summarizeBacklinkAutonomySchedulerObservability(
+  scheduler: Pick<BacklinkAutonomySchedulerResult, "workspacesScanned" | "promotionsScanned" | "skipped">,
+): Pick<BacklinkAutonomyProductionTickResult, "workspacesScanned" | "promotionsScanned" | "skipped"> {
+  const skipped: Record<string, number> = {};
+  for (const entry of scheduler.skipped) {
+    const reasonCodes = entry.split(":", 1)[0]?.split(",") ?? [];
+    for (const reasonCode of reasonCodes) {
+      const code = SCHEDULER_SKIP_REASON_CODE.test(reasonCode) ? reasonCode : "UNRECOGNIZED_SKIP_REASON";
+      skipped[code] = (skipped[code] ?? 0) + 1;
+    }
+  }
+  return {
+    workspacesScanned: scheduler.workspacesScanned,
+    promotionsScanned: scheduler.promotionsScanned,
+    skipped: Object.fromEntries(Object.entries(skipped).sort(([left], [right]) => left.localeCompare(right))),
+  };
+}
 
 /** A generic `Error.name` is attacker- or data-influenced in principle (any thrown object can set it); never surface it unchecked. */
 const KNOWN_GENERIC_ERROR_TYPES = new Set<string>([
@@ -132,7 +161,7 @@ export async function runBacklinkAutonomyProductionTick(
   input: { at: string; workerId: string },
 ): Promise<BacklinkAutonomyProductionTickResult> {
   if (deps.runtimeConfig().autonomyEnabled !== true) {
-    return { disposition: "disabled", seededRuns: 0, tasksCreated: 0, tasksExisting: 0, reclaimedTasks: 0, workerSteps: 0, workerTerminal: 0, contactSelectionResumedRuns: 0, promotionAutoApplied: 0, runsFailed: 0, runFailures: [] };
+    return { disposition: "disabled", seededRuns: 0, tasksCreated: 0, tasksExisting: 0, reclaimedTasks: 0, workerSteps: 0, workerTerminal: 0, contactSelectionResumedRuns: 0, promotionAutoApplied: 0, runsFailed: 0, runFailures: [], workspacesScanned: 0, promotionsScanned: 0, skipped: {} };
   }
   // Runs before the scheduler so a freshly auto-applied promotion is already
   // a canonical applied promotion by the time listCanonicalAppliedPromotions
@@ -178,7 +207,7 @@ export async function runBacklinkAutonomyProductionTick(
       runFailures.push({ workspaceId: run.workspaceId, runId: run.runId, ...describeAutonomyRunError(error) });
     }
   }
-  return { disposition: "completed", seededRuns: seeded.autonomyRunIds.length, tasksCreated: seeded.created, tasksExisting: seeded.existing, reclaimedTasks, workerSteps, workerTerminal, contactSelectionResumedRuns: resumed.resumedRuns.length, promotionAutoApplied: promotionAutoApplyOutcomes.filter((outcome) => outcome.outcome === "applied").length, runsFailed, runFailures };
+  return { disposition: "completed", seededRuns: seeded.autonomyRunIds.length, tasksCreated: seeded.created, tasksExisting: seeded.existing, reclaimedTasks, workerSteps, workerTerminal, contactSelectionResumedRuns: resumed.resumedRuns.length, promotionAutoApplied: promotionAutoApplyOutcomes.filter((outcome) => outcome.outcome === "applied").length, runsFailed, runFailures, ...summarizeBacklinkAutonomySchedulerObservability(seeded) };
 }
 
 function blockedHandlers(client: ReturnType<typeof createSupabaseAdminClient>): BacklinkAutonomyDispatcherDependencies {
