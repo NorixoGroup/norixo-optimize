@@ -268,9 +268,22 @@ export async function resumeBacklinkAutonomyCompletedRun(
   // without the write path itself being made transactional with the read.
   const freshControl = await deps.getControl();
 
+  // The orchestrator's shared nextTask() always sets the new task's
+  // dependsOnTaskId to progress.completedTaskId — correct for the normal
+  // same-run worker flow, but here completedTaskId (sourceTask.id) belongs
+  // to the SOURCE run while the new task belongs to the sibling run.
+  // trg_automation_tasks_dependency_integrity (migration 20260803030000)
+  // requires depends_on_task_id to share both workspace_id AND run_id with
+  // the task that carries it, and raises AUTOMATION_TASK_DEPENDENCY_SCOPE_MISMATCH
+  // otherwise. Source-run provenance is already fully preserved in the
+  // sibling run's own `input` (sourceAutonomyRunId/sourceTaskId/resumedStage,
+  // set above) — dependsOnTaskId is a same-run claim-ordering mechanism, not
+  // an audit trail, so clearing it loses no traceability.
+  const createSiblingRunTask: typeof deps.createOrGetTask = (task) => deps.createOrGetTask({ ...task, dependsOnTaskId: null });
+
   let created: Awaited<ReturnType<typeof runBacklinkAutonomyOrchestrator>>;
   try {
-    created = await runBacklinkAutonomyOrchestrator({ createOrGetTask: deps.createOrGetTask }, {
+    created = await runBacklinkAutonomyOrchestrator({ createOrGetTask: createSiblingRunTask }, {
       workspaceId: input.workspaceId,
       runId: siblingRun.run.id,
       domainId: scope.domainId,

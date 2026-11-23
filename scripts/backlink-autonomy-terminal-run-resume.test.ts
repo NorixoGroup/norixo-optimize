@@ -473,3 +473,19 @@ test("a partial failure (sibling run created, task creation throws) reports the 
   assert.equal(runs.all.size, 1);
   assert.equal(retryTasks.all.size, 1);
 });
+
+test("regression (BACKLINKS-LIVE-22): the sibling run's new task never carries a cross-run dependsOnTaskId — trg_automation_tasks_dependency_integrity would otherwise reject it", async () => {
+  const capturedInputs: Array<{ taskKey: string; dependsOnTaskId?: string | null; runId: string }> = [];
+  const createOrGetTask = async (input: { taskKey: string; dependsOnTaskId?: string | null; runId: string }) => {
+    capturedInputs.push(input);
+    const tasks = makeTaskStore();
+    return tasks.createOrGetTask(input);
+  };
+  const result = await resumeBacklinkAutonomyCompletedRun(baseDeps({ createOrGetTask }), baseInput());
+  assert.equal(result.outcome, "resumed");
+  assert.equal(capturedInputs.length, 1, "createOrGetTask must have been called exactly once");
+  const [captured] = capturedInputs;
+  assert.equal(captured!.dependsOnTaskId, null, "dependsOnTaskId must be null, never the source run's task id");
+  assert.notEqual(captured!.dependsOnTaskId, SOURCE_TASK_ID, "the dependency must never point at a task from a different run");
+  assert.notEqual(captured!.runId, SOURCE_RUN_ID, "sanity: the new task belongs to the sibling run, not the source run");
+});
