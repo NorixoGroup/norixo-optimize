@@ -180,6 +180,14 @@ export async function resumeBacklinkAutonomyCompletedRun(
   if (run.status !== "completed") {
     return notEligible("SOURCE_RUN_NOT_TERMINAL_COMPLETED", input.sourceRunId);
   }
+  // Fail-closed: only a genuine backlinks-autonomy run may ever be resumed.
+  // A completed run of a different system/runKind could otherwise happen to
+  // carry a task whose taskKind string collides with the resumable stage's
+  // expected kind, and would then be fed into the autonomy orchestrator as
+  // if it were one of its own runs.
+  if (run.system !== "backlinks" || run.runKind !== BACKLINK_AUTONOMY_TERMINAL_RESUME_RUN_KIND) {
+    return notEligible("SOURCE_RUN_KIND_INELIGIBLE", input.sourceRunId);
+  }
 
   const expectedTaskKind = `backlinks.${input.stage}`;
   const tasks = await deps.listTasks({ workspaceId: input.workspaceId, runId: input.sourceRunId });

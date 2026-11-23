@@ -286,6 +286,22 @@ test("source run missing, belonging to another workspace, or not completed is re
   }
 });
 
+test("a completed run with the wrong system or the wrong runKind is rejected, fail-closed, before any task is ever listed", async () => {
+  const cases: Array<[AutomationRun, string]> = [
+    [completedRun({ system: "not-backlinks" as AutomationRun["system"] }), "SOURCE_RUN_KIND_INELIGIBLE"],
+    [completedRun({ runKind: "backlinks.discovery" }), "SOURCE_RUN_KIND_INELIGIBLE"],
+  ];
+  for (const [run, reason] of cases) {
+    const result = await resumeBacklinkAutonomyCompletedRun(
+      baseDeps({ getRun: async () => run, listTasks: neverCalled("listTasks"), getContact: neverCalled("getContact"), createOrGetRun: neverCalled("createOrGetRun"), createOrGetTask: neverCalled("createOrGetTask") }),
+      baseInput(),
+    );
+    assert.equal(result.outcome, "not_eligible");
+    assert.deepEqual(result.reasonCodes, [reason]);
+    assert.equal(result.runId, null);
+  }
+});
+
 test("missing, wrong-kind, non-completed, or malformed-scope source task blocks resume without creating anything", async () => {
   const cases: Array<AutomationTask[]> = [
     [],
