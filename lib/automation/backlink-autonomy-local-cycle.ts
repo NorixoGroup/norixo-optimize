@@ -3,6 +3,7 @@ import type { AutomationTask, AutomationTaskDependencies } from "./types";
 import type { Json } from "@/types/database.types";
 import { dispatchBacklinkAutonomyTask, type BacklinkAutonomyDispatcherControl, type BacklinkAutonomyDispatcherDependencies, type BacklinkAutonomyDispatchMode, type BacklinkAutonomyDispatchState } from "./backlink-autonomy-dispatcher";
 import { runBacklinkAutonomyOrchestrator, type BacklinkMasterAutonomyOrchestratorResult } from "./backlink-master-autonomy-orchestrator";
+import { isBacklinkAutonomyDeferredReason, terminalBacklinkAutonomyOutput } from "./backlink-autonomy-supervision";
 
 export type BacklinkAutonomyLocalCycleResult = {
   outcome: "empty" | "execution_pending" | "blocked" | "manual_review" | "dead_letter" | "max_steps" | "rejected";
@@ -57,7 +58,18 @@ export async function runBacklinkAutonomyCycle(input: {
       const failed = await failAutomationTask(input.taskDependencies, { workspaceId: input.workspaceId, taskId: task.id, workerId: input.workerId, failedAt: input.scheduledAt, errorCode: "BACKLINK_AUTONOMY_HANDLER_FAILED", errorMessage: error instanceof Error ? error.message.slice(0, 500) : "Backlink autonomy handler failed" });
       return { outcome: failed.kind === "dead_letter" ? "dead_letter" : "rejected", reasonCodes: ["BACKLINK_AUTONOMY_HANDLER_FAILED"], steps: steps + 1, taskIds, readyTransitionRequired: false };
     }
-    if (dispatched.kind === "rejected") return { outcome: "rejected", reasonCodes: [dispatched.reason], steps: steps + 1, taskIds, readyTransitionRequired: false };
+    if (dispatched.kind === "rejected") {
+      if (isBacklinkAutonomyDeferredReason(dispatched.reason)) {
+        const deferred = await failAutomationTask(input.taskDependencies, { workspaceId: input.workspaceId, taskId: task.id, workerId: input.workerId, failedAt: input.scheduledAt, errorCode: dispatched.reason, errorMessage: `Backlink autonomy task is waiting for ${dispatched.reason}.` });
+        return { outcome: deferred.kind === "dead_letter" ? "dead_letter" : "blocked", reasonCodes: [dispatched.reason], steps: steps + 1, taskIds, readyTransitionRequired: false };
+      }
+      const completed = await completeAutomationTask(input.taskDependencies, { workspaceId: input.workspaceId, taskId: task.id, workerId: input.workerId, completedAt: input.scheduledAt, output: terminalBacklinkAutonomyOutput("rejected", [dispatched.reason]) });
+      return { outcome: "rejected", reasonCodes: [completed.kind === "rejected" ? "TASK_COMPLETION_REJECTED" : dispatched.reason], steps: steps + 1, taskIds, readyTransitionRequired: false };
+    }
+    if (dispatched.taskKind === "backlinks.mailbox_verification" && dispatched.output.outcome === "deferred") {
+      const deferred = await failAutomationTask(input.taskDependencies, { workspaceId: input.workspaceId, taskId: task.id, workerId: input.workerId, failedAt: input.scheduledAt, errorCode: dispatched.output.reason, errorMessage: `Mailbox verification is waiting for ${dispatched.output.reason}.` });
+      return { outcome: deferred.kind === "dead_letter" ? "dead_letter" : "blocked", reasonCodes: [dispatched.output.reason], steps: steps + 1, taskIds, readyTransitionRequired: false };
+    }
     const output = JSON.parse(JSON.stringify(dispatched.output)) as Json;
     const completed = await completeAutomationTask(input.taskDependencies, { workspaceId: input.workspaceId, taskId: task.id, workerId: input.workerId, completedAt: input.scheduledAt, output });
     if (completed.kind === "rejected") return { outcome: "rejected", reasonCodes: ["TASK_COMPLETION_REJECTED"], steps: steps + 1, taskIds, readyTransitionRequired: false };

@@ -327,7 +327,7 @@ async function main() {
       const degradedResult = {
         disposition: "completed" as const,
         seededRuns: 2, tasksCreated: 0, tasksExisting: 0, reclaimedTasks: 0,
-        workerSteps: 3, workerTerminal: 0, contactSelectionResumedRuns: 0, promotionAutoApplied: 0,
+        workerSteps: 3, workerTerminal: 0, supervision: { completed: 0, blocked: 0, rejected: 0, retried: 0, deadLetter: 0, reasonCodes: {} }, contactSelectionResumedRuns: 0, promotionAutoApplied: 0,
         runsFailed: 1,
         runFailures: [{ workspaceId: "workspace-degraded", runId: "autonomy-run-degraded", errorType: "Error", errorCode: "UNKNOWN" }],
         workspacesScanned: 1,

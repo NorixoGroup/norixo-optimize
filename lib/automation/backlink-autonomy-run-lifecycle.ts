@@ -13,8 +13,14 @@ export type BacklinkAutonomyRunLifecycleResult =
   | { kind: "completed" | "failed"; runStatus: AutomationRun["status"] };
 
 function summary(tasks: readonly AutomationTask[]) {
+  const reasonCodes = [...new Set(tasks.flatMap((task) => {
+    const output = typeof task.output === "object" && task.output != null && !Array.isArray(task.output) ? task.output as Record<string, unknown> : null;
+    const outputReasons = Array.isArray(output?.reasonCodes) ? output.reasonCodes.filter((value): value is string => typeof value === "string") : [];
+    return [...(task.errorCode == null ? [] : [task.errorCode]), ...outputReasons];
+  }))].filter((code) => /^[A-Z][A-Z0-9_]*$/.test(code)).sort();
   return {
     version: 1,
+    reasonCodes,
     taskCounts: {
       queued: tasks.filter((task) => task.status === "queued").length,
       running: tasks.filter((task) => task.status === "running").length,

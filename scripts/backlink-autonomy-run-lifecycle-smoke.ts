@@ -55,7 +55,7 @@ async function main() {
     assert.equal(result.kind, "completed");
     assert.equal(f.status(), "completed");
     assert.deepEqual(f.calls, ["start:2026-11-09T06:38:05.000Z", "complete:2026-11-09T06:38:05.000Z"]);
-    assert.deepEqual(f.value().summary, { version: 1, taskCounts: { queued: 0, running: 0, completed: 1, failed: 0, deadLetter: 0, cancelled: 0 } });
+    assert.deepEqual(f.value().summary, { version: 1, reasonCodes: [], taskCounts: { queued: 0, running: 0, completed: 1, failed: 0, deadLetter: 0, cancelled: 0 } });
   }
 
   // Retried or still-running work leaves the parent running.

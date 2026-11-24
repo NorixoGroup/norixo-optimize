@@ -103,6 +103,32 @@ begin
 end
 $$;
 
+\echo '--- Deferred authorization: repeated policy waits preserve attempts, reason codes, lease safety, and later resumption ---'
+insert into public.automation_tasks (id, workspace_id, run_id, system, task_kind, task_key, status, priority, scheduled_at, available_at, max_attempts, backoff_base_seconds, input)
+values ('00000000-0000-4000-8000-0000000000c4', '00000000-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-0000000000b1', 'backlinks', 'backlinks.mailbox_verification', 'auto05-task-deferred-auth', 'queued', 50, now(), now(), 3, 1, '{}'::jsonb);
+do $$
+declare task_id uuid;
+begin
+  -- Two independent ticks see the same missing authorization. Neither is an
+  -- execution attempt and neither can leave a running lease behind.
+  for i in 1..2 loop
+    select id into task_id from public.claim_next_automation_task('00000000-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-0000000000b1', 'auto05-defer-worker', now() + make_interval(secs => i * 2), 60);
+    if task_id is distinct from '00000000-0000-4000-8000-0000000000c4' then raise exception 'FAIL deferred authorization: task was not safely claimable on tick %.', i; end if;
+    perform * from public.fail_automation_task('00000000-0000-4000-8000-0000000000a1', task_id, 'auto05-defer-worker', now() + make_interval(secs => i * 2), 'MAILBOX_VERIFICATION_PAID_AUTHORIZATION_REQUIRED', 'Authorization is absent.');
+    if (select status from public.automation_tasks where id = task_id) <> 'queued'
+      or (select attempt_count from public.automation_tasks where id = task_id) <> 0
+      or (select error_code from public.automation_tasks where id = task_id) <> 'MAILBOX_VERIFICATION_PAID_AUTHORIZATION_REQUIRED'
+      or (select output->'reasonCodes'->>0 from public.automation_tasks where id = task_id) <> 'MAILBOX_VERIFICATION_PAID_AUTHORIZATION_REQUIRED' then
+      raise exception 'FAIL deferred authorization: policy wait consumed an attempt or lost its persisted reason.';
+    end if;
+  end loop;
+  select id into task_id from public.claim_next_automation_task('00000000-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-0000000000b1', 'auto05-resume-worker', now() + interval '10 seconds', 60);
+  perform * from public.complete_automation_task('00000000-0000-4000-8000-0000000000a1', task_id, 'auto05-resume-worker', now() + interval '10 seconds', '{"resumed":true}'::jsonb);
+  if (select status from public.automation_tasks where id = task_id) <> 'completed' then raise exception 'FAIL deferred authorization: task did not resume after authorization became available.'; end if;
+  raise notice 'PASS deferred authorization: repeated waits preserved attempts and task resumed safely';
+end
+$$;
+
 \echo '--- RLS: a plain workspace member cannot insert a run; the workspace owner can (real shipped policy, real request.jwt.claims mechanism) ---'
 begin;
 set local role authenticated;
