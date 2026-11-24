@@ -229,7 +229,7 @@ function autonomyFixture(options: { domainId: string; opportunityId: string; hos
     async claimNextTask(input) { const value = queue.find((item) => item.status === "queued") ?? null; if (!value) return null; value.status = "running"; value.workerId = input.workerId; value.attemptCount++; counters.claims++; return value; },
     async heartbeatTask() { return null; },
     async completeTask(input) { const value = [...byKey.values()].find((item) => item.id === input.taskId) ?? null; if (!value || value.status !== "running") return null; value.status = "completed"; value.output = input.output; value.completedAt = input.completedAt; counters.completes++; return value; },
-    async failTask(input) { const value = [...byKey.values()].find((item) => item.id === input.taskId)!; counters.failures++; value.status = value.attemptCount >= value.maxAttempts ? "dead_letter" : "failed"; return value; },
+    async failTask(input) { const value = [...byKey.values()].find((item) => item.id === input.taskId)!; counters.failures++; value.status = value.attemptCount >= value.maxAttempts ? "dead_letter" : "queued"; value.errorCode = input.errorCode; value.errorMessage = input.errorMessage; return value; },
     async reclaimExpiredTasks() { return []; }, async cancelTask() { return null; },
   };
   const domain = { id: options.domainId, workspace_id: ids.workspace, hostname: options.hostname, archived_at: null };
@@ -256,7 +256,7 @@ function autonomyFixture(options: { domainId: string; opportunityId: string; hos
     decision: { getFacts: async () => ({ backlinksEnabled: true, liveAutomationEnabled: true, evidenceBackedContact: true, contactStatus: contacts[0]?.contact_status ?? "unverified", channel: "email" as const, validOpportunity: true, validCampaign: true, validDraft: true, inboundReplyStop: false, complaintOrBounceStop: false, conflictingOpenAttempt: false, rateLimitEligible: true, maxAttemptEligible: true, contactFormVerified: false }) },
     contactForm: { getLatestApprovalCandidate: async () => null, queueExistingApproval: async () => { throw new Error("must not queue a contact-form submission without a preexisting human approval"); } },
   };
-  return { deps, handlers, contacts, counters, byKey };
+  return { deps, handlers, contacts, counters, byKey, setPaidMailboxVerificationAuthorized(value: boolean) { options.paidMailboxVerificationAuthorized = value; } };
 }
 
 async function enterAutonomy(fixture: ReturnType<typeof autonomyFixture>, applied: { applicationId: string; domainId: string; opportunityId: string }, promotionTask: AutomationTask, autonomyRunId: string, hostname: string) {
@@ -305,9 +305,19 @@ async function main(): Promise<void> {
   const refused = autonomyFixture({ domainId: applied.domainId, opportunityId: applied.opportunityId, hostname: proposal.hostname, paidMailboxVerificationAuthorized: false });
   await enterAutonomy(refused, applied, promotionTask, refusalRunId, proposal.hostname);
   const refusalCycle = await runBacklinkAutonomyCycle({ taskDependencies: refused.deps, handlers: refused.handlers, workspaceId: ids.workspace, runId: refusalRunId, workerId: "full-chain-smoke", actorUserId: ids.actor, domainId: applied.domainId, opportunityId: applied.opportunityId, scheduledAt: now, mode: "apply", control: { ...control, paidMailboxVerificationAuthorized: false }, channel: "email" });
-  assertTrue(refusalCycle.outcome === "rejected" && JSON.stringify(refusalCycle.reasonCodes) === JSON.stringify(["MAILBOX_VERIFICATION_PAID_AUTHORIZATION_REQUIRED"]), "the security refusal must be demonstrated through the full real chain, not just an isolated fixture");
+  assertTrue(refusalCycle.outcome === "blocked" && JSON.stringify(refusalCycle.reasonCodes) === JSON.stringify(["MAILBOX_VERIFICATION_PAID_AUTHORIZATION_REQUIRED"]), "the security refusal must be deferred through the full real chain, not just an isolated fixture");
   assertTrue(refused.counters.zeroBounceCalls === 0, "the refusal must occur before the simulated provider is ever reached — zero verification calls");
+  const deferredMailbox = [...refused.byKey.values()].find((value) => value.taskKind === "backlinks.mailbox_verification")!;
+  assertTrue(deferredMailbox.status === "queued" && deferredMailbox.errorCode === "MAILBOX_VERIFICATION_PAID_AUTHORIZATION_REQUIRED", "the refused task must persist its reason and leave running for a bounded retry");
   record("security_refusal", { outcome: refusalCycle.outcome, reasonCodes: refusalCycle.reasonCodes, zeroBounceCalls: refused.counters.zeroBounceCalls });
+  refused.setPaidMailboxVerificationAuthorized(true);
+  const resumedCycle = await runBacklinkAutonomyCycle({ taskDependencies: refused.deps, handlers: refused.handlers, workspaceId: ids.workspace, runId: refusalRunId, workerId: "full-chain-smoke", actorUserId: ids.actor, domainId: applied.domainId, opportunityId: applied.opportunityId, scheduledAt: now, mode: "apply", control: { ...control, paidMailboxVerificationAuthorized: true }, channel: "email" });
+  assertTrue(resumedCycle.outcome === "execution_pending", "a queued authorization block must resume from the same mailbox task after authorization is supplied");
+  assertTrue(Number(refused.counters.zeroBounceCalls) === 1, "the authorized retry uses exactly one simulated verification, with no duplicate provider call before authorization");
+  const resumedReplayCounters = { ...refused.counters };
+  assertTrue((await runBacklinkAutonomyCycle({ taskDependencies: refused.deps, handlers: refused.handlers, workspaceId: ids.workspace, runId: refusalRunId, workerId: "full-chain-smoke", actorUserId: ids.actor, domainId: applied.domainId, opportunityId: applied.opportunityId, scheduledAt: now, mode: "apply", control: { ...control, paidMailboxVerificationAuthorized: true }, channel: "email" })).outcome === "empty", "the resumed chain remains idempotent");
+  assertTrue(JSON.stringify(refused.counters) === JSON.stringify(resumedReplayCounters), "replaying a resumed chain must not create duplicates");
+  record("authorization_resume", { outcome: resumedCycle.outcome, zeroBounceCalls: refused.counters.zeroBounceCalls, replayCountersUnchanged: true });
 
   console.log("TRACE", JSON.stringify(trace, null, 2));
   console.log("EXTERNAL_EFFECT_COUNTERS", JSON.stringify({ golden: golden.counters, refused: refused.counters }, null, 2));

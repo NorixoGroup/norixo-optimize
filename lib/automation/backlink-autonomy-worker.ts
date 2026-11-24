@@ -4,6 +4,7 @@ import { dispatchBacklinkAutonomyTask, type BacklinkAutonomyDispatcherDependenci
 import { normalizeBacklinkAutonomyRuntimeControl } from "./backlink-autonomy-runtime-controls";
 import type { BacklinkAutonomyRuntimeConfig } from "./backlink-autonomy-runtime-config";
 import { runBacklinkAutonomyOrchestrator } from "./backlink-master-autonomy-orchestrator";
+import { isBacklinkAutonomyDeferredReason, terminalBacklinkAutonomyOutput } from "./backlink-autonomy-supervision";
 import type { Json } from "@/types/database.types";
 
 export const BACKLINK_AUTONOMY_TASK_KINDS = ["backlinks.contact_resolution", "backlinks.contact_validation", "backlinks.mailbox_verification", "backlinks.campaign_prepare", "backlinks.draft_prepare", "backlinks.outreach_decision", "backlinks.contact_form_prepare"] as const;
@@ -17,7 +18,7 @@ export type BacklinkAutonomyWorkerDependencies = AutomationTaskDependencies & Ba
   getActorUserId: (input: { workspaceId: string; task: AutomationTask }) => Promise<string | null>;
   campaignApplyAuthorized?: (input: { workspaceId: string; task: AutomationTask }) => Promise<boolean>;
 };
-export type BacklinkAutonomyWorkerResult = { kind: "disabled" | "empty" | "completed" | "retried" | "dead_letter" | "terminal"; reasonCodes: readonly string[]; taskId: string | null; nextTaskId: string | null };
+export type BacklinkAutonomyWorkerResult = { kind: "disabled" | "empty" | "completed" | "blocked" | "rejected" | "retried" | "dead_letter" | "terminal"; reasonCodes: readonly string[]; taskId: string | null; nextTaskId: string | null };
 function record(value: unknown): Record<string, unknown> | null { return typeof value === "object" && value != null && !Array.isArray(value) ? value as Record<string, unknown> : null; }
 function string(value: unknown): string | null { return typeof value === "string" && value.length > 0 ? value : null; }
 async function completeOrThrow(deps: AutomationTaskDependencies, task: AutomationTask, workerId: string, at: string, output: Json): Promise<void> {
@@ -29,7 +30,7 @@ async function failOrThrow(deps: AutomationTaskDependencies, task: AutomationTas
   if (failed.kind === "rejected") throw new Error("AUTONOMY_TASK_FAILURE_REJECTED");
   return failed;
 }
-function terminalOutput(reasonCodes: readonly string[]): Json { return { version: 1, terminal: true, reasonCodes: [...reasonCodes] }; }
+function terminalOutput(reasonCodes: readonly string[]): Json { return terminalBacklinkAutonomyOutput("terminal", reasonCodes); }
 
 /** Claims at most one pre-filtered autonomy task; it never invokes outbound executors. */
 export async function runOneBacklinkAutonomyWorkerTask(deps: BacklinkAutonomyWorkerDependencies, input: { workspaceId: string; runId: string; workerId: string; at: string }): Promise<BacklinkAutonomyWorkerResult> {
@@ -47,7 +48,18 @@ export async function runOneBacklinkAutonomyWorkerTask(deps: BacklinkAutonomyWor
     const actorRequired = task.taskKind === "backlinks.contact_resolution" || task.taskKind === "backlinks.campaign_prepare" || task.taskKind === "backlinks.draft_prepare";
     if (actorRequired && actorUserId == null) { await completeOrThrow(deps, task, input.workerId, input.at, terminalOutput(["AUTONOMY_ACTOR_MISSING"])); return { kind: "terminal", reasonCodes: ["AUTONOMY_ACTOR_MISSING"], taskId: task.id, nextTaskId: null }; }
     const dispatched = await dispatchBacklinkAutonomyTask(deps, { task, mode: "apply", control, state: { actorUserId: actorUserId ?? "", campaignId: string(dependency?.campaignId) ?? undefined, outreachId: string(dependency?.outreachId) ?? undefined, channel: (dependency?.channel === "email" || dependency?.channel === "contact_form" || dependency?.channel === "linkedin") ? dependency.channel : "email" } });
-    if (dispatched.kind === "rejected") { await completeOrThrow(deps, task, input.workerId, input.at, terminalOutput([dispatched.reason])); return { kind: "terminal", reasonCodes: [dispatched.reason], taskId: task.id, nextTaskId: null }; }
+    if (dispatched.kind === "rejected") {
+      if (isBacklinkAutonomyDeferredReason(dispatched.reason)) {
+        const deferred = await failOrThrow(deps, task, input.workerId, input.at, dispatched.reason, `Backlink autonomy task is waiting for ${dispatched.reason}.`);
+        return { kind: deferred.kind === "dead_letter" ? "dead_letter" : "blocked", reasonCodes: [dispatched.reason], taskId: task.id, nextTaskId: null };
+      }
+      await completeOrThrow(deps, task, input.workerId, input.at, terminalBacklinkAutonomyOutput("rejected", [dispatched.reason]));
+      return { kind: "rejected", reasonCodes: [dispatched.reason], taskId: task.id, nextTaskId: null };
+    }
+    if (dispatched.taskKind === "backlinks.mailbox_verification" && dispatched.output.outcome === "deferred") {
+      const deferred = await failOrThrow(deps, task, input.workerId, input.at, dispatched.output.reason, `Mailbox verification is waiting for ${dispatched.output.reason}.`);
+      return { kind: deferred.kind === "dead_letter" ? "dead_letter" : "blocked", reasonCodes: [dispatched.output.reason], taskId: task.id, nextTaskId: null };
+    }
     const output = record(dispatched.output) ?? {};
     const contactIds = dispatched.taskKind === "backlinks.contact_resolution" ? [...new Set([...(dispatched.output.createdContactIds), ...(dispatched.output.existingContactIds)])] : [string(record(task.input)?.contactId)].filter((id): id is string => id != null);
     const stage = dispatched.taskKind.replace("backlinks.", "") as "contact_resolution" | "contact_validation" | "mailbox_verification" | "campaign_prepare" | "draft_prepare" | "outreach_decision" | "contact_form_prepare";

@@ -97,7 +97,7 @@ async function main() {
   }, { at, workerId: "test" });
   assert.deepEqual(disabled, {
     disposition: "disabled", seededRuns: 0, tasksCreated: 0, tasksExisting: 0, reclaimedTasks: 0,
-    workerSteps: 0, workerTerminal: 0, contactSelectionResumedRuns: 0, promotionAutoApplied: 0,
+    workerSteps: 0, workerTerminal: 0, supervision: { completed: 0, blocked: 0, rejected: 0, retried: 0, deadLetter: 0, reasonCodes: {} }, contactSelectionResumedRuns: 0, promotionAutoApplied: 0,
     runsFailed: 0, runFailures: [], workspacesScanned: 0, promotionsScanned: 0, skipped: {},
   });
 

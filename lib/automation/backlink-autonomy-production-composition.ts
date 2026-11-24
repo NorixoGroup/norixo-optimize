@@ -67,6 +67,8 @@ export type BacklinkAutonomyProductionTickResult = {
   reclaimedTasks: number;
   workerSteps: number;
   workerTerminal: number;
+  /** Bounded outcome counts and reason codes, safe for scheduler/n8n responses. */
+  supervision: { completed: number; blocked: number; rejected: number; retried: number; deadLetter: number; reasonCodes: Readonly<Record<string, number>> };
   contactSelectionResumedRuns: number;
   promotionAutoApplied: number;
   /** Runs whose lifecycle/reclaim/worker processing threw; the tick still completed for every other run. */
@@ -161,7 +163,7 @@ export async function runBacklinkAutonomyProductionTick(
   input: { at: string; workerId: string },
 ): Promise<BacklinkAutonomyProductionTickResult> {
   if (deps.runtimeConfig().autonomyEnabled !== true) {
-    return { disposition: "disabled", seededRuns: 0, tasksCreated: 0, tasksExisting: 0, reclaimedTasks: 0, workerSteps: 0, workerTerminal: 0, contactSelectionResumedRuns: 0, promotionAutoApplied: 0, runsFailed: 0, runFailures: [], workspacesScanned: 0, promotionsScanned: 0, skipped: {} };
+    return { disposition: "disabled", seededRuns: 0, tasksCreated: 0, tasksExisting: 0, reclaimedTasks: 0, workerSteps: 0, workerTerminal: 0, supervision: { completed: 0, blocked: 0, rejected: 0, retried: 0, deadLetter: 0, reasonCodes: {} }, contactSelectionResumedRuns: 0, promotionAutoApplied: 0, runsFailed: 0, runFailures: [], workspacesScanned: 0, promotionsScanned: 0, skipped: {} };
   }
   // Runs before the scheduler so a freshly auto-applied promotion is already
   // a canonical applied promotion by the time listCanonicalAppliedPromotions
@@ -181,6 +183,7 @@ export async function runBacklinkAutonomyProductionTick(
   let reclaimedTasks = 0;
   let workerSteps = 0;
   let workerTerminal = 0;
+  const supervision = { completed: 0, blocked: 0, rejected: 0, retried: 0, deadLetter: 0, reasonCodes: {} as Record<string, number> };
   let runsFailed = 0;
   const runFailures: BacklinkAutonomyRunFailure[] = [];
   for (const run of [...seeded.autonomyRuns, ...resumed.resumedRuns]) {
@@ -195,8 +198,16 @@ export async function runBacklinkAutonomyProductionTick(
           workspaceId: run.workspaceId, runId: run.runId, workerId: input.workerId, at: now(),
         });
         workerSteps += 1;
+        if (result.kind === "completed") supervision.completed += 1;
+        if (result.kind === "blocked") supervision.blocked += 1;
+        if (result.kind === "rejected") supervision.rejected += 1;
+        if (result.kind === "retried") supervision.retried += 1;
+        if (result.kind === "dead_letter") supervision.deadLetter += 1;
+        for (const reasonCode of result.reasonCodes) {
+          if (/^[A-Z][A-Z0-9_]*$/.test(reasonCode)) supervision.reasonCodes[reasonCode] = (supervision.reasonCodes[reasonCode] ?? 0) + 1;
+        }
         if (result.kind === "empty" || result.kind === "disabled") break;
-        if (result.kind === "terminal" || result.kind === "dead_letter") workerTerminal += 1;
+        if (result.kind === "terminal" || result.kind === "rejected" || result.kind === "dead_letter") workerTerminal += 1;
       }
       await reconcileBacklinkAutonomyRunLifecycle(deps.lifecycle, { workspaceId: run.workspaceId, runId: run.runId, at: now() });
     } catch (error) {
@@ -207,7 +218,7 @@ export async function runBacklinkAutonomyProductionTick(
       runFailures.push({ workspaceId: run.workspaceId, runId: run.runId, ...describeAutonomyRunError(error) });
     }
   }
-  return { disposition: "completed", seededRuns: seeded.autonomyRunIds.length, tasksCreated: seeded.created, tasksExisting: seeded.existing, reclaimedTasks, workerSteps, workerTerminal, contactSelectionResumedRuns: resumed.resumedRuns.length, promotionAutoApplied: promotionAutoApplyOutcomes.filter((outcome) => outcome.outcome === "applied").length, runsFailed, runFailures, ...summarizeBacklinkAutonomySchedulerObservability(seeded) };
+  return { disposition: "completed", seededRuns: seeded.autonomyRunIds.length, tasksCreated: seeded.created, tasksExisting: seeded.existing, reclaimedTasks, workerSteps, workerTerminal, supervision: { ...supervision, reasonCodes: Object.fromEntries(Object.entries(supervision.reasonCodes).sort(([left], [right]) => left.localeCompare(right))) }, contactSelectionResumedRuns: resumed.resumedRuns.length, promotionAutoApplied: promotionAutoApplyOutcomes.filter((outcome) => outcome.outcome === "applied").length, runsFailed, runFailures, ...summarizeBacklinkAutonomySchedulerObservability(seeded) };
 }
 
 function blockedHandlers(client: ReturnType<typeof createSupabaseAdminClient>): BacklinkAutonomyDispatcherDependencies {
