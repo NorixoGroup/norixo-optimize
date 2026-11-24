@@ -8,7 +8,7 @@ import type { ContactResolutionResult } from "@/lib/backlinks/services/contactRe
 
 const ids = { workspace: "00000000-0000-4000-8000-000000000001", run: "00000000-0000-4000-8000-000000000002", autonomyRun: "00000000-0000-4000-8000-000000000009", promotion: "00000000-0000-4000-8000-000000000003", domain: "00000000-0000-4000-8000-000000000004", opportunity: "00000000-0000-4000-8000-000000000005", actor: "00000000-0000-4000-8000-000000000006" };
 const now = "2026-09-21T00:00:00.000Z";
-const control = { backlinksEnabled: true, disabledReason: null, backlinkAutonomyEnabled: true, campaignApplyAuthorized: true, dryRunOnly: false };
+const control = { backlinksEnabled: true, disabledReason: null, backlinkAutonomyEnabled: true, campaignApplyAuthorized: true, paidMailboxVerificationAuthorized: true, dryRunOnly: false };
 type Contact = { id: string; workspace_id: string; domain_id: string; contact_status: string; email_normalized: string | null; linkedin_url: string | null; contact_form_url: string | null; source_reference: string | null };
 
 function task(input: CreateAutomationTaskInput, id: string): AutomationTask {
@@ -103,6 +103,9 @@ async function main() {
   const transientCampaign = fixture({ contacts: [verified()], resolution: resolved([emailCandidate]), throwCampaign: true }); await enter(transientCampaign); assert.equal((await cycle(transientCampaign)).outcome, "rejected");
   const transientDraft = fixture({ contacts: [verified()], resolution: resolved([emailCandidate]), throwDraft: true }); await enter(transientDraft); assert.equal((await cycle(transientDraft)).outcome, "rejected");
   const noCampaignAuthorization = fixture({ contacts: [verified()], resolution: resolved([emailCandidate]) }); await enter(noCampaignAuthorization); const noCampaign = await runBacklinkAutonomyCycle({ taskDependencies: noCampaignAuthorization.deps, handlers: noCampaignAuthorization.handlers, workspaceId: ids.workspace, runId: ids.autonomyRun, workerId: "local-smoke", actorUserId: ids.actor, domainId: ids.domain, opportunityId: ids.opportunity, scheduledAt: now, mode: "apply", control: { ...control, campaignApplyAuthorized: false }, channel: "email" }); assert.equal(noCampaign.outcome, "manual_review"); assert.deepEqual(noCampaign.reasonCodes, ["CAMPAIGN_APPLY_AUTHORIZATION_REQUIRED"]); assert.equal(noCampaignAuthorization.counters.campaignCreates, 0);
+  // K: without explicit paid-verification authorization, the dispatcher rejects before the mailbox handler
+  // (and therefore the ZeroBounce provider and the record() trap) is ever reached — zero external effect.
+  const noPaidMailboxAuthorization = fixture({ resolution: resolved([emailCandidate]) }); await enter(noPaidMailboxAuthorization); const noPaidMailbox = await runBacklinkAutonomyCycle({ taskDependencies: noPaidMailboxAuthorization.deps, handlers: noPaidMailboxAuthorization.handlers, workspaceId: ids.workspace, runId: ids.autonomyRun, workerId: "local-smoke", actorUserId: ids.actor, domainId: ids.domain, opportunityId: ids.opportunity, scheduledAt: now, mode: "apply", control: { ...control, paidMailboxVerificationAuthorized: false }, channel: "email" }); assert.equal(noPaidMailbox.outcome, "rejected"); assert.deepEqual(noPaidMailbox.reasonCodes, ["MAILBOX_VERIFICATION_PAID_AUTHORIZATION_REQUIRED"]); assert.equal(noPaidMailboxAuthorization.counters.sends, 0); assert.equal(noPaidMailboxAuthorization.counters.forms, 0); assert.equal(noPaidMailboxAuthorization.counters.linkedin, 0); assert.equal(noPaidMailboxAuthorization.counters.failures, 0, "the dispatcher rejects before the handler runs: no provider call, no completion, no failure recorded");
   console.log("PASS — Backlink autonomy local E2E smoke");
 }
 void main();
