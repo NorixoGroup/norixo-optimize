@@ -109,21 +109,28 @@ SQL
 APPLIED=0; TOLERATED=0
 for f in $(ls "$MIG"/*.sql | sort); do
   name=$(basename "$f")
-  case "$name" in 20261017120000_*) continue ;; esac
-  if as_owner -f "$f" >/dev/null 2>/dev/null; then
+  case "$name" in
+    # Manual-discovery test fixture: intentionally never applied in production.
+    20261017120000_*)
+      printf 'SKIPPED migration: %s (manual-discovery test fixture; intentionally not applied in production)\n' "$name"
+      continue
+      ;;
+  esac
+  if migration_error=$(as_owner -f "$f" 2>&1 >/dev/null); then
     APPLIED=$((APPLIED + 1))
   else
     if echo "$name" | grep -q -E "backlink|automation|outreach|contact_form|claim|dead_letter|discovery|brave|inbound|enable_workspace_rls"; then
-      as_owner -f "$f" 2>&1 | head -8 >&2 || true
+      printf 'STRICT migration failed: %s\n%s\n' "$name" "${migration_error:-psql returned no diagnostic}" >&2
       die "Backlinks / automation / workspace-RLS migration failed to apply: $name"
     fi
     TOLERATED=$((TOLERATED + 1))
+    printf 'TOLERATED migration failed: %s\n%s\n' "$name" "${migration_error:-psql returned no diagnostic}" >&2
   fi
 done
 for fn in claim_next_automation_task complete_automation_task is_workspace_admin_or_owner; do
   [ "$("${ADMIN[@]}" -d "$DB" -Atc "select count(*) from pg_proc where proname='$fn'")" -ge 1 ] || die "$fn missing after migrations"
 done
-pass "migrations applied ($APPLIED ok, $TOLERATED unrelated base-table failures tolerated, 20261017120000 skipped)"
+pass "migrations applied ($APPLIED ok, $TOLERATED unrelated base-table failures tolerated, 20261017120000 manual-discovery fixture excluded)"
 
 # Only the three roles (shared cluster-wide, never created/altered by this
 # script -- consistent with scripts/rls-test-harness/01_bootstrap_auth_and_roles.sql's
