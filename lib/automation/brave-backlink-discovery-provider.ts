@@ -1,5 +1,8 @@
 import {
   BacklinkDiscoveryProviderError,
+  isValidBacklinkDiscoveryHttpStatus,
+  normalizeBacklinkDiscoveryContentType,
+  type BacklinkDiscoveryInvalidResponseSubcause,
   type BacklinkDiscoveryProvider,
   type BacklinkDiscoveryProviderItem,
   type BacklinkDiscoveryProviderSearchInput,
@@ -27,11 +30,24 @@ function configurationError(): BacklinkDiscoveryProviderError {
   );
 }
 
-function invalidResponseError(): BacklinkDiscoveryProviderError {
+function invalidResponseError(diagnostic?: {
+  subcause: BacklinkDiscoveryInvalidResponseSubcause;
+  httpStatus?: number | null;
+  contentType?: string | null;
+}): BacklinkDiscoveryProviderError {
   return new BacklinkDiscoveryProviderError(
     "PROVIDER_INVALID_RESPONSE",
     "Brave Search provider returned an invalid response",
     false,
+    diagnostic
+      ? {
+          subcause: diagnostic.subcause,
+          httpStatus: isValidBacklinkDiscoveryHttpStatus(diagnostic.httpStatus ?? null)
+            ? (diagnostic.httpStatus as number)
+            : null,
+          contentType: normalizeBacklinkDiscoveryContentType(diagnostic.contentType ?? null),
+        }
+      : undefined,
   );
 }
 
@@ -130,22 +146,28 @@ function validateConfiguration(
   };
 }
 
-function extractResults(payload: unknown): readonly unknown[] {
+function extractResults(
+  payload: unknown,
+  responseContext: { httpStatus: number; contentType: string | null },
+): readonly unknown[] {
+  const schemaInvalid = () =>
+    invalidResponseError({ subcause: "schema_invalid", ...responseContext });
+
   if (!isRecord(payload)) {
-    throw invalidResponseError();
+    throw schemaInvalid();
   }
 
   if (payload.web === undefined) {
     return [];
   }
   if (!isRecord(payload.web)) {
-    throw invalidResponseError();
+    throw schemaInvalid();
   }
   if (payload.web.results === undefined) {
     return [];
   }
   if (!Array.isArray(payload.web.results)) {
-    throw invalidResponseError();
+    throw schemaInvalid();
   }
 
   return payload.web.results;
@@ -180,7 +202,7 @@ function mapItems(
   return items;
 }
 
-function classifyHttpError(status: number): BacklinkDiscoveryProviderError {
+function classifyHttpError(status: number, contentType: string | null): BacklinkDiscoveryProviderError {
   if (status === 401 || status === 403) {
     return configurationError();
   }
@@ -190,7 +212,7 @@ function classifyHttpError(status: number): BacklinkDiscoveryProviderError {
   if (status >= 500 && status <= 599) {
     return transientError();
   }
-  return invalidResponseError();
+  return invalidResponseError({ subcause: "http_status", httpStatus: status, contentType });
 }
 
 function buildSearchUrl(
@@ -230,6 +252,12 @@ export function createBraveBacklinkDiscoveryProvider(
       });
       timedOut.catch(() => undefined);
 
+      // Captured only for diagnostics (status code and normalized content-type); never the body.
+      let responseContext: { httpStatus: number; contentType: string | null } = {
+        httpStatus: 0,
+        contentType: null,
+      };
+
       const request = (async (): Promise<unknown> => {
         let response: Response;
         try {
@@ -249,14 +277,18 @@ export function createBraveBacklinkDiscoveryProvider(
           throw transientError();
         }
 
+        responseContext = { httpStatus: response.status, contentType: response.headers.get("content-type") };
+
         if (!response.ok) {
-          throw classifyHttpError(response.status);
+          throw classifyHttpError(responseContext.httpStatus, responseContext.contentType);
         }
 
         try {
           return await response.json();
         } catch {
-          throw signal.aborted ? transientError() : invalidResponseError();
+          throw signal.aborted
+            ? transientError()
+            : invalidResponseError({ subcause: "json_parse", ...responseContext });
         }
       })();
       request.catch(() => undefined);
@@ -268,7 +300,7 @@ export function createBraveBacklinkDiscoveryProvider(
         queryIndex: searchInput.queryIndex,
         countryCode: searchInput.countryCode,
         languageCode: searchInput.languageCode,
-        items: mapItems(extractResults(payload), searchInput.maxResults),
+        items: mapItems(extractResults(payload, responseContext), searchInput.maxResults),
       };
     },
   };

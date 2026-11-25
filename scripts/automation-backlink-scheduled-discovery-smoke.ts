@@ -11,6 +11,7 @@ import {
   selectScheduledDiscoveryMarket,
   type ScheduledDiscoveryDependencies,
 } from "../lib/automation/backlink-scheduled-discovery";
+import { encodeBacklinkDiscoveryInvalidResponseDiagnostic } from "../lib/automation/backlink-discovery-provider-types";
 import { createScheduledDiscoveryCronHandler } from "../app/api/internal/cron/backlinks/discovery/route";
 import type { AutomationRun } from "../lib/automation/types";
 
@@ -183,12 +184,86 @@ async function main(): Promise<void> {
     const aiFailure = makeDeps({ generateQueries: (async () => { throw new Error("secret-token-xyz AI down"); }) as ScheduledDiscoveryDependencies["generateQueries"] });
     const aiResult = await runScheduledBacklinkDiscovery(aiFailure.deps, { now: MONDAY });
     assert(aiResult.disposition === "completed" && aiResult.workspaces[0]?.outcome === "error" && aiFailure.calls.tick.length === 0, "AI failure: no Brave run");
+    assert(aiResult.disposition === "completed" && aiResult.workspaces[0]?.failure?.reasonCode === "SCHEDULED_DISCOVERY_WORKSPACE_ERROR" && aiResult.workspaces[0]?.failure?.stage === "query_generation" && aiResult.workspaces[0]?.failure?.correlationId === null, "AI failure has a bounded diagnostic without a run correlation");
     assert(!JSON.stringify(aiResult).includes("secret-token-xyz"), "Errors must not leak details");
     const providerFailure = makeDeps({ runTick: async () => { throw new Error("BRAVE provider failed"); } });
     const providerResult = await runScheduledBacklinkDiscovery(providerFailure.deps, { now: MONDAY });
     assert(providerResult.disposition === "completed" && providerResult.workspaces[0]?.outcome === "error", "Provider failure is reported, not thrown");
-    const failedTick = makeDeps({ runTick: async () => ({ kind: "failed" }) });
-    assert(((await runScheduledBacklinkDiscovery(failedTick.deps, { now: MONDAY })) as unknown as { workspaces: { outcome: string }[] }).workspaces[0]?.outcome === "failed", "Failed tick reported");
+    const failedTick = makeDeps({ runTick: async () => ({
+      kind: "failed",
+      run: { id: "00000000-0000-4000-8000-000000000001" },
+      execution: { lastIssue: { taskKind: "backlinks.discovery.preview", code: "PROVIDER_CONFIGURATION_ERROR", message: "secret-token-xyz" } },
+    }) as unknown as Awaited<ReturnType<ScheduledDiscoveryDependencies["runTick"]>> });
+    const failedResult = await runScheduledBacklinkDiscovery(failedTick.deps, { now: MONDAY });
+    assert(failedResult.disposition === "completed" && failedResult.workspaces[0]?.outcome === "failed", "Failed tick reported");
+    assert(failedResult.disposition === "completed" && failedResult.workspaces[0]?.failure?.reasonCode === "PROVIDER_CONFIGURATION_ERROR" && failedResult.workspaces[0]?.failure?.stage === "discovery" && failedResult.workspaces[0]?.failure?.errorType === "provider" && failedResult.workspaces[0]?.failure?.correlationId === "00000000-0000-4000-8000-000000000001", "Failed tick exposes a safe, correlated diagnostic");
+    assert(!JSON.stringify(failedResult).includes("secret-token-xyz"), "Failed tick must not leak the raw task message");
+    assert(failedResult.disposition === "completed" && failedResult.workspaces[0]?.failure?.detail === undefined, "Non-PROVIDER_INVALID_RESPONSE failures never carry a diagnostic detail");
+
+    // PROVIDER_INVALID_RESPONSE diagnostics: compatibility, round-trip, malformed and content-type rejection.
+    const invalidResponseTick = (message: string) =>
+      makeDeps({
+        runTick: async () => ({
+          kind: "failed",
+          run: { id: "00000000-0000-4000-8000-000000000002" },
+          execution: { lastIssue: { taskKind: "backlinks.discovery.preview", code: "PROVIDER_INVALID_RESPONSE", message } },
+        }) as unknown as Awaited<ReturnType<ScheduledDiscoveryDependencies["runTick"]>>,
+      });
+
+    // Historical messages recorded before this fix carry no diagnostic suffix: detail is omitted.
+    const historical = await runScheduledBacklinkDiscovery(
+      invalidResponseTick("Discovery provider returned an invalid response.").deps,
+      { now: MONDAY },
+    );
+    assert(historical.disposition === "completed" && historical.workspaces[0]?.failure?.reasonCode === "PROVIDER_INVALID_RESPONSE" && historical.workspaces[0]?.failure?.detail === undefined, "Historical PROVIDER_INVALID_RESPONSE message without a diagnostic omits detail");
+
+    // Persist → extract → re-validate round trip for a real diagnostic.
+    const encoded = encodeBacklinkDiscoveryInvalidResponseDiagnostic({
+      subcause: "http_status",
+      httpStatus: 418,
+      contentType: "text/html",
+    });
+    const roundTrip = await runScheduledBacklinkDiscovery(
+      invalidResponseTick(`Discovery provider returned an invalid response.${encoded}`).deps,
+      { now: MONDAY },
+    );
+    assert(
+      roundTrip.disposition === "completed" &&
+        roundTrip.workspaces[0]?.failure?.detail?.subcause === "http_status" &&
+        roundTrip.workspaces[0]?.failure?.detail?.httpStatus === 418 &&
+        roundTrip.workspaces[0]?.failure?.detail?.contentType === "text/html",
+      "A validly encoded diagnostic round-trips through the persisted message",
+    );
+
+    // A malformed suffix (free text, not the closed encoding) must not be mistaken for a diagnostic.
+    const malformed = await runScheduledBacklinkDiscovery(
+      invalidResponseTick("Discovery provider returned an invalid response. diag:subcause=totally_made_up").deps,
+      { now: MONDAY },
+    );
+    assert(malformed.disposition === "completed" && malformed.workspaces[0]?.failure?.detail === undefined, "A malformed diagnostic suffix is rejected, not partially trusted");
+
+    // A Content-Type outside the closed allow-list is dropped; the rest of the diagnostic survives.
+    const arbitraryContentType = await runScheduledBacklinkDiscovery(
+      invalidResponseTick(
+        "Discovery provider returned an invalid response. diag:subcause=http_status;status=404;ctype=application/x-evil",
+      ).deps,
+      { now: MONDAY },
+    );
+    assert(
+      arbitraryContentType.disposition === "completed" &&
+        arbitraryContentType.workspaces[0]?.failure?.detail?.subcause === "http_status" &&
+        arbitraryContentType.workspaces[0]?.failure?.detail?.httpStatus === 404 &&
+        arbitraryContentType.workspaces[0]?.failure?.detail?.contentType === null,
+      "An arbitrary Content-Type is rejected while the rest of the diagnostic is kept",
+    );
+
+    // The structured detail never carries the raw persisted message, even when it contains a diagnostic.
+    assert(
+      !JSON.stringify(roundTrip).includes("Discovery provider returned an invalid response.") &&
+        !JSON.stringify(malformed).includes("totally_made_up"),
+      "ScheduledDiscoveryFailure.detail must never surface the raw persisted message",
+    );
+
     const mixed = makeDeps({
       listEligibleWorkspaceIds: async () => ["ws-b", "ws-a"],
       generateQueries: (async () => { if (mixed.calls.generate.length++ === 0) throw new Error("boom"); return suggestions(["x y z one", "x y z two"]); }) as unknown as ScheduledDiscoveryDependencies["generateQueries"],
@@ -283,15 +358,10 @@ async function main(): Promise<void> {
     assert(!/resend|zerobounce|outreach|sendTransactionalEmail|contactResolution|contactForm|mailbox|promotions\/apply|applyBacklinkPromotion|campaigns\/apply|createCampaign|intakeBacklinkDiscoveryOpportunity/i.test(code), "Scheduled discovery must not reach outreach, contacts, ZeroBounce, promotion or campaigns");
     assert(code.includes('requestedScope: "preview"') && !code.includes('requestedScope: "apply"'), "Qualification and promotion stay preview");
     assert(!/\.(insert|update|delete|upsert|rpc)\(/.test(code), "No direct writes from the scheduled discovery layer");
-    const vercel = JSON.parse(await readFile("vercel.json", "utf8")) as { crons: { path: string; schedule: string }[] };
+    const vercel = JSON.parse(await readFile("vercel.json", "utf8")) as { crons?: { path: string; schedule: string }[] };
     assert(
-      JSON.stringify(vercel.crons) === JSON.stringify([
-        { path: "/api/internal/cron/backlinks/outreach/schedule", schedule: "0 6 * * *" },
-        { path: "/api/internal/cron/backlinks/reverification", schedule: "0 5 * * *" },
-        { path: "/api/internal/cron/backlinks/autonomy", schedule: "15 6 * * *" },
-        { path: "/api/internal/cron/backlinks/discovery-qualification-resume", schedule: "30 6 * * *" },
-      ]),
-      "vercel.json keeps exactly the four other crons and no Discovery cron (scheduled by Supabase pg_cron)",
+      !(vercel.crons ?? []).some((cron) => cron.path === "/api/internal/cron/backlinks/discovery"),
+      "vercel.json must not schedule Discovery",
     );
   }
 

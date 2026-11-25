@@ -5,6 +5,10 @@ import {
   normalizeBacklinkDiscoveryQueryKey,
   type BacklinkDiscoveryQuerySuggestionResult,
 } from "./backlink-discovery-query-generator";
+import {
+  decodeBacklinkDiscoveryInvalidResponseDiagnostic,
+  type BacklinkDiscoveryProviderErrorDetails,
+} from "./backlink-discovery-provider-types";
 import type { AutomationRun } from "./types";
 
 /**
@@ -138,6 +142,38 @@ export type ScheduledDiscoveryWorkspaceOutcome =
   | "skipped_no_queries"
   | "error";
 
+type ScheduledDiscoveryFailureStage =
+  | "run_lookup"
+  | "query_history"
+  | "query_generation"
+  | "tick"
+  | "discovery"
+  | "qualification"
+  | "promotion"
+  | "automation";
+
+type ScheduledDiscoveryFailure = {
+  reasonCode: string;
+  stage: ScheduledDiscoveryFailureStage;
+  errorType: "provider" | "task_handler" | "automation" | "exception";
+  correlationId: string | null;
+  workspaceId: string;
+  windowDate: string;
+  /**
+   * Structured, closed-vocabulary diagnostic for PROVIDER_INVALID_RESPONSE, re-validated
+   * against the same allow-lists used when it was recorded. Never the raw persisted message;
+   * omitted whenever that message carries no recognizable, valid diagnostic.
+   */
+  detail?: BacklinkDiscoveryProviderErrorDetails;
+};
+
+type ScheduledDiscoveryWorkspaceResult = {
+  workspaceId: string;
+  outcome: ScheduledDiscoveryWorkspaceOutcome;
+  /** Additive, bounded diagnostic metadata; never a raw exception message. */
+  failure?: ScheduledDiscoveryFailure;
+};
+
 export type ScheduledDiscoveryResult =
   | { disposition: "disabled" }
   | { disposition: "not_scheduled_day" }
@@ -146,7 +182,7 @@ export type ScheduledDiscoveryResult =
       disposition: "completed";
       windowDate: string;
       market: ScheduledDiscoveryMarket;
-      workspaces: readonly { workspaceId: string; outcome: ScheduledDiscoveryWorkspaceOutcome }[];
+      workspaces: readonly ScheduledDiscoveryWorkspaceResult[];
     };
 
 export type ScheduledDiscoveryDependencies = {
@@ -163,8 +199,56 @@ export type ScheduledDiscoveryDependencies = {
     idempotencyKey: string;
     scheduledAt: string;
     discoveryInput: Record<string, Json>;
-  }) => Promise<{ kind: string }>;
+  }) => Promise<
+    | { kind: "completed" | "pending_retry" | "rejected" }
+    | {
+        kind: "failed";
+        run: { id: string };
+        execution: { lastIssue: { taskKind: string; code: string; message: string } | null };
+      }
+  >;
 };
+
+function failureStage(taskKind: string | undefined): ScheduledDiscoveryFailureStage {
+  if (taskKind === "backlinks.discovery.preview") return "discovery";
+  if (taskKind === "backlinks.qualification.preview") return "qualification";
+  if (taskKind === "backlinks.promotion.preview") return "promotion";
+  return "automation";
+}
+
+function failureCode(code: string | undefined): string {
+  return typeof code === "string" && /^[A-Z][A-Z0-9_]{0,99}$/.test(code)
+    ? code
+    : "AUTOMATION_TASK_EXECUTION_FAILED";
+}
+
+function failedTickDiagnostic(input: {
+  workspaceId: string;
+  windowDate: string;
+  runId: string;
+  lastIssue: { taskKind: string; code: string; message: string } | null;
+}): ScheduledDiscoveryFailure {
+  const reasonCode = failureCode(input.lastIssue?.code);
+  // Decoding re-validates subcause, HTTP status and content-type against the same closed
+  // allow-lists used when they were recorded; a malformed or historical message yields null.
+  const detail =
+    reasonCode === "PROVIDER_INVALID_RESPONSE"
+      ? decodeBacklinkDiscoveryInvalidResponseDiagnostic(input.lastIssue?.message)
+      : null;
+  return {
+    reasonCode,
+    stage: failureStage(input.lastIssue?.taskKind),
+    errorType: reasonCode.startsWith("PROVIDER_")
+      ? "provider"
+      : reasonCode === "AUTOMATION_TASK_HANDLER_FAILED"
+        ? "task_handler"
+        : "automation",
+    correlationId: input.runId,
+    workspaceId: input.workspaceId,
+    windowDate: input.windowDate,
+    ...(detail !== null ? { detail } : {}),
+  };
+}
 
 function dedupeAgainstHistory(
   suggestions: BacklinkDiscoveryQuerySuggestionResult["suggestions"],
@@ -202,9 +286,10 @@ export async function runScheduledBacklinkDiscovery(
   const market = selectScheduledDiscoveryMarket(window.windowDate);
   const since = new Date(input.now.getTime() - SCHEDULED_DISCOVERY_HISTORY_DAYS * DAY_MS).toISOString();
   const workspaceIds = await deps.listEligibleWorkspaceIds(SCHEDULED_DISCOVERY_MAX_WORKSPACES);
-  const workspaces: { workspaceId: string; outcome: ScheduledDiscoveryWorkspaceOutcome }[] = [];
+  const workspaces: ScheduledDiscoveryWorkspaceResult[] = [];
 
   for (const workspaceId of [...workspaceIds].sort()) {
+    let stage: ScheduledDiscoveryFailureStage = "run_lookup";
     try {
       const existing = await deps.getRunByKey({
         workspaceId,
@@ -216,11 +301,13 @@ export async function runScheduledBacklinkDiscovery(
         continue;
       }
 
+      stage = "query_history";
       const history = await deps.listRecentQueries({
         workspaceId,
         since,
         limit: 500,
       });
+      stage = "query_generation";
       const generated = await deps.generateQueries({
         countryCode: market.countryCode,
         languageCode: market.languageCode,
@@ -234,6 +321,7 @@ export async function runScheduledBacklinkDiscovery(
         continue;
       }
 
+      stage = "tick";
       const result = await deps.runTick({
         workspaceId,
         idempotencyKey: window.idempotencyKey,
@@ -244,10 +332,34 @@ export async function runScheduledBacklinkDiscovery(
         result.kind === "completed" || result.kind === "pending_retry" || result.kind === "rejected"
           ? result.kind
           : "failed";
-      workspaces.push({ workspaceId, outcome });
+      workspaces.push(
+        result.kind === "failed"
+          ? {
+              workspaceId,
+              outcome,
+              failure: failedTickDiagnostic({
+                workspaceId,
+                windowDate: window.windowDate,
+                runId: result.run.id,
+                lastIssue: result.execution.lastIssue,
+              }),
+            }
+          : { workspaceId, outcome },
+      );
     } catch {
       // One workspace failing (AI, database, provider) must not hide the others or leak details.
-      workspaces.push({ workspaceId, outcome: "error" });
+      workspaces.push({
+        workspaceId,
+        outcome: "error",
+        failure: {
+          reasonCode: "SCHEDULED_DISCOVERY_WORKSPACE_ERROR",
+          stage,
+          errorType: "exception",
+          correlationId: null,
+          workspaceId,
+          windowDate: window.windowDate,
+        },
+      });
     }
   }
 

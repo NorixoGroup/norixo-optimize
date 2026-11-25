@@ -251,8 +251,14 @@ export type {
 } from "./backlink-discovery-types";
 export {
   BacklinkDiscoveryProviderError,
+  decodeBacklinkDiscoveryInvalidResponseDiagnostic,
+  encodeBacklinkDiscoveryInvalidResponseDiagnostic,
+  isValidBacklinkDiscoveryHttpStatus,
+  normalizeBacklinkDiscoveryContentType,
+  type BacklinkDiscoveryInvalidResponseSubcause,
   type BacklinkDiscoveryProvider,
   type BacklinkDiscoveryProviderErrorCode,
+  type BacklinkDiscoveryProviderErrorDetails,
   type BacklinkDiscoveryProviderItem,
   type BacklinkDiscoveryProviderRegistry,
   type BacklinkDiscoveryProviderSearchInput,

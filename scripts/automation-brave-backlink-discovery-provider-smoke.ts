@@ -1,6 +1,9 @@
 import {
   BacklinkDiscoveryProviderError,
   createBraveBacklinkDiscoveryProvider,
+  decodeBacklinkDiscoveryInvalidResponseDiagnostic,
+  encodeBacklinkDiscoveryInvalidResponseDiagnostic,
+  type BacklinkDiscoveryProviderErrorDetails,
   type BacklinkDiscoveryProviderSearchInput,
 } from "../lib/automation";
 
@@ -47,6 +50,35 @@ async function assertProviderError(
   throw new Error(`Expected ${code}`);
 }
 
+/** Verifies the closed, bounded diagnostic attached to a PROVIDER_INVALID_RESPONSE error. */
+async function assertInvalidResponseDetails(
+  operation: () => Promise<unknown>,
+  expected: { subcause: string; httpStatus: number | null; contentType: string | null },
+): Promise<void> {
+  try {
+    await operation();
+  } catch (error) {
+    assert(
+      error instanceof BacklinkDiscoveryProviderError &&
+        error.code === "PROVIDER_INVALID_RESPONSE" &&
+        error.details !== null &&
+        error.details.subcause === expected.subcause &&
+        error.details.httpStatus === expected.httpStatus &&
+        error.details.contentType === expected.contentType,
+      `Expected PROVIDER_INVALID_RESPONSE details ${JSON.stringify(expected)}, got ${JSON.stringify(
+        error instanceof BacklinkDiscoveryProviderError ? error.details : error,
+      )}`,
+    );
+    assert(
+      !JSON.stringify((error as BacklinkDiscoveryProviderError).details).includes("test-subscription-token"),
+      "Diagnostic details must never carry the token",
+    );
+    return;
+  }
+
+  throw new Error("Expected PROVIDER_INVALID_RESPONSE");
+}
+
 type RecordedFetch = {
   url: string;
   init: RequestInit | undefined;
@@ -66,10 +98,14 @@ function responseFetch(
   payload: unknown,
   records: RecordedFetch[],
   status = 200,
+  contentType?: string,
 ): typeof fetch {
   return async (resource, init) => {
     records.push({ url: toUrl(resource).toString(), init });
-    return new Response(JSON.stringify(payload), { status });
+    return new Response(
+      JSON.stringify(payload),
+      contentType === undefined ? { status } : { status, headers: { "content-type": contentType } },
+    );
   };
 }
 
@@ -80,10 +116,13 @@ function throwingFetch(records: RecordedFetch[]): typeof fetch {
   };
 }
 
-function invalidJsonFetch(records: RecordedFetch[]): typeof fetch {
+function invalidJsonFetch(records: RecordedFetch[], contentType?: string): typeof fetch {
   return async (resource, init) => {
     records.push({ url: toUrl(resource).toString(), init });
-    return new Response("not-json", { status: 200 });
+    return new Response(
+      "not-json",
+      contentType === undefined ? { status: 200 } : { status: 200, headers: { "content-type": contentType } },
+    );
   };
 }
 
@@ -268,17 +307,57 @@ async function main(): Promise<void> {
     [503, "PROVIDER_TRANSIENT_ERROR", true],
     [418, "PROVIDER_INVALID_RESPONSE", false],
   ] as const) {
-    await assertProviderError(
-      () =>
-        createBraveBacklinkDiscoveryProvider({
-          subscriptionToken: "test-subscription-token",
-          fetchImplementation: responseFetch({}, [], status),
-          endpoint: "https://brave.test/search",
-        }).search(input),
-      code,
-      retryable,
-    );
+    const provider = createBraveBacklinkDiscoveryProvider({
+      subscriptionToken: "test-subscription-token",
+      fetchImplementation: responseFetch({}, [], status),
+      endpoint: "https://brave.test/search",
+    });
+    try {
+      await provider.search(input);
+      throw new Error(`Expected ${code}`);
+    } catch (error) {
+      assert(
+        error instanceof BacklinkDiscoveryProviderError &&
+          error.code === code &&
+          error.retryable === retryable &&
+          // Only PROVIDER_INVALID_RESPONSE carries a diagnostic; the other codes stay untouched.
+          (code === "PROVIDER_INVALID_RESPONSE" ? error.details !== null : error.details === null),
+        `Expected ${code} with the right diagnostic presence`,
+      );
+    }
   }
+
+  // --- PROVIDER_INVALID_RESPONSE subcauses, HTTP status and content-type diagnostics ---
+  await assertInvalidResponseDetails(
+    () =>
+      createBraveBacklinkDiscoveryProvider({
+        subscriptionToken: "test-subscription-token",
+        fetchImplementation: responseFetch({}, [], 418, "text/html; charset=utf-8"),
+        endpoint: "https://brave.test/search",
+      }).search(input),
+    { subcause: "http_status", httpStatus: 418, contentType: "text/html" },
+  );
+  // No content-type header at all (a byte body sets none, unlike a string body): status is
+  // still recorded, content-type stays absent rather than defaulting to anything.
+  await assertInvalidResponseDetails(
+    () =>
+      createBraveBacklinkDiscoveryProvider({
+        subscriptionToken: "test-subscription-token",
+        fetchImplementation: async () => new Response(new TextEncoder().encode("{}"), { status: 404 }),
+        endpoint: "https://brave.test/search",
+      }).search(input),
+    { subcause: "http_status", httpStatus: 404, contentType: null },
+  );
+  // Content-Type outside the closed allow-list is rejected outright, never passed through.
+  await assertInvalidResponseDetails(
+    () =>
+      createBraveBacklinkDiscoveryProvider({
+        subscriptionToken: "test-subscription-token",
+        fetchImplementation: responseFetch({}, [], 404, "application/octet-stream; evil=<script>alert(1)</script>"),
+        endpoint: "https://brave.test/search",
+      }).search(input),
+    { subcause: "http_status", httpStatus: 404, contentType: null },
+  );
   await assertProviderError(
     () =>
       createBraveBacklinkDiscoveryProvider({
@@ -298,6 +377,34 @@ async function main(): Promise<void> {
       }).search(input),
     "PROVIDER_INVALID_RESPONSE",
     false,
+  );
+  await assertInvalidResponseDetails(
+    () =>
+      createBraveBacklinkDiscoveryProvider({
+        subscriptionToken: "test-subscription-token",
+        fetchImplementation: invalidJsonFetch([], "text/html"),
+        endpoint: "https://brave.test/search",
+      }).search(input),
+    { subcause: "json_parse", httpStatus: 200, contentType: "text/html" },
+  );
+  await assertInvalidResponseDetails(
+    () =>
+      createBraveBacklinkDiscoveryProvider({
+        subscriptionToken: "test-subscription-token",
+        fetchImplementation: responseFetch({ web: { results: {} } }, [], 200, "application/json"),
+        endpoint: "https://brave.test/search",
+      }).search(input),
+    { subcause: "schema_invalid", httpStatus: 200, contentType: "application/json" },
+  );
+  await assertInvalidResponseDetails(
+    () =>
+      createBraveBacklinkDiscoveryProvider({
+        subscriptionToken: "test-subscription-token",
+        fetchImplementation: async () =>
+          new Response(new TextEncoder().encode(JSON.stringify("not-an-object")), { status: 200 }),
+        endpoint: "https://brave.test/search",
+      }).search(input),
+    { subcause: "schema_invalid", httpStatus: 200, contentType: null },
   );
 
   // --- Timeout (no network, no real Brave call) ---
@@ -461,6 +568,86 @@ async function main(): Promise<void> {
   } finally {
     clearInterval(keepAlive);
   }
+
+  // --- encodeBacklinkDiscoveryInvalidResponseDiagnostic: hardened at the persistence boundary,
+  // never trusting the caller, even one bypassing the TypeScript types below with `as`. ---
+
+  // 1. An arbitrary subcause outside the closed set is rejected: no suffix at all.
+  assert(
+    encodeBacklinkDiscoveryInvalidResponseDiagnostic({
+      subcause: "made_up_subcause" as unknown as BacklinkDiscoveryProviderErrorDetails["subcause"],
+      httpStatus: null,
+      contentType: null,
+    }) === "",
+    "An arbitrary subcause must be rejected, not persisted",
+  );
+
+  // 2. An out-of-range HTTP status (below 100 or above 599) is omitted, not persisted.
+  for (const badStatus of [0, 50, 600, 1000]) {
+    const suffix = encodeBacklinkDiscoveryInvalidResponseDiagnostic({
+      subcause: "http_status",
+      httpStatus: badStatus as unknown as number,
+      contentType: null,
+    });
+    assert(suffix === " diag:subcause=http_status" && !suffix.includes("status="), `Out-of-range status ${badStatus} must be omitted`);
+  }
+
+  // 3. A non-integer HTTP status is omitted, not persisted.
+  for (const badStatus of [200.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+    const suffix = encodeBacklinkDiscoveryInvalidResponseDiagnostic({
+      subcause: "http_status",
+      httpStatus: badStatus as unknown as number,
+      contentType: null,
+    });
+    assert(suffix === " diag:subcause=http_status" && !suffix.includes("status="), `Non-integer status ${badStatus} must be omitted`);
+  }
+
+  // 4. A Content-Type outside the closed allow-list is omitted, not persisted.
+  assert(
+    encodeBacklinkDiscoveryInvalidResponseDiagnostic({
+      subcause: "json_parse",
+      httpStatus: 200,
+      contentType: "application/x-arbitrary-synthetic-type",
+    }) === " diag:subcause=json_parse;status=200",
+    "An arbitrary Content-Type must be omitted",
+  );
+
+  // 5. A Content-Type carrying a synthetic "sensitive" parameter never has that parameter persisted:
+  // only the base MIME type survives normalization, and only when it is itself allow-listed.
+  const withFakeSecretParam = encodeBacklinkDiscoveryInvalidResponseDiagnostic({
+    subcause: "schema_invalid",
+    httpStatus: 200,
+    contentType: "text/html; session=FAKE-SYNTHETIC-SECRET-00000000",
+  });
+  assert(
+    withFakeSecretParam === " diag:subcause=schema_invalid;status=200;ctype=text/html" &&
+      !withFakeSecretParam.includes("FAKE-SYNTHETIC-SECRET"),
+    "A Content-Type parameter must never be persisted, synthetic secret included",
+  );
+
+  // 6. An excessively long, non-allow-listed Content-Type is never persisted (omitted, not truncated-in).
+  const longFakeContentType = `application/${"x".repeat(5_000)}`;
+  const withLongContentType = encodeBacklinkDiscoveryInvalidResponseDiagnostic({
+    subcause: "http_status",
+    httpStatus: 404,
+    contentType: longFakeContentType,
+  });
+  assert(
+    withLongContentType === " diag:subcause=http_status;status=404" && withLongContentType.length < 100,
+    "An excessively long Content-Type must be omitted and the suffix must stay bounded",
+  );
+
+  // 8. A validly encoded diagnostic round-trips exactly through the existing decoder.
+  const validDetails: BacklinkDiscoveryProviderErrorDetails = {
+    subcause: "schema_invalid",
+    httpStatus: 502,
+    contentType: "application/json",
+  };
+  const roundTripMessage = `Discovery provider returned an invalid response.${encodeBacklinkDiscoveryInvalidResponseDiagnostic(validDetails)}`;
+  assert(
+    JSON.stringify(decodeBacklinkDiscoveryInvalidResponseDiagnostic(roundTripMessage)) === JSON.stringify(validDetails),
+    "A validly encoded diagnostic must decode back to the same structured details",
+  );
 
   console.log("PASS — Automation Brave backlink discovery provider smoke");
 }
